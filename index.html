@@ -259,7 +259,7 @@
         <a href="#tools">Tools</a>
         <a href="#interfaces">Interfaces</a>
         <a href="#testing">Testing</a>
-        <a href="https://github.com/Pastorsimon1798/agentcut">GitHub</a>
+        <a href="https://github.com/pastorsimon1798/agentcut">GitHub</a>
     </div>
 </nav>
 
@@ -278,7 +278,7 @@
         <div class="badge"><div class="dot orange"></div> 3 interfaces</div>
     </div>
     <div class="cta-row">
-        <a class="btn btn-primary" href="https://github.com/Pastorsimon1798/agentcut">View on GitHub</a>
+        <a class="btn btn-primary" href="https://github.com/pastorsimon1798/agentcut">View on GitHub</a>
         <a class="btn btn-secondary" href="#quickstart">pip install agentcut</a>
     </div>
 </div>
@@ -292,7 +292,7 @@
     <p class="section-desc">
         AI agents can write code, analyze documents, browse the web, create images — but video editing?
         Existing tools are either GUI-only (agents can't click buttons), raw FFmpeg wrappers (agents can't
-        memorize 500 flags), or cloud APIs (expensive, slow, vendor lock-in). AgentCut bridges this gap.
+        memorize hundreds of flags), or cloud APIs (expensive, slow, vendor lock-in). AgentCut bridges this gap.
     </p>
     <div class="grid-3">
         <div class="feature-card">
@@ -303,7 +303,7 @@
         <div class="feature-card">
             <div class="icon">&#9889;</div>
             <h3>Model Context Protocol</h3>
-            <p>Standard MCP server. Works with Claude Code, Cursor, Windsurf, and any MCP-compatible client. Zero custom integration needed.</p>
+            <p>Standard MCP server. Works with any MCP-compatible client. Zero custom integration needed.</p>
         </div>
         <div class="feature-card">
             <div class="icon">&#128274;</div>
@@ -321,7 +321,7 @@
     <div class="section-title">Not just another FFmpeg wrapper.</div>
     <p class="section-desc">
         "Can't I just have Claude Code run ffmpeg commands?" Sure &mdash; if you enjoy debugging 200-character filter graphs,
-        wrestling with flag order semantics, and paying $2.50 for a 5-second video on Replicate. Here's why AgentCut is different.
+        wrestling with flag order semantics, and paying dollars per short clip on cloud APIs. Here's why AgentCut is different.
     </p>
 
     <!-- Comparison Table -->
@@ -375,7 +375,7 @@
                 <tr>
                     <td style="color: var(--text); font-family: inherit;">Discovery</td>
                     <td style="color: var(--green);">16 self-documenting tools</td>
-                    <td style="color: var(--orange);">Must know 500+ flags</td>
+                    <td style="color: var(--orange);">Must know hundreds of flags</td>
                     <td style="color: var(--text2);">API docs</td>
                 </tr>
                 <tr>
@@ -632,6 +632,11 @@ $ agentcut storyboard video.mp4 -n 12</pre></div>
     <div class="code-block"><pre><span class="comment"># 1. Install FFmpeg (if you don't have it)</span>
 brew install ffmpeg
 
+<span class="comment"># For full text overlay support (drawtext filter):</span>
+<span class="comment"># brew install freetype harfbuzz</span>
+<span class="comment"># brew reinstall --build-from-source ffmpeg</span>
+<span class="comment"># Verify: ffmpeg -filters | grep drawtext</span>
+
 <span class="comment"># 2. Install AgentCut</span>
 pip install agentcut
 
@@ -647,8 +652,8 @@ pip install agentcut
 <footer>
     <div>AgentCut &mdash; Apache 2.0 License</div>
     <div>
-        <a href="https://github.com/Pastorsimon1798/agentcut">GitHub</a> &bull;
-        <a href="https://github.com/Pastorsimon1798/agentcut/issues">Issues</a> &bull;
+        <a href="https://github.com/pastorsimon1798/agentcut">GitHub</a> &bull;
+        <a href="https://github.com/pastorsimon1798/agentcut/issues">Issues</a> &bull;
         Built with FFmpeg + MCP
     </div>
 </footer>

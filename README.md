@@ -10,7 +10,7 @@
 
 <p align="center">
   <strong>The video editing MCP server for AI agents.</strong><br>
-  16 tools. 3 interfaces. Zero existing competition.
+  16 tools. 3 interfaces. Purpose-built for AI agents.
 </p>
 
 <p align="center">
@@ -26,7 +26,7 @@
 
 ## What is AgentCut?
 
-AgentCut is an open-source video editing server built on the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). It gives AI agents like Claude Code, Cursor, Windsurf, and any MCP-compatible client the ability to programmatically edit video files.
+AgentCut is an open-source video editing server built on the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). It gives AI agents and any MCP-compatible client the ability to programmatically edit video files.
 
 Think of it as **ffmpeg with an API that AI agents can actually use**. Instead of memorizing cryptic command-line flags, an agent calls structured tools with clear parameters and gets structured results back.
 
@@ -57,6 +57,11 @@ AgentCut bridges this gap. It's a local, fast, free video editing layer that any
 ```bash
 # macOS
 brew install ffmpeg
+
+# For full text overlay support (drawtext filter):
+# brew install freetype harfbuzz
+# brew reinstall --build-from-source ffmpeg
+# Verify: ffmpeg -filters | grep drawtext
 
 # Ubuntu/Debian
 sudo apt install ffmpeg
@@ -284,11 +289,22 @@ StoryboardResult(success=True, frames=["f1.jpg", ...], grid="grid.jpg", count=8)
 agentcut [command] [options]
 
 Commands:
-  info       Get video metadata
-  preview    Generate fast low-res preview
-  storyboard Extract key frames as storyboard
-  trim       Trim a video
-  convert    Convert video format
+  info           Get video metadata
+  trim           Trim a video
+  merge          Merge multiple clips
+  add-text       Overlay text on a video
+  add-audio      Add or replace audio track
+  resize         Resize or change aspect ratio
+  convert        Convert video format
+  speed          Change playback speed
+  thumbnail      Extract a single frame
+  preview        Generate fast low-res preview
+  storyboard     Extract key frames as storyboard
+  subtitles      Burn subtitles into video
+  watermark      Add image watermark
+  export         Export with quality settings
+  extract-audio  Extract audio track
+  edit           Execute timeline-based edit from JSON
 
 Options:
   --mcp      Run as MCP server (default when no command given)

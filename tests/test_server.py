@@ -70,10 +70,11 @@ class TestServerInitialization:
 class TestVideoInfoTool:
     def test_returns_metadata(self, sample_video):
         result = video_info(sample_video)
-        # video_info returns model_dump() directly on success (no "success" key)
-        assert result["width"] == 640
-        assert result["height"] == 480
-        assert result["duration"] > 0
+        assert result["success"] is True
+        info = result["info"]
+        assert info["width"] == 640
+        assert info["height"] == 480
+        assert info["duration"] > 0
 
     def test_nonexistent_file(self):
         result = video_info("/nonexistent/video.mp4")

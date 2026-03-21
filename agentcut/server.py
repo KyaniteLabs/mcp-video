@@ -136,7 +136,7 @@ def video_info(input_path: str) -> dict[str, Any]:
     """
     try:
         info = probe(input_path)
-        return info.model_dump()
+        return {"success": True, "info": info.model_dump()}
     except AgentCutError as e:
         return _error_result(e)
 
@@ -361,6 +361,12 @@ def video_preview(
         scale_factor: Downscale factor (4 = 1/4 resolution).
     """
     try:
+        if scale_factor < 1:
+            return _error_result(AgentCutError(
+                "scale_factor must be at least 1",
+                error_type="validation_error",
+                code="invalid_scale_factor",
+            ))
         return _result(preview(input_path, output_path=output_path, scale_factor=scale_factor))
     except AgentCutError as e:
         return _error_result(e)
@@ -380,6 +386,12 @@ def video_storyboard(
         frame_count: Number of key frames to extract.
     """
     try:
+        if frame_count < 1:
+            return _error_result(AgentCutError(
+                "frame_count must be at least 1",
+                error_type="validation_error",
+                code="invalid_frame_count",
+            ))
         return _result(storyboard(input_path, output_dir=output_dir, frame_count=frame_count))
     except AgentCutError as e:
         return _error_result(e)

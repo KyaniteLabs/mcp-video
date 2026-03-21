@@ -8,7 +8,7 @@
 
 I just built something that didn't exist: an open-source video editing MCP server for AI agents.
 
-16 tools. 3 interfaces. 0 competition.
+16 tools. 3 interfaces. Purpose-built for AI agents.
 
 Agents can now trim, merge, add text, resize, convert, and export video — all locally, all free.
 
@@ -60,8 +60,8 @@ Also works as a CLI: `agentcut trim video.mp4 -s 0:30 -d 15`
 
 pip install agentcut
 
-GitHub: github.com/Pastorsimon1798/agentcut
-MIT/Apache 2.0. Contributions welcome.
+GitHub: github.com/pastorsimon1798/agentcut
+Apache 2.0. Contributions welcome.
 
 The MCP ecosystem needs more tools like this. Video editing is just the start — image processing, audio mixing, 3D rendering... there's room for so many MCP servers.
 
@@ -75,9 +75,9 @@ If you build with MCP, I'd love to hear what tools you need.
 
 **Body:**
 
-AgentCut is an open-source MCP server that gives AI agents the ability to edit video files. It wraps FFmpeg into 16 structured tools that work with Claude Code, Cursor, Windsurf, and any MCP-compatible client.
+AgentCut is an open-source MCP server that gives AI agents the ability to edit video files. It wraps FFmpeg into 16 structured tools that work with any MCP-compatible client.
 
-The motivation: AI agents can write code, browse the web, create images — but they can't edit video. Existing options are GUI-only (agents can't click), raw FFmpeg (agents can't memorize 500 flags), or cloud APIs (expensive, slow, vendor lock-in).
+The motivation: AI agents can write code, browse the web, create images — but they can't edit video. Existing options are GUI-only (agents can't click), raw FFmpeg (agents can't memorize hundreds of flags), or cloud APIs (expensive, slow, vendor lock-in).
 
 Three interfaces:
 - MCP Server: Add to your config, then just tell your agent what to edit
@@ -92,7 +92,7 @@ Also includes a Timeline DSL for complex multi-track edits (video + audio + text
 
 pip install agentcut
 
-GitHub: https://github.com/Pastorsimon1798/agentcut
+GitHub: https://github.com/pastorsimon1798/agentcut
 
 ---
 
@@ -128,7 +128,7 @@ Also has a Python client and CLI. 234 tests. Apache 2.0.
 
 What tools would you want to see in an MCP server? I'm thinking about building image processing and audio mixing servers next.
 
-GitHub: https://github.com/Pastorsimon1798/agentcut
+GitHub: https://github.com/pastorsimon1798/agentcut
 
 ---
 
@@ -167,7 +167,7 @@ Everything runs locally. No cloud, no API keys, no per-minute billing. Your vide
 
 pip install agentcut
 
-https://github.com/Pastorsimon1798/agentcut
+https://github.com/pastorsimon1798/agentcut
 
 ---
 
@@ -179,13 +179,13 @@ https://github.com/Pastorsimon1798/agentcut
 
 Built an MCP server for video editing. 16 tools that wrap FFmpeg into a clean API for AI agents.
 
-Works with Claude Code, Cursor, Windsurf, any MCP client. Also has a Python client and CLI.
+Works with Claude Code, Cursor, Windsurf, and any MCP-compatible client. Also has a Python client and CLI.
 
 The key feature is the Timeline DSL — describe a full multi-track edit (video clips + audio + text + transitions) in a single JSON object and execute it in one call.
 
 234 tests. Apache 2.0. pip install agentcut.
 
-https://github.com/Pastorsimon1798/agentcut
+https://github.com/pastorsimon1798/agentcut
 
 ---
 
@@ -195,11 +195,11 @@ https://github.com/Pastorsimon1798/agentcut
 
 Hey [Name], I saw you've been building with MCP and thought you might be interested — I just shipped AgentCut, an open-source video editing MCP server.
 
-16 tools (trim, merge, text, audio, resize, convert, etc.) that work with Claude Code, Cursor, etc. It's the first MCP server for video editing that I know of.
+16 tools (trim, merge, text, audio, resize, convert, etc.) that work with Claude Code, Cursor, etc. It's the first MCP server for video editing that I know of in this niche.
 
 Would love your feedback if you get a chance to try it. What video editing capabilities would be most useful in your workflows?
 
-GitHub: https://github.com/Pastorsimon1798/agentcut
+GitHub: https://github.com/pastorsimon1798/agentcut
 
 ### DM Template 2 (AI content creators)
 
@@ -217,4 +217,4 @@ The architecture is: MCP server wrapping FFmpeg, with a Python client and CLI. 1
 
 Curious if you've thought about adding video capabilities to [their project]? Would be happy to collaborate or share what I've learned about the MCP tool-building patterns.
 
-GitHub: https://github.com/Pastorsimon1798/agentcut
+GitHub: https://github.com/pastorsimon1798/agentcut

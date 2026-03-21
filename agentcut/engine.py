@@ -7,7 +7,6 @@ import os
 import shutil
 import subprocess
 import tempfile
-import time
 from pathlib import Path
 from typing import Any
 
@@ -150,6 +149,14 @@ def _run_ffprobe_json(path: str) -> dict[str, Any]:
     return json.loads(proc.stdout)
 
 
+def _movflags_args(output_path: str) -> list[str]:
+    """Return -movflags +faststart only for MP4/MOV containers."""
+    ext = os.path.splitext(output_path)[1].lower()
+    if ext in (".mp4", ".mov"):
+        return ["-movflags", "+faststart"]
+    return []
+
+
 def _position_coords(position: Position, width: int = 0, height: int = 0) -> str:
     """Return drawtext x,y expression for a named position."""
     # These expressions use FFmpeg's text_w/text_h variables
@@ -227,11 +234,15 @@ def probe(path: str) -> VideoInfo:
 
     # FPS — r_frame_rate is "num/den"
     rfr = vs.get("r_frame_rate", "30/1")
-    if "/" in rfr:
-        num, den = rfr.split("/")
-        fps = float(num) / float(den)
-    else:
-        fps = float(rfr)
+    try:
+        if "/" in rfr:
+            num, den = rfr.split("/")
+            den_val = float(den)
+            fps = float(num) / den_val if den_val != 0 else 30.0
+        else:
+            fps = float(rfr) if float(rfr) != 0 else 30.0
+    except (ValueError, ZeroDivisionError):
+        fps = 30.0
 
     # Codecs
     codec = vs.get("codec_name", "unknown")
@@ -277,7 +288,7 @@ def normalize(input_path: str, output_path: str | None = None) -> str:
         "-i", input_path,
         "-c:v", "libx264", "-preset", "fast", "-crf", "23",
         "-c:a", "aac", "-b:a", "128k",
-        "-movflags", "+faststart",
+    ] + _movflags_args(output) + [
         output,
     ])
     return output
@@ -309,7 +320,7 @@ def trim(
     args.extend([
         "-c:v", "libx264", "-preset", "fast", "-crf", "23",
         "-c:a", "aac", "-b:a", "128k",
-        "-movflags", "+faststart",
+    ] + _movflags_args(output) + [
         output,
     ])
     _run_ffmpeg(args)
@@ -382,7 +393,7 @@ def merge(
                 "-f", "concat", "-safe", "0",
                 "-i", concat_file,
                 "-c", "copy",
-                "-movflags", "+faststart",
+            ] + _movflags_args(output) + [
                 output,
             ])
 
@@ -419,6 +430,12 @@ def _merge_with_transitions(
     cumulative = 0.0
     for i in range(n - 1):
         clip_dur = get_duration(clips[i])
+        if transition_duration >= clip_dur:
+            raise AgentCutError(
+                f"Transition duration ({transition_duration}s) must be less than "
+                f"clip {i+1} duration ({clip_dur:.1f}s)",
+                code="transition_too_long",
+            )
         cumulative += clip_dur - transition_duration
         offsets.append(cumulative)
 
@@ -456,7 +473,7 @@ def _merge_with_transitions(
             "-map", "[vout]", "-map", "[aout]",
             "-c:v", "libx264", "-preset", "fast", "-crf", "23",
             "-c:a", "aac", "-b:a", "128k",
-            "-movflags", "+faststart",
+        ] + _movflags_args(output) + [
             output,
         ]
     )
@@ -482,9 +499,9 @@ def add_text(
     coords = _position_coords(position)
     fontfile = font or _default_font()
 
-    # Escape single quotes in text for FFmpeg
+    # Escape single quotes and colons in text for FFmpeg
     escaped_text = text.replace("'", "'\\''")
-    escaped_text = text.replace(":", "\\:")
+    escaped_text = escaped_text.replace(":", "\\:")
 
     filter_parts = [
         f"drawtext=text='{escaped_text}'",
@@ -511,7 +528,7 @@ def add_text(
         "-vf", vf,
         "-c:v", "libx264", "-preset", "fast", "-crf", "23",
         "-c:a", "copy",
-        "-movflags", "+faststart",
+    ] + _movflags_args(output) + [
         output,
     ])
 
@@ -571,7 +588,7 @@ def add_audio(
             "-map", "0:v", "-map", "[aout]",
             "-c:v", "copy",
             "-c:a", "aac", "-b:a", "128k",
-            "-movflags", "+faststart",
+        ] + _movflags_args(output) + [
             output,
         ])
     else:
@@ -599,7 +616,7 @@ def add_audio(
             "-c:v", "copy",
             "-c:a", "aac", "-b:a", "128k",
             "-shortest",
-            "-movflags", "+faststart",
+        ] + _movflags_args(output) + [
             output,
         ])
         _run_ffmpeg(args)
@@ -628,6 +645,12 @@ def resize(
 
     if aspect_ratio and aspect_ratio in ASPECT_RATIOS:
         w, h = ASPECT_RATIOS[aspect_ratio]
+    elif aspect_ratio:
+        raise AgentCutError(
+            f"Unknown aspect ratio: {aspect_ratio}. "
+            f"Available: {', '.join(ASPECT_RATIOS.keys())}",
+            code="invalid_aspect_ratio",
+        )
     elif width and height:
         w, h = width, height
     elif width:
@@ -657,7 +680,7 @@ def resize(
         "-crf", str(preset["crf"]),
         "-preset", preset["preset"],
         "-c:a", "aac", "-b:a", "128k",
-        "-movflags", "+faststart",
+    ] + _movflags_args(output) + [
         output,
     ])
 
@@ -787,7 +810,7 @@ def speed(
             "-map", "[v]", "-map", "[a]",
             "-c:v", "libx264", "-preset", "fast", "-crf", "23",
             "-c:a", "aac", "-b:a", "128k",
-            "-movflags", "+faststart",
+        ] + _movflags_args(output) + [
             output,
         ])
     else:
@@ -796,7 +819,7 @@ def speed(
             "-vf", video_filter,
             "-an",
             "-c:v", "libx264", "-preset", "fast", "-crf", "23",
-            "-movflags", "+faststart",
+        ] + _movflags_args(output) + [
             output,
         ])
 
@@ -823,6 +846,10 @@ def thumbnail(
         # Grab frame at 10% of video duration
         dur = get_duration(input_path)
         timestamp = dur * 0.1
+    else:
+        # Clamp to valid range
+        dur = get_duration(input_path)
+        timestamp = min(timestamp, dur * 0.99)
 
     output = output_path or _auto_output(input_path, f"frame_{timestamp:.1f}s", ext=".jpg")
 
@@ -847,6 +874,8 @@ def preview(
 ) -> EditResult:
     """Generate a fast low-resolution preview for quick review."""
     _validate_input(input_path)
+    if scale_factor < 1:
+        raise AgentCutError("scale_factor must be at least 1", code="invalid_scale_factor")
     info = probe(input_path)
 
     w = max(info.width // scale_factor, 320)
@@ -861,7 +890,7 @@ def preview(
         "-crf", str(PREVIEW_PRESETS["crf"]),
         "-preset", PREVIEW_PRESETS["preset"],
         "-c:a", "aac", "-b:a", "64k", "-ac", "2",
-        "-movflags", "+faststart",
+    ] + _movflags_args(output) + [
         output,
     ])
 
@@ -883,6 +912,8 @@ def storyboard(
 ) -> StoryboardResult:
     """Extract key frames and create a storyboard grid for human review."""
     _validate_input(input_path)
+    if frame_count < 1:
+        raise AgentCutError("frame_count must be at least 1", code="invalid_frame_count")
     dur = get_duration(input_path)
 
     out_dir = output_dir or _auto_output_dir(input_path, "storyboard")
@@ -993,7 +1024,7 @@ def subtitles(
         "-vf", f"subtitles='{escaped_sub_path}':force_style='{escaped_style}'",
         "-c:v", "libx264", "-preset", "fast", "-crf", "23",
         "-c:a", "copy",
-        "-movflags", "+faststart",
+    ] + _movflags_args(output) + [
         output,
     ])
 
@@ -1044,7 +1075,7 @@ def watermark(
         f"[1:v]format=rgba,colorchannelmixer=aa={opacity_fmt}[wm];[0:v][wm]overlay={overlay_pos}",
         "-c:v", "libx264", "-preset", "fast", "-crf", "23",
         "-c:a", "copy",
-        "-movflags", "+faststart",
+    ] + _movflags_args(output) + [
         output,
     ])
 
