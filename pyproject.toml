@@ -38,5 +38,15 @@ Homepage = "https://github.com/pastorsimon1798/agentcut"
 Documentation = "https://github.com/pastorsimon1798/agentcut#readme"
 Repository = "https://github.com/pastorsimon1798/agentcut"
 
+[tool.hatch.build]
+exclude = [
+    ".venv/",
+    ".venv-build/",
+    "tests/",
+    "dist/",
+    "build/",
+    "*.egg-info/",
+]
+
 [tool.hatch.build.targets.wheel]
 packages = ["agentcut"]
