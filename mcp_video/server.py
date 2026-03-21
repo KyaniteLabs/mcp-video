@@ -10,6 +10,7 @@ from mcp.server.fastmcp import FastMCP
 from .engine import (
     add_audio,
     add_text,
+    apply_filter,
     convert,
     crop,
     edit_timeline,
@@ -17,10 +18,13 @@ from .engine import (
     extract_audio,
     fade,
     merge,
+    normalize_audio,
+    overlay_video,
     preview,
     probe,
     resize,
     rotate,
+    split_screen,
     storyboard,
     subtitles,
     speed,
@@ -31,8 +35,10 @@ from .engine import (
 from .errors import MCPVideoError
 from .models import (
     ExportFormat,
+    FilterType,
     Position,
     QualityLevel,
+    SplitLayout,
 )
 
 mcp = FastMCP(
@@ -185,8 +191,8 @@ def video_merge(
     Args:
         clips: List of absolute paths to video clips to merge (in order).
         output_path: Where to save the merged video. Auto-generated if omitted.
-        transition: Single transition type for all clip pairs (fade, dissolve, wipe-left, wipe-right, wipe-up, wipe-down).
-        transitions: Per-pair transition types (one per clip boundary). Overrides transition if both provided.
+        transition: Single transition type for all clip pairs (fade, dissolve, wipe-*).
+        transitions: Per-pair transition types. Overrides transition if both provided.
         transition_duration: Duration of each transition in seconds.
     """
     try:
@@ -557,33 +563,8 @@ def video_edit(
     The timeline JSON describes video clips, audio tracks, text overlays,
     transitions, and export settings in a single operation.
 
-    Example timeline:
-    {
-        "width": 1080,
-        "height": 1920,
-        "tracks": [
-            {
-                "type": "video",
-                "clips": [
-                    {"source": "intro.mp4", "start": 0, "duration": 5},
-                    {"source": "main.mp4", "start": 5, "trim_start": 10, "duration": 30}
-                ],
-                "transitions": [{"after_clip": 0, "type": "fade", "duration": 1.0}]
-            },
-            {
-                "type": "audio",
-                "clips": [{"source": "music.mp3", "start": 0, "volume": 0.7}]
-            },
-            {
-                "type": "text",
-                "elements": [{"text": "EPISODE 42", "start": 0, "duration": 3, "position": "top-center"}]
-            }
-        ],
-        "export": {"format": "mp4", "quality": "high"}
-    }
-
     Args:
-        timeline: JSON object describing the full edit timeline.
+        timeline: JSON object with keys: width, height, tracks (video/audio/text), export.
         output_path: Where to save the final video. Auto-generated if omitted.
     """
     try:
@@ -631,3 +612,218 @@ def video_extract_audio(
             error_type="processing_error",
             code="file_error",
         ))
+
+
+@mcp.tool()
+def video_filter(
+    input_path: str,
+    filter_type: str,
+    params: dict[str, Any] | None = None,
+    output_path: str | None = None,
+) -> dict[str, Any]:
+    """Apply a visual filter to a video.
+
+    Args:
+        input_path: Absolute path to the input video.
+        filter_type: Filter type (blur, sharpen, brightness, contrast, saturation, grayscale, sepia, invert, vignette, color_preset).
+        params: Optional filter parameters (e.g. radius for blur, preset for color_preset).
+        output_path: Where to save the output. Auto-generated if omitted.
+    """
+    try:
+        return _result(apply_filter(input_path, filter_type=filter_type, params=params, output_path=output_path))
+    except MCPVideoError as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_blur(
+    input_path: str,
+    radius: int = 5,
+    strength: int = 1,
+    output_path: str | None = None,
+) -> dict[str, Any]:
+    """Apply blur effect to a video.
+
+    Args:
+        input_path: Absolute path to the input video.
+        radius: Blur radius in pixels (default 5).
+        strength: Blur strength (default 1).
+        output_path: Where to save the output. Auto-generated if omitted.
+    """
+    try:
+        return _result(apply_filter(
+            input_path, filter_type="blur",
+            params={"radius": radius, "strength": strength},
+            output_path=output_path,
+        ))
+    except MCPVideoError as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_color_grade(
+    input_path: str,
+    preset: str = "warm",
+    output_path: str | None = None,
+) -> dict[str, Any]:
+    """Apply a color grading preset to a video.
+
+    Args:
+        input_path: Absolute path to the input video.
+        preset: Color preset (warm, cool, vintage, cinematic, noir).
+        output_path: Where to save the output. Auto-generated if omitted.
+    """
+    try:
+        return _result(apply_filter(
+            input_path, filter_type="color_preset",
+            params={"preset": preset},
+            output_path=output_path,
+        ))
+    except MCPVideoError as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_normalize_audio(
+    input_path: str,
+    target_lufs: float = -16.0,
+    output_path: str | None = None,
+) -> dict[str, Any]:
+    """Normalize audio loudness to a target LUFS level.
+
+    Common presets: -16 (YouTube), -23 (EBU R128/broadcast), -14 (Apple/Spotify).
+
+    Args:
+        input_path: Absolute path to the input video.
+        target_lufs: Target integrated loudness in LUFS (default -16 for YouTube).
+        output_path: Where to save the output. Auto-generated if omitted.
+    """
+    try:
+        return _result(normalize_audio(input_path, target_lufs=target_lufs, output_path=output_path))
+    except MCPVideoError as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_overlay(
+    background_path: str,
+    overlay_path: str,
+    position: str = "top-right",
+    width: int | None = None,
+    height: int | None = None,
+    opacity: float = 0.8,
+    start_time: float | None = None,
+    duration: float | None = None,
+    output_path: str | None = None,
+) -> dict[str, Any]:
+    """Picture-in-picture: overlay a video on top of another.
+
+    Args:
+        background_path: Absolute path to the background video.
+        overlay_path: Absolute path to the overlay video.
+        position: Position on screen (top-left, top-center, top-right, center, bottom-left, bottom-center, bottom-right).
+        width: Width to scale the overlay to (pixels).
+        height: Height to scale the overlay to (pixels).
+        opacity: Overlay opacity (0.0 to 1.0).
+        start_time: When the overlay appears (seconds).
+        duration: How long the overlay is visible (seconds).
+        output_path: Where to save the output. Auto-generated if omitted.
+    """
+    try:
+        return _result(overlay_video(
+            background_path, overlay_path=overlay_path, position=position,
+            width=width, height=height, opacity=opacity,
+            start_time=start_time, duration=duration,
+            output_path=output_path,
+        ))
+    except MCPVideoError as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_split_screen(
+    left_path: str,
+    right_path: str,
+    layout: str = "side-by-side",
+    output_path: str | None = None,
+) -> dict[str, Any]:
+    """Place two videos side by side or top/bottom.
+
+    Args:
+        left_path: Absolute path to the first video.
+        right_path: Absolute path to the second video.
+        layout: Layout type (side-by-side or top-bottom).
+        output_path: Where to save the output. Auto-generated if omitted.
+    """
+    try:
+        return _result(split_screen(left_path, right_path=right_path, layout=layout, output_path=output_path))
+    except MCPVideoError as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_batch(
+    inputs: list[str],
+    operation: str,
+    params: dict[str, Any] | None = None,
+    output_dir: str | None = None,
+) -> dict[str, Any]:
+    """Apply the same operation to multiple video files.
+
+    Args:
+        inputs: List of absolute paths to input video files.
+        operation: Operation (trim, resize, convert, filter, blur, color_grade, watermark, speed, fade, normalize_audio).
+        params: Parameters for the operation.
+        output_dir: Directory for output files. Auto-generated if omitted.
+    """
+    try:
+        if not inputs:
+            return _error_result(MCPVideoError("No input files provided", code="empty_inputs"))
+
+        params = params or {}
+        results = []
+        succeeded = 0
+        failed = 0
+
+        for input_path in inputs:
+            try:
+                if operation == "trim":
+                    result = trim(input_path, start=params.get("start", "0"), duration=params.get("duration"), end=params.get("end"))
+                elif operation == "resize":
+                    result = resize(input_path, width=params.get("width"), height=params.get("height"), aspect_ratio=params.get("aspect_ratio"), quality=params.get("quality", "high"))
+                elif operation == "convert":
+                    result = convert(input_path, format=params.get("format", "mp4"), quality=params.get("quality", "high"))
+                elif operation == "filter":
+                    result = apply_filter(input_path, filter_type=params.get("filter_type", "blur"), params=params.get("filter_params", {}))
+                elif operation == "blur":
+                    result = apply_filter(input_path, filter_type="blur", params=params.get("filter_params", {}))
+                elif operation == "color_grade":
+                    result = apply_filter(input_path, filter_type="color_preset", params={"preset": params.get("preset", "warm")})
+                elif operation == "watermark":
+                    result = watermark(input_path, image_path=params.get("image_path", ""), position=params.get("position", "bottom-right"), opacity=params.get("opacity", 0.7))
+                elif operation == "speed":
+                    result = speed(input_path, factor=params.get("factor", 1.0))
+                elif operation == "fade":
+                    result = fade(input_path, fade_in=params.get("fade_in", 0.5), fade_out=params.get("fade_out", 0.5))
+                elif operation == "normalize_audio":
+                    result = normalize_audio(input_path, target_lufs=params.get("target_lufs", -16.0))
+                else:
+                    results.append({"input": input_path, "success": False, "error": f"Unknown operation: {operation}"})
+                    failed += 1
+                    continue
+
+                results.append({"input": input_path, "success": True, "output_path": result.output_path})
+                succeeded += 1
+            except Exception as e:
+                results.append({"input": input_path, "success": False, "error": str(e)})
+                failed += 1
+
+        return {
+            "success": failed == 0,
+            "total": len(inputs),
+            "succeeded": succeeded,
+            "failed": failed,
+            "results": results,
+        }
+    except MCPVideoError as e:
+        return _error_result(e)

@@ -244,3 +244,77 @@ class TestClientFade:
         assert isinstance(result, EditResult)
         assert result.operation == "fade"
         assert os.path.isfile(result.output_path)
+
+
+class TestClientFilter:
+    @requires_filter("boxblur", "Blur filter")
+    def test_blur_returns_edit_result(self, editor, sample_video):
+        result = editor.filter(sample_video, filter_type="blur")
+        assert isinstance(result, EditResult)
+        assert os.path.isfile(result.output_path)
+
+    @requires_filter("eq", "Color preset filter")
+    def test_color_preset_returns_edit_result(self, editor, sample_video):
+        result = editor.filter(sample_video, filter_type="color_preset", params={"preset": "warm"})
+        assert isinstance(result, EditResult)
+        assert os.path.isfile(result.output_path)
+
+
+class TestClientBlur:
+    @requires_filter("boxblur", "Blur filter")
+    def test_blur_returns_edit_result(self, editor, sample_video):
+        result = editor.blur(sample_video)
+        assert isinstance(result, EditResult)
+        assert os.path.isfile(result.output_path)
+
+    @requires_filter("boxblur", "Blur filter")
+    def test_blur_with_params(self, editor, sample_video):
+        result = editor.blur(sample_video, radius=10, strength=2)
+        assert isinstance(result, EditResult)
+
+
+class TestClientColorGrade:
+    @requires_filter("eq", "Color preset filter")
+    def test_color_grade_returns_edit_result(self, editor, sample_video):
+        result = editor.color_grade(sample_video, preset="cinematic")
+        assert isinstance(result, EditResult)
+        assert os.path.isfile(result.output_path)
+
+
+class TestClientNormalizeAudio:
+    @requires_filter("loudnorm", "Audio normalization")
+    def test_normalize_audio_returns_edit_result(self, editor, sample_video):
+        result = editor.normalize_audio(sample_video)
+        assert isinstance(result, EditResult)
+        assert result.operation == "normalize_audio"
+        assert os.path.isfile(result.output_path)
+
+
+class TestClientOverlayVideo:
+    def test_overlay_returns_edit_result(self, editor, sample_video, sample_video_2):
+        result = editor.overlay_video(sample_video, sample_video_2)
+        assert isinstance(result, EditResult)
+        assert os.path.isfile(result.output_path)
+
+    def test_overlay_with_scale(self, editor, sample_video, sample_video_2):
+        result = editor.overlay_video(sample_video, sample_video_2, width=160, height=120)
+        assert isinstance(result, EditResult)
+
+
+class TestClientSplitScreen:
+    def test_split_screen_returns_edit_result(self, editor, sample_video, sample_video_2):
+        result = editor.split_screen(sample_video, sample_video_2)
+        assert isinstance(result, EditResult)
+        assert os.path.isfile(result.output_path)
+
+    def test_split_screen_top_bottom(self, editor, sample_video, sample_video_2):
+        result = editor.split_screen(sample_video, sample_video_2, layout="top-bottom")
+        assert isinstance(result, EditResult)
+
+
+class TestClientBatch:
+    def test_batch_returns_dict(self, editor, sample_video):
+        result = editor.batch([sample_video], operation="trim", params={"start": "0", "duration": "1"})
+        assert isinstance(result, dict)
+        assert result["success"] is True
+        assert result["succeeded"] == 1

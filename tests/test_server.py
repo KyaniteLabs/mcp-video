@@ -13,18 +13,25 @@ from mcp_video.server import (
     templates_resource,
     video_add_audio,
     video_add_text,
+    video_batch,
+    video_blur,
+    video_color_grade,
     video_convert,
     video_crop,
     video_edit,
     video_export,
     video_extract_audio,
     video_fade,
+    video_filter,
     video_info,
     video_merge,
+    video_normalize_audio,
+    video_overlay,
     video_preview,
     video_resize,
     video_rotate,
     video_speed,
+    video_split_screen,
     video_storyboard,
     video_thumbnail,
     video_trim,
@@ -65,6 +72,13 @@ class TestServerInitialization:
         assert "video_crop" in tool_names
         assert "video_rotate" in tool_names
         assert "video_fade" in tool_names
+        assert "video_filter" in tool_names
+        assert "video_blur" in tool_names
+        assert "video_color_grade" in tool_names
+        assert "video_normalize_audio" in tool_names
+        assert "video_overlay" in tool_names
+        assert "video_split_screen" in tool_names
+        assert "video_batch" in tool_names
 
     def test_resources_registered(self):
         # Verify templates resource is defined (can't call async list_resources in sync test)
@@ -304,3 +318,127 @@ class TestVideoFadeTool:
         result = video_fade(sample_video, fade_in=0, fade_out=0)
         assert result["success"] is False
         assert "error" in result
+
+
+class TestVideoFilterTool:
+    @requires_filter("boxblur", "Blur filter")
+    def test_blur_filter(self, sample_video):
+        result = video_filter(sample_video, filter_type="blur")
+        assert result["success"] is True
+        assert os.path.isfile(result["output_path"])
+
+    @requires_filter("eq", "Color preset filter")
+    def test_color_preset_filter(self, sample_video):
+        result = video_filter(sample_video, filter_type="color_preset", params={"preset": "warm"})
+        assert result["success"] is True
+        assert os.path.isfile(result["output_path"])
+
+    def test_error_on_missing_filter(self, sample_video):
+        if not _check_filter_available("boxblur"):
+            result = video_filter(sample_video, filter_type="blur")
+            assert result["success"] is False
+            assert "error" in result
+
+
+class TestVideoBlurTool:
+    @requires_filter("boxblur", "Blur filter")
+    def test_blur_default(self, sample_video):
+        result = video_blur(sample_video)
+        assert result["success"] is True
+        assert os.path.isfile(result["output_path"])
+
+    @requires_filter("boxblur", "Blur filter")
+    def test_blur_custom_radius(self, sample_video):
+        result = video_blur(sample_video, radius=10, strength=2)
+        assert result["success"] is True
+
+
+class TestVideoColorGradeTool:
+    @requires_filter("eq", "Color preset filter")
+    def test_warm_preset(self, sample_video):
+        result = video_color_grade(sample_video, preset="warm")
+        assert result["success"] is True
+        assert os.path.isfile(result["output_path"])
+
+
+class TestVideoNormalizeAudioTool:
+    @requires_filter("loudnorm", "Audio normalization")
+    def test_normalize_default(self, sample_video):
+        result = video_normalize_audio(sample_video)
+        assert result["success"] is True
+        assert os.path.isfile(result["output_path"])
+        assert result["operation"] == "normalize_audio"
+
+    @requires_filter("loudnorm", "Audio normalization")
+    def test_normalize_broadcast(self, sample_video):
+        result = video_normalize_audio(sample_video, target_lufs=-23.0)
+        assert result["success"] is True
+
+
+class TestVideoOverlayTool:
+    def test_overlay_default(self, sample_video, sample_video_2):
+        result = video_overlay(sample_video, overlay_path=sample_video_2)
+        assert result["success"] is True
+        assert os.path.isfile(result["output_path"])
+
+    def test_overlay_with_scale(self, sample_video, sample_video_2):
+        result = video_overlay(sample_video, overlay_path=sample_video_2, width=160, height=120)
+        assert result["success"] is True
+
+    def test_error_on_missing_file(self, sample_video):
+        result = video_overlay(sample_video, overlay_path="/nonexistent/video.mp4")
+        assert result["success"] is False
+        assert "error" in result
+
+
+class TestVideoSplitScreenTool:
+    def test_side_by_side(self, sample_video, sample_video_2):
+        result = video_split_screen(sample_video, right_path=sample_video_2)
+        assert result["success"] is True
+        assert os.path.isfile(result["output_path"])
+
+    def test_top_bottom(self, sample_video, sample_video_2):
+        result = video_split_screen(sample_video, right_path=sample_video_2, layout="top-bottom")
+        assert result["success"] is True
+
+
+class TestVideoBatchTool:
+    def test_batch_trim(self, sample_video):
+        result = video_batch(
+            [sample_video, sample_video],
+            operation="trim",
+            params={"start": "0", "duration": "1"},
+        )
+        assert result["success"] is True
+        assert result["total"] == 2
+        assert result["succeeded"] == 2
+        assert result["failed"] == 0
+
+    def test_batch_convert(self, sample_video):
+        result = video_batch(
+            [sample_video],
+            operation="convert",
+            params={"format": "webm"},
+        )
+        assert result["success"] is True
+        assert result["succeeded"] == 1
+
+    def test_batch_empty_inputs(self):
+        result = video_batch([], operation="trim")
+        assert result["success"] is False
+        assert "error" in result
+
+    def test_batch_unknown_operation(self, sample_video):
+        result = video_batch([sample_video], operation="nonexistent")
+        assert result["success"] is False
+        assert result["failed"] == 1
+
+    def test_batch_partial_failure(self, sample_video):
+        result = video_batch(
+            [sample_video, "/nonexistent/video.mp4"],
+            operation="trim",
+            params={"start": "0", "duration": "1"},
+        )
+        assert result["success"] is False
+        assert result["succeeded"] == 1
+        assert result["failed"] == 1

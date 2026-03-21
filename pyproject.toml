@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mcp-video"
-version = "0.2.0"
+version = "0.3.0"
 description = "Video editing MCP server for AI agents"
 readme = "README.md"
 license = "Apache-2.0"
@@ -50,3 +50,8 @@ exclude = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["mcp_video"]
+
+[tool.pytest.ini_options]
+markers = [
+    "slow: marks tests as slow (real-media integration tests)",
+]

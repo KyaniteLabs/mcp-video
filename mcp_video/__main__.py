@@ -160,6 +160,58 @@ def main() -> None:
     edit_p.add_argument("timeline", help="Path to timeline JSON file")
     edit_p.add_argument("-o", "--output", help="Output file path")
 
+    # filter
+    filter_p = subparsers.add_parser("filter", help="Apply a visual filter")
+    filter_p.add_argument("input", help="Input video file")
+    filter_p.add_argument("-t", "--type", dest="filter_type", required=True, choices=["blur", "sharpen", "brightness", "contrast", "saturation", "grayscale", "sepia", "invert", "vignette", "color_preset"], help="Filter type")
+    filter_p.add_argument("--params", help="Filter parameters as JSON")
+    filter_p.add_argument("-o", "--output", help="Output file path")
+
+    # blur (convenience)
+    blur_p = subparsers.add_parser("blur", help="Apply blur effect")
+    blur_p.add_argument("input", help="Input video file")
+    blur_p.add_argument("-r", "--radius", type=int, default=5, help="Blur radius (default: 5)")
+    blur_p.add_argument("-s", "--strength", type=int, default=1, help="Blur strength (default: 1)")
+    blur_p.add_argument("-o", "--output", help="Output file path")
+
+    # color-grade (convenience)
+    grade_p = subparsers.add_parser("color-grade", help="Apply color grading preset")
+    grade_p.add_argument("input", help="Input video file")
+    grade_p.add_argument("-p", "--preset", default="warm", choices=["warm", "cool", "vintage", "cinematic", "noir"], help="Color preset")
+    grade_p.add_argument("-o", "--output", help="Output file path")
+
+    # normalize-audio
+    norm_p = subparsers.add_parser("normalize-audio", help="Normalize audio loudness")
+    norm_p.add_argument("input", help="Input video file")
+    norm_p.add_argument("-l", "--lufs", type=float, default=-16.0, help="Target LUFS (default: -16 for YouTube)")
+    norm_p.add_argument("-o", "--output", help="Output file path")
+
+    # overlay-video
+    overlay_p = subparsers.add_parser("overlay-video", help="Picture-in-picture overlay")
+    overlay_p.add_argument("background", help="Background video file")
+    overlay_p.add_argument("overlay", help="Overlay video file")
+    overlay_p.add_argument("-p", "--position", default="top-right", choices=["top-left", "top-center", "top-right", "center-left", "center", "center-right", "bottom-left", "bottom-center", "bottom-right"])
+    overlay_p.add_argument("-w", "--width", type=int, help="Overlay width")
+    overlay_p.add_argument("--height", type=int, help="Overlay height")
+    overlay_p.add_argument("--opacity", type=float, default=0.8, help="Overlay opacity (0.0-1.0)")
+    overlay_p.add_argument("--start-time", type=float, help="When overlay appears (seconds)")
+    overlay_p.add_argument("--duration", type=float, help="How long overlay is visible (seconds)")
+    overlay_p.add_argument("-o", "--output", help="Output file path")
+
+    # split-screen
+    split_p = subparsers.add_parser("split-screen", help="Place two videos side by side or top/bottom")
+    split_p.add_argument("left", help="First video file")
+    split_p.add_argument("right", help="Second video file")
+    split_p.add_argument("-l", "--layout", default="side-by-side", choices=["side-by-side", "top-bottom"], help="Layout type")
+    split_p.add_argument("-o", "--output", help="Output file path")
+
+    # batch
+    batch_p = subparsers.add_parser("batch", help="Apply operation to multiple files")
+    batch_p.add_argument("inputs", nargs="+", help="Input video files")
+    batch_p.add_argument("-o", "--operation", required=True, choices=["trim", "resize", "convert", "filter", "blur", "color_grade", "watermark", "speed", "fade", "normalize_audio"], help="Operation to apply")
+    batch_p.add_argument("--params", help="Operation parameters as JSON")
+    batch_p.add_argument("-d", "--output-dir", help="Output directory")
+
     args = parser.parse_args()
 
     # Default mode: run MCP server
@@ -286,6 +338,48 @@ def main() -> None:
             from .engine import edit_timeline
             result = edit_timeline(tl, output_path=args.output)
             print(json.dumps(result.model_dump(), indent=2))
+
+        elif args.command == "filter":
+            from .engine import apply_filter
+            params = json.loads(args.params) if args.params else {}
+            result = apply_filter(args.input, filter_type=args.filter_type, params=params, output_path=args.output)
+            print(json.dumps(result.model_dump(), indent=2))
+
+        elif args.command == "blur":
+            from .engine import apply_filter
+            result = apply_filter(args.input, filter_type="blur", params={"radius": args.radius, "strength": args.strength}, output_path=args.output)
+            print(json.dumps(result.model_dump(), indent=2))
+
+        elif args.command == "color-grade":
+            from .engine import apply_filter
+            result = apply_filter(args.input, filter_type="color_preset", params={"preset": args.preset}, output_path=args.output)
+            print(json.dumps(result.model_dump(), indent=2))
+
+        elif args.command == "normalize-audio":
+            from .engine import normalize_audio
+            result = normalize_audio(args.input, target_lufs=args.lufs, output_path=args.output)
+            print(json.dumps(result.model_dump(), indent=2))
+
+        elif args.command == "overlay-video":
+            from .engine import overlay_video
+            result = overlay_video(
+                args.background, overlay_path=args.overlay, position=args.position,
+                width=args.width, height=args.height, opacity=args.opacity,
+                start_time=args.start_time, duration=args.duration,
+                output_path=args.output,
+            )
+            print(json.dumps(result.model_dump(), indent=2))
+
+        elif args.command == "split-screen":
+            from .engine import split_screen
+            result = split_screen(args.left, right_path=args.right, layout=args.layout, output_path=args.output)
+            print(json.dumps(result.model_dump(), indent=2))
+
+        elif args.command == "batch":
+            from .server import video_batch
+            params = json.loads(args.params) if args.params else {}
+            result = video_batch(args.inputs, operation=args.operation, params=params, output_dir=args.output_dir)
+            print(json.dumps(result, indent=2))
 
     except Exception as e:
         from .errors import MCPVideoError

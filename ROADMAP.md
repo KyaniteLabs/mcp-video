@@ -13,12 +13,15 @@ Bugs fixed, 0.1.1 shipped. Here's what would make mcp-video genuinely better to 
 
 ## Medium Impact (Makes the API less frustrating)
 
+- [x] **Video effects/filters** — Blur, sharpen, color grading, color presets (warm/cool/vintage/cinematic/noir), grayscale, sepia, invert, vignette. *(Shipped in v0.3.0 as `video_filter`, `video_blur`, `video_color_grade`)*
+- [x] **Audio editing** — Audio normalization to LUFS targets (YouTube -16, broadcast -23, Spotify -14). *(Shipped in v0.3.0 as `video_normalize_audio`)*
+
 - [ ] **Crop by percentage** — Currently requires pixel math (`width=1920, height=1080`). Add `crop_percent: 50` so "center 50%" just works. The engine calculates pixels internally.
 - [ ] **Orientation-aware metadata** — `video_info` reports raw stream dimensions (3840x2160) for a portrait phone video that displays as 2160x3840. Read the rotation/side_data metadata from ffprobe and report display orientation.
 - [ ] **Merge auto-concat** — When merging clips with different resolutions/codecs, auto-normalize instead of failing. The error message suggests this but doesn't do it.
 - [ ] **convert vs export clarity** — Both do similar things. Either merge them or make the distinction obvious in the tool descriptions. Right now users (and agents) have to guess which to use.
 - [ ] **Template preview** — Before running a template, return what it *would* do (operations list, estimated output size, duration). Lets agents confirm before committing to a 30-second render.
-- [ ] **Batch operations** — Accept multiple inputs for a single operation. "Trim these 5 videos to 10 seconds each" in one call instead of 5.
+- [x] **Batch operations** — Accept multiple inputs for a single operation. "Trim these 5 videos to 10 seconds each" in one call instead of 5. *(Shipped in v0.3.0 as `video_batch`)*
 
 ## Low Impact (Nice to have)
 
@@ -33,11 +36,9 @@ Bugs fixed, 0.1.1 shipped. Here's what would make mcp-video genuinely better to 
 
 - [ ] **Usage analytics** — Optional anonymous ping on startup: version, Python version, OS. Just a single HTTP call, no tracking. Know how many people actually use it.
 - [ ] **Structured logging** — Currently silent on success. Add a `--verbose` flag and optional log file. Helps users debug their own issues before filing them.
-- [ ] **GitHub Actions CI** — Run the full test suite on push. Catch regressions before they ship. Currently manual.
+- [x] **GitHub Actions CI** — Run the full test suite on push. Catch regressions before they ship. Currently manual. *(Shipped in v0.2.x)*
 
 ## Not Doing (Intentionally out of scope)
 
-- **Video effects/filters** — Blur, sharpen, color grading. That's DaVinci Resolve territory.
-- **Audio editing** — EQ, compression, noise removal. Use a dedicated audio tool.
 - **Streaming** — RTMP, HLS output. Different domain.
 - **GPU acceleration** — Keep it simple. CPU FFmpeg is fast enough for the target use case.
