@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgentCut — Video Editing for AI Agents</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #0a0a0f;
+            --bg2: #12121a;
+            --bg3: #1a1a2e;
+            --text: #e4e4e7;
+            --text2: #a1a1aa;
+            --text3: #71717a;
+            --accent: #6366f1;
+            --accent2: #818cf8;
+            --green: #22c55e;
+            --orange: #f97316;
+            --border: #27272a;
+            --radius: 12px;
+            --mono: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ---- NAV ---- */
+        nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+            background: rgba(10,10,15,0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            padding: 0 2rem;
+            height: 60px;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        nav .logo { font-weight: 700; font-size: 1.1rem; letter-spacing: -0.02em; }
+        nav .logo span { color: var(--accent2); }
+        nav .links { display: flex; gap: 1.5rem; }
+        nav .links a {
+            color: var(--text2); text-decoration: none; font-size: 0.9rem;
+            transition: color 0.2s;
+        }
+        nav .links a:hover { color: var(--text); }
+
+        /* ---- HERO ---- */
+        .hero {
+            max-width: 900px; margin: 0 auto;
+            padding: 140px 2rem 80px;
+            text-align: center;
+        }
+        .hero h1 {
+            font-size: clamp(2.5rem, 6vw, 4rem);
+            font-weight: 800;
+            letter-spacing: -0.04em;
+            line-height: 1.1;
+            margin-bottom: 1.2rem;
+        }
+        .hero h1 .gradient {
+            background: linear-gradient(135deg, var(--accent2), var(--orange));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .hero .subtitle {
+            font-size: 1.2rem;
+            color: var(--text2);
+            max-width: 600px;
+            margin: 0 auto 2rem;
+        }
+        .hero .badges {
+            display: flex; gap: 0.75rem; justify-content: center;
+            flex-wrap: wrap; margin-bottom: 2.5rem;
+        }
+        .badge {
+            display: inline-flex; align-items: center; gap: 0.4rem;
+            background: var(--bg2); border: 1px solid var(--border);
+            border-radius: 999px; padding: 0.35rem 0.9rem;
+            font-size: 0.8rem; color: var(--text2);
+        }
+        .badge .dot { width: 6px; height: 6px; border-radius: 50%; }
+        .badge .dot.green { background: var(--green); }
+        .badge .dot.blue { background: var(--accent); }
+        .badge .dot.orange { background: var(--orange); }
+        .hero .cta-row { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+        .btn {
+            display: inline-flex; align-items: center; gap: 0.5rem;
+            padding: 0.75rem 1.5rem; border-radius: var(--radius);
+            font-size: 0.95rem; font-weight: 600; text-decoration: none;
+            transition: all 0.2s; border: none; cursor: pointer;
+        }
+        .btn-primary {
+            background: var(--accent); color: white;
+        }
+        .btn-primary:hover { background: var(--accent2); }
+        .btn-secondary {
+            background: var(--bg2); color: var(--text); border: 1px solid var(--border);
+        }
+        .btn-secondary:hover { border-color: var(--text3); }
+
+        /* ---- SECTIONS ---- */
+        section {
+            max-width: 1100px; margin: 0 auto;
+            padding: 80px 2rem;
+        }
+        .section-label {
+            font-size: 0.8rem; font-weight: 600; text-transform: uppercase;
+            letter-spacing: 0.1em; color: var(--accent2);
+            margin-bottom: 0.75rem;
+        }
+        .section-title {
+            font-size: clamp(1.8rem, 4vw, 2.5rem);
+            font-weight: 700; letter-spacing: -0.03em;
+            margin-bottom: 1rem; line-height: 1.2;
+        }
+        .section-desc {
+            color: var(--text2); font-size: 1.05rem;
+            max-width: 650px; margin-bottom: 3rem;
+        }
+
+        /* ---- GRID CARDS ---- */
+        .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; }
+        .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem; }
+
+        .card {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+        }
+        .card h3 {
+            font-size: 1.05rem; font-weight: 600; margin-bottom: 0.5rem;
+        }
+        .card p { color: var(--text2); font-size: 0.9rem; line-height: 1.5; }
+
+        /* ---- CODE ---- */
+        .code-block {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+        }
+        .code-block pre {
+            font-family: var(--mono);
+            font-size: 0.85rem;
+            line-height: 1.7;
+            color: var(--text2);
+            white-space: pre;
+        }
+        .code-block .comment { color: var(--text3); }
+        .code-block .keyword { color: var(--accent2); }
+        .code-block .string { color: var(--green); }
+        .code-block .func { color: #f0abfc; }
+        .code-block .param { color: #fbbf24; }
+
+        /* ---- TABLE ---- */
+        .table-wrap {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+        table {
+            width: 100%; border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+        thead { background: var(--bg3); }
+        th {
+            text-align: left; padding: 0.75rem 1rem;
+            font-weight: 600; font-size: 0.8rem;
+            text-transform: uppercase; letter-spacing: 0.05em;
+            color: var(--text2);
+        }
+        td {
+            padding: 0.6rem 1rem;
+            border-top: 1px solid var(--border);
+        }
+        td:first-child { font-family: var(--mono); font-size: 0.82rem; color: var(--accent2); }
+        td:last-child { color: var(--text2); }
+
+        /* ---- DIVIDER ---- */
+        hr {
+            border: none;
+            border-top: 1px solid var(--border);
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        /* ---- FEATURE CARDS ---- */
+        .feature-card {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 2rem;
+        }
+        .feature-card .icon {
+            width: 44px; height: 44px;
+            background: var(--bg3);
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+        }
+        .feature-card h3 { font-size: 1.05rem; font-weight: 600; margin-bottom: 0.5rem; }
+        .feature-card p { color: var(--text2); font-size: 0.9rem; }
+
+        /* ---- WORKFLOW ---- */
+        .workflow {
+            display: flex; align-items: center; gap: 0.5rem;
+            flex-wrap: wrap; margin: 2rem 0;
+        }
+        .workflow .step {
+            background: var(--bg3);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.6rem 1rem;
+            font-size: 0.85rem;
+            font-family: var(--mono);
+        }
+        .workflow .arrow { color: var(--text3); font-size: 1.2rem; }
+
+        /* ---- FOOTER ---- */
+        footer {
+            max-width: 1100px; margin: 0 auto;
+            padding: 3rem 2rem;
+            border-top: 1px solid var(--border);
+            display: flex; justify-content: space-between;
+            align-items: center; flex-wrap: wrap; gap: 1rem;
+            color: var(--text3); font-size: 0.85rem;
+        }
+        footer a { color: var(--text2); text-decoration: none; }
+        footer a:hover { color: var(--text); }
+
+        /* ---- RESPONSIVE ---- */
+        @media (max-width: 768px) {
+            nav .links { display: none; }
+            .hero { padding: 120px 1.5rem 60px; }
+            section { padding: 50px 1.5rem; }
+            .grid-2, .grid-3 { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+    <div class="logo">agent<span>cut</span></div>
+    <div class="links">
+        <a href="#how-it-works">How It Works</a>
+        <a href="#tools">Tools</a>
+        <a href="#interfaces">Interfaces</a>
+        <a href="#testing">Testing</a>
+        <a href="https://github.com/Pastorsimon1798/agentcut">GitHub</a>
+    </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+    <h1>
+        Video editing<br>
+        <span class="gradient">for AI agents.</span>
+    </h1>
+    <p class="subtitle">
+        16 MCP tools that give Claude Code, Cursor, and any AI agent the ability to trim, merge, overlay text, sync audio, and export video. Local, fast, free.
+    </p>
+    <div class="badges">
+        <div class="badge"><div class="dot green"></div> 234 tests passing</div>
+        <div class="badge"><div class="dot blue"></div> 16 MCP tools</div>
+        <div class="badge"><div class="dot orange"></div> 3 interfaces</div>
+    </div>
+    <div class="cta-row">
+        <a class="btn btn-primary" href="https://github.com/Pastorsimon1798/agentcut">View on GitHub</a>
+        <a class="btn btn-secondary" href="#quickstart">pip install agentcut</a>
+    </div>
+</div>
+
+<hr>
+
+<!-- PROBLEM -->
+<section id="how-it-works">
+    <div class="section-label">The Problem</div>
+    <div class="section-title">AI agents can't edit video. Until now.</div>
+    <p class="section-desc">
+        AI agents can write code, analyze documents, browse the web, create images — but video editing?
+        Existing tools are either GUI-only (agents can't click buttons), raw FFmpeg wrappers (agents can't
+        memorize 500 flags), or cloud APIs (expensive, slow, vendor lock-in). AgentCut bridges this gap.
+    </p>
+    <div class="grid-3">
+        <div class="feature-card">
+            <div class="icon">&#9881;</div>
+            <h3>16 Video Editing Tools</h3>
+            <p>Trim, merge, add text, sync audio, resize, convert, speed change, watermarks, subtitles, storyboards, and more.</p>
+        </div>
+        <div class="feature-card">
+            <div class="icon">&#9889;</div>
+            <h3>Model Context Protocol</h3>
+            <p>Standard MCP server. Works with Claude Code, Cursor, Windsurf, and any MCP-compatible client. Zero custom integration needed.</p>
+        </div>
+        <div class="feature-card">
+            <div class="icon">&#128274;</div>
+            <h3>Local & Private</h3>
+            <p>Runs on your machine. No cloud uploads, no API keys, no per-minute billing. Your video never leaves your computer.</p>
+        </div>
+    </div>
+</section>
+
+<hr>
+
+<!-- TOOLS -->
+<section id="tools">
+    <div class="section-label">Capabilities</div>
+    <div class="section-title">16 tools. Every operation you need.</div>
+    <p class="section-desc">
+        Every tool returns structured JSON. On success, you get output paths, duration, resolution. On failure, you get error types with auto-fix suggestions.
+    </p>
+
+    <div class="table-wrap" style="margin-bottom: 1.5rem;">
+        <table>
+            <thead>
+                <tr><th>Tool</th><th>What It Does</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>video_info</td><td>Get metadata: duration, resolution, codec, fps, file size</td></tr>
+                <tr><td>video_trim</td><td>Trim clip by start time + duration or end time</td></tr>
+                <tr><td>video_merge</td><td>Concatenate multiple clips with optional transitions</td></tr>
+                <tr><td>video_add_text</td><td>Overlay text, titles, captions with custom positioning</td></tr>
+                <tr><td>video_add_audio</td><td>Add, replace, or mix audio tracks with fade effects</td></tr>
+                <tr><td>video_resize</td><td>Change resolution or apply preset aspect ratios</td></tr>
+                <tr><td>video_convert</td><td>Convert between mp4, webm, gif, mov</td></tr>
+                <tr><td>video_speed</td><td>Speed up or slow down (slow-mo, time-lapse)</td></tr>
+                <tr><td>video_thumbnail</td><td>Extract a single frame at any timestamp</td></tr>
+                <tr><td>video_preview</td><td>Generate fast low-res preview for quick review</td></tr>
+                <tr><td>video_storyboard</td><td>Extract key frames + create grid for review</td></tr>
+                <tr><td>video_subtitles</td><td>Burn SRT/VTT subtitles into the video</td></tr>
+                <tr><td>video_watermark</td><td>Add image watermark with opacity control</td></tr>
+                <tr><td>video_export</td><td>Render final video with quality presets</td></tr>
+                <tr><td>video_edit</td><td>Full timeline-based edit (JSON DSL for complex edits)</td></tr>
+                <tr><td>video_extract_audio</td><td>Extract audio as mp3, wav, aac, ogg, or flac</td></tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<hr>
+
+<!-- INTERFACES -->
+<section id="interfaces">
+    <div class="section-label">Three Interfaces</div>
+    <div class="section-title">However you want to use it.</div>
+    <p class="section-desc">
+        AgentCut works as an MCP server for AI agents, a Python library for scripts, and a CLI tool for the terminal.
+    </p>
+
+    <div class="grid-2">
+        <div>
+            <h3 style="margin-bottom: 0.75rem;">MCP Server (for AI agents)</h3>
+            <p style="color: var(--text2); font-size: 0.9rem; margin-bottom: 1rem;">
+                Add to your Claude Code or Cursor MCP config. Then just talk to your agent.
+            </p>
+            <div class="code-block"><pre>{
+  <span class="string">"mcpServers"</span>: {
+    <span class="string">"agentcut"</span>: {
+      <span class="string">"command"</span>: <span class="string">"uvx"</span>,
+      <span class="string">"args"</span>: [<span class="string">"agentcut"</span>]
+    }
+  }
+}</pre></div>
+            <p style="color: var(--text3); font-size: 0.85rem; margin-top: 0.5rem;">
+                Then: *"Trim this video from 0:30 to 1:00, add a title, and export for TikTok."*
+            </p>
+        </div>
+        <div>
+            <h3 style="margin-bottom: 0.75rem;">Python Client</h3>
+            <p style="color: var(--text2); font-size: 0.9rem; margin-bottom: 1rem;">
+                Clean API for automation, pipelines, and batch processing.
+            </p>
+            <div class="code-block"><pre><span class="keyword">from</span> agentcut <span class="keyword">import</span> Client
+
+editor = <span class="func">Client</span>()
+clip = editor.<span class="func">trim</span>(<span class="string">"v.mp4"</span>, start=<span class="string">"0:30"</span>, duration=<span class="string">"15"</span>)
+final = editor.<span class="func">resize</span>(clip.output_path, aspect_ratio=<span class="string">"9:16"</span>)
+result = editor.<span class="func">export</span>(final.output_path)
+<span class="func">print</span>(result.resolution)  <span class="comment"># 1080x1920</span></pre></div>
+        </div>
+    </div>
+
+    <div style="margin-top: 2rem;">
+        <h3 style="margin-bottom: 0.75rem;">CLI Tool</h3>
+        <div class="code-block"><pre><span class="comment"># Get info</span>
+$ agentcut info video.mp4
+
+<span class="comment"># Trim and convert</span>
+$ agentcut trim video.mp4 -s 0:30 -d 15
+$ agentcut convert video.mp4 -f webm -q high
+
+<span class="comment"># Generate storyboard</span>
+$ agentcut storyboard video.mp4 -n 12</pre></div>
+    </div>
+</section>
+
+<hr>
+
+<!-- TIMELINE DSL -->
+<section id="timeline">
+    <div class="section-label">Timeline DSL</div>
+    <div class="section-title">Complex edits in a single JSON object.</div>
+    <p class="section-desc">
+        Describe multi-track edits with video clips, audio, text overlays, transitions, and export settings — all in one call.
+    </p>
+    <div class="code-block"><pre>editor.<span class="func">edit</span>({
+    <span class="string">"width"</span>: <span class="param">1080</span>, <span class="string">"height"</span>: <span class="param">1920</span>,
+    <span class="string">"tracks"</span>: [
+        {
+            <span class="string">"type"</span>: <span class="string">"video"</span>,
+            <span class="string">"clips"</span>: [
+                {<span class="string">"source"</span>: <span class="string">"intro.mp4"</span>, <span class="string">"duration"</span>: <span class="param">5</span>},
+                {<span class="string">"source"</span>: <span class="string">"main.mp4"</span>, <span class="string">"trim_start"</span>: <span class="param">10</span>, <span class="string">"duration"</span>: <span class="param">30</span>},
+            ],
+            <span class="string">"transitions"</span>: [{<span class="string">"after_clip"</span>: <span class="param">0</span>, <span class="string">"type"</span>: <span class="string">"fade"</span>, <span class="string">"duration"</span>: <span class="param">1.0</span>}],
+        },
+        {
+            <span class="string">"type"</span>: <span class="string">"audio"</span>,
+            <span class="string">"clips"</span>: [{<span class="string">"source"</span>: <span class="string">"music.mp3"</span>, <span class="string">"volume"</span>: <span class="param">0.7</span>}],
+        },
+        {
+            <span class="string">"type"</span>: <span class="string">"text"</span>,
+            <span class="string">"elements"</span>: [{<span class="string">"text"</span>: <span class="string">"EPISODE 42"</span>, <span class="string">"position"</span>: <span class="string">"top-center"</span>}],
+        },
+    ],
+    <span class="string">"export"</span>: {<span class="string">"format"</span>: <span class="string">"mp4"</span>, <span class="string">"quality"</span>: <span class="string">"high"</span>},
+})</pre></div>
+</section>
+
+<hr>
+
+<!-- TEMPLATES -->
+<section id="templates">
+    <div class="section-label">Templates</div>
+    <div class="section-title">One function per platform.</div>
+    <p class="section-desc">
+        Pre-built templates handle the correct dimensions, text positioning, and export settings for each social media platform.
+    </p>
+    <div class="grid-3">
+        <div class="card">
+            <h3>TikTok</h3>
+            <p>9:16, 1080x1920. Caption at bottom-center. Optional background music at volume 0.5.</p>
+        </div>
+        <div class="card">
+            <h3>YouTube Shorts</h3>
+            <p>9:16, title at top-center with size 42. Same format as TikTok but different text placement.</p>
+        </div>
+        <div class="card">
+            <h3>Instagram Reel</h3>
+            <p>9:16, caption at bottom-center. Clean, simple template.</p>
+        </div>
+        <div class="card">
+            <h3>YouTube Video</h3>
+            <p>16:9, 1920x1080. Supports title card (3s), outro clip, and background music.</p>
+        </div>
+        <div class="card">
+            <h3>Instagram Post</h3>
+            <p>1:1, 1080x1080. Square format with optional caption overlay.</p>
+        </div>
+        <div class="card">
+            <h3>Custom</h3>
+            <p>Build your own with the Timeline DSL. Any dimensions, any number of tracks.</p>
+        </div>
+    </div>
+</section>
+
+<hr>
+
+<!-- TESTING -->
+<section id="testing">
+    <div class="section-label">Quality</div>
+    <div class="section-title">234 tests. Full testing pyramid.</div>
+    <p class="section-desc">
+        Every model, error class, template, tool, and workflow is tested. Unit tests don't even need FFmpeg installed.
+    </p>
+    <div class="grid-3">
+        <div class="card" style="text-align: center;">
+            <div style="font-size: 2rem; font-weight: 800; color: var(--accent2);">104</div>
+            <div style="font-size: 0.85rem; color: var(--text2);">Unit tests (no FFmpeg)</div>
+            <div style="font-size: 0.75rem; color: var(--text3); margin-top: 0.5rem;">Models, errors, templates</div>
+        </div>
+        <div class="card" style="text-align: center;">
+            <div style="font-size: 2rem; font-weight: 800; color: var(--green);">122</div>
+            <div style="font-size: 0.85rem; color: var(--text2);">Integration tests</div>
+            <div style="font-size: 0.75rem; color: var(--text3); margin-top: 0.5rem;">Client, server, engine, CLI</div>
+        </div>
+        <div class="card" style="text-align: center;">
+            <div style="font-size: 2rem; font-weight: 800; color: var(--orange);">8</div>
+            <div style="font-size: 0.85rem; color: var(--text2);">E2E workflow tests</div>
+            <div style="font-size: 0.75rem; color: var(--text3); margin-top: 0.5rem;">TikTok, YouTube, GIF, speed</div>
+        </div>
+    </div>
+</section>
+
+<hr>
+
+<!-- QUICK START -->
+<section id="quickstart">
+    <div class="section-label">Get Started</div>
+    <div class="section-title">Up and running in 60 seconds.</div>
+    <div class="workflow">
+        <div class="step">1. Install FFmpeg</div>
+        <div class="arrow">&rarr;</div>
+        <div class="step">2. pip install agentcut</div>
+        <div class="arrow">&rarr;</div>
+        <div class="step">3. Add to MCP config</div>
+        <div class="arrow">&rarr;</div>
+        <div class="step">4. Start editing</div>
+    </div>
+    <div class="code-block"><pre><span class="comment"># 1. Install FFmpeg (if you don't have it)</span>
+brew install ffmpeg
+
+<span class="comment"># 2. Install AgentCut</span>
+pip install agentcut
+
+<span class="comment"># 3. Add to your Claude Code MCP config</span>
+<span class="comment"># (Settings > MCP Servers > Add > agentcut)</span>
+
+<span class="comment"># 4. Start editing!</span>
+<span class="comment"># Just tell your agent what you want:</span>
+<span class="comment"># "Trim this video to 30 seconds and add a title"</span></pre></div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+    <div>AgentCut &mdash; Apache 2.0 License</div>
+    <div>
+        <a href="https://github.com/Pastorsimon1798/agentcut">GitHub</a> &bull;
+        <a href="https://github.com/Pastorsimon1798/agentcut/issues">Issues</a> &bull;
+        Built with FFmpeg + MCP
+    </div>
+</footer>
+
+</body>
+</html>

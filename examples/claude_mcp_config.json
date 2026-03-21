@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "agentcut": {
+      "command": "uvx",
+      "args": ["agentcut"]
+    }
+  }
+}
