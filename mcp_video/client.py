@@ -7,6 +7,7 @@ from typing import Any, Literal
 from .engine import (
     add_audio as _add_audio,
     add_text as _add_text,
+    apply_filter as _apply_filter,
     convert as _convert,
     crop as _crop,
     edit_timeline as _edit_timeline,
@@ -14,10 +15,13 @@ from .engine import (
     extract_audio as _extract_audio,
     fade as _fade,
     merge as _merge,
+    normalize_audio as _normalize_audio,
+    overlay_video as _overlay_video,
     preview as _preview,
     probe as _probe,
     resize as _resize,
     rotate as _rotate,
+    split_screen as _split_screen,
     storyboard as _storyboard,
     subtitles as _subtitles,
     speed as _speed,
@@ -266,6 +270,92 @@ class Client:
             operation="extract_audio",
             format=format,
         )
+
+    def filter(
+        self,
+        video: str,
+        filter_type: str,
+        params: dict | None = None,
+        output: str | None = None,
+    ) -> EditResult:
+        """Apply a visual filter to a video."""
+        return _apply_filter(video, filter_type=filter_type, params=params, output_path=output)
+
+    def blur(
+        self,
+        video: str,
+        radius: int = 5,
+        strength: int = 1,
+        output: str | None = None,
+    ) -> EditResult:
+        """Apply blur effect to a video."""
+        return _apply_filter(
+            video, filter_type="blur",
+            params={"radius": radius, "strength": strength},
+            output_path=output,
+        )
+
+    def color_grade(
+        self,
+        video: str,
+        preset: str = "warm",
+        output: str | None = None,
+    ) -> EditResult:
+        """Apply a color grading preset to a video."""
+        return _apply_filter(
+            video, filter_type="color_preset",
+            params={"preset": preset},
+            output_path=output,
+        )
+
+    def normalize_audio(
+        self,
+        video: str,
+        target_lufs: float = -16.0,
+        output: str | None = None,
+    ) -> EditResult:
+        """Normalize audio loudness to a target LUFS level."""
+        return _normalize_audio(video, target_lufs=target_lufs, output_path=output)
+
+    def overlay_video(
+        self,
+        background: str,
+        overlay: str,
+        position: str = "top-right",
+        width: int | None = None,
+        height: int | None = None,
+        opacity: float = 0.8,
+        start_time: float | None = None,
+        duration: float | None = None,
+        output: str | None = None,
+    ) -> EditResult:
+        """Picture-in-picture: overlay a video on top of another."""
+        return _overlay_video(
+            background, overlay_path=overlay, position=position,
+            width=width, height=height, opacity=opacity,
+            start_time=start_time, duration=duration,
+            output_path=output,
+        )
+
+    def split_screen(
+        self,
+        left: str,
+        right: str,
+        layout: str = "side-by-side",
+        output: str | None = None,
+    ) -> EditResult:
+        """Place two videos side by side or top/bottom."""
+        return _split_screen(left, right_path=right, layout=layout, output_path=output)
+
+    def batch(
+        self,
+        inputs: list[str],
+        operation: str,
+        params: dict | None = None,
+    ) -> dict:
+        """Apply the same operation to multiple video files."""
+        from .server import video_batch
+        return video_batch(inputs, operation=operation, params=params)
 
 
 # Fix the circular import for resize

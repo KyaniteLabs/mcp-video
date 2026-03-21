@@ -189,3 +189,34 @@ def sample_video_no_audio(tmp_path_factory) -> str:
         pytest.skip("Could not generate video without audio")
 
     return video_path
+
+
+@pytest.fixture(scope="session")
+def sample_video_2(tmp_path_factory) -> str:
+    """Create a 3-second test video with different resolution for compositing tests."""
+    if not has_ffmpeg():
+        pytest.skip("FFmpeg not installed")
+
+    video_path = str(tmp_path_factory.mktemp("videos") / "test_video_2.mp4")
+
+    # Generate a test video: 3 seconds, 320x240, solid blue + sine audio
+    subprocess.run(
+        [
+            "ffmpeg", "-y",
+            "-f", "lavfi",
+            "-i", "color=c=blue:size=320x240:duration=3:rate=30",
+            "-f", "lavfi",
+            "-i", "sine=frequency=880:duration=3",
+            "-c:v", "libx264", "-preset", "ultrafast", "-crf", "23",
+            "-c:a", "aac", "-b:a", "128k",
+            "-shortest",
+            video_path,
+        ],
+        capture_output=True,
+        timeout=30,
+    )
+
+    if not os.path.isfile(video_path):
+        pytest.skip("Could not generate second test video")
+
+    return video_path

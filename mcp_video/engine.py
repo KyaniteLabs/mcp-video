@@ -26,11 +26,14 @@ from .models import (
     ASPECT_RATIOS,
     PREVIEW_PRESETS,
     QUALITY_PRESETS,
+    ColorPreset,
     EditResult,
     ErrorResult,
     ExportFormat,
+    FilterType,
     Position,
     QualityLevel,
+    SplitLayout,
     StoryboardResult,
     ThumbnailResult,
     Timeline,
@@ -1544,3 +1547,301 @@ def extract_audio(
     ])
 
     return output
+
+
+# ---------------------------------------------------------------------------
+# Video filters & effects
+# ---------------------------------------------------------------------------
+
+def _get_color_preset_filter(preset: ColorPreset) -> str:
+    """Return FFmpeg eq filter string for a named color preset."""
+    preset_filters: dict[ColorPreset, str] = {
+        "warm": "eq=brightness=0.05:saturation=1.3:contrast=1.05",
+        "cool": "eq=brightness=0.02:saturation=0.9:contrast=1.05",
+        "vintage": "eq=contrast=1.1:brightness=-0.02:saturation=0.7",
+        "cinematic": "eq=contrast=1.15:brightness=-0.03:saturation=0.85",
+        "noir": "eq=contrast=1.3:brightness=-0.05:saturation=0.0",
+    }
+    if preset not in preset_filters:
+        valid = ", ".join(sorted(preset_filters))
+        raise MCPVideoError(
+            f"Unknown color preset '{preset}'. Valid presets: {valid}",
+            error_type="validation_error",
+            code="invalid_color_preset",
+        )
+    return preset_filters[preset]
+
+
+def apply_filter(
+    input_path: str,
+    filter_type: FilterType,
+    params: dict[str, Any] | None = None,
+    output_path: str | None = None,
+) -> EditResult:
+    """Apply a visual filter to a video.
+
+    Args:
+        input_path: Path to the input video.
+        filter_type: One of the supported filter types.
+        params: Optional parameters for the filter.
+        output_path: Where to save the output.
+    """
+    _validate_input(input_path)
+    params = params or {}
+    output = output_path or _auto_output(input_path, f"filter_{filter_type}")
+
+    # Build the -vf filter string
+    filter_map: dict[FilterType, tuple[str, str]] = {
+        "blur": ("boxblur", f"boxblur={params.get('radius', 5)}:{params.get('strength', 1)}"),
+        "sharpen": ("unsharp", f"unsharp=5:5:{params.get('amount', 1.0)}:5:5:0.0"),
+        "brightness": ("eq", f"eq=brightness={params.get('level', 0.1)}"),
+        "contrast": ("eq", f"eq=contrast={params.get('level', 1.5)}"),
+        "saturation": ("eq", f"eq=saturation={params.get('level', 1.5)}"),
+        "grayscale": ("hue", "hue=s=0"),
+        "sepia": ("colorchannelmixer", "colorchannelmixer=.393:.769:.189:0:.349:.686:.168:0:.272:.534:.131"),
+        "invert": ("negate", "negate"),
+        "vignette": ("vignette", f"vignette=angle={params.get('angle', 'PI/4')}"),
+        "color_preset": ("eq", _get_color_preset_filter(params.get("preset", "warm"))),
+    }
+
+    if filter_type not in filter_map:
+        valid = ", ".join(sorted(filter_map))
+        raise MCPVideoError(
+            f"Unknown filter type '{filter_type}'. Valid types: {valid}",
+            error_type="validation_error",
+            code="invalid_filter_type",
+        )
+    filter_name, vf_string = filter_map[filter_type]
+    _require_filter(filter_name, f"Filter '{filter_type}'")
+
+    _run_ffmpeg([
+        "-i", input_path,
+        "-vf", vf_string,
+        "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+        "-c:a", "copy",
+    ] + _movflags_args(output) + [
+        output,
+    ])
+
+    info = probe(output)
+    return EditResult(
+        output_path=output,
+        duration=info.duration,
+        resolution=info.resolution,
+        size_mb=info.size_mb,
+        format="mp4",
+        operation=f"filter_{filter_type}",
+    )
+
+
+# ---------------------------------------------------------------------------
+# Audio normalization
+# ---------------------------------------------------------------------------
+
+def normalize_audio(
+    input_path: str,
+    target_lufs: float = -16.0,
+    lra: float = 11.0,
+    output_path: str | None = None,
+) -> EditResult:
+    """Normalize audio loudness to a target LUFS level.
+
+    Args:
+        input_path: Path to the input video.
+        target_lufs: Target integrated loudness in LUFS. Common values:
+            -16 (YouTube), -23 (EBU R128/broadcast), -14 (Apple/Spotify).
+        lra: Loudness range target in LU. Default 11.0.
+        output_path: Where to save the output.
+    """
+    _validate_input(input_path)
+    _require_filter("loudnorm", "Audio normalization")
+    output = output_path or _auto_output(input_path, "normalized")
+
+    # loudnorm parameters: I=integrated loudness, TP=true peak, LRA=loudness range
+    # TP (true peak) should be a fixed value near -1.5 dBTP regardless of target LUFS.
+    tp = -1.5
+
+    _run_ffmpeg([
+        "-i", input_path,
+        "-af", f"loudnorm=I={target_lufs}:TP={tp}:LRA={lra}",
+        "-c:v", "copy",
+        "-c:a", "aac", "-b:a", "192k",
+    ] + _movflags_args(output) + [
+        output,
+    ])
+
+    info = probe(output)
+    return EditResult(
+        output_path=output,
+        duration=info.duration,
+        resolution=info.resolution,
+        size_mb=info.size_mb,
+        format="mp4",
+        operation="normalize_audio",
+    )
+
+
+# ---------------------------------------------------------------------------
+# Compositing & overlays
+# ---------------------------------------------------------------------------
+
+def overlay_video(
+    background_path: str,
+    overlay_path: str,
+    position: Position = "top-right",
+    width: int | None = None,
+    height: int | None = None,
+    opacity: float = 0.8,
+    start_time: float | None = None,
+    duration: float | None = None,
+    output_path: str | None = None,
+) -> EditResult:
+    """Picture-in-picture: overlay a video on top of another.
+
+    Args:
+        background_path: Path to the background video.
+        overlay_path: Path to the overlay video.
+        position: Position of the overlay on screen.
+        width: Width to scale the overlay to.
+        height: Height to scale the overlay to.
+        opacity: Opacity of the overlay (0.0 to 1.0).
+        start_time: When the overlay appears (seconds).
+        duration: How long the overlay is visible (seconds).
+        output_path: Where to save the output.
+    """
+    _validate_input(background_path)
+    _validate_input(overlay_path)
+    _require_filter("overlay", "Video overlay")
+    output = output_path or _auto_output(background_path, "overlay")
+
+    # Build scale filter for overlay
+    scale_parts = []
+    if width and height:
+        scale_parts.append(f"scale={width}:{height}")
+    elif width:
+        scale_parts.append(f"scale={width}:-1")
+    elif height:
+        scale_parts.append(f"scale=-1:{height}")
+    scale_filter = ",".join(scale_parts) if scale_parts else ""
+
+    # Build the overlay filter chain
+    opacity_fmt = f"{opacity:.2f}"
+    overlay_chain_parts = ["format=rgba", f"colorchannelmixer=aa={opacity_fmt}"]
+    if scale_filter:
+        overlay_chain_parts.insert(0, scale_filter)
+    overlay_chain = ",".join(overlay_chain_parts)
+
+    # Position map (same as watermark but without margin)
+    position_map: dict[Position, str] = {
+        "top-left": "0:0",
+        "top-center": "(main_w-overlay_w)/2:0",
+        "top-right": "main_w-overlay_w:0",
+        "center-left": "0:(main_h-overlay_h)/2",
+        "center": "(main_w-overlay_w)/2:(main_h-overlay_h)/2",
+        "center-right": "main_w-overlay_w:(main_h-overlay_h)/2",
+        "bottom-left": "0:main_h-overlay_h",
+        "bottom-center": "(main_w-overlay_w)/2:main_h-overlay_h",
+        "bottom-right": "main_w-overlay_w:main_h-overlay_h",
+    }
+    overlay_pos = position_map.get(position, position_map["top-right"])
+
+    # Optional enable expression for timing
+    enable_expr = ""
+    if start_time is not None or duration is not None:
+        parts = []
+        if start_time is not None and duration is not None:
+            end = start_time + duration
+            parts.append(f"between(t,{start_time},{end})")
+        elif start_time is not None:
+            parts.append(f"gte(t,{start_time})")
+        elif duration is not None:
+            parts.append(f"lte(t,{duration})")
+        enable_expr = f":enable='{parts[0]}'"
+
+    filter_complex = f"[1:v]{overlay_chain}[ov];[0:v][ov]overlay={overlay_pos}{enable_expr}"
+
+    _run_ffmpeg([
+        "-i", background_path, "-i", overlay_path,
+        "-filter_complex", filter_complex,
+        "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+        "-c:a", "aac", "-b:a", "128k",
+    ] + _movflags_args(output) + [
+        output,
+    ])
+
+    info = probe(output)
+    return EditResult(
+        output_path=output,
+        duration=info.duration,
+        resolution=info.resolution,
+        size_mb=info.size_mb,
+        format="mp4",
+        operation="overlay_video",
+    )
+
+
+def split_screen(
+    left_path: str,
+    right_path: str,
+    layout: SplitLayout = "side-by-side",
+    output_path: str | None = None,
+) -> EditResult:
+    """Place two videos side by side or top/bottom.
+
+    Args:
+        left_path: Path to the first video.
+        right_path: Path to the second video.
+        layout: 'side-by-side' or 'top-bottom'.
+        output_path: Where to save the output.
+    """
+    _validate_input(left_path)
+    _validate_input(right_path)
+    output = output_path or _auto_output(left_path, f"split_{layout}")
+
+    # Get info about both videos to check if resizing is needed
+    left_info = probe(left_path)
+    right_info = probe(right_path)
+
+    # Build filter_complex to normalize heights (side-by-side) or widths (top-bottom)
+    # Use max dimensions to avoid losing quality when one video is larger
+    if layout == "side-by-side":
+        target_h = max(left_info.height, right_info.height)
+        if left_info.height != right_info.height:
+            filter_complex = (
+                f"[0:v]scale=-1:{target_h},setsar=1[left];"
+                f"[1:v]scale=-1:{target_h},setsar=1[right];"
+                f"[left][right]hstack=inputs=2[v]"
+            )
+        else:
+            filter_complex = "[0:v][1:v]hstack=inputs=2[v]"
+    else:
+        target_w = max(left_info.width, right_info.width)
+        if left_info.width != right_info.width:
+            filter_complex = (
+                f"[0:v]scale={target_w}:-1,setsar=1[top];"
+                f"[1:v]scale={target_w}:-1,setsar=1[bottom];"
+                f"[top][bottom]vstack=inputs=2[v]"
+            )
+        else:
+            filter_complex = "[0:v][1:v]vstack=inputs=2[v]"
+
+    _run_ffmpeg([
+        "-i", left_path, "-i", right_path,
+        "-filter_complex", filter_complex,
+        "-map", "[v]",
+        "-map", "0:a?",
+        "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+        "-c:a", "aac", "-b:a", "128k",
+    ] + _movflags_args(output) + [
+        output,
+    ])
+
+    info = probe(output)
+    return EditResult(
+        output_path=output,
+        duration=info.duration,
+        resolution=info.resolution,
+        size_mb=info.size_mb,
+        format="mp4",
+        operation=f"split_screen_{layout}",
+    )

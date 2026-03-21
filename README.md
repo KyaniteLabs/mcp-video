@@ -1,10 +1,10 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.2.0-blue.svg" alt="Version">
-  <img src="https://img.shields.io/badge/tests-276%20passed-brightgreen.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/version-0.3.0-blue.svg" alt="Version">
+  <img src="https://img.shields.io/badge/tests-380%20passed-brightgreen.svg" alt="Tests">
   <a href="https://github.com/pastorsimon1798/mcp-video/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/pastorsimon1798/mcp-video/.github/workflows/ci.yml?branch=master&label=CI" alt="CI"></a>
   <a href="https://glama.ai/mcp/servers/pastorsimon1798/mcp-video"><img src="https://glama.ai/mcp/servers/pastorsimon1798/mcp-video/badges/score.svg" alt="Glama Score"></a>
   <img src="https://img.shields.io/badge/pypi-mcp--video-blue.svg" alt="PyPI">
-  <img src="https://img.shields.io/badge/tools-19%20MCP%20tools-orange.svg" alt="Tools">
+  <img src="https://img.shields.io/badge/tools-26%20MCP%20tools-orange.svg" alt="Tools">
   <img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="License">
   <img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python">
 </p>
@@ -13,7 +13,7 @@
 
 <p align="center">
   <strong>The video editing MCP server for AI agents.</strong><br>
-  19 tools. 3 interfaces. Purpose-built for AI agents.
+  26 tools. 3 interfaces. Purpose-built for AI agents.
 </p>
 
 <p align="center">
@@ -196,9 +196,9 @@ mcp_video convert video.mp4 -f webm -q high
 
 ## MCP Tools
 
-mcp-video exposes 19 tools for AI agents. All tools return structured JSON with `success`, `output_path`, and operation metadata. On failure, they return `{"success": false, "error": {...}}` with auto-fix suggestions.
+mcp-video exposes 26 tools for AI agents. All tools return structured JSON with `success`, `output_path`, and operation metadata. On failure, they return `{"success": false, "error": {...}}` with auto-fix suggestions.
 
-**New in v0.2.0:** Progress callbacks provide real-time feedback on long-running operations (merge, convert, export), and visual verification returns thumbnails so agents can confirm results without opening files.
+**New in v0.3.0:** Video filters & effects (blur, sharpen, color grading with presets), audio normalization to LUFS targets, picture-in-picture and split-screen compositing, and batch processing for multi-file workflows.
 
 ### Video Operations
 
@@ -228,6 +228,33 @@ mcp-video exposes 19 tools for AI agents. All tools return structured JSON with 
 | `video_resize` | Change resolution/aspect ratio | `input_path`, `width`/`height` or `aspect_ratio` |
 | `video_convert` | Convert format | `input_path`, `format` (mp4/webm/gif/mov) |
 | `video_export` | Render with quality settings | `input_path`, `quality`, `format` |
+
+### Filters & Effects
+
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `video_filter` | Apply visual filter (blur, sharpen, grayscale, sepia, invert, vignette, brightness, contrast, saturation) | `input_path`, `filter_type`, `params` |
+| `video_blur` | Blur video | `input_path`, `radius`, `strength` |
+| `video_color_grade` | Apply color preset (warm, cool, vintage, cinematic, noir) | `input_path`, `preset` |
+
+### Audio
+
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `video_normalize_audio` | Normalize loudness to LUFS target | `input_path`, `target_lufs` (-16 YouTube, -23 broadcast, -14 Spotify) |
+
+### Composition
+
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `video_overlay` | Picture-in-picture overlay | `background_path`, `overlay_path`, `position`, `width`, `opacity` |
+| `video_split_screen` | Side-by-side or top/bottom layout | `left_path`, `right_path`, `layout` |
+
+### Batch Processing
+
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `video_batch` | Apply operation to multiple files | `inputs[]`, `operation`, `params`, `output_dir` |
 
 ### Analysis & Extraction
 
@@ -287,6 +314,13 @@ editor = Client()
 | `export(video, output?, quality?, format?)` | `EditResult` | Render with quality settings |
 | `edit(timeline, output?)` | `EditResult` | Execute full timeline edit from JSON |
 | `extract_audio(video, output?, format?)` | `EditResult` | Extract audio as file path |
+| `filter(video, filter_type, params?, output?)` | `EditResult` | Apply visual filter (blur, sharpen, grayscale, etc.) |
+| `blur(video, radius?, strength?, output?)` | `EditResult` | Blur video |
+| `color_grade(video, preset?, output?)` | `EditResult` | Apply color preset (warm, cool, vintage, etc.) |
+| `normalize_audio(video, target_lufs?, output?)` | `EditResult` | Normalize audio to LUFS target |
+| `overlay(background, overlay, position?, width?, opacity?, start_time?, duration?, output?)` | `EditResult` | Picture-in-picture overlay |
+| `split_screen(left, right, layout?, output?)` | `EditResult` | Side-by-side or top/bottom layout |
+| `batch(inputs, operation, params?)` | `dict` | Apply operation to multiple files |
 
 ### Return Models
 
@@ -330,6 +364,13 @@ Commands:
   export         Export with quality settings
   extract-audio  Extract audio track
   edit           Execute timeline-based edit from JSON
+  filter         Apply visual filter (blur, sharpen, grayscale, etc.)
+  blur           Blur video
+  color-grade    Apply color preset (warm, cool, vintage, etc.)
+  normalize-audio Normalize audio to LUFS target
+  overlay-video  Picture-in-picture overlay
+  split-screen   Side-by-side or top/bottom layout
+  batch          Apply operation to multiple files
 
 Options:
   --mcp      Run as MCP server (default when no command given)
@@ -353,6 +394,21 @@ mcp_video trim video.mp4 -s 00:02:15 -d 30 -o clip.mp4
 
 # Convert to GIF at medium quality
 mcp_video convert video.mp4 -f gif -q medium
+
+# Apply cinematic color grade
+mcp_video color-grade video.mp4 --preset cinematic
+
+# Normalize audio for YouTube (-16 LUFS)
+mcp_video normalize-audio video.mp4 --lufs -16
+
+# Picture-in-picture overlay
+mcp_video overlay-video background.mp4 overlay.mp4 --position bottom-right --width 360
+
+# Side-by-side split screen
+mcp_video split-screen left.mp4 right.mp4 --layout side-by-side
+
+# Batch blur 3 videos at once
+mcp_video batch video1.mp4 video2.mp4 video3.mp4 --operation blur
 
 # Default: run MCP server
 mcp_video --mcp
@@ -539,20 +595,21 @@ mcp-video parses FFmpeg errors and returns structured, actionable error response
 
 ## Testing
 
-mcp-video has **276 tests** across the full testing pyramid:
+mcp-video has **380 tests** across the full testing pyramid:
 
 ```
 tests/
 ├── conftest.py              # Shared fixtures (sample video, audio, SRT, VTT, watermark PNG, WebM)
-├── test_models.py           # 48 tests — Pydantic model validation (no FFmpeg needed)
+├── test_models.py           # 55 tests — Pydantic model validation (no FFmpeg needed)
 ├── test_errors.py           # 42 tests — Error classes and FFmpeg error parsing (no FFmpeg)
 ├── test_templates.py        # 21 tests — Template functions and registry (no FFmpeg)
-├── test_client.py           # 31 tests — Python Client API wrapper
-├── test_server.py           # 36 tests — MCP tool layer
-├── test_engine.py           # 26 tests — Core FFmpeg engine operations
-├── test_engine_advanced.py  # 44 tests — Edge cases, new operations, per-transition merge
-├── test_cli.py              # 6 tests  — CLI commands via subprocess
-└── test_e2e.py              # 8 tests  — Full end-to-end workflows
+├── test_client.py           # 42 tests — Python Client API wrapper
+├── test_server.py           # 55 tests — MCP tool layer
+├── test_engine.py           # 33 tests — Core FFmpeg engine operations
+├── test_engine_advanced.py  # 78 tests — Edge cases, new operations, filter validation, per-transition merge
+├── test_cli.py              # 14 tests — CLI commands via subprocess
+├── test_e2e.py              # 8 tests  — Full end-to-end workflows
+└── test_real_media.py       # 33 tests — Real-media integration tests (marked @slow)
 ```
 
 ### Running Tests
@@ -561,23 +618,30 @@ tests/
 # Install dev dependencies
 pip install -e ".[dev]"
 
-# Run all tests
+# Run all tests (excluding slow/real-media tests)
+pytest tests/ -v -m "not slow"
+
+# Run all tests including real-media integration tests
 pytest tests/ -v
 
 # Run only unit tests (no FFmpeg needed)
 pytest tests/test_models.py tests/test_errors.py tests/test_templates.py -v
 
+# Run real-media tests only (requires iPhone footage in ~/Downloads/)
+pytest tests/test_real_media.py -v -m slow
+
 # Run with coverage
-pytest tests/ --cov=mcp_video --cov-report=term-missing
+pytest tests/ -m "not slow" --cov=mcp_video --cov-report=term-missing
 ```
 
 ### Test Pyramid
 
 | Layer | Tests | What It Tests |
 |-------|-------|---------------|
-| **Unit** | 111 | Models, errors, templates — pure Python, no FFmpeg |
-| **Integration** | 143 | Client, server, engine, CLI — real FFmpeg operations |
+| **Unit** | 118 | Models, errors, templates — pure Python, no FFmpeg |
+| **Integration** | 221 | Client, server, engine, CLI — real FFmpeg operations |
 | **E2E** | 8 | Multi-step workflows (TikTok, YouTube, GIF, speed) |
+| **Real Media** | 33 | iPhone footage integration tests (marked @slow) |
 
 ---
 
@@ -592,7 +656,7 @@ mcp_video/
 ├── errors.py         # Error types + FFmpeg stderr parser
 ├── models.py         # Pydantic models (VideoInfo, EditResult, Timeline DSL)
 ├── templates.py      # Platform templates (TikTok, YouTube, Instagram)
-└── server.py         # MCP server (19 tools + 4 resources)
+└── server.py         # MCP server (26 tools + 4 resources)
 ```
 
 **Dependencies:**
@@ -648,12 +712,13 @@ pytest tests/ -v --tb=long
 
 - [x] Progress callbacks for long-running operations (v0.2.0)
 - [x] Visual verification with thumbnail output (v0.2.0)
-- [ ] Batch processing mode (edit 100 videos at once)
+- [x] Video filters & effects — blur, sharpen, color grading, presets (v0.3.0)
+- [x] Audio normalization to LUFS targets (v0.3.0)
+- [x] Picture-in-picture and split-screen compositing (v0.3.0)
+- [x] Batch processing for multi-file workflows (v0.3.0)
 - [ ] Streaming upload/download (S3, GCS integration)
 - [ ] Web UI for non-agent users
 - [ ] FFmpeg filter auto-detection and graceful fallback
-- [ ] Video effects (blur, color grading)
-- [ ] Audio normalization and noise reduction
 - [ ] Thumbnail selection via AI scene detection
 - [ ] Plugin system for custom filters
 

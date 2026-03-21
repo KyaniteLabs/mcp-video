@@ -6,7 +6,9 @@ import pytest
 
 from mcp_video.engine import (
     _check_filter_available,
+    _get_color_preset_filter,
     add_audio,
+    apply_filter,
     convert,
     crop,
     edit_timeline,
@@ -15,11 +17,14 @@ from mcp_video.engine import (
     get_duration,
     merge,
     normalize,
+    normalize_audio,
+    overlay_video,
     preview,
     probe,
     resize,
     rotate,
     speed,
+    split_screen,
     storyboard,
     thumbnail,
     trim,
@@ -384,4 +389,193 @@ class TestMergePerTransition:
             transition="fade",
             transition_duration=0.5,
         )
+        assert os.path.isfile(result.output_path)
+
+
+# ---------------------------------------------------------------------------
+# v0.3.0 features: filters, compositing, audio normalization
+# ---------------------------------------------------------------------------
+
+class TestColorPresetFilter:
+    def test_warm_preset(self):
+        vf = _get_color_preset_filter("warm")
+        assert "brightness=0.05" in vf
+        assert "saturation=1.3" in vf
+
+    def test_cool_preset(self):
+        vf = _get_color_preset_filter("cool")
+        assert "saturation=0.9" in vf
+
+    def test_noir_preset(self):
+        vf = _get_color_preset_filter("noir")
+        assert "saturation=0.0" in vf
+
+    def test_cinematic_preset(self):
+        vf = _get_color_preset_filter("cinematic")
+        assert "contrast=1.15" in vf
+
+    def test_vintage_preset(self):
+        vf = _get_color_preset_filter("vintage")
+        assert "saturation=0.7" in vf
+
+
+class TestApplyFilter:
+    @requires_filter("boxblur", "Blur filter")
+    def test_blur(self, sample_video):
+        result = apply_filter(sample_video, filter_type="blur")
+        assert os.path.isfile(result.output_path)
+        assert result.operation == "filter_blur"
+
+    @requires_filter("boxblur", "Blur filter")
+    def test_blur_with_params(self, sample_video):
+        result = apply_filter(sample_video, filter_type="blur", params={"radius": 10, "strength": 2})
+        assert os.path.isfile(result.output_path)
+
+    @requires_filter("unsharp", "Sharpen filter")
+    def test_sharpen(self, sample_video):
+        result = apply_filter(sample_video, filter_type="sharpen")
+        assert os.path.isfile(result.output_path)
+
+    @requires_filter("eq", "Brightness filter")
+    def test_brightness(self, sample_video):
+        result = apply_filter(sample_video, filter_type="brightness", params={"level": 0.2})
+        assert os.path.isfile(result.output_path)
+
+    @requires_filter("eq", "Contrast filter")
+    def test_contrast(self, sample_video):
+        result = apply_filter(sample_video, filter_type="contrast")
+        assert os.path.isfile(result.output_path)
+
+    @requires_filter("eq", "Saturation filter")
+    def test_saturation(self, sample_video):
+        result = apply_filter(sample_video, filter_type="saturation", params={"level": 2.0})
+        assert os.path.isfile(result.output_path)
+
+    @requires_filter("hue", "Grayscale filter")
+    def test_grayscale(self, sample_video):
+        result = apply_filter(sample_video, filter_type="grayscale")
+        assert os.path.isfile(result.output_path)
+
+    @requires_filter("colorchannelmixer", "Sepia filter")
+    def test_sepia(self, sample_video):
+        result = apply_filter(sample_video, filter_type="sepia")
+        assert os.path.isfile(result.output_path)
+
+    @requires_filter("negate", "Invert filter")
+    def test_invert(self, sample_video):
+        result = apply_filter(sample_video, filter_type="invert")
+        assert os.path.isfile(result.output_path)
+
+    @requires_filter("vignette", "Vignette filter")
+    def test_vignette(self, sample_video):
+        result = apply_filter(sample_video, filter_type="vignette")
+        assert os.path.isfile(result.output_path)
+
+    @requires_filter("eq", "Color preset filter")
+    def test_color_preset_warm(self, sample_video):
+        result = apply_filter(sample_video, filter_type="color_preset", params={"preset": "warm"})
+        assert os.path.isfile(result.output_path)
+
+    @requires_filter("eq", "Color preset filter")
+    def test_color_preset_cinematic(self, sample_video):
+        result = apply_filter(sample_video, filter_type="color_preset", params={"preset": "cinematic"})
+        assert os.path.isfile(result.output_path)
+
+    def test_custom_output_path(self, sample_video, tmp_path):
+        out = str(tmp_path / "custom_filter.mp4")
+        result = apply_filter(sample_video, filter_type="blur", output_path=out)
+        assert result.output_path == out
+
+
+class TestNormalizeAudio:
+    @requires_filter("loudnorm", "Audio normalization")
+    def test_normalize_default(self, sample_video):
+        result = normalize_audio(sample_video)
+        assert os.path.isfile(result.output_path)
+        assert result.operation == "normalize_audio"
+
+    @requires_filter("loudnorm", "Audio normalization")
+    def test_normalize_broadcast(self, sample_video):
+        result = normalize_audio(sample_video, target_lufs=-23.0)
+        assert os.path.isfile(result.output_path)
+
+    @requires_filter("loudnorm", "Audio normalization")
+    def test_normalize_custom_output(self, sample_video, tmp_path):
+        out = str(tmp_path / "normalized.mp4")
+        result = normalize_audio(sample_video, output_path=out)
+        assert result.output_path == out
+
+
+class TestOverlayVideo:
+    def test_overlay_default(self, sample_video, sample_video_2):
+        result = overlay_video(sample_video, overlay_path=sample_video_2)
+        assert os.path.isfile(result.output_path)
+        assert result.operation == "overlay_video"
+
+    def test_overlay_with_scale(self, sample_video, sample_video_2):
+        result = overlay_video(sample_video, overlay_path=sample_video_2, width=160, height=120)
+        assert os.path.isfile(result.output_path)
+
+    def test_overlay_with_timing(self, sample_video, sample_video_2):
+        result = overlay_video(sample_video, overlay_path=sample_video_2, start_time=0.5, duration=1.0)
+        assert os.path.isfile(result.output_path)
+
+    def test_overlay_custom_output(self, sample_video, sample_video_2, tmp_path):
+        out = str(tmp_path / "overlay.mp4")
+        result = overlay_video(sample_video, overlay_path=sample_video_2, output_path=out)
+        assert result.output_path == out
+
+
+class TestSplitScreen:
+    def test_side_by_side(self, sample_video, sample_video_2):
+        result = split_screen(sample_video, right_path=sample_video_2, layout="side-by-side")
+        assert os.path.isfile(result.output_path)
+        assert result.operation == "split_screen_side-by-side"
+        # sample_video=640x480, sample_video_2=320x240
+        # max-dims: scale to max height (480), width = 640 + (320*480/240) = 640+640 = 1280
+        assert result.resolution == "1280x480"
+
+    def test_top_bottom(self, sample_video, sample_video_2):
+        result = split_screen(sample_video, right_path=sample_video_2, layout="top-bottom")
+        assert os.path.isfile(result.output_path)
+        assert result.operation == "split_screen_top-bottom"
+        # max-dims: scale to max width (640), height = 480 + (240*640/320) = 480+480 = 960
+        assert result.resolution == "640x960"
+
+    def test_same_resolution(self, sample_video):
+        result = split_screen(sample_video, right_path=sample_video, layout="side-by-side")
+        assert os.path.isfile(result.output_path)
+        assert result.resolution == "1280x480"
+
+    def test_custom_output(self, sample_video, sample_video_2, tmp_path):
+        out = str(tmp_path / "split.mp4")
+        result = split_screen(sample_video, right_path=sample_video_2, output_path=out)
+        assert result.output_path == out
+
+
+class TestFilterValidation:
+    """Regression tests for filter_type and preset validation (bugbot #5)."""
+
+    def test_invalid_filter_type_raises_mcp_error(self, sample_video):
+        with pytest.raises(MCPVideoError, match="Unknown filter type"):
+            apply_filter(sample_video, filter_type="blurr")
+
+    def test_invalid_color_preset_raises_mcp_error(self, sample_video):
+        with pytest.raises(MCPVideoError, match="Unknown color preset"):
+            _get_color_preset_filter("warmth")
+
+    def test_invalid_preset_via_apply_filter(self, sample_video):
+        with pytest.raises(MCPVideoError, match="Unknown color preset"):
+            apply_filter(sample_video, filter_type="color_preset", params={"preset": "neon"})
+
+
+class TestLoudnormTruePeak:
+    """Regression test for loudnorm TP formula (bugbot #6)."""
+
+    @requires_filter("loudnorm", "Audio normalization")
+    def test_broadcast_tp_is_fixed(self, sample_video, tmp_path):
+        """TP should be -1.5 regardless of target_lufs, not target_lufs + 14.5."""
+        from mcp_video.engine import normalize_audio
+        out = str(tmp_path / "norm_broadcast.mp4")
+        result = normalize_audio(sample_video, target_lufs=-23.0, output_path=out)
         assert os.path.isfile(result.output_path)

@@ -38,9 +38,10 @@ tests/
 ├── test_client.py      # Client API wrapper
 ├── test_server.py      # MCP tool layer
 ├── test_engine.py      # Core FFmpeg operations
-├── test_engine_advanced.py  # Edge cases, crop, rotate, fade
+├── test_engine_advanced.py  # Edge cases, crop, rotate, fade, filters, validation
 ├── test_cli.py         # CLI commands
-└── test_e2e.py         # Multi-step workflows
+├── test_e2e.py         # Multi-step workflows
+└── test_real_media.py  # Real-media integration tests (iPhone footage)
 ```
 
 ## Making Changes
@@ -84,7 +85,7 @@ tests/
 - Every new tool needs at least: success case, error case (bad input), and one edge case
 - E2E tests chain multiple operations together
 - Run the full suite before pushing: `pytest tests/ -v --tb=short`
-- Target: 276+ tests, 0 failures
+- Target: 380+ tests, 0 failures
 
 ## Commit Messages
 

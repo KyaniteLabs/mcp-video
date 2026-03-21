@@ -121,6 +121,19 @@ Position = Literal[
 
 TransitionType = Literal["fade", "dissolve", "wipe-left", "wipe-right", "wipe-up", "wipe-down"]
 
+# --- Filter types ---
+
+FilterType = Literal[
+    "blur", "sharpen", "brightness", "contrast", "saturation",
+    "grayscale", "sepia", "invert", "vignette", "color_preset",
+]
+
+ColorPreset = Literal["warm", "cool", "vintage", "cinematic", "noir"]
+
+# --- Split layout ---
+
+SplitLayout = Literal["side-by-side", "top-bottom"]
+
 # --- Format types ---
 
 ExportFormat = Literal["mp4", "webm", "gif", "mov"]
