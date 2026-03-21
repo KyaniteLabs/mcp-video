@@ -1,6 +1,9 @@
 <p align="center">
   <img src="https://img.shields.io/badge/version-0.2.0-blue.svg" alt="Version">
-  <img src="https://img.shields.io/badge/tests-276%20passed-green.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/tests-276%20passed-brightgreen.svg" alt="Tests">
+  <a href="https://github.com/pastorsimon1798/mcp-video/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/pastorsimon1798/mcp-video/.github/workflows/ci.yml?branch=master&label=CI" alt="CI"></a>
+  <a href="https://glama.ai/mcp/servers/pastorsimon1798/mcp-video"><img src="https://glama.ai/mcp/servers/pastorsimon1798/mcp-video/badges/score.svg" alt="Glama Score"></a>
+  <img src="https://img.shields.io/badge/pypi-mcp--video-blue.svg" alt="PyPI">
   <img src="https://img.shields.io/badge/tools-19%20MCP%20tools-orange.svg" alt="Tools">
   <img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="License">
   <img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python">
@@ -89,12 +92,18 @@ uvx mcp_video
 
 ### 1. As an MCP Server (for AI agents)
 
-Add to your Claude Code or Claude Desktop MCP settings:
+Install [FFmpeg](https://ffmpeg.org) first, then pick your client:
 
+**Claude Code:**
+```bash
+claude mcp add mcp-video -- pip install mcp-video && mcp-video --mcp
+```
+
+**Claude Desktop** — add to your `claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
-    "mcp_video": {
+    "mcp-video": {
       "command": "uvx",
       "args": ["mcp_video"]
     }
@@ -102,16 +111,19 @@ Add to your Claude Code or Claude Desktop MCP settings:
 }
 ```
 
-Or if installed via pip:
+**Cursor** — add to your `.cursor/mcp.json`:
 ```json
 {
   "mcpServers": {
-    "mcp_video": {
-      "command": "mcp_video"
+    "mcp-video": {
+      "command": "uvx",
+      "args": ["mcp_video"]
     }
   }
 }
 ```
+
+**Any MCP client** — if installed via pip, the command is just `mcp-video`.
 
 Then just ask your agent: *"Trim this video from 0:30 to 1:00, add a title card, and resize for TikTok."*
 
