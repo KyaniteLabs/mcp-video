@@ -1,7 +1,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/version-0.1.0-blue.svg" alt="Version">
-  <img src="https://img.shields.io/badge/tests-234%20passed-green.svg" alt="Tests">
-  <img src="https://img.shields.io/badge/tools-16%20MCP%20tools-orange.svg" alt="Tools">
+  <img src="https://img.shields.io/badge/tests-262%20passed-green.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/tools-19%20MCP%20tools-orange.svg" alt="Tools">
   <img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="License">
   <img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python">
 </p>
@@ -10,7 +10,7 @@
 
 <p align="center">
   <strong>The video editing MCP server for AI agents.</strong><br>
-  16 tools. 3 interfaces. Purpose-built for AI agents.
+  19 tools. 3 interfaces. Purpose-built for AI agents.
 </p>
 
 <p align="center">
@@ -182,7 +182,7 @@ agentcut convert video.mp4 -f webm -q high
 
 ## MCP Tools
 
-AgentCut exposes 16 tools for AI agents. All tools return structured JSON with `success`, `output_path`, and operation metadata. On failure, they return `{"success": false, "error": {...}}` with auto-fix suggestions.
+AgentCut exposes 19 tools for AI agents. All tools return structured JSON with `success`, `output_path`, and operation metadata. On failure, they return `{"success": false, "error": {...}}` with auto-fix suggestions.
 
 ### Video Operations
 
@@ -190,7 +190,7 @@ AgentCut exposes 16 tools for AI agents. All tools return structured JSON with `
 |------|-------------|----------------|
 | `video_info` | Get video metadata | `input_path` |
 | `video_trim` | Trim clip by timestamp | `input_path`, `start`, `duration`/`end` |
-| `video_merge` | Concatenate multiple clips | `clips[]`, `transition`, `transition_duration` |
+| `video_merge` | Concatenate multiple clips | `clips[]`, `transitions[]`, `transition_duration` |
 | `video_speed` | Change playback speed | `input_path`, `factor` (0.5=slow, 2.0=fast) |
 
 ### Effects & Overlays
@@ -201,6 +201,9 @@ AgentCut exposes 16 tools for AI agents. All tools return structured JSON with `
 | `video_add_audio` | Add or replace audio | `video_path`, `audio_path`, `volume`, `mix` |
 | `video_subtitles` | Burn SRT/VTT subtitles | `input_path`, `subtitle_path` |
 | `video_watermark` | Add image watermark | `input_path`, `image_path`, `position`, `opacity` |
+| `video_crop` | Crop to rectangular region | `input_path`, `width`, `height`, `x?`, `y?` |
+| `video_rotate` | Rotate and/or flip video | `input_path`, `angle`, `flip_horizontal`, `flip_vertical` |
+| `video_fade` | Video fade in/out | `input_path`, `fade_in`, `fade_out` |
 
 ### Format & Quality
 
@@ -251,7 +254,7 @@ editor = Client()
 |--------|---------|-------------|
 | `info(path)` | `VideoInfo` | Video metadata (duration, resolution, codec, fps, size) |
 | `trim(input, start, duration?, end?, output?)` | `EditResult` | Trim by start time + duration or end time |
-| `merge(clips, output?, transitions?, transition_duration?)` | `EditResult` | Concatenate clips with optional transitions |
+| `merge(clips, output?, transitions?, transition_duration?)` | `EditResult` | Concatenate clips with per-pair transitions |
 | `add_text(video, text, position?, font?, size?, color?, shadow?, start_time?, duration?, output?)` | `EditResult` | Overlay text on video |
 | `add_audio(video, audio, volume?, fade_in?, fade_out?, mix?, start_time?, output?)` | `EditResult` | Add or replace audio track |
 | `resize(video, width?, height?, aspect_ratio?, quality?, output?)` | `EditResult` | Resize or change aspect ratio |
@@ -262,9 +265,12 @@ editor = Client()
 | `storyboard(video, output_dir?, frame_count?)` | `StoryboardResult` | Key frames + grid |
 | `subtitles(video, subtitle_file, output?)` | `EditResult` | Burn subtitles into video |
 | `watermark(video, image, position?, opacity?, margin?, output?)` | `EditResult` | Add image watermark |
+| `crop(video, width, height, x?, y?, output?)` | `EditResult` | Crop to rectangular region |
+| `rotate(video, angle?, flip_horizontal?, flip_vertical?, output?)` | `EditResult` | Rotate and/or flip video |
+| `fade(video, fade_in?, fade_out?, output?)` | `EditResult` | Video fade in/out effect |
 | `export(video, output?, quality?, format?)` | `EditResult` | Render with quality settings |
 | `edit(timeline, output?)` | `EditResult` | Execute full timeline edit from JSON |
-| `extract_audio(video, output?, format?)` | `str` | Extract audio as file path |
+| `extract_audio(video, output?, format?)` | `EditResult` | Extract audio as file path |
 
 ### Return Models
 
@@ -302,6 +308,9 @@ Commands:
   storyboard     Extract key frames as storyboard
   subtitles      Burn subtitles into video
   watermark      Add image watermark
+  crop           Crop to rectangular region
+  rotate         Rotate and/or flip video
+  fade           Add video fade in/out
   export         Export with quality settings
   extract-audio  Extract audio track
   edit           Execute timeline-based edit from JSON
@@ -514,7 +523,7 @@ AgentCut parses FFmpeg errors and returns structured, actionable error responses
 
 ## Testing
 
-AgentCut has **234 tests** across the full testing pyramid:
+AgentCut has **262 tests** across the full testing pyramid:
 
 ```
 tests/
@@ -522,10 +531,10 @@ tests/
 ├── test_models.py           # 48 tests — Pydantic model validation (no FFmpeg needed)
 ├── test_errors.py           # 35 tests — Error classes and FFmpeg error parsing (no FFmpeg)
 ├── test_templates.py        # 21 tests — Template functions and registry (no FFmpeg)
-├── test_client.py           # 28 tests — Python Client API wrapper
-├── test_server.py           # 28 tests — MCP tool layer
+├── test_client.py           # 35 tests — Python Client API wrapper
+├── test_server.py           # 33 tests — MCP tool layer
 ├── test_engine.py           # 27 tests — Core FFmpeg engine operations
-├── test_engine_advanced.py  # 23 tests — Edge cases and uncovered operations
+├── test_engine_advanced.py  # 37 tests — Edge cases, new operations, per-transition merge
 ├── test_cli.py              # 6 tests  — CLI commands via subprocess
 └── test_e2e.py              # 8 tests  — Full end-to-end workflows
 ```
@@ -551,7 +560,7 @@ pytest tests/ --cov=agentcut --cov-report=term-missing
 | Layer | Tests | What It Tests |
 |-------|-------|---------------|
 | **Unit** | 104 | Models, errors, templates — pure Python, no FFmpeg |
-| **Integration** | 122 | Client, server, engine, CLI — real FFmpeg operations |
+| **Integration** | 150 | Client, server, engine, CLI — real FFmpeg operations |
 | **E2E** | 8 | Multi-step workflows (TikTok, YouTube, GIF, speed) |
 
 ---
@@ -567,7 +576,7 @@ agentcut/
 ├── errors.py         # Error types + FFmpeg stderr parser
 ├── models.py         # Pydantic models (VideoInfo, EditResult, Timeline DSL)
 ├── templates.py      # Platform templates (TikTok, YouTube, Instagram)
-└── server.py         # MCP server (16 tools + 4 resources)
+└── server.py         # MCP server (19 tools + 4 resources)
 ```
 
 **Dependencies:**
@@ -625,7 +634,7 @@ pytest tests/ -v --tb=long
 - [ ] Streaming upload/download (S3, GCS integration)
 - [ ] Web UI for non-agent users
 - [ ] FFmpeg filter auto-detection and graceful fallback
-- [ ] Video effects (blur, color grading, transitions)
+- [ ] Video effects (blur, color grading)
 - [ ] Audio normalization and noise reduction
 - [ ] Thumbnail selection via AI scene detection
 - [ ] Plugin system for custom filters

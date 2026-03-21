@@ -270,11 +270,11 @@
         <span class="gradient">for AI agents.</span>
     </h1>
     <p class="subtitle">
-        16 MCP tools that give Claude Code, Cursor, and any AI agent the ability to trim, merge, overlay text, sync audio, and export video. Local, fast, free.
+        19 MCP tools that give Claude Code, Cursor, and any AI agent the ability to trim, merge, overlay text, sync audio, and export video. Local, fast, free.
     </p>
     <div class="badges">
-        <div class="badge"><div class="dot green"></div> 234 tests passing</div>
-        <div class="badge"><div class="dot blue"></div> 16 MCP tools</div>
+        <div class="badge"><div class="dot green"></div> 262 tests passing</div>
+        <div class="badge"><div class="dot blue"></div> 19 MCP tools</div>
         <div class="badge"><div class="dot orange"></div> 3 interfaces</div>
     </div>
     <div class="cta-row">
@@ -380,7 +380,7 @@
                 </tr>
                 <tr>
                     <td style="color: var(--text); font-family: inherit;">Testing</td>
-                    <td style="color: var(--green);">234 tests, CI-ready</td>
+                    <td style="color: var(--green);">262 tests, CI-ready</td>
                     <td style="color: var(--orange);">None (ad-hoc)</td>
                     <td style="color: var(--text2);">Provider's tests</td>
                 </tr>
@@ -427,7 +427,7 @@
 <!-- TOOLS -->
 <section id="tools">
     <div class="section-label">Capabilities</div>
-    <div class="section-title">16 tools. Every operation you need.</div>
+    <div class="section-title">19 tools. Every operation you need.</div>
     <p class="section-desc">
         Every tool returns structured JSON. On success, you get output paths, duration, resolution. On failure, you get error types with auto-fix suggestions.
     </p>
@@ -454,6 +454,9 @@
                 <tr><td>video_export</td><td>Render final video with quality presets</td></tr>
                 <tr><td>video_edit</td><td>Full timeline-based edit (JSON DSL for complex edits)</td></tr>
                 <tr><td>video_extract_audio</td><td>Extract audio as mp3, wav, aac, ogg, or flac</td></tr>
+                <tr><td>video_crop</td><td>Crop to rectangular region with custom offset</td></tr>
+                <tr><td>video_rotate</td><td>Rotate 90/180/270 degrees or flip horizontal/vertical</td></tr>
+                <tr><td>video_fade</td><td>Add fade in/out effects to video</td></tr>
             </tbody>
         </table>
     </div>
@@ -591,7 +594,7 @@ $ agentcut storyboard video.mp4 -n 12</pre></div>
 <!-- TESTING -->
 <section id="testing">
     <div class="section-label">Quality</div>
-    <div class="section-title">234 tests. Full testing pyramid.</div>
+    <div class="section-title">262 tests. Full testing pyramid.</div>
     <p class="section-desc">
         Every model, error class, template, tool, and workflow is tested. Unit tests don't even need FFmpeg installed.
     </p>
@@ -602,7 +605,7 @@ $ agentcut storyboard video.mp4 -n 12</pre></div>
             <div style="font-size: 0.75rem; color: var(--text3); margin-top: 0.5rem;">Models, errors, templates</div>
         </div>
         <div class="card" style="text-align: center;">
-            <div style="font-size: 2rem; font-weight: 800; color: var(--green);">122</div>
+            <div style="font-size: 2rem; font-weight: 800; color: var(--green);">150</div>
             <div style="font-size: 0.85rem; color: var(--text2);">Integration tests</div>
             <div style="font-size: 0.75rem; color: var(--text3); margin-top: 0.5rem;">Client, server, engine, CLI</div>
         </div>
