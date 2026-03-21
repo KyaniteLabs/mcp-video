@@ -420,6 +420,49 @@
             <p>Your workflow depends on their API staying up, their pricing not changing, and their model versions not breaking your prompts. With AgentCut, FFmpeg runs on your machine &mdash; no API deprecation risk.</p>
         </div>
     </div>
+
+    <div class="section-title" style="font-size: 1.3rem; margin-bottom: 1.5rem;">Saves tokens. Saves turns.</div>
+    <p style="color: var(--text2); font-size: 0.95rem; max-width: 650px; margin-bottom: 1.5rem;">
+        Every wasted turn costs money. With raw FFmpeg, Claude spends tokens parsing hundreds of lines of stderr, retrying failed commands, and re-probing files it already processed. AgentCut eliminates all of that.
+    </p>
+    <div class="table-wrap" style="margin-bottom: 0;">
+        <table>
+            <thead>
+                <tr>
+                    <th></th>
+                    <th style="color: var(--accent2);">AgentCut</th>
+                    <th>Claude Code + FFmpeg</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="color: var(--text); font-family: inherit;">Turns for 5 operations</td>
+                    <td style="color: var(--green);">4&ndash;5</td>
+                    <td style="color: var(--orange);">6&ndash;10</td>
+                </tr>
+                <tr>
+                    <td style="color: var(--text); font-family: inherit;">Output tokens per turn</td>
+                    <td style="color: var(--green);">50&ndash;80 (JSON)</td>
+                    <td style="color: var(--orange);">200&ndash;500 (stderr)</td>
+                </tr>
+                <tr>
+                    <td style="color: var(--text); font-family: inherit;">Error retries</td>
+                    <td style="color: var(--green);">0&ndash;1 (pre-validated)</td>
+                    <td style="color: var(--orange);">2&ndash;3 typical</td>
+                </tr>
+                <tr>
+                    <td style="color: var(--text); font-family: inherit;">Re-probing between steps</td>
+                    <td style="color: var(--green);">Never</td>
+                    <td style="color: var(--orange);">Every step</td>
+                </tr>
+                <tr>
+                    <td style="color: var(--text); font-family: inherit;">Token reduction</td>
+                    <td style="color: var(--green); font-weight: 600;">~40&ndash;50% fewer turns</td>
+                    <td style="color: var(--text3);">baseline</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
 </section>
 
 <hr>
