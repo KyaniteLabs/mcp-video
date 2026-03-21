@@ -461,19 +461,27 @@ def _merge_with_transitions(
 
     filter_str = ";".join(filter_parts)
 
-    # Audio: concatenate all audio streams
-    audio_parts = []
-    for i in range(n):
-        audio_parts.append(f"[{i}:a]")
-    audio_filter = "".join(audio_parts) + f"concat=n={n}:v=0:a=1[aout]"
+    # Audio: only include if clips have audio streams
+    has_audio = any(probe(c).audio_codec is not None for c in clips)
+    if has_audio:
+        audio_parts = []
+        for i in range(n):
+            audio_parts.append(f"[{i}:a]")
+        audio_filter = "".join(audio_parts) + f"concat=n={n}:v=0:a=1[aout]"
+        filter_complex = f"{filter_str};{audio_filter}"
+        map_args = ["-map", "[vout]", "-map", "[aout]"]
+        audio_codec_args = ["-c:a", "aac", "-b:a", "128k"]
+    else:
+        filter_complex = filter_str
+        map_args = ["-map", "[vout]"]
+        audio_codec_args = ["-an"]
 
     _run_ffmpeg(
         inputs + [
-            "-filter_complex", f"{filter_str};{audio_filter}",
-            "-map", "[vout]", "-map", "[aout]",
+            "-filter_complex", filter_complex,
+        ] + map_args + [
             "-c:v", "libx264", "-preset", "fast", "-crf", "23",
-            "-c:a", "aac", "-b:a", "128k",
-        ] + _movflags_args(output) + [
+        ] + audio_codec_args + _movflags_args(output) + [
             output,
         ]
     )
@@ -1105,8 +1113,10 @@ def export_video(
 # Timeline-based edit (composite operation)
 # ---------------------------------------------------------------------------
 
-def edit_timeline(timeline: Timeline, output_path: str | None = None) -> EditResult:
+def edit_timeline(timeline: Timeline | dict, output_path: str | None = None) -> EditResult:
     """Execute a full timeline-based edit described in JSON."""
+    if isinstance(timeline, dict):
+        timeline = Timeline.model_validate(timeline)
     tmpdir = tempfile.mkdtemp(prefix="agentcut_timeline_")
     try:
         video_clips: list[str] = []
