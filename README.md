@@ -529,12 +529,12 @@ AgentCut has **262 tests** across the full testing pyramid:
 tests/
 ├── conftest.py              # Shared fixtures (sample video, audio, SRT, VTT, watermark PNG, WebM)
 ├── test_models.py           # 48 tests — Pydantic model validation (no FFmpeg needed)
-├── test_errors.py           # 35 tests — Error classes and FFmpeg error parsing (no FFmpeg)
+├── test_errors.py           # 42 tests — Error classes and FFmpeg error parsing (no FFmpeg)
 ├── test_templates.py        # 21 tests — Template functions and registry (no FFmpeg)
-├── test_client.py           # 35 tests — Python Client API wrapper
-├── test_server.py           # 33 tests — MCP tool layer
-├── test_engine.py           # 27 tests — Core FFmpeg engine operations
-├── test_engine_advanced.py  # 37 tests — Edge cases, new operations, per-transition merge
+├── test_client.py           # 31 tests — Python Client API wrapper
+├── test_server.py           # 36 tests — MCP tool layer
+├── test_engine.py           # 26 tests — Core FFmpeg engine operations
+├── test_engine_advanced.py  # 44 tests — Edge cases, new operations, per-transition merge
 ├── test_cli.py              # 6 tests  — CLI commands via subprocess
 └── test_e2e.py              # 8 tests  — Full end-to-end workflows
 ```
@@ -559,8 +559,8 @@ pytest tests/ --cov=agentcut --cov-report=term-missing
 
 | Layer | Tests | What It Tests |
 |-------|-------|---------------|
-| **Unit** | 104 | Models, errors, templates — pure Python, no FFmpeg |
-| **Integration** | 150 | Client, server, engine, CLI — real FFmpeg operations |
+| **Unit** | 111 | Models, errors, templates — pure Python, no FFmpeg |
+| **Integration** | 143 | Client, server, engine, CLI — real FFmpeg operations |
 | **E2E** | 8 | Multi-step workflows (TikTok, YouTube, GIF, speed) |
 
 ---
