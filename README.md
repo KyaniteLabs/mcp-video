@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.1.0-blue.svg" alt="Version">
+  <img src="https://img.shields.io/badge/version-0.1.1-blue.svg" alt="Version">
   <img src="https://img.shields.io/badge/tests-262%20passed-green.svg" alt="Tests">
   <img src="https://img.shields.io/badge/tools-19%20MCP%20tools-orange.svg" alt="Tools">
   <img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="License">
@@ -19,7 +19,9 @@
   <a href="#python-client">Python API</a> &bull;
   <a href="#cli">CLI</a> &bull;
   <a href="#timeline-dsl">Timeline DSL</a> &bull;
-  <a href="#templates">Templates</a>
+  <a href="#templates">Templates</a> &bull;
+  <a href="ROADMAP.md">Roadmap</a> &bull;
+  <a href="CONTRIBUTING.md">Contributing</a>
 </p>
 
 ---
