@@ -551,3 +551,31 @@ class TestSplitScreen:
         out = str(tmp_path / "split.mp4")
         result = split_screen(sample_video, right_path=sample_video_2, output_path=out)
         assert result.output_path == out
+
+
+class TestFilterValidation:
+    """Regression tests for filter_type and preset validation (bugbot #5)."""
+
+    def test_invalid_filter_type_raises_mcp_error(self, sample_video):
+        with pytest.raises(MCPVideoError, match="Unknown filter type"):
+            apply_filter(sample_video, filter_type="blurr")
+
+    def test_invalid_color_preset_raises_mcp_error(self, sample_video):
+        with pytest.raises(MCPVideoError, match="Unknown color preset"):
+            _get_color_preset_filter("warmth")
+
+    def test_invalid_preset_via_apply_filter(self, sample_video):
+        with pytest.raises(MCPVideoError, match="Unknown color preset"):
+            apply_filter(sample_video, filter_type="color_preset", params={"preset": "neon"})
+
+
+class TestLoudnormTruePeak:
+    """Regression test for loudnorm TP formula (bugbot #6)."""
+
+    @requires_filter("loudnorm", "Audio normalization")
+    def test_broadcast_tp_is_fixed(self, sample_video, tmp_path):
+        """TP should be -1.5 regardless of target_lufs, not target_lufs + 14.5."""
+        from mcp_video.engine import normalize_audio
+        out = str(tmp_path / "norm_broadcast.mp4")
+        result = normalize_audio(sample_video, target_lufs=-23.0, output_path=out)
+        assert os.path.isfile(result.output_path)

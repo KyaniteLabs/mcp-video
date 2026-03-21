@@ -208,9 +208,9 @@ def main() -> None:
     # batch
     batch_p = subparsers.add_parser("batch", help="Apply operation to multiple files")
     batch_p.add_argument("inputs", nargs="+", help="Input video files")
-    batch_p.add_argument("-o", "--operation", required=True, choices=["trim", "resize", "convert", "filter", "blur", "color_grade", "watermark", "speed", "fade", "normalize_audio"], help="Operation to apply")
+    batch_p.add_argument("-o", "--output-dir", help="Output directory for processed files")
+    batch_p.add_argument("--operation", required=True, choices=["trim", "resize", "convert", "filter", "blur", "color_grade", "watermark", "speed", "fade", "normalize_audio"], help="Operation to apply")
     batch_p.add_argument("--params", help="Operation parameters as JSON")
-    batch_p.add_argument("-d", "--output-dir", help="Output directory")
 
     args = parser.parse_args()
 

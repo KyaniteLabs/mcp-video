@@ -125,7 +125,7 @@ class TestCLISplitScreen:
 
 class TestCLIBatch:
     def test_batch_outputs_json(self, sample_video):
-        result = run_cli("batch", sample_video, "-o", "trim", '--params', '{"start": "0", "duration": "1"}')
+        result = run_cli("batch", sample_video, "--operation", "trim", '--params', '{"start": "0", "duration": "1"}')
         data = json.loads(result.stdout)
         assert data["success"] is True
         assert data["succeeded"] == 1

@@ -1562,6 +1562,13 @@ def _get_color_preset_filter(preset: ColorPreset) -> str:
         "cinematic": "eq=contrast=1.15:brightness=-0.03:saturation=0.85",
         "noir": "eq=contrast=1.3:brightness=-0.05:saturation=0.0",
     }
+    if preset not in preset_filters:
+        valid = ", ".join(sorted(preset_filters))
+        raise MCPVideoError(
+            f"Unknown color preset '{preset}'. Valid presets: {valid}",
+            error_type="validation_error",
+            code="invalid_color_preset",
+        )
     return preset_filters[preset]
 
 
@@ -1597,6 +1604,13 @@ def apply_filter(
         "color_preset": ("eq", _get_color_preset_filter(params.get("preset", "warm"))),
     }
 
+    if filter_type not in filter_map:
+        valid = ", ".join(sorted(filter_map))
+        raise MCPVideoError(
+            f"Unknown filter type '{filter_type}'. Valid types: {valid}",
+            error_type="validation_error",
+            code="invalid_filter_type",
+        )
     filter_name, vf_string = filter_map[filter_type]
     _require_filter(filter_name, f"Filter '{filter_type}'")
 
@@ -1644,8 +1658,8 @@ def normalize_audio(
     output = output_path or _auto_output(input_path, "normalized")
 
     # loudnorm parameters: I=integrated loudness, TP=true peak, LRA=loudness range
-    # TP must be in range [-9, 0]. Clamp to -1.5 for safety.
-    tp = min(max(target_lufs + 14.5, -9.0), -1.5)
+    # TP (true peak) should be a fixed value near -1.5 dBTP regardless of target LUFS.
+    tp = -1.5
 
     _run_ffmpeg([
         "-i", input_path,
@@ -1815,6 +1829,7 @@ def split_screen(
         "-i", left_path, "-i", right_path,
         "-filter_complex", filter_complex,
         "-map", "[v]",
+        "-map", "0:a?",
         "-c:v", "libx264", "-preset", "fast", "-crf", "23",
         "-c:a", "aac", "-b:a", "128k",
     ] + _movflags_args(output) + [

@@ -442,3 +442,18 @@ class TestVideoBatchTool:
         assert result["success"] is False
         assert result["succeeded"] == 1
         assert result["failed"] == 1
+
+    def test_batch_output_dir(self, sample_video, tmp_path):
+        """Regression: output_dir must actually be used by batch operations."""
+        out_dir = str(tmp_path / "batch_out")
+        result = video_batch(
+            [sample_video],
+            operation="trim",
+            params={"start": "0", "duration": "1"},
+            output_dir=out_dir,
+        )
+        assert result["success"] is True
+        assert result["succeeded"] == 1
+        # Output file should be in the specified directory, not next to the input
+        output_path = result["results"][0]["output_path"]
+        assert os.path.dirname(output_path) == out_dir
