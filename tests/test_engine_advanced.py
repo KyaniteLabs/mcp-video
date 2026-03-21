@@ -8,14 +8,17 @@ from agentcut.engine import (
     _check_filter_available,
     add_audio,
     convert,
+    crop,
     edit_timeline,
     extract_audio,
+    fade,
     get_duration,
     merge,
     normalize,
     preview,
     probe,
     resize,
+    rotate,
     speed,
     storyboard,
     thumbnail,
@@ -274,3 +277,111 @@ class TestAddAudioAdvanced:
     def test_nonexistent_audio(self, sample_video):
         with pytest.raises(InputFileError):
             add_audio(sample_video, "/nonexistent/audio.mp3")
+
+
+class TestCrop:
+    def test_crop_center(self, sample_video):
+        result = crop(sample_video, width=320, height=240)
+        assert os.path.isfile(result.output_path)
+        assert result.operation == "crop"
+        info = probe(result.output_path)
+        assert info.width == 320
+        assert info.height == 240
+
+    def test_crop_with_offset(self, sample_video):
+        result = crop(sample_video, width=200, height=200, x=10, y=10)
+        assert os.path.isfile(result.output_path)
+        info = probe(result.output_path)
+        assert info.width == 200
+        assert info.height == 200
+
+    def test_crop_too_large_raises(self, sample_video):
+        with pytest.raises(AgentCutError):
+            crop(sample_video, width=9999, height=9999)
+
+    def test_crop_zero_dimensions_raises(self, sample_video):
+        with pytest.raises(AgentCutError):
+            crop(sample_video, width=0, height=100)
+
+
+class TestRotate:
+    def test_rotate_90(self, sample_video):
+        result = rotate(sample_video, angle=90)
+        assert os.path.isfile(result.output_path)
+        assert result.operation == "rotate"
+        info = probe(result.output_path)
+        # 640x480 rotated 90 should become 480x640
+        assert info.width == 480
+        assert info.height == 640
+
+    def test_rotate_180(self, sample_video):
+        result = rotate(sample_video, angle=180)
+        assert os.path.isfile(result.output_path)
+        info = probe(result.output_path)
+        assert info.width == 640
+        assert info.height == 480
+
+    def test_flip_horizontal(self, sample_video):
+        result = rotate(sample_video, flip_horizontal=True)
+        assert os.path.isfile(result.output_path)
+        info = probe(result.output_path)
+        assert info.width == 640
+        assert info.height == 480
+
+    def test_invalid_angle_raises(self, sample_video):
+        with pytest.raises(AgentCutError):
+            rotate(sample_video, angle=45)
+
+    def test_no_transform_raises(self, sample_video):
+        with pytest.raises(AgentCutError):
+            rotate(sample_video, angle=0)
+
+
+class TestFade:
+    def test_fade_in(self, sample_video):
+        result = fade(sample_video, fade_in=0.5)
+        assert os.path.isfile(result.output_path)
+        assert result.operation == "fade"
+
+    def test_fade_out(self, sample_video):
+        result = fade(sample_video, fade_out=0.5)
+        assert os.path.isfile(result.output_path)
+
+    def test_fade_in_and_out(self, sample_video):
+        result = fade(sample_video, fade_in=0.3, fade_out=0.5)
+        assert os.path.isfile(result.output_path)
+
+    def test_no_fade_raises(self, sample_video):
+        with pytest.raises(AgentCutError):
+            fade(sample_video, fade_in=0, fade_out=0)
+
+
+class TestMergePerTransition:
+    def test_single_transition_type(self, sample_video):
+        result = merge(
+            [sample_video, sample_video, sample_video],
+            transitions=["fade"],
+        )
+        assert os.path.isfile(result.output_path)
+
+    def test_multiple_transition_types(self, sample_video):
+        result = merge(
+            [sample_video, sample_video, sample_video],
+            transitions=["fade", "dissolve"],
+        )
+        assert os.path.isfile(result.output_path)
+
+    def test_transitions_shorter_than_pairs_repeats_last(self, sample_video):
+        result = merge(
+            [sample_video, sample_video, sample_video],
+            transitions=["fade"],  # 2 pairs but only 1 type
+        )
+        assert os.path.isfile(result.output_path)
+
+    def test_transition_param_backward_compat(self, sample_video):
+        result = merge(
+            [sample_video, sample_video],
+            transition="fade",
+            transition_duration=0.5,
+        )
+        assert os.path.isfile(result.output_path)

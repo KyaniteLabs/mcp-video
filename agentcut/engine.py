@@ -340,9 +340,19 @@ def merge(
     clips: list[str],
     output_path: str | None = None,
     transition: str | None = None,
+    transitions: list[str] | None = None,
     transition_duration: float = 1.0,
 ) -> EditResult:
-    """Merge multiple clips into one video. Auto-normalizes if needed."""
+    """Merge multiple clips into one video. Auto-normalizes if needed.
+
+    Args:
+        clips: List of video file paths.
+        output_path: Output file path.
+        transition: Single transition type for all clip pairs (backward compat).
+        transitions: Per-pair transition types (one per boundary, len = len(clips)-1).
+            If shorter than clip pairs, the last type is repeated.
+        transition_duration: Duration of each transition in seconds.
+    """
     if not clips:
         raise InputFileError("", "No clips provided for merge")
 
@@ -380,9 +390,16 @@ def merge(
 
         output = output_path or _auto_output(clips[0], "merged")
 
-        if transition and len(working_clips) > 1:
+        # Resolve transition types list
+        transition_types: list[str] | None = None
+        if transitions and len(working_clips) > 1:
+            transition_types = list(transitions)
+        elif transition and len(working_clips) > 1:
+            transition_types = [transition] * (len(working_clips) - 1)
+
+        if transition_types and len(working_clips) > 1:
             # Use xfade filter for transitions
-            _merge_with_transitions(working_clips, output, transition, transition_duration)
+            _merge_with_transitions(working_clips, output, transition_types, transition_duration)
         else:
             # Simple concat
             concat_file = os.path.join(tmpdir, "concat.txt")
@@ -416,21 +433,30 @@ def merge(
 def _merge_with_transitions(
     clips: list[str],
     output: str,
-    transition_type: str,
+    transition_types: list[str],
     transition_duration: float,
 ) -> None:
-    """Merge clips with xfade transitions between them."""
+    """Merge clips with xfade transitions between them.
+
+    Args:
+        transition_types: One transition type per clip pair (len = len(clips)-1).
+            If shorter, the last type is repeated.
+    """
     n = len(clips)
     if n < 2:
         _run_ffmpeg(["-i", clips[0], "-c", "copy", output])
         return
 
+    # Pad transition_types if shorter than clip pairs
+    pairs = n - 1
+    if len(transition_types) < pairs:
+        last = transition_types[-1] if transition_types else "fade"
+        transition_types = transition_types + [last] * (pairs - len(transition_types))
+
     # xfade offset calculation
-    # First clip gets its full duration minus transition_duration
-    # Each subsequent clip starts transition_duration before the previous ends
     offsets: list[float] = []
     cumulative = 0.0
-    for i in range(n - 1):
+    for i in range(pairs):
         clip_dur = get_duration(clips[i])
         if transition_duration >= clip_dur:
             raise AgentCutError(
@@ -446,18 +472,17 @@ def _merge_with_transitions(
     for clip in clips:
         inputs.extend(["-i", clip])
 
-    # Build filter chain: [0:v][1:v]xfade=transition:offset=t[xt0];
-    # [xt0][2:v]xfade=transition:offset=t[xt1]; ...
+    # Build filter chain with per-pair transition types
     filter_parts = []
     labels: list[str] = []
     for i in range(n):
         labels.append(f"{i}:v")
 
-    for i in range(n - 1):
+    for i in range(pairs):
         in1 = labels[i]
         in2 = labels[i + 1]
-        out = f"xt{i}" if i < n - 2 else "vout"
-        xfade_type = transition_type.replace("-", "")
+        out = f"xt{i}" if i < pairs - 1 else "vout"
+        xfade_type = transition_types[i].replace("-", "")
         filter_parts.append(f"[{in1}][{in2}]xfade=transition={xfade_type}:offset={offsets[i]:.3f}:duration={transition_duration:.3f}[{out}]")
         labels[i + 1] = out
 
@@ -1101,6 +1126,152 @@ def watermark(
     )
 
 
+def crop(
+    input_path: str,
+    width: int,
+    height: int,
+    x: int | None = None,
+    y: int | None = None,
+    output_path: str | None = None,
+) -> EditResult:
+    """Crop a video to a rectangular region."""
+    _validate_input(input_path)
+    if width <= 0 or height <= 0:
+        raise AgentCutError("Crop dimensions must be positive", code="invalid_crop")
+
+    info = probe(input_path)
+    if width > info.width or height > info.height:
+        raise AgentCutError(
+            f"Crop size ({width}x{height}) larger than video ({info.width}x{info.height})",
+            code="crop_too_large",
+        )
+
+    if x is None:
+        x = (info.width - width) // 2
+    if y is None:
+        y = (info.height - height) // 2
+
+    output = output_path or _auto_output(input_path, f"crop_{width}x{height}")
+
+    _run_ffmpeg([
+        "-i", input_path,
+        "-vf", f"crop={width}:{height}:{x}:{y}",
+        "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+        "-c:a", "copy",
+    ] + _movflags_args(output) + [
+        output,
+    ])
+
+    result_info = probe(output)
+    return EditResult(
+        output_path=output,
+        duration=result_info.duration,
+        resolution=result_info.resolution,
+        size_mb=result_info.size_mb,
+        format="mp4",
+        operation="crop",
+    )
+
+
+def rotate(
+    input_path: str,
+    angle: int = 0,
+    flip_horizontal: bool = False,
+    flip_vertical: bool = False,
+    output_path: str | None = None,
+) -> EditResult:
+    """Rotate and/or flip a video.
+
+    Args:
+        angle: Rotation angle (0, 90, 180, 270).
+        flip_horizontal: Mirror horizontally.
+        flip_vertical: Mirror vertically.
+    """
+    _validate_input(input_path)
+
+    if angle not in (0, 90, 180, 270):
+        raise AgentCutError("angle must be 0, 90, 180, or 270", code="invalid_angle")
+    if angle == 0 and not flip_horizontal and not flip_vertical:
+        raise AgentCutError("No rotation or flip specified", code="no_transform")
+
+    filters: list[str] = []
+    if flip_horizontal:
+        filters.append("hflip")
+    if flip_vertical:
+        filters.append("vflip")
+    if angle == 90:
+        filters.append("transpose=1")
+    elif angle == 180:
+        filters.append("transpose=1,transpose=1")
+    elif angle == 270:
+        filters.append("transpose=2")
+
+    vf = ",".join(filters)
+    output = output_path or _auto_output(input_path, f"rotated_{angle}")
+
+    _run_ffmpeg([
+        "-i", input_path,
+        "-vf", vf,
+        "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+        "-c:a", "aac", "-b:a", "128k",
+    ] + _movflags_args(output) + [
+        output,
+    ])
+
+    result_info = probe(output)
+    return EditResult(
+        output_path=output,
+        duration=result_info.duration,
+        resolution=result_info.resolution,
+        size_mb=result_info.size_mb,
+        format="mp4",
+        operation="rotate",
+    )
+
+
+def fade(
+    input_path: str,
+    fade_in: float = 0.0,
+    fade_out: float = 0.0,
+    output_path: str | None = None,
+) -> EditResult:
+    """Add fade in/out effect to a video."""
+    _validate_input(input_path)
+    if fade_in <= 0 and fade_out <= 0:
+        raise AgentCutError("Specify fade_in and/or fade_out > 0", code="no_fade")
+
+    output = output_path or _auto_output(input_path, "faded")
+    info = probe(input_path)
+
+    vf_parts: list[str] = []
+    if fade_in > 0:
+        vf_parts.append(f"fade=t=in:st=0:d={fade_in}")
+    if fade_out > 0:
+        fade_start = max(0, info.duration - fade_out)
+        vf_parts.append(f"fade=t=out:st={fade_start:.3f}:d={fade_out}")
+
+    vf = ",".join(vf_parts)
+
+    _run_ffmpeg([
+        "-i", input_path,
+        "-vf", vf,
+        "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+        "-c:a", "copy",
+    ] + _movflags_args(output) + [
+        output,
+    ])
+
+    result_info = probe(output)
+    return EditResult(
+        output_path=output,
+        duration=result_info.duration,
+        resolution=result_info.resolution,
+        size_mb=result_info.size_mb,
+        format="mp4",
+        operation="fade",
+    )
+
+
 def export_video(
     input_path: str,
     output_path: str | None = None,
@@ -1156,12 +1327,16 @@ def edit_timeline(timeline: Timeline | dict, output_path: str | None = None) -> 
             merged = video_clips[0]
         else:
             merged = os.path.join(tmpdir, "merged.mp4")
-            transitions = None
+            transition_list = None
+            trans_duration = 1.0
             for track in timeline.tracks:
                 if track.type == "video" and track.transitions:
-                    transitions = track.transitions[0].type.value
+                    # Sort by after_clip to get correct order
+                    sorted_trans = sorted(track.transitions, key=lambda t: t.after_clip)
+                    transition_list = [t.type.value for t in sorted_trans]
+                    trans_duration = sorted_trans[0].duration
                     break
-            merge(video_clips, output_path=merged, transition=transitions)
+            merge(video_clips, output_path=merged, transitions=transition_list, transition_duration=trans_duration)
 
         # Apply text overlays
         current = merged

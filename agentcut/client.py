@@ -8,12 +8,16 @@ from .engine import (
     add_audio as _add_audio,
     add_text as _add_text,
     convert as _convert,
+    crop as _crop,
     edit_timeline as _edit_timeline,
     export_video as _export_video,
     extract_audio as _extract_audio,
+    fade as _fade,
     merge as _merge,
     preview as _preview,
     probe as _probe,
+    resize as _resize,
+    rotate as _rotate,
     storyboard as _storyboard,
     subtitles as _subtitles,
     speed as _speed,
@@ -28,7 +32,6 @@ from .models import (
     QualityLevel,
     StoryboardResult,
     ThumbnailResult,
-    Timeline,
     VideoInfo,
 )
 
@@ -71,14 +74,12 @@ class Client:
         Args:
             clips: List of video file paths.
             output: Output file path.
-            transitions: List of transition types (applied between each clip pair).
-                Note: the underlying merge() function applies a single transition
-                type between all clips. If multiple transitions are provided,
-                the first one is used.
+            transitions: Transition types applied between each clip pair.
+                One per boundary (len = len(clips)-1). If fewer provided,
+                the last type is repeated. Example: ["fade", "dissolve", "fade"].
             transition_duration: Duration of each transition in seconds.
         """
-        transition = transitions[0] if transitions else None
-        return _merge(clips, output_path=output, transition=transition, transition_duration=transition_duration)
+        return _merge(clips, output_path=output, transitions=transitions, transition_duration=transition_duration)
 
     def add_text(
         self,
@@ -205,6 +206,39 @@ class Client:
             opacity=opacity, margin=margin, output_path=output,
         )
 
+    def crop(
+        self,
+        video: str,
+        width: int,
+        height: int,
+        x: int | None = None,
+        y: int | None = None,
+        output: str | None = None,
+    ) -> EditResult:
+        """Crop a video to a rectangular region."""
+        return _crop(video, width=width, height=height, x=x, y=y, output_path=output)
+
+    def rotate(
+        self,
+        video: str,
+        angle: int = 0,
+        flip_horizontal: bool = False,
+        flip_vertical: bool = False,
+        output: str | None = None,
+    ) -> EditResult:
+        """Rotate and/or flip a video."""
+        return _rotate(video, angle=angle, flip_horizontal=flip_horizontal, flip_vertical=flip_vertical, output_path=output)
+
+    def fade(
+        self,
+        video: str,
+        fade_in: float = 0.0,
+        fade_out: float = 0.0,
+        output: str | None = None,
+    ) -> EditResult:
+        """Add fade in/out effect to a video."""
+        return _fade(video, fade_in=fade_in, fade_out=fade_out, output_path=output)
+
     def export(
         self,
         video: str,
@@ -217,8 +251,7 @@ class Client:
 
     def edit(self, timeline: dict[str, Any], output: str | None = None) -> EditResult:
         """Execute a full timeline-based edit from JSON."""
-        tl = Timeline.model_validate(timeline)
-        return _edit_timeline(tl, output_path=output)
+        return _edit_timeline(timeline, output_path=output)
 
     def extract_audio(
         self,

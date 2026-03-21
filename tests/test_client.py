@@ -215,3 +215,32 @@ class TestClientExtractAudio:
         assert isinstance(result, EditResult)
         assert result.operation == "extract_audio"
         assert os.path.isfile(result.output_path)
+
+
+class TestClientCrop:
+    def test_crop_returns_edit_result(self, editor, sample_video):
+        result = editor.crop(sample_video, width=320, height=240)
+        assert isinstance(result, EditResult)
+        assert result.operation == "crop"
+        assert os.path.isfile(result.output_path)
+
+
+class TestClientRotate:
+    def test_rotate_returns_edit_result(self, editor, sample_video):
+        result = editor.rotate(sample_video, angle=90)
+        assert isinstance(result, EditResult)
+        assert result.operation == "rotate"
+        assert os.path.isfile(result.output_path)
+
+    def test_flip_returns_edit_result(self, editor, sample_video):
+        result = editor.rotate(sample_video, flip_horizontal=True)
+        assert isinstance(result, EditResult)
+        assert os.path.isfile(result.output_path)
+
+
+class TestClientFade:
+    def test_fade_returns_edit_result(self, editor, sample_video):
+        result = editor.fade(sample_video, fade_in=0.5, fade_out=0.5)
+        assert isinstance(result, EditResult)
+        assert result.operation == "fade"
+        assert os.path.isfile(result.output_path)

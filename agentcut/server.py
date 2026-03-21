@@ -11,13 +11,16 @@ from .engine import (
     add_audio,
     add_text,
     convert,
+    crop,
     edit_timeline,
     export_video,
     extract_audio,
+    fade,
     merge,
     preview,
     probe,
     resize,
+    rotate,
     storyboard,
     subtitles,
     speed,
@@ -30,7 +33,6 @@ from .models import (
     ExportFormat,
     Position,
     QualityLevel,
-    Timeline,
 )
 
 mcp = FastMCP(
@@ -171,6 +173,7 @@ def video_merge(
     clips: list[str],
     output_path: str | None = None,
     transition: str | None = None,
+    transitions: list[str] | None = None,
     transition_duration: float = 1.0,
 ) -> dict[str, Any]:
     """Merge multiple video clips into one.
@@ -178,11 +181,12 @@ def video_merge(
     Args:
         clips: List of absolute paths to video clips to merge (in order).
         output_path: Where to save the merged video. Auto-generated if omitted.
-        transition: Transition type between clips (fade, dissolve, wipe-left, wipe-right, wipe-up, wipe-down).
+        transition: Single transition type for all clip pairs (fade, dissolve, wipe-left, wipe-right, wipe-up, wipe-down).
+        transitions: Per-pair transition types (one per clip boundary). Overrides transition if both provided.
         transition_duration: Duration of each transition in seconds.
     """
     try:
-        return _result(merge(clips, output_path=output_path, transition=transition, transition_duration=transition_duration))
+        return _result(merge(clips, output_path=output_path, transition=transition, transitions=transitions, transition_duration=transition_duration))
     except AgentCutError as e:
         return _error_result(e)
 
@@ -471,6 +475,75 @@ def video_export(
 
 
 @mcp.tool()
+def video_crop(
+    input_path: str,
+    width: int,
+    height: int,
+    x: int | None = None,
+    y: int | None = None,
+    output_path: str | None = None,
+) -> dict[str, Any]:
+    """Crop a video to a rectangular region.
+
+    Args:
+        input_path: Absolute path to the input video.
+        width: Width of the crop region in pixels.
+        height: Height of the crop region in pixels.
+        x: X offset (defaults to center).
+        y: Y offset (defaults to center).
+        output_path: Where to save the output. Auto-generated if omitted.
+    """
+    try:
+        return _result(crop(input_path, width=width, height=height, x=x, y=y, output_path=output_path))
+    except AgentCutError as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_rotate(
+    input_path: str,
+    angle: int = 0,
+    flip_horizontal: bool = False,
+    flip_vertical: bool = False,
+    output_path: str | None = None,
+) -> dict[str, Any]:
+    """Rotate and/or flip a video.
+
+    Args:
+        input_path: Absolute path to the input video.
+        angle: Rotation angle (0, 90, 180, 270 degrees).
+        flip_horizontal: Mirror the video horizontally.
+        flip_vertical: Mirror the video vertically.
+        output_path: Where to save the output. Auto-generated if omitted.
+    """
+    try:
+        return _result(rotate(input_path, angle=angle, flip_horizontal=flip_horizontal, flip_vertical=flip_vertical, output_path=output_path))
+    except AgentCutError as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_fade(
+    input_path: str,
+    fade_in: float = 0.0,
+    fade_out: float = 0.0,
+    output_path: str | None = None,
+) -> dict[str, Any]:
+    """Add fade in/out effect to a video.
+
+    Args:
+        input_path: Absolute path to the input video.
+        fade_in: Fade in duration in seconds (from black).
+        fade_out: Fade out duration in seconds (to black).
+        output_path: Where to save the output. Auto-generated if omitted.
+    """
+    try:
+        return _result(fade(input_path, fade_in=fade_in, fade_out=fade_out, output_path=output_path))
+    except AgentCutError as e:
+        return _error_result(e)
+
+
+@mcp.tool()
 def video_edit(
     timeline: dict[str, Any],
     output_path: str | None = None,
@@ -510,8 +583,7 @@ def video_edit(
         output_path: Where to save the final video. Auto-generated if omitted.
     """
     try:
-        tl = Timeline.model_validate(timeline)
-        return _result(edit_timeline(tl, output_path=output_path))
+        return _result(edit_timeline(timeline, output_path=output_path))
     except Exception as e:
         if isinstance(e, AgentCutError):
             return _error_result(e)

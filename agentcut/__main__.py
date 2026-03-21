@@ -35,6 +35,7 @@ def main() -> None:
     merge_p = subparsers.add_parser("merge", help="Merge multiple clips")
     merge_p.add_argument("inputs", nargs="+", help="Input video files")
     merge_p.add_argument("-t", "--transition", default=None, choices=["fade", "dissolve", "wipe-left", "wipe-right", "wipe-up", "wipe-down"])
+    merge_p.add_argument("--transitions", nargs="+", choices=["fade", "dissolve", "wipe-left", "wipe-right", "wipe-up", "wipe-down"], help="Per-pair transition types (overrides --transition)")
     merge_p.add_argument("-td", "--transition-duration", type=float, default=1.0, help="Transition duration in seconds")
     merge_p.add_argument("-o", "--output", help="Output file path")
 
@@ -117,6 +118,30 @@ def main() -> None:
     wm_p.add_argument("--margin", type=int, default=20, help="Margin from edge in pixels")
     wm_p.add_argument("-o", "--output", help="Output file path")
 
+    # crop
+    crop_p = subparsers.add_parser("crop", help="Crop a video to a region")
+    crop_p.add_argument("input", help="Input video file")
+    crop_p.add_argument("-w", "--width", type=int, required=True, help="Crop width in pixels")
+    crop_p.add_argument("--height", type=int, required=True, help="Crop height in pixels")
+    crop_p.add_argument("-x", type=int, default=None, help="X offset (default: center)")
+    crop_p.add_argument("-y", type=int, default=None, help="Y offset (default: center)")
+    crop_p.add_argument("-o", "--output", help="Output file path")
+
+    # rotate
+    rotate_p = subparsers.add_parser("rotate", help="Rotate and/or flip a video")
+    rotate_p.add_argument("input", help="Input video file")
+    rotate_p.add_argument("-a", "--angle", type=int, default=0, choices=[0, 90, 180, 270], help="Rotation angle in degrees")
+    rotate_p.add_argument("--flip-h", action="store_true", help="Flip horizontally")
+    rotate_p.add_argument("--flip-v", action="store_true", help="Flip vertically")
+    rotate_p.add_argument("-o", "--output", help="Output file path")
+
+    # fade
+    fade_p = subparsers.add_parser("fade", help="Add fade in/out to video")
+    fade_p.add_argument("input", help="Input video file")
+    fade_p.add_argument("--fade-in", type=float, default=0.0, help="Fade in duration (seconds)")
+    fade_p.add_argument("--fade-out", type=float, default=0.0, help="Fade out duration (seconds)")
+    fade_p.add_argument("-o", "--output", help="Output file path")
+
     # export
     export_p = subparsers.add_parser("export", help="Export video with quality settings")
     export_p.add_argument("input", help="Input video file")
@@ -157,7 +182,7 @@ def main() -> None:
 
         elif args.command == "merge":
             from .engine import merge
-            result = merge(args.inputs, output_path=args.output, transition=args.transition, transition_duration=args.transition_duration)
+            result = merge(args.inputs, output_path=args.output, transition=args.transition, transitions=args.transitions, transition_duration=args.transition_duration)
             print(json.dumps(result.model_dump(), indent=2))
 
         elif args.command == "add-text":
@@ -227,6 +252,21 @@ def main() -> None:
                 opacity=args.opacity, margin=args.margin,
                 output_path=args.output,
             )
+            print(json.dumps(result.model_dump(), indent=2))
+
+        elif args.command == "crop":
+            from .engine import crop
+            result = crop(args.input, width=args.width, height=args.height, x=args.x, y=args.y, output_path=args.output)
+            print(json.dumps(result.model_dump(), indent=2))
+
+        elif args.command == "rotate":
+            from .engine import rotate
+            result = rotate(args.input, angle=args.angle, flip_horizontal=args.flip_h, flip_vertical=args.flip_v, output_path=args.output)
+            print(json.dumps(result.model_dump(), indent=2))
+
+        elif args.command == "fade":
+            from .engine import fade
+            result = fade(args.input, fade_in=args.fade_in, fade_out=args.fade_out, output_path=args.output)
             print(json.dumps(result.model_dump(), indent=2))
 
         elif args.command == "export":

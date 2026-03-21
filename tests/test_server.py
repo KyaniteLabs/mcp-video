@@ -14,13 +14,16 @@ from agentcut.server import (
     video_add_audio,
     video_add_text,
     video_convert,
+    video_crop,
     video_edit,
     video_export,
     video_extract_audio,
+    video_fade,
     video_info,
     video_merge,
     video_preview,
     video_resize,
+    video_rotate,
     video_speed,
     video_storyboard,
     video_thumbnail,
@@ -59,6 +62,9 @@ class TestServerInitialization:
         assert "video_export" in tool_names
         assert "video_edit" in tool_names
         assert "video_extract_audio" in tool_names
+        assert "video_crop" in tool_names
+        assert "video_rotate" in tool_names
+        assert "video_fade" in tool_names
 
     def test_resources_registered(self):
         # Verify templates resource is defined (can't call async list_resources in sync test)
@@ -257,3 +263,44 @@ class TestTemplatesResource:
         assert "webm" in formats
         assert "gif" in formats
         assert "mov" in formats
+
+
+class TestVideoCropTool:
+    def test_returns_success(self, sample_video):
+        result = video_crop(sample_video, width=320, height=240)
+        assert result["success"] is True
+        assert os.path.isfile(result["output_path"])
+
+    def test_error_on_too_large(self, sample_video):
+        result = video_crop(sample_video, width=9999, height=9999)
+        assert result["success"] is False
+        assert "error" in result
+
+
+class TestVideoRotateTool:
+    def test_rotate_90(self, sample_video):
+        result = video_rotate(sample_video, angle=90)
+        assert result["success"] is True
+        assert os.path.isfile(result["output_path"])
+
+    def test_flip_horizontal(self, sample_video):
+        result = video_rotate(sample_video, flip_horizontal=True)
+        assert result["success"] is True
+        assert os.path.isfile(result["output_path"])
+
+    def test_error_on_invalid_angle(self, sample_video):
+        result = video_rotate(sample_video, angle=45)
+        assert result["success"] is False
+        assert "error" in result
+
+
+class TestVideoFadeTool:
+    def test_fade_in_and_out(self, sample_video):
+        result = video_fade(sample_video, fade_in=0.5, fade_out=0.5)
+        assert result["success"] is True
+        assert os.path.isfile(result["output_path"])
+
+    def test_error_on_no_fade(self, sample_video):
+        result = video_fade(sample_video, fade_in=0, fade_out=0)
+        assert result["success"] is False
+        assert "error" in result
