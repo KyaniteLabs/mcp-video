@@ -75,7 +75,7 @@ sudo apt install ffmpeg
 ### Installation
 
 ```bash
-pip install mcp_video
+pip install mcp-video
 ```
 
 Or with UVX (no install needed):
@@ -505,7 +505,7 @@ mcp-video parses FFmpeg errors and returns structured, actionable error response
       "auto_fix": true,
       "description": "Auto-convert input from vp9 to H.264/AAC before editing"
     },
-    "documentation_url": "https://github.com/pastorsimon1798/mcp_video#codec-compatibility"
+    "documentation_url": "https://github.com/pastorsimon1798/mcp-video#codec-compatibility"
   }
 }
 ```
@@ -612,8 +612,8 @@ SRT, WebVTT (burned into video)
 
 ```bash
 # Clone
-git clone https://github.com/pastorsimon1798/mcp_video.git
-cd mcp_video
+git clone https://github.com/pastorsimon1798/mcp-video.git
+cd mcp-video
 
 # Setup
 python -m venv .venv
