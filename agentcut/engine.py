@@ -79,8 +79,8 @@ def _check_filter_available(name: str) -> bool:
         _AVAILABLE_FILTERS = set()
         for line in proc.stdout.split("\n"):
             parts = line.strip().split()
-            if len(parts) >= 2 and parts[1] in ("V", "A", "AV"):
-                _AVAILABLE_FILTERS.add(parts[0])
+            if len(parts) >= 3 and "->" in parts[2]:
+                _AVAILABLE_FILTERS.add(parts[1])
     return name in _AVAILABLE_FILTERS
 
 
@@ -776,15 +776,29 @@ def speed(
         tempo_val = factor ** (1 / chain_count)
         audio_filter = ",".join([f"atempo={tempo_val}"] * chain_count)
 
-    _run_ffmpeg([
-        "-i", input_path,
-        "-filter_complex", f"[0:v]{video_filter}[v];[0:a]{audio_filter}[a]",
-        "-map", "[v]", "-map", "[a]",
-        "-c:v", "libx264", "-preset", "fast", "-crf", "23",
-        "-c:a", "aac", "-b:a", "128k",
-        "-movflags", "+faststart",
-        output,
-    ])
+    # Check if input has audio
+    info = probe(input_path)
+    has_audio = info.audio_codec is not None
+
+    if has_audio:
+        _run_ffmpeg([
+            "-i", input_path,
+            "-filter_complex", f"[0:v]{video_filter}[v];[0:a]{audio_filter}[a]",
+            "-map", "[v]", "-map", "[a]",
+            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+            "-c:a", "aac", "-b:a", "128k",
+            "-movflags", "+faststart",
+            output,
+        ])
+    else:
+        _run_ffmpeg([
+            "-i", input_path,
+            "-vf", video_filter,
+            "-an",
+            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+            "-movflags", "+faststart",
+            output,
+        ])
 
     info = probe(output)
     return EditResult(
@@ -1137,8 +1151,13 @@ def edit_timeline(timeline: Timeline, output_path: str | None = None) -> EditRes
                 resize(current, width=timeline.width, height=timeline.height, output_path=resized)
                 current = resized
 
-        # Export
-        output = output_path or _auto_output(current, "timeline", ext=f".{timeline.export.format}")
+        # Export — write to a safe location outside tmpdir
+        if output_path:
+            output = output_path
+        else:
+            # Use the original video's directory, not tmpdir
+            original_source = video_clips[0]
+            output = _auto_output(original_source, "timeline", ext=f".{timeline.export.format}")
         result = export_video(
             current,
             output_path=output,

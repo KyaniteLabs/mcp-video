@@ -255,6 +255,7 @@
     <div class="logo">agent<span>cut</span></div>
     <div class="links">
         <a href="#how-it-works">How It Works</a>
+        <a href="#why">Why AgentCut</a>
         <a href="#tools">Tools</a>
         <a href="#interfaces">Interfaces</a>
         <a href="#testing">Testing</a>
@@ -308,6 +309,115 @@
             <div class="icon">&#128274;</div>
             <h3>Local & Private</h3>
             <p>Runs on your machine. No cloud uploads, no API keys, no per-minute billing. Your video never leaves your computer.</p>
+        </div>
+    </div>
+</section>
+
+<hr>
+
+<!-- WHY AGENTCUT -->
+<section id="why">
+    <div class="section-label">Why AgentCut</div>
+    <div class="section-title">Not just another FFmpeg wrapper.</div>
+    <p class="section-desc">
+        "Can't I just have Claude Code run ffmpeg commands?" Sure &mdash; if you enjoy debugging 200-character filter graphs,
+        wrestling with flag order semantics, and paying $2.50 for a 5-second video on Replicate. Here's why AgentCut is different.
+    </p>
+
+    <!-- Comparison Table -->
+    <div class="table-wrap" style="margin-bottom: 2.5rem;">
+        <table>
+            <thead>
+                <tr>
+                    <th></th>
+                    <th style="color: var(--accent2);">AgentCut</th>
+                    <th>Claude Code + FFmpeg</th>
+                    <th>Cloud APIs</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="color: var(--text); font-family: inherit;">Cost</td>
+                    <td style="color: var(--green);">Free, local</td>
+                    <td style="color: var(--text2);">Free, but your time isn't</td>
+                    <td style="color: var(--orange);">$0.28&ndash;$2.50 per 5s video</td>
+                </tr>
+                <tr>
+                    <td style="color: var(--text); font-family: inherit;">Privacy</td>
+                    <td style="color: var(--green);">100% local</td>
+                    <td style="color: var(--green);">100% local</td>
+                    <td style="color: var(--orange);">Uploads to cloud</td>
+                </tr>
+                <tr>
+                    <td style="color: var(--text); font-family: inherit;">Error messages</td>
+                    <td style="color: var(--green);">Structured + auto-fix</td>
+                    <td style="color: var(--orange);">FFmpeg stderr (cryptic)</td>
+                    <td style="color: var(--text2);">HTTP errors</td>
+                </tr>
+                <tr>
+                    <td style="color: var(--text); font-family: inherit;">Parameter validation</td>
+                    <td style="color: var(--green);">Before execution</td>
+                    <td style="color: var(--orange);">Only at runtime</td>
+                    <td style="color: var(--text2);">API schema check</td>
+                </tr>
+                <tr>
+                    <td style="color: var(--text); font-family: inherit;">Text overlay</td>
+                    <td style="color: var(--green);"><code>add_text(text="Hi")</code></td>
+                    <td style="color: var(--orange);"><code style="font-size: 0.75rem;">-vf "drawtext=text='Hi':fontfile=...:fontsize=24:x=(w-text_w)/2:y=h-50"</code></td>
+                    <td style="color: var(--text2);">Varies by API</td>
+                </tr>
+                <tr>
+                    <td style="color: var(--text); font-family: inherit;">Speed change</td>
+                    <td style="color: var(--green);">Handles audio-less videos</td>
+                    <td style="color: var(--orange);">Fails if no audio stream</td>
+                    <td style="color: var(--text2);">Usually handled</td>
+                </tr>
+                <tr>
+                    <td style="color: var(--text); font-family: inherit;">Discovery</td>
+                    <td style="color: var(--green);">16 self-documenting tools</td>
+                    <td style="color: var(--orange);">Must know 500+ flags</td>
+                    <td style="color: var(--text2);">API docs</td>
+                </tr>
+                <tr>
+                    <td style="color: var(--text); font-family: inherit;">Testing</td>
+                    <td style="color: var(--green);">234 tests, CI-ready</td>
+                    <td style="color: var(--orange);">None (ad-hoc)</td>
+                    <td style="color: var(--text2);">Provider's tests</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Deep dive cards -->
+    <div class="section-title" style="font-size: 1.3rem; margin-bottom: 1.5rem;">The real problems with raw FFmpeg</div>
+    <div class="grid-2" style="margin-bottom: 2.5rem;">
+        <div class="card">
+            <h3>Flag order changes behavior silently</h3>
+            <p>Put <code>-ss 10</code> before <code>-i input.mp4</code> and FFmpeg seeks instantly. Put it after, and it decodes every frame up to 10s first. Same flags, completely different performance. Claude Code can't know which you meant.</p>
+        </div>
+        <div class="card">
+            <h3>Cryptic error messages</h3>
+            <p>Try adding audio to a silent video and you get: <code style="font-size: 0.8rem;">"Stream specifier ':a' matches no streams."</code> No hint that the video has no audio. AgentCut checks before running and gives you a clear error.</p>
+        </div>
+        <div class="card">
+            <h3>Intermediate files = quality loss</h3>
+            <p>Every FFmpeg call re-encodes. Chain 5 operations and you've re-encoded 5 times. AgentCut's timeline DSL composes operations into a single FFmpeg command where possible.</p>
+        </div>
+        <div class="card">
+            <h3>Claude forgets between commands</h3>
+            <p>In a 10-step workflow, Claude must re-discover file paths, resolutions, and durations at every step. AgentCut returns structured results (path, duration, resolution) so the agent always has context.</p>
+        </div>
+    </div>
+
+    <div class="section-title" style="font-size: 1.3rem; margin-bottom: 1.5rem;">Why not cloud APIs?</div>
+    <div class="grid-2">
+        <div class="card">
+            <h3>Expensive at scale</h3>
+            <p>Replicate charges $0.28&ndash;$0.50 per second of generated video. A 60-second clip costs $17&ndash;$30. RunwayML's Pro plan gives you ~90 seconds of Gen-4.5 for $28/month. AgentCut: $0, forever.</p>
+        </div>
+        <div class="card">
+            <h3>Vendor lock-in</h3>
+            <p>Your workflow depends on their API staying up, their pricing not changing, and their model versions not breaking your prompts. With AgentCut, FFmpeg runs on your machine &mdash; no API deprecation risk.</p>
         </div>
     </div>
 </section>
