@@ -1,4 +1,4 @@
-"""Pydantic models for AgentCut operations."""
+"""Pydantic models for mcp-video operations."""
 
 from __future__ import annotations
 
@@ -53,6 +53,8 @@ class EditResult(BaseModel):
     size_mb: float | None = None
     format: str | None = None
     operation: str | None = None
+    progress: float | None = Field(default=None, description="Final progress percentage (0-100)")
+    thumbnail_base64: str | None = Field(default=None, description="Base64-encoded JPEG thumbnail of the first frame")
 
 
 class ErrorResult(BaseModel):

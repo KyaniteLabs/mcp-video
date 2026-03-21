@@ -1,15 +1,15 @@
 # Improvement Roadmap
 
-Bugs fixed, 0.1.1 shipped. Here's what would make AgentCut genuinely better to use.
+Bugs fixed, 0.1.1 shipped. Here's what would make mcp-video genuinely better to use.
 
 ---
 
 ## High Impact (Directly improves every user session)
 
-- [ ] **Progress callbacks** — Long operations (merge, convert, export) give no feedback. A progress percentage in the MCP response would let agents tell users "50% done..." instead of silence. FFmpeg outputs progress to stderr — parse it.
+- [x] **Progress callbacks** — Long operations (merge, convert, export) give no feedback. A progress percentage in the MCP response would let agents tell users "50% done..." instead of silence. FFmpeg outputs progress to stderr — parse it.
 - [ ] **Output file cleanup** — Every operation creates a new file. Multi-step workflows leave 3-4 intermediate files. Add a `cleanup` parameter or a `video_cleanup` tool that removes intermediates, keeping only the final output.
 - [ ] **Smarter GIF output** — 3-second GIF at "low" quality = 28MB. The two-pass palette approach is good but `scale=480:-1` is too large for "low". Scale by quality preset: low=320, medium=480, high=640.
-- [ ] **Visual verification** — After an operation, return a thumbnail of the first frame of the output. Lets agents (and users) confirm the result looks correct without opening the file. Could be base64-encoded or a file path.
+- [x] **Visual verification** — After an operation, return a thumbnail of the first frame of the output. Lets agents (and users) confirm the result looks correct without opening the file. Could be base64-encoded or a file path.
 
 ## Medium Impact (Makes the API less frustrating)
 

@@ -2,8 +2,8 @@
 
 import pytest
 
-from agentcut.errors import (
-    AgentCutError,
+from mcp_video.errors import (
+    MCPVideoError,
     CodecError,
     ExportError,
     FFmpegNotFoundError,
@@ -16,9 +16,9 @@ from agentcut.errors import (
 )
 
 
-class TestAgentCutError:
+class TestMCPVideoError:
     def test_to_dict_structure(self):
-        err = AgentCutError("something went wrong")
+        err = MCPVideoError("something went wrong")
         d = err.to_dict()
         assert d["type"] == "unknown_error"
         assert d["code"] == "unknown"
@@ -27,7 +27,7 @@ class TestAgentCutError:
         assert "documentation_url" not in d
 
     def test_with_suggested_action(self):
-        err = AgentCutError(
+        err = MCPVideoError(
             "test error",
             suggested_action={"auto_fix": True, "description": "try again"},
         )
@@ -36,7 +36,7 @@ class TestAgentCutError:
         assert d["suggested_action"]["auto_fix"] is True
 
     def test_with_docs_url(self):
-        err = AgentCutError(
+        err = MCPVideoError(
             "test error",
             docs_url="https://example.com/docs",
         )
@@ -45,12 +45,12 @@ class TestAgentCutError:
         assert d["documentation_url"] == "https://example.com/docs"
 
     def test_is_exception(self):
-        err = AgentCutError("test")
-        with pytest.raises(AgentCutError):
+        err = MCPVideoError("test")
+        with pytest.raises(MCPVideoError):
             raise err
 
     def test_str_representation(self):
-        err = AgentCutError("detailed message")
+        err = MCPVideoError("detailed message")
         assert str(err) == "detailed message"
 
 

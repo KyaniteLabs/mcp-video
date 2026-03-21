@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AgentCut — Video Editing for AI Agents</title>
+    <title>mcp-video — Video Editing for AI Agents</title>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -252,14 +252,14 @@
 
 <!-- NAV -->
 <nav>
-    <div class="logo">agent<span>cut</span></div>
+    <div class="logo">mcp<span>-video</span></div>
     <div class="links">
         <a href="#how-it-works">How It Works</a>
-        <a href="#why">Why AgentCut</a>
+        <a href="#why">Why mcp-video</a>
         <a href="#tools">Tools</a>
         <a href="#interfaces">Interfaces</a>
         <a href="#testing">Testing</a>
-        <a href="https://github.com/pastorsimon1798/agentcut">GitHub</a>
+        <a href="https://github.com/pastorsimon1798/mcp-video">GitHub</a>
     </div>
 </nav>
 
@@ -278,8 +278,8 @@
         <div class="badge"><div class="dot orange"></div> 3 interfaces</div>
     </div>
     <div class="cta-row">
-        <a class="btn btn-primary" href="https://github.com/pastorsimon1798/agentcut">View on GitHub</a>
-        <a class="btn btn-secondary" href="#quickstart">pip install agentcut</a>
+        <a class="btn btn-primary" href="https://github.com/pastorsimon1798/mcp-video">View on GitHub</a>
+        <a class="btn btn-secondary" href="#quickstart">pip install mcp-video</a>
     </div>
 </div>
 
@@ -292,7 +292,7 @@
     <p class="section-desc">
         AI agents can write code, analyze documents, browse the web, create images — but video editing?
         Existing tools are either GUI-only (agents can't click buttons), raw FFmpeg wrappers (agents can't
-        memorize hundreds of flags), or cloud APIs (expensive, slow, vendor lock-in). AgentCut bridges this gap.
+        memorize hundreds of flags), or cloud APIs (expensive, slow, vendor lock-in). mcp-video bridges this gap.
     </p>
     <div class="grid-3">
         <div class="feature-card">
@@ -315,13 +315,13 @@
 
 <hr>
 
-<!-- WHY AGENTCUT -->
+<!-- WHY MCP-VIDEO -->
 <section id="why">
-    <div class="section-label">Why AgentCut</div>
+    <div class="section-label">Why mcp-video</div>
     <div class="section-title">Not just another FFmpeg wrapper.</div>
     <p class="section-desc">
         "Can't I just have Claude Code run ffmpeg commands?" Sure &mdash; if you enjoy debugging 200-character filter graphs,
-        wrestling with flag order semantics, and paying dollars per short clip on cloud APIs. Here's why AgentCut is different.
+        wrestling with flag order semantics, and paying dollars per short clip on cloud APIs. Here's why mcp-video is different.
     </p>
 
     <!-- Comparison Table -->
@@ -330,7 +330,7 @@
             <thead>
                 <tr>
                     <th></th>
-                    <th style="color: var(--accent2);">AgentCut</th>
+                    <th style="color: var(--accent2);">mcp-video</th>
                     <th>Claude Code + FFmpeg</th>
                     <th>Cloud APIs</th>
                 </tr>
@@ -397,15 +397,15 @@
         </div>
         <div class="card">
             <h3>Cryptic error messages</h3>
-            <p>Try adding audio to a silent video and you get: <code style="font-size: 0.8rem;">"Stream specifier ':a' matches no streams."</code> No hint that the video has no audio. AgentCut checks before running and gives you a clear error.</p>
+            <p>Try adding audio to a silent video and you get: <code style="font-size: 0.8rem;">"Stream specifier ':a' matches no streams."</code> No hint that the video has no audio. mcp-video checks before running and gives you a clear error.</p>
         </div>
         <div class="card">
             <h3>Intermediate files = quality loss</h3>
-            <p>Every FFmpeg call re-encodes. Chain 5 operations and you've re-encoded 5 times. AgentCut's timeline DSL composes operations into a single FFmpeg command where possible.</p>
+            <p>Every FFmpeg call re-encodes. Chain 5 operations and you've re-encoded 5 times. mcp-video's timeline DSL composes operations into a single FFmpeg command where possible.</p>
         </div>
         <div class="card">
             <h3>Claude forgets between commands</h3>
-            <p>In a 10-step workflow, Claude must re-discover file paths, resolutions, and durations at every step. AgentCut returns structured results (path, duration, resolution) so the agent always has context.</p>
+            <p>In a 10-step workflow, Claude must re-discover file paths, resolutions, and durations at every step. mcp-video returns structured results (path, duration, resolution) so the agent always has context.</p>
         </div>
     </div>
 
@@ -413,24 +413,24 @@
     <div class="grid-2">
         <div class="card">
             <h3>Expensive at scale</h3>
-            <p>Replicate charges $0.28&ndash;$0.50 per second of generated video. A 60-second clip costs $17&ndash;$30. RunwayML's Pro plan gives you ~90 seconds of Gen-4.5 for $28/month. AgentCut: $0, forever.</p>
+            <p>Replicate charges $0.28&ndash;$0.50 per second of generated video. A 60-second clip costs $17&ndash;$30. RunwayML's Pro plan gives you ~90 seconds of Gen-4.5 for $28/month. mcp-video: $0, forever.</p>
         </div>
         <div class="card">
             <h3>Vendor lock-in</h3>
-            <p>Your workflow depends on their API staying up, their pricing not changing, and their model versions not breaking your prompts. With AgentCut, FFmpeg runs on your machine &mdash; no API deprecation risk.</p>
+            <p>Your workflow depends on their API staying up, their pricing not changing, and their model versions not breaking your prompts. With mcp-video, FFmpeg runs on your machine &mdash; no API deprecation risk.</p>
         </div>
     </div>
 
     <div class="section-title" style="font-size: 1.3rem; margin-bottom: 1.5rem;">Saves tokens. Saves turns.</div>
     <p style="color: var(--text2); font-size: 0.95rem; max-width: 650px; margin-bottom: 1.5rem;">
-        Every wasted turn costs money. With raw FFmpeg, Claude spends tokens parsing hundreds of lines of stderr, retrying failed commands, and re-probing files it already processed. AgentCut eliminates all of that.
+        Every wasted turn costs money. With raw FFmpeg, Claude spends tokens parsing hundreds of lines of stderr, retrying failed commands, and re-probing files it already processed. mcp-video eliminates all of that.
     </p>
     <div class="table-wrap" style="margin-bottom: 0;">
         <table>
             <thead>
                 <tr>
                     <th></th>
-                    <th style="color: var(--accent2);">AgentCut</th>
+                    <th style="color: var(--accent2);">mcp-video</th>
                     <th>Claude Code + FFmpeg</th>
                 </tr>
             </thead>
@@ -512,7 +512,7 @@
     <div class="section-label">Three Interfaces</div>
     <div class="section-title">However you want to use it.</div>
     <p class="section-desc">
-        AgentCut works as an MCP server for AI agents, a Python library for scripts, and a CLI tool for the terminal.
+        mcp-video works as an MCP server for AI agents, a Python library for scripts, and a CLI tool for the terminal.
     </p>
 
     <div class="grid-2">
@@ -523,9 +523,9 @@
             </p>
             <div class="code-block"><pre>{
   <span class="string">"mcpServers"</span>: {
-    <span class="string">"agentcut"</span>: {
+    <span class="string">"mcp-video"</span>: {
       <span class="string">"command"</span>: <span class="string">"uvx"</span>,
-      <span class="string">"args"</span>: [<span class="string">"agentcut"</span>]
+      <span class="string">"args"</span>: [<span class="string">"mcp-video"</span>]
     }
   }
 }</pre></div>
@@ -538,7 +538,7 @@
             <p style="color: var(--text2); font-size: 0.9rem; margin-bottom: 1rem;">
                 Clean API for automation, pipelines, and batch processing.
             </p>
-            <div class="code-block"><pre><span class="keyword">from</span> agentcut <span class="keyword">import</span> Client
+            <div class="code-block"><pre><span class="keyword">from</span> mcp_video <span class="keyword">import</span> Client
 
 editor = <span class="func">Client</span>()
 clip = editor.<span class="func">trim</span>(<span class="string">"v.mp4"</span>, start=<span class="string">"0:30"</span>, duration=<span class="string">"15"</span>)
@@ -551,14 +551,14 @@ result = editor.<span class="func">export</span>(final.output_path)
     <div style="margin-top: 2rem;">
         <h3 style="margin-bottom: 0.75rem;">CLI Tool</h3>
         <div class="code-block"><pre><span class="comment"># Get info</span>
-$ agentcut info video.mp4
+$ mcp-video info video.mp4
 
 <span class="comment"># Trim and convert</span>
-$ agentcut trim video.mp4 -s 0:30 -d 15
-$ agentcut convert video.mp4 -f webm -q high
+$ mcp-video trim video.mp4 -s 0:30 -d 15
+$ mcp-video convert video.mp4 -f webm -q high
 
 <span class="comment"># Generate storyboard</span>
-$ agentcut storyboard video.mp4 -n 12</pre></div>
+$ mcp-video storyboard video.mp4 -n 12</pre></div>
     </div>
 </section>
 
@@ -669,7 +669,7 @@ $ agentcut storyboard video.mp4 -n 12</pre></div>
     <div class="workflow">
         <div class="step">1. Install FFmpeg</div>
         <div class="arrow">&rarr;</div>
-        <div class="step">2. pip install agentcut</div>
+        <div class="step">2. pip install mcp-video</div>
         <div class="arrow">&rarr;</div>
         <div class="step">3. Add to MCP config</div>
         <div class="arrow">&rarr;</div>
@@ -683,11 +683,11 @@ brew install ffmpeg
 <span class="comment"># brew reinstall --build-from-source ffmpeg</span>
 <span class="comment"># Verify: ffmpeg -filters | grep drawtext</span>
 
-<span class="comment"># 2. Install AgentCut</span>
-pip install agentcut
+<span class="comment"># 2. Install mcp-video</span>
+pip install mcp-video
 
 <span class="comment"># 3. Add to your Claude Code MCP config</span>
-<span class="comment"># (Settings > MCP Servers > Add > agentcut)</span>
+<span class="comment"># (Settings > MCP Servers > Add > mcp-video)</span>
 
 <span class="comment"># 4. Start editing!</span>
 <span class="comment"># Just tell your agent what you want:</span>
@@ -696,10 +696,10 @@ pip install agentcut
 
 <!-- FOOTER -->
 <footer>
-    <div>AgentCut &mdash; Apache 2.0 License</div>
+    <div>mcp-video &mdash; Apache 2.0 License</div>
     <div>
-        <a href="https://github.com/pastorsimon1798/agentcut">GitHub</a> &bull;
-        <a href="https://github.com/pastorsimon1798/agentcut/issues">Issues</a> &bull;
+        <a href="https://github.com/pastorsimon1798/mcp-video">GitHub</a> &bull;
+        <a href="https://github.com/pastorsimon1798/mcp-video/issues">Issues</a> &bull;
         Built with FFmpeg + MCP
     </div>
 </footer>

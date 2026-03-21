@@ -1,12 +1,12 @@
-"""AgentCut error types with auto-fix suggestions."""
+"""mcp-video error types with auto-fix suggestions."""
 
 from __future__ import annotations
 
 from typing import Any
 
 
-class AgentCutError(Exception):
-    """Base error for all AgentCut operations."""
+class MCPVideoError(Exception):
+    """Base error for all mcp-video operations."""
 
     def __init__(
         self,
@@ -35,7 +35,7 @@ class AgentCutError(Exception):
         return result
 
 
-class FFmpegNotFoundError(AgentCutError):
+class FFmpegNotFoundError(MCPVideoError):
     """FFmpeg is not installed or not on PATH."""
 
     def __init__(self) -> None:
@@ -46,12 +46,12 @@ class FFmpegNotFoundError(AgentCutError):
             code="ffmpeg_not_found",
             suggested_action={
                 "auto_fix": False,
-                "description": "Install FFmpeg before using AgentCut",
+                "description": "Install FFmpeg before using mcp-video",
             },
         )
 
 
-class FFprobeNotFoundError(AgentCutError):
+class FFprobeNotFoundError(MCPVideoError):
     """FFprobe is not installed or not on PATH."""
 
     def __init__(self) -> None:
@@ -62,7 +62,7 @@ class FFprobeNotFoundError(AgentCutError):
         )
 
 
-class InputFileError(AgentCutError):
+class InputFileError(MCPVideoError):
     """Input file doesn't exist or is not a valid video."""
 
     def __init__(self, path: str, reason: str = "File not found") -> None:
@@ -77,7 +77,7 @@ class InputFileError(AgentCutError):
         )
 
 
-class CodecError(AgentCutError):
+class CodecError(MCPVideoError):
     """Unsupported or incompatible codec."""
 
     def __init__(self, codec: str, detail: str = "") -> None:
@@ -89,11 +89,11 @@ class CodecError(AgentCutError):
                 "auto_fix": True,
                 "description": f"Auto-convert input from {codec} to H.264/AAC before editing",
             },
-            docs_url="https://github.com/pastorsimon1798/agentcut#codec-compatibility",
+            docs_url="https://github.com/pastorsimon1798/mcp-video#codec-compatibility",
         )
 
 
-class ResolutionMismatchError(AgentCutError):
+class ResolutionMismatchError(MCPVideoError):
     """Clips have different resolutions for concat operation."""
 
     def __init__(self, resolutions: list[str]) -> None:
@@ -108,7 +108,7 @@ class ResolutionMismatchError(AgentCutError):
         )
 
 
-class ProcessingError(AgentCutError):
+class ProcessingError(MCPVideoError):
     """FFmpeg processing failed."""
 
     def __init__(self, command: str, returncode: int, stderr: str) -> None:
@@ -124,7 +124,7 @@ class ProcessingError(AgentCutError):
         self.full_stderr = stderr
 
 
-class ExportError(AgentCutError):
+class ExportError(MCPVideoError):
     """Export/rendering failed."""
 
     def __init__(self, format: str, detail: str) -> None:
@@ -135,7 +135,7 @@ class ExportError(AgentCutError):
         )
 
 
-class ResourceError(AgentCutError):
+class ResourceError(MCPVideoError):
     """Insufficient disk space or memory."""
 
     def __init__(self, resource: str, detail: str) -> None:
@@ -146,7 +146,7 @@ class ResourceError(AgentCutError):
         )
 
 
-def parse_ffmpeg_error(stderr: str) -> AgentCutError:
+def parse_ffmpeg_error(stderr: str) -> MCPVideoError:
     """Parse FFmpeg stderr and return the most specific error type."""
     stderr_lower = stderr.lower()
 
@@ -169,3 +169,7 @@ def parse_ffmpeg_error(stderr: str) -> AgentCutError:
         return ResourceError("disk_space", "No space left on device")
 
     return ProcessingError("", 1, stderr)
+
+
+# Backwards compatibility alias
+AgentCutError = MCPVideoError

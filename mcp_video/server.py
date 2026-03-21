@@ -1,4 +1,4 @@
-"""AgentCut MCP server — exposes video editing tools for AI agents."""
+"""mcp-video MCP server — exposes video editing tools for AI agents."""
 
 from __future__ import annotations
 
@@ -28,7 +28,7 @@ from .engine import (
     trim,
     watermark,
 )
-from .errors import AgentCutError
+from .errors import MCPVideoError
 from .models import (
     ExportFormat,
     Position,
@@ -36,9 +36,9 @@ from .models import (
 )
 
 mcp = FastMCP(
-    "agentcut",
+    "mcp-video",
     instructions=(
-        "AgentCut is a video editing MCP server. Use these tools to trim, merge, "
+        "mcp-video is a video editing MCP server. Use these tools to trim, merge, "
         "add text overlays, sync audio, resize, convert, and export video files. "
         "All file paths should be absolute. Output files are generated automatically "
         "if no output_path is provided."
@@ -46,7 +46,7 @@ mcp = FastMCP(
 )
 
 
-def _error_result(err: AgentCutError) -> dict[str, Any]:
+def _error_result(err: MCPVideoError) -> dict[str, Any]:
     return {"success": False, "error": err.to_dict()}
 
 
@@ -54,7 +54,11 @@ def _result(result: Any) -> dict[str, Any]:
     if result is None:
         return {"success": False, "error": {"type": "processing_error", "code": "no_result", "message": "Operation returned no result"}}
     if hasattr(result, "model_dump"):
-        return result.model_dump()
+        data = result.model_dump()
+        # Include thumbnail_base64 only if it was generated (keep MCP responses lean)
+        if not data.get("thumbnail_base64"):
+            data.pop("thumbnail_base64", None)
+        return data
     return {"success": True, "output_path": str(result)}
 
 
@@ -62,17 +66,17 @@ def _result(result: Any) -> dict[str, Any]:
 # MCP Resources
 # ---------------------------------------------------------------------------
 
-@mcp.resource("agentcut://video/{path}/info")
+@mcp.resource("mcp-video://video/{path}/info")
 def video_info_resource(path: str) -> str:
     """Get metadata about a video file (duration, resolution, codec, etc.)."""
     try:
         info = probe(path)
         return info.model_dump_json(indent=2)
-    except AgentCutError as e:
+    except MCPVideoError as e:
         return _error_result(e).__str__()
 
 
-@mcp.resource("agentcut://video/{path}/preview")
+@mcp.resource("mcp-video://video/{path}/preview")
 def video_preview_resource(path: str) -> str:
     """Get a text storyboard description (key frame timestamps)."""
     try:
@@ -84,11 +88,11 @@ def video_preview_resource(path: str) -> str:
             ts = dur * (i + 1) / (count + 1)
             frames.append(f"Frame {i+1}: {ts:.1f}s")
         return "\n".join(frames)
-    except AgentCutError as e:
+    except MCPVideoError as e:
         return _error_result(e).__str__()
 
 
-@mcp.resource("agentcut://video/{path}/audio")
+@mcp.resource("mcp-video://video/{path}/audio")
 def video_audio_resource(path: str) -> str:
     """Extract and describe the audio track of a video."""
     try:
@@ -100,11 +104,11 @@ def video_audio_resource(path: str) -> str:
                 f"Duration: {info.duration:.1f}s"
             )
         return "No audio track found."
-    except AgentCutError as e:
+    except MCPVideoError as e:
         return _error_result(e).__str__()
 
 
-@mcp.resource("agentcut://templates")
+@mcp.resource("mcp-video://templates")
 def templates_resource() -> str:
     """List available editing templates (aspect ratios, quality presets)."""
     from .models import ASPECT_RATIOS, QUALITY_PRESETS
@@ -141,7 +145,7 @@ def video_info(input_path: str) -> dict[str, Any]:
     try:
         info = probe(input_path)
         return {"success": True, "info": info.model_dump()}
-    except AgentCutError as e:
+    except MCPVideoError as e:
         return _error_result(e)
 
 
@@ -164,7 +168,7 @@ def video_trim(
     """
     try:
         return _result(trim(input_path, start=start, duration=duration, end=end, output_path=output_path))
-    except AgentCutError as e:
+    except MCPVideoError as e:
         return _error_result(e)
 
 
@@ -187,7 +191,7 @@ def video_merge(
     """
     try:
         return _result(merge(clips, output_path=output_path, transition=transition, transitions=transitions, transition_duration=transition_duration))
-    except AgentCutError as e:
+    except MCPVideoError as e:
         return _error_result(e)
 
 
@@ -225,7 +229,7 @@ def video_add_text(
             start_time=start_time, duration=duration,
             output_path=output_path,
         ))
-    except AgentCutError as e:
+    except MCPVideoError as e:
         return _error_result(e)
 
 
@@ -258,7 +262,7 @@ def video_add_audio(
             fade_in=fade_in, fade_out=fade_out, mix=mix,
             start_time=start_time, output_path=output_path,
         ))
-    except AgentCutError as e:
+    except MCPVideoError as e:
         return _error_result(e)
 
 
@@ -287,7 +291,7 @@ def video_resize(
             aspect_ratio=aspect_ratio, quality=quality,
             output_path=output_path,
         ))
-    except AgentCutError as e:
+    except MCPVideoError as e:
         return _error_result(e)
 
 
@@ -311,7 +315,7 @@ def video_convert(
             input_path, format=format, quality=quality,
             output_path=output_path,
         ))
-    except AgentCutError as e:
+    except MCPVideoError as e:
         return _error_result(e)
 
 
@@ -330,7 +334,7 @@ def video_speed(
     """
     try:
         return _result(speed(input_path, factor=factor, output_path=output_path))
-    except AgentCutError as e:
+    except MCPVideoError as e:
         return _error_result(e)
 
 
@@ -349,7 +353,7 @@ def video_thumbnail(
     """
     try:
         return _result(thumbnail(input_path, timestamp=timestamp, output_path=output_path))
-    except AgentCutError as e:
+    except MCPVideoError as e:
         return _error_result(e)
 
 
@@ -368,13 +372,13 @@ def video_preview(
     """
     try:
         if scale_factor < 1:
-            return _error_result(AgentCutError(
+            return _error_result(MCPVideoError(
                 "scale_factor must be at least 1",
                 error_type="validation_error",
                 code="invalid_scale_factor",
             ))
         return _result(preview(input_path, output_path=output_path, scale_factor=scale_factor))
-    except AgentCutError as e:
+    except MCPVideoError as e:
         return _error_result(e)
 
 
@@ -393,13 +397,13 @@ def video_storyboard(
     """
     try:
         if frame_count < 1:
-            return _error_result(AgentCutError(
+            return _error_result(MCPVideoError(
                 "frame_count must be at least 1",
                 error_type="validation_error",
                 code="invalid_frame_count",
             ))
         return _result(storyboard(input_path, output_dir=output_dir, frame_count=frame_count))
-    except AgentCutError as e:
+    except MCPVideoError as e:
         return _error_result(e)
 
 
@@ -418,7 +422,7 @@ def video_subtitles(
     """
     try:
         return _result(subtitles(input_path, subtitle_path=subtitle_path, output_path=output_path))
-    except AgentCutError as e:
+    except MCPVideoError as e:
         return _error_result(e)
 
 
@@ -446,7 +450,7 @@ def video_watermark(
             input_path, image_path=image_path, position=position,
             opacity=opacity, margin=margin, output_path=output_path,
         ))
-    except AgentCutError as e:
+    except MCPVideoError as e:
         return _error_result(e)
 
 
@@ -470,7 +474,7 @@ def video_export(
             input_path, output_path=output_path,
             quality=quality, format=format,
         ))
-    except AgentCutError as e:
+    except MCPVideoError as e:
         return _error_result(e)
 
 
@@ -495,7 +499,7 @@ def video_crop(
     """
     try:
         return _result(crop(input_path, width=width, height=height, x=x, y=y, output_path=output_path))
-    except AgentCutError as e:
+    except MCPVideoError as e:
         return _error_result(e)
 
 
@@ -518,7 +522,7 @@ def video_rotate(
     """
     try:
         return _result(rotate(input_path, angle=angle, flip_horizontal=flip_horizontal, flip_vertical=flip_vertical, output_path=output_path))
-    except AgentCutError as e:
+    except MCPVideoError as e:
         return _error_result(e)
 
 
@@ -539,7 +543,7 @@ def video_fade(
     """
     try:
         return _result(fade(input_path, fade_in=fade_in, fade_out=fade_out, output_path=output_path))
-    except AgentCutError as e:
+    except MCPVideoError as e:
         return _error_result(e)
 
 
@@ -585,9 +589,9 @@ def video_edit(
     try:
         return _result(edit_timeline(timeline, output_path=output_path))
     except Exception as e:
-        if isinstance(e, AgentCutError):
+        if isinstance(e, MCPVideoError):
             return _error_result(e)
-        return _error_result(AgentCutError(str(e), error_type="validation_error", code="invalid_timeline"))
+        return _error_result(MCPVideoError(str(e), error_type="validation_error", code="invalid_timeline"))
 
 
 @mcp.tool()
@@ -606,7 +610,7 @@ def video_extract_audio(
     try:
         result = extract_audio(input_path, output_path=output_path, format=format)
         if not os.path.isfile(result):
-            return _error_result(AgentCutError(
+            return _error_result(MCPVideoError(
                 f"Audio extraction completed but output file not found: {result}",
                 error_type="processing_error",
                 code="missing_output",
@@ -619,10 +623,10 @@ def video_extract_audio(
             "format": format,
             "operation": "extract_audio",
         }
-    except AgentCutError as e:
+    except MCPVideoError as e:
         return _error_result(e)
     except OSError as e:
-        return _error_result(AgentCutError(
+        return _error_result(MCPVideoError(
             f"File error during audio extraction: {e}",
             error_type="processing_error",
             code="file_error",

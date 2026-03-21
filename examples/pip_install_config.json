@@ -1,7 +1,7 @@
 {
   "mcpServers": {
-    "agentcut": {
-      "command": "agentcut"
+    "mcp-video": {
+      "command": "mcp-video"
     }
   }
 }

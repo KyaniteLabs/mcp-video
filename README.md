@@ -1,12 +1,12 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.1.1-blue.svg" alt="Version">
+  <img src="https://img.shields.io/badge/version-0.2.0-blue.svg" alt="Version">
   <img src="https://img.shields.io/badge/tests-262%20passed-green.svg" alt="Tests">
   <img src="https://img.shields.io/badge/tools-19%20MCP%20tools-orange.svg" alt="Tools">
   <img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="License">
   <img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python">
 </p>
 
-<h1 align="center">AgentCut</h1>
+<h1 align="center">mcp-video</h1>
 
 <p align="center">
   <strong>The video editing MCP server for AI agents.</strong><br>
@@ -26,9 +26,9 @@
 
 ---
 
-## What is AgentCut?
+## What is mcp-video?
 
-AgentCut is an open-source video editing server built on the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). It gives AI agents and any MCP-compatible client the ability to programmatically edit video files.
+mcp-video is an open-source video editing server built on the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). It gives AI agents and any MCP-compatible client the ability to programmatically edit video files.
 
 Think of it as **ffmpeg with an API that AI agents can actually use**. Instead of memorizing cryptic command-line flags, an agent calls structured tools with clear parameters and gets structured results back.
 
@@ -39,7 +39,7 @@ AI agents can write code, analyze documents, and browse the web — but they can
 - **Raw FFmpeg wrappers** — require memorizing hundreds of flags
 - **Cloud APIs** (Render, Bannerbear) — expensive, slow, vendor lock-in
 
-AgentCut bridges this gap. It's a local, fast, free video editing layer that any AI agent can use through a standard protocol.
+mcp-video bridges this gap. It's a local, fast, free video editing layer that any AI agent can use through a standard protocol.
 
 ### Three Ways to Use It
 
@@ -47,7 +47,7 @@ AgentCut bridges this gap. It's a local, fast, free video editing layer that any
 |-----------|----------|---------|
 | **MCP Server** | AI agents (Claude Code, Cursor) | *"Trim this video and add a title"* |
 | **Python Client** | Scripts, automation, pipelines | `editor.trim("v.mp4", start="0:30", duration="15")` |
-| **CLI** | Shell scripts, quick ops | `agentcut trim video.mp4 -s 0:30 -d 15` |
+| **CLI** | Shell scripts, quick ops | `mcp_video trim video.mp4 -s 0:30 -d 15` |
 
 ---
 
@@ -75,12 +75,12 @@ sudo apt install ffmpeg
 ### Installation
 
 ```bash
-pip install agentcut
+pip install mcp_video
 ```
 
 Or with UVX (no install needed):
 ```bash
-uvx agentcut
+uvx mcp_video
 ```
 
 ---
@@ -94,9 +94,9 @@ Add to your Claude Code or Claude Desktop MCP settings:
 ```json
 {
   "mcpServers": {
-    "agentcut": {
+    "mcp_video": {
       "command": "uvx",
-      "args": ["agentcut"]
+      "args": ["mcp_video"]
     }
   }
 }
@@ -106,8 +106,8 @@ Or if installed via pip:
 ```json
 {
   "mcpServers": {
-    "agentcut": {
-      "command": "agentcut"
+    "mcp_video": {
+      "command": "mcp_video"
     }
   }
 }
@@ -118,7 +118,7 @@ Then just ask your agent: *"Trim this video from 0:30 to 1:00, add a title card,
 ### 2. As a Python Library
 
 ```python
-from agentcut import Client
+from mcp_video import Client
 
 editor = Client()
 
@@ -165,26 +165,28 @@ print(result)
 
 ```bash
 # Get video metadata
-agentcut info video.mp4
+mcp_video info video.mp4
 
 # Generate a fast low-res preview
-agentcut preview video.mp4
+mcp_video preview video.mp4
 
 # Extract storyboard frames for review
-agentcut storyboard video.mp4 -n 12
+mcp_video storyboard video.mp4 -n 12
 
 # Trim a clip
-agentcut trim video.mp4 -s 00:02:15 -d 30 -o trimmed.mp4
+mcp_video trim video.mp4 -s 00:02:15 -d 30 -o trimmed.mp4
 
 # Convert to a different format
-agentcut convert video.mp4 -f webm -q high
+mcp_video convert video.mp4 -f webm -q high
 ```
 
 ---
 
 ## MCP Tools
 
-AgentCut exposes 19 tools for AI agents. All tools return structured JSON with `success`, `output_path`, and operation metadata. On failure, they return `{"success": false, "error": {...}}` with auto-fix suggestions.
+mcp-video exposes 19 tools for AI agents. All tools return structured JSON with `success`, `output_path`, and operation metadata. On failure, they return `{"success": false, "error": {...}}` with auto-fix suggestions.
+
+**New in v0.2.0:** Progress callbacks provide real-time feedback on long-running operations (merge, convert, export), and visual verification returns thumbnails so agents can confirm results without opening files.
 
 ### Video Operations
 
@@ -234,10 +236,10 @@ AgentCut exposes 19 tools for AI agents. All tools return structured JSON with `
 
 | Resource URI | Description |
 |-------------|-------------|
-| `agentcut://video/{path}/info` | Video metadata as JSON |
-| `agentcut://video/{path}/preview` | Key frame timestamps |
-| `agentcut://video/{path}/audio` | Audio track info |
-| `agentcut://templates` | Available templates, presets, and formats |
+| `mcp-video://video/{path}/info` | Video metadata as JSON |
+| `mcp-video://video/{path}/preview` | Key frame timestamps |
+| `mcp-video://video/{path}/audio` | Audio track info |
+| `mcp-video://templates` | Available templates, presets, and formats |
 
 ---
 
@@ -246,7 +248,7 @@ AgentCut exposes 19 tools for AI agents. All tools return structured JSON with `
 Full reference for the `Client` class:
 
 ```python
-from agentcut import Client
+from mcp_video import Client
 editor = Client()
 ```
 
@@ -294,7 +296,7 @@ StoryboardResult(success=True, frames=["f1.jpg", ...], grid="grid.jpg", count=8)
 ## CLI Reference
 
 ```
-agentcut [command] [options]
+mcp_video [command] [options]
 
 Commands:
   info           Get video metadata
@@ -326,22 +328,22 @@ Options:
 
 ```bash
 # Get metadata as JSON
-agentcut info video.mp4
+mcp_video info video.mp4
 
 # Preview with custom downscale
-agentcut preview video.mp4 -s 2
+mcp_video preview video.mp4 -s 2
 
 # Storyboard with 12 frames
-agentcut storyboard video.mp4 -n 12 -o ./frames
+mcp_video storyboard video.mp4 -n 12 -o ./frames
 
 # Trim from 2:15 for 30 seconds
-agentcut trim video.mp4 -s 00:02:15 -d 30 -o clip.mp4
+mcp_video trim video.mp4 -s 00:02:15 -d 30 -o clip.mp4
 
 # Convert to GIF at medium quality
-agentcut convert video.mp4 -f gif -q medium
+mcp_video convert video.mp4 -f gif -q medium
 
 # Default: run MCP server
-agentcut --mcp
+mcp_video --mcp
 ```
 
 ---
@@ -412,7 +414,7 @@ editor.edit({
 Pre-built templates for common social media formats:
 
 ```python
-from agentcut.templates import tiktok_template, youtube_video_template
+from mcp_video.templates import tiktok_template, youtube_video_template
 
 # TikTok (9:16, 1080x1920)
 timeline = tiktok_template(
@@ -445,7 +447,7 @@ result = editor.edit(timeline)
 ### Template Registry
 
 ```python
-from agentcut.templates import TEMPLATES
+from mcp_video.templates import TEMPLATES
 
 print(list(TEMPLATES.keys()))
 # ['tiktok', 'youtube-shorts', 'instagram-reel', 'youtube', 'instagram-post']
@@ -490,7 +492,7 @@ editor.resize("video.mp4", aspect_ratio="1:1")   # Instagram
 
 ## Error Handling
 
-AgentCut parses FFmpeg errors and returns structured, actionable error responses:
+mcp-video parses FFmpeg errors and returns structured, actionable error responses:
 
 ```json
 {
@@ -503,7 +505,7 @@ AgentCut parses FFmpeg errors and returns structured, actionable error responses
       "auto_fix": true,
       "description": "Auto-convert input from vp9 to H.264/AAC before editing"
     },
-    "documentation_url": "https://github.com/pastorsimon1798/agentcut#codec-compatibility"
+    "documentation_url": "https://github.com/pastorsimon1798/mcp_video#codec-compatibility"
   }
 }
 ```
@@ -525,7 +527,7 @@ AgentCut parses FFmpeg errors and returns structured, actionable error responses
 
 ## Testing
 
-AgentCut has **262 tests** across the full testing pyramid:
+mcp-video has **262 tests** across the full testing pyramid:
 
 ```
 tests/
@@ -554,7 +556,7 @@ pytest tests/ -v
 pytest tests/test_models.py tests/test_errors.py tests/test_templates.py -v
 
 # Run with coverage
-pytest tests/ --cov=agentcut --cov-report=term-missing
+pytest tests/ --cov=mcp_video --cov-report=term-missing
 ```
 
 ### Test Pyramid
@@ -570,7 +572,7 @@ pytest tests/ --cov=agentcut --cov-report=term-missing
 ## Architecture
 
 ```
-agentcut/
+mcp_video/
 ├── __init__.py       # Exports Client
 ├── __main__.py       # CLI entry point (argparse)
 ├── client.py         # Python Client class (wraps engine)
@@ -610,8 +612,8 @@ SRT, WebVTT (burned into video)
 
 ```bash
 # Clone
-git clone https://github.com/pastorsimon1798/agentcut.git
-cd agentcut
+git clone https://github.com/pastorsimon1798/mcp_video.git
+cd mcp_video
 
 # Setup
 python -m venv .venv
@@ -632,6 +634,8 @@ pytest tests/ -v --tb=long
 
 ## Roadmap
 
+- [x] Progress callbacks for long-running operations (v0.2.0)
+- [x] Visual verification with thumbnail output (v0.2.0)
 - [ ] Batch processing mode (edit 100 videos at once)
 - [ ] Streaming upload/download (S3, GCS integration)
 - [ ] Web UI for non-agent users

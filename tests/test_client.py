@@ -4,9 +4,9 @@ import os
 
 import pytest
 
-from agentcut import Client
-from agentcut.engine import _check_filter_available
-from agentcut.models import EditResult, StoryboardResult, ThumbnailResult, VideoInfo
+from mcp_video import Client
+from mcp_video.engine import _check_filter_available
+from mcp_video.models import EditResult, StoryboardResult, ThumbnailResult, VideoInfo
 
 
 def requires_filter(name: str, feature: str):
@@ -36,7 +36,7 @@ class TestClientInfo:
         assert info.height == 480
 
     def test_info_nonexistent_file(self, editor):
-        from agentcut.errors import InputFileError
+        from mcp_video.errors import InputFileError
         with pytest.raises(InputFileError):
             editor.info("/nonexistent/video.mp4")
 

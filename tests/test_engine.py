@@ -5,8 +5,10 @@ import os
 
 import pytest
 
-from agentcut.engine import (
+from mcp_video.engine import (
     _check_filter_available,
+    _generate_thumbnail_base64,
+    _parse_ffmpeg_time,
     add_audio,
     add_text,
     convert,
@@ -21,8 +23,8 @@ from agentcut.engine import (
     trim,
     watermark,
 )
-from agentcut.errors import AgentCutError, InputFileError
-from agentcut.models import VideoInfo
+from mcp_video.errors import MCPVideoError, InputFileError
+from mcp_video.models import VideoInfo
 
 
 def requires_filter(name: str, feature: str):
@@ -135,7 +137,7 @@ class TestAddAudio:
 
 class TestResize:
     def test_resize_by_dimensions(self, sample_video):
-        from agentcut.engine import resize
+        from mcp_video.engine import resize
         result = resize(sample_video, width=320, height=240)
         assert os.path.isfile(result.output_path)
         info = probe(result.output_path)
@@ -143,7 +145,7 @@ class TestResize:
         assert info.height == 240
 
     def test_resize_by_aspect_ratio(self, sample_video):
-        from agentcut.engine import resize
+        from mcp_video.engine import resize
         result = resize(sample_video, aspect_ratio="1:1")
         assert os.path.isfile(result.output_path)
         info = probe(result.output_path)
@@ -212,3 +214,93 @@ class TestSubtitles:
         )
         result = subtitles(input_path=str(sample_video), subtitle_path=str(srt_path))
         assert os.path.isfile(result.output_path)
+
+
+class TestProgressCallbacks:
+    """Tests for progress callback functionality."""
+
+    def test_parse_ffmpeg_time_parsing(self):
+        """Test _parse_ffmpeg_time with various time formats."""
+        # Format: HH:MM:SS.xx
+        assert _parse_ffmpeg_time("00:00:05.12") == 5.12
+        assert _parse_ffmpeg_time("00:01:30.00") == 90.0
+        assert _parse_ffmpeg_time("00:00:00.00") == 0.0
+        assert _parse_ffmpeg_time("01:00:00.00") == 3600.0
+        assert _parse_ffmpeg_time("00:00:59.99") == 59.99
+
+    def test_parse_ffmpeg_time_invalid_format(self):
+        """Test _parse_ffmpeg_time with invalid format returns 0.0."""
+        assert _parse_ffmpeg_time("invalid") == 0.0
+        assert _parse_ffmpeg_time("00:00") == 0.0
+        assert _parse_ffmpeg_time("") == 0.0
+
+    def test_run_ffmpeg_with_progress_no_duration(self, sample_video, tmp_path):
+        """When estimated_duration is None, should fall back to regular _run_ffmpeg."""
+        from mcp_video.engine import _run_ffmpeg_with_progress
+        import subprocess
+
+        # Create a simple FFmpeg command
+        output = str(tmp_path / "output.mp4")
+        args = [
+            "-i", sample_video,
+            "-t", "1",
+            "-c", "copy",
+            output,
+        ]
+
+        # With estimated_duration=None, on_progress should not be called
+        progress_calls = []
+        def mock_on_progress(pct):
+            progress_calls.append(pct)
+
+        result = _run_ffmpeg_with_progress(args, estimated_duration=None, on_progress=mock_on_progress)
+        assert isinstance(result, subprocess.CompletedProcess)
+        # Progress callback should not have been called (falls back to regular _run_ffmpeg)
+        assert len(progress_calls) == 0
+
+    def test_run_ffmpeg_with_progress_convert(self, sample_video):
+        """Use convert with on_progress callback, verify progress reaches 100."""
+        progress_values = []
+
+        def track_progress(pct):
+            progress_values.append(pct)
+
+        result = convert(sample_video, format="webm", on_progress=track_progress)
+
+        # Verify the conversion succeeded
+        assert os.path.isfile(result.output_path)
+        assert result.format == "webm"
+
+        # Verify progress was tracked and reached 100
+        assert len(progress_values) > 0
+        assert 100.0 in progress_values
+
+    def test_convert_returns_progress_field(self, sample_video):
+        """Verify that convert returns EditResult with progress=100.0."""
+        result = convert(sample_video, format="webm")
+        assert result.progress == 100.0
+        assert result.success is True
+
+
+class TestThumbnailBase64:
+    """Tests for base64 thumbnail generation."""
+
+    def test_generate_thumbnail_base64_valid_video(self, sample_video):
+        """Call _generate_thumbnail_base64 on a real video, verify it returns valid base64."""
+        import base64
+
+        thumb_b64 = _generate_thumbnail_base64(sample_video)
+        assert isinstance(thumb_b64, str)
+        assert len(thumb_b64) > 0
+
+        # Verify it's valid base64 by attempting to decode it
+        try:
+            decoded = base64.b64decode(thumb_b64, validate=True)
+            assert len(decoded) > 0
+        except Exception as e:
+            pytest.fail(f"Failed to decode base64 thumbnail: {e}")
+
+    def test_generate_thumbnail_base64_invalid_path(self):
+        """Call with nonexistent path, verify it returns None."""
+        result = _generate_thumbnail_base64("/nonexistent/video.mp4")
+        assert result is None

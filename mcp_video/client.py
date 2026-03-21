@@ -1,4 +1,4 @@
-"""AgentCut Python client — clean API for programmatic video editing."""
+"""mcp-video Python client — clean API for programmatic video editing."""
 
 from __future__ import annotations
 
@@ -37,10 +37,10 @@ from .models import (
 
 
 class Client:
-    """AgentCut client for programmatic video editing.
+    """mcp-video client for programmatic video editing.
 
     Usage:
-        from agentcut import Client
+        from mcp_video import Client
         editor = Client()
 
         result = editor.trim("input.mp4", start="00:00:30", duration="00:00:15")

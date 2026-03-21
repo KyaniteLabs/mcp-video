@@ -1,4 +1,4 @@
-"""AgentCut CLI entry point."""
+"""mcp-video CLI entry point."""
 
 from __future__ import annotations
 
@@ -9,8 +9,8 @@ import sys
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        prog="agentcut",
-        description="AgentCut — Video editing for AI agents",
+        prog="mcp-video",
+        description="mcp-video — Video editing for AI agents",
     )
     parser.add_argument(
         "--mcp",
@@ -288,8 +288,8 @@ def main() -> None:
             print(json.dumps(result.model_dump(), indent=2))
 
     except Exception as e:
-        from .errors import AgentCutError
-        if isinstance(e, AgentCutError):
+        from .errors import MCPVideoError
+        if isinstance(e, MCPVideoError):
             print(json.dumps({"success": False, "error": e.to_dict()}, indent=2), file=sys.stderr)
         else:
             print(json.dumps({"success": False, "error": {"type": "unknown", "message": str(e)}}, indent=2), file=sys.stderr)

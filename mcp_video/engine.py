@@ -2,16 +2,18 @@
 
 from __future__ import annotations
 
+import base64
 import json
 import os
+import re
 import shutil
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from .errors import (
-    AgentCutError,
+    MCPVideoError,
     CodecError,
     FFmpegNotFoundError,
     FFprobeNotFoundError,
@@ -86,7 +88,7 @@ def _check_filter_available(name: str) -> bool:
 def _require_filter(name: str, feature: str) -> None:
     """Raise an error if a required FFmpeg filter is not available."""
     if not _check_filter_available(name):
-        raise AgentCutError(
+        raise MCPVideoError(
             f"FFmpeg filter '{name}' is not available. {feature} requires FFmpeg "
             f"to be compiled with additional libraries.\n"
             f"Install with: brew install ffmpeg (macOS) or rebuild FFmpeg with "
@@ -136,6 +138,101 @@ def _run_ffmpeg(args: list[str]) -> subprocess.CompletedProcess[str]:
     if proc.returncode != 0:
         raise parse_ffmpeg_error(proc.stderr)
     return proc
+
+
+def _parse_ffmpeg_time(time_str: str) -> float:
+    """Parse FFmpeg time= value (HH:MM:SS.xx) to seconds."""
+    m = re.match(r"(\d+):(\d+):(\d+)\.(\d+)", time_str)
+    if not m:
+        return 0.0
+    return int(m.group(1)) * 3600 + int(m.group(2)) * 60 + int(m.group(3)) + int(m.group(4)) / 100
+
+
+_TIME_RE = re.compile(r"time=(\d+:\d+:\d+\.\d+)")
+
+
+def _run_ffmpeg_with_progress(
+    args: list[str],
+    estimated_duration: float | None = None,
+    on_progress: Callable[[float], None] | None = None,
+) -> subprocess.CompletedProcess[str]:
+    """Run FFmpeg with real-time progress reporting.
+
+    Parses FFmpeg stderr for time= output and calls on_progress(percent).
+    Falls back to _run_ffmpeg if estimated_duration is not provided.
+    """
+    if estimated_duration is None or estimated_duration <= 0 or on_progress is None:
+        return _run_ffmpeg(args)
+
+    cmd = [_ffmpeg(), "-y"] + args
+    proc = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+
+    stderr_lines: list[str] = []
+    try:
+        while True:
+            line = proc.stderr.readline()
+            if not line:
+                break
+            stderr_lines.append(line)
+
+            match = _TIME_RE.search(line)
+            if match:
+                current_time = _parse_ffmpeg_time(match.group(1))
+                pct = min(100.0, (current_time / estimated_duration) * 100)
+                on_progress(pct)
+    finally:
+        proc.wait()
+
+    stderr = "".join(stderr_lines)
+    if proc.returncode != 0:
+        raise parse_ffmpeg_error(stderr)
+
+    # Report 100% on success
+    on_progress(100.0)
+
+    return subprocess.CompletedProcess(
+        cmd, proc.returncode, proc.stdout.read(), stderr,
+    )
+
+
+def _generate_thumbnail_base64(video_path: str) -> str | None:
+    """Generate a base64-encoded JPEG thumbnail from the first frame of a video.
+
+    Returns base64 string or None if generation fails.
+    """
+    try:
+        tmp = tempfile.NamedTemporaryFile(suffix=".jpg", delete=False)
+        tmp_path = tmp.name
+        tmp.close()
+
+        proc = subprocess.run(
+            [
+                _ffmpeg(), "-y",
+                "-i", video_path,
+                "-vframes", "1",
+                "-q:v", "5",
+                "-vf", "scale=320:-1",
+                tmp_path,
+            ],
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+
+        if proc.returncode != 0 or not os.path.isfile(tmp_path):
+            return None
+
+        with open(tmp_path, "rb") as f:
+            data = f.read()
+        os.unlink(tmp_path)
+        return base64.b64encode(data).decode("ascii")
+    except Exception:
+        return None
 
 
 def _run_ffprobe_json(path: str) -> dict[str, Any]:
@@ -373,7 +470,7 @@ def merge(
     target_h = max(i.height for i in infos)
 
     working_clips: list[str] = []
-    tmpdir = tempfile.mkdtemp(prefix="agentcut_")
+    tmpdir = tempfile.mkdtemp(prefix="mcp_video_")
 
     try:
         if needs_normalize:
@@ -463,7 +560,7 @@ def _merge_with_transitions(
     for i in range(pairs):
         clip_dur = get_duration(clips[i])
         if transition_duration >= clip_dur:
-            raise AgentCutError(
+            raise MCPVideoError(
                 f"Transition duration ({transition_duration}s) must be less than "
                 f"clip {i+1} duration ({clip_dur:.1f}s)",
                 code="transition_too_long",
@@ -686,7 +783,7 @@ def resize(
     if aspect_ratio and aspect_ratio in ASPECT_RATIOS:
         w, h = ASPECT_RATIOS[aspect_ratio]
     elif aspect_ratio:
-        raise AgentCutError(
+        raise MCPVideoError(
             f"Unknown aspect ratio: {aspect_ratio}. "
             f"Available: {', '.join(ASPECT_RATIOS.keys())}",
             error_type="input_error",
@@ -703,7 +800,7 @@ def resize(
         ratio = info.width / info.height
         w, h = int(height * ratio), height
     else:
-        raise AgentCutError("resize requires width+height, aspect_ratio, or single dimension")
+        raise MCPVideoError("resize requires width+height, aspect_ratio, or single dimension")
 
     preset = QUALITY_PRESETS[quality]
     output = output_path or _auto_output(input_path, f"{w}x{h}")
@@ -741,6 +838,7 @@ def convert(
     format: ExportFormat = "mp4",
     quality: QualityLevel = "high",
     output_path: str | None = None,
+    on_progress: Callable[[float], None] | None = None,
 ) -> EditResult:
     """Convert video to a different format."""
     _validate_input(input_path)
@@ -748,8 +846,11 @@ def convert(
     ext = f".{format}" if not format.startswith(".") else format
     output = output_path or _auto_output(input_path, format, ext=ext)
 
+    # Get input duration for progress estimation
+    input_info = probe(input_path)
+
     if format == "mp4":
-        _run_ffmpeg([
+        _run_ffmpeg_with_progress([
             "-i", input_path,
             "-c:v", "libx264",
             "-crf", str(preset["crf"]),
@@ -757,28 +858,28 @@ def convert(
             "-c:a", "aac", "-b:a", "128k",
             "-movflags", "+faststart",
             output,
-        ])
+        ], estimated_duration=input_info.duration, on_progress=on_progress)
     elif format == "webm":
-        _run_ffmpeg([
+        _run_ffmpeg_with_progress([
             "-i", input_path,
             "-c:v", "libvpx-vp9",
             "-crf", str(preset["crf"]),
             "-b:v", "0",
             "-c:a", "libopus",
             output,
-        ])
+        ], estimated_duration=input_info.duration, on_progress=on_progress)
     elif format == "mov":
-        _run_ffmpeg([
+        _run_ffmpeg_with_progress([
             "-i", input_path,
             "-c:v", "libx264",
             "-crf", str(preset["crf"]),
             "-preset", preset["preset"],
             "-c:a", "pcm_s16le",
             output,
-        ])
+        ], estimated_duration=input_info.duration, on_progress=on_progress)
     elif format == "gif":
         # Two-pass palette-based GIF generation for quality
-        tmpdir = tempfile.mkdtemp(prefix="agentcut_gif_")
+        tmpdir = tempfile.mkdtemp(prefix="mcp_video_gif_")
         try:
             palette = os.path.join(tmpdir, "palette.png")
             _run_ffmpeg([
@@ -786,16 +887,18 @@ def convert(
                 "-vf", "fps=15,scale=480:-1:flags=lanczos,palettegen",
                 "-y", palette,
             ])
-            _run_ffmpeg([
+            _run_ffmpeg_with_progress([
                 "-i", input_path,
                 "-i", palette,
                 "-lavfi", "fps=15,scale=480:-1:flags=lanczos [x]; [x][1:v] paletteuse",
                 "-y", output,
-            ])
+            ], estimated_duration=input_info.duration, on_progress=on_progress)
         finally:
             shutil.rmtree(tmpdir, ignore_errors=True)
     else:
-        raise AgentCutError(f"Unsupported format: {format}", code="unsupported_format")
+        raise MCPVideoError(f"Unsupported format: {format}", code="unsupported_format")
+
+    thumb_b64 = _generate_thumbnail_base64(output) if format != "gif" else None
 
     if os.path.isfile(output):
         size_mb = os.path.getsize(output) / (1024 * 1024)
@@ -808,6 +911,8 @@ def convert(
                 size_mb=round(size_mb, 2),
                 format=format,
                 operation="convert",
+                progress=100.0,
+                thumbnail_base64=thumb_b64,
             )
     else:
         size_mb = None
@@ -817,6 +922,8 @@ def convert(
         size_mb=round(size_mb, 2) if size_mb else None,
         format=format,
         operation="convert",
+        progress=100.0,
+        thumbnail_base64=thumb_b64,
     )
 
 
@@ -828,7 +935,7 @@ def speed(
     """Change playback speed. factor > 1 = faster, < 1 = slower."""
     _validate_input(input_path)
     if factor <= 0:
-        raise AgentCutError("Speed factor must be positive")
+        raise MCPVideoError("Speed factor must be positive")
 
     output = output_path or _auto_output(input_path, f"speed_{factor}x")
 
@@ -926,7 +1033,7 @@ def preview(
     """Generate a fast low-resolution preview for quick review."""
     _validate_input(input_path)
     if scale_factor < 1:
-        raise AgentCutError("scale_factor must be at least 1", code="invalid_scale_factor")
+        raise MCPVideoError("scale_factor must be at least 1", code="invalid_scale_factor")
     info = probe(input_path)
 
     w = max(info.width // scale_factor, 320)
@@ -964,13 +1071,13 @@ def storyboard(
     """Extract key frames and create a storyboard grid for human review."""
     _validate_input(input_path)
     if frame_count < 1:
-        raise AgentCutError("frame_count must be at least 1", code="invalid_frame_count")
+        raise MCPVideoError("frame_count must be at least 1", code="invalid_frame_count")
     dur = get_duration(input_path)
 
     out_dir = output_dir or _auto_output_dir(input_path, "storyboard")
     os.makedirs(out_dir, exist_ok=True)
 
-    tmpdir = tempfile.mkdtemp(prefix="agentcut_sb_")
+    tmpdir = tempfile.mkdtemp(prefix="mcp_video_sb_")
     try:
         frame_paths: list[str] = []
         interval = dur / (frame_count + 1)
@@ -1153,11 +1260,11 @@ def crop(
     """Crop a video to a rectangular region."""
     _validate_input(input_path)
     if width <= 0 or height <= 0:
-        raise AgentCutError("Crop dimensions must be positive", code="invalid_crop")
+        raise MCPVideoError("Crop dimensions must be positive", code="invalid_crop")
 
     info = probe(input_path)
     if width > info.width or height > info.height:
-        raise AgentCutError(
+        raise MCPVideoError(
             f"Crop size ({width}x{height}) larger than video ({info.width}x{info.height})",
             code="crop_too_large",
         )
@@ -1206,9 +1313,9 @@ def rotate(
     _validate_input(input_path)
 
     if angle not in (0, 90, 180, 270):
-        raise AgentCutError("angle must be 0, 90, 180, or 270", code="invalid_angle")
+        raise MCPVideoError("angle must be 0, 90, 180, or 270", code="invalid_angle")
     if angle == 0 and not flip_horizontal and not flip_vertical:
-        raise AgentCutError("No rotation or flip specified", code="no_transform")
+        raise MCPVideoError("No rotation or flip specified", code="no_transform")
 
     filters: list[str] = []
     if flip_horizontal:
@@ -1254,7 +1361,7 @@ def fade(
     """Add fade in/out effect to a video."""
     _validate_input(input_path)
     if fade_in <= 0 and fade_out <= 0:
-        raise AgentCutError("Specify fade_in and/or fade_out > 0", code="no_fade")
+        raise MCPVideoError("Specify fade_in and/or fade_out > 0", code="no_fade")
 
     output = output_path or _auto_output(input_path, "faded")
     info = probe(input_path)
@@ -1293,10 +1400,13 @@ def export_video(
     output_path: str | None = None,
     quality: QualityLevel = "high",
     format: ExportFormat = "mp4",
+    on_progress: Callable[[float], None] | None = None,
 ) -> EditResult:
     """Export a video with specified quality and format settings."""
     _validate_input(input_path)
-    return convert(input_path, format=format, quality=quality, output_path=output_path)
+    result = convert(input_path, format=format, quality=quality, output_path=output_path, on_progress=on_progress)
+    result.operation = "export"
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -1307,7 +1417,7 @@ def edit_timeline(timeline: Timeline | dict, output_path: str | None = None) -> 
     """Execute a full timeline-based edit described in JSON."""
     if isinstance(timeline, dict):
         timeline = Timeline.model_validate(timeline)
-    tmpdir = tempfile.mkdtemp(prefix="agentcut_timeline_")
+    tmpdir = tempfile.mkdtemp(prefix="mcp_video_timeline_")
     try:
         video_clips: list[str] = []
         audio_clips: list[str] = []
@@ -1336,7 +1446,7 @@ def edit_timeline(timeline: Timeline | dict, output_path: str | None = None) -> 
                     audio_clips.append(clip.source)
 
         if not video_clips:
-            raise AgentCutError("Timeline must have at least one video clip")
+            raise MCPVideoError("Timeline must have at least one video clip")
 
         # Merge video clips
         if len(video_clips) == 1:

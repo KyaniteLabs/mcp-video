@@ -8,8 +8,8 @@ import pytest
 
 
 def run_cli(*args: str, expect_fail: bool = False) -> subprocess.CompletedProcess:
-    """Run agentcut CLI and return result."""
-    cmd = [sys.executable, "-m", "agentcut"] + list(args)
+    """Run mcp-video CLI and return result."""
+    cmd = [sys.executable, "-m", "mcp_video"] + list(args)
     result = subprocess.run(
         cmd,
         capture_output=True,

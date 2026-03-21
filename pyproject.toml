@@ -3,8 +3,8 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "agentcut"
-version = "0.1.1"
+name = "mcp-video"
+version = "0.2.0"
 description = "Video editing MCP server for AI agents"
 readme = "README.md"
 license = "Apache-2.0"
@@ -31,12 +31,12 @@ dev = ["pytest>=8.0", "pytest-asyncio>=0.23", "pillow>=10.0"]
 all = ["pillow>=10.0"]
 
 [project.scripts]
-agentcut = "agentcut.__main__:main"
+mcp-video = "mcp_video.__main__:main"
 
 [project.urls]
-Homepage = "https://github.com/pastorsimon1798/agentcut"
-Documentation = "https://github.com/pastorsimon1798/agentcut#readme"
-Repository = "https://github.com/pastorsimon1798/agentcut"
+Homepage = "https://github.com/pastorsimon1798/mcp-video"
+Documentation = "https://github.com/pastorsimon1798/mcp-video#readme"
+Repository = "https://github.com/pastorsimon1798/mcp-video"
 
 [tool.hatch.build]
 exclude = [
@@ -49,4 +49,4 @@ exclude = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["agentcut"]
+packages = ["mcp_video"]

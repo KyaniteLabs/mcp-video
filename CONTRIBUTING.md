@@ -1,13 +1,13 @@
-# Contributing to AgentCut
+# Contributing to mcp-video
 
-Thanks for your interest in improving AgentCut. This is a focused project — every tool should work reliably, and every change should maintain that standard.
+Thanks for your interest in improving mcp-video. This is a focused project — every tool should work reliably, and every change should maintain that standard.
 
 ## Quick Start
 
 ```bash
 # Clone and install dev dependencies
-git clone https://github.com/pastorsimon1798/agentcut.git
-cd agentcut
+git clone https://github.com/pastorsimon1798/mcp-video.git
+cd mcp_video
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
@@ -22,7 +22,7 @@ pytest tests/test_engine.py -v
 ## Project Structure
 
 ```
-agentcut/
+mcp_video/
 ├── engine.py       # All FFmpeg operations (the core)
 ├── server.py       # MCP tool definitions
 ├── client.py       # Python Client wrapper

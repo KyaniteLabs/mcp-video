@@ -5,8 +5,8 @@ import os
 
 import pytest
 
-from agentcut.engine import _check_filter_available
-from agentcut.server import (
+from mcp_video.engine import _check_filter_available
+from mcp_video.server import (
     _error_result,
     _result,
     mcp,
@@ -30,7 +30,7 @@ from agentcut.server import (
     video_trim,
     video_watermark,
 )
-from agentcut.errors import AgentCutError, InputFileError
+from mcp_video.errors import MCPVideoError, InputFileError
 
 
 def requires_filter(name: str, feature: str):
@@ -43,7 +43,7 @@ def requires_filter(name: str, feature: str):
 class TestServerInitialization:
     def test_mcp_instance(self):
         assert mcp is not None
-        assert mcp.name == "agentcut"
+        assert mcp.name == "mcp-video"
 
     def test_tools_registered(self):
         # Check that the server has tools registered
@@ -226,7 +226,7 @@ class TestErrorHandling:
         assert result["error"]["code"] == "invalid_input"
 
     def test_result_helper_with_model(self):
-        from agentcut.models import EditResult
+        from mcp_video.models import EditResult
         edit = EditResult(output_path="/tmp/out.mp4", operation="trim")
         result = _result(edit)
         assert result["success"] is True

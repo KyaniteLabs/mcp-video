@@ -4,7 +4,7 @@ import os
 
 import pytest
 
-from agentcut.engine import (
+from mcp_video.engine import (
     _check_filter_available,
     add_audio,
     convert,
@@ -25,8 +25,8 @@ from agentcut.engine import (
     trim,
     watermark,
 )
-from agentcut.models import Timeline, TimelineClip, TimelineTrack
-from agentcut.errors import InputFileError, AgentCutError
+from mcp_video.models import Timeline, TimelineClip, TimelineTrack
+from mcp_video.errors import InputFileError, MCPVideoError
 
 
 def requires_filter(name: str, feature: str):
@@ -74,13 +74,13 @@ class TestWatermark:
 
 class TestExportVideo:
     def test_wrapper_for_convert(self, sample_video):
-        from agentcut.engine import export_video
+        from mcp_video.engine import export_video
         result = export_video(sample_video)
         assert os.path.isfile(result.output_path)
-        assert result.operation == "convert"
+        assert result.operation == "export"
 
     def test_with_quality(self, sample_video):
-        from agentcut.engine import export_video
+        from mcp_video.engine import export_video
         result = export_video(sample_video, quality="low")
         assert os.path.isfile(result.output_path)
 
@@ -147,7 +147,7 @@ class TestEditTimeline:
 
     def test_timeline_no_video_clips_raises(self):
         tl = Timeline(tracks=[])
-        with pytest.raises(AgentCutError):
+        with pytest.raises(MCPVideoError):
             edit_timeline(tl)
 
 
@@ -211,7 +211,7 @@ class TestResizeAdvanced:
         assert info.height == 240
 
     def test_resize_no_params_raises(self, sample_video):
-        with pytest.raises(AgentCutError):
+        with pytest.raises(MCPVideoError):
             resize(sample_video)
 
 
@@ -296,11 +296,11 @@ class TestCrop:
         assert info.height == 200
 
     def test_crop_too_large_raises(self, sample_video):
-        with pytest.raises(AgentCutError):
+        with pytest.raises(MCPVideoError):
             crop(sample_video, width=9999, height=9999)
 
     def test_crop_zero_dimensions_raises(self, sample_video):
-        with pytest.raises(AgentCutError):
+        with pytest.raises(MCPVideoError):
             crop(sample_video, width=0, height=100)
 
 
@@ -329,11 +329,11 @@ class TestRotate:
         assert info.height == 480
 
     def test_invalid_angle_raises(self, sample_video):
-        with pytest.raises(AgentCutError):
+        with pytest.raises(MCPVideoError):
             rotate(sample_video, angle=45)
 
     def test_no_transform_raises(self, sample_video):
-        with pytest.raises(AgentCutError):
+        with pytest.raises(MCPVideoError):
             rotate(sample_video, angle=0)
 
 
@@ -352,7 +352,7 @@ class TestFade:
         assert os.path.isfile(result.output_path)
 
     def test_no_fade_raises(self, sample_video):
-        with pytest.raises(AgentCutError):
+        with pytest.raises(MCPVideoError):
             fade(sample_video, fade_in=0, fade_out=0)
 
 

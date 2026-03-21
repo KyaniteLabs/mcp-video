@@ -2,7 +2,7 @@
 
 import pytest
 
-from agentcut.models import (
+from mcp_video.models import (
     ASPECT_RATIOS,
     PREVIEW_PRESETS,
     QUALITY_PRESETS,
@@ -425,3 +425,66 @@ class TestInvalidInputs:
         assert trans.type == "fade"
         with pytest.raises(Exception):
             TimelineTransition(after_clip=0, type="invalid")
+
+
+class TestEditResultNewFields:
+    """Tests for new progress and thumbnail_base64 fields in EditResult."""
+
+    def test_edit_result_progress_field(self):
+        """Test that EditResult can be created with progress field."""
+        result = EditResult(
+            output_path="/tmp/out.mp4",
+            progress=50.0,
+        )
+        assert result.progress == 50.0
+        assert result.success is True
+
+    def test_edit_result_progress_optional(self):
+        """Test that progress defaults to None."""
+        result = EditResult(output_path="/tmp/out.mp4")
+        assert result.progress is None
+
+    def test_edit_result_thumbnail_base64(self):
+        """Test that EditResult can be created with thumbnail_base64 field."""
+        result = EditResult(
+            output_path="/tmp/out.mp4",
+            thumbnail_base64="abc123",
+        )
+        assert result.thumbnail_base64 == "abc123"
+        assert result.success is True
+
+    def test_edit_result_thumbnail_optional(self):
+        """Test that thumbnail_base64 defaults to None."""
+        result = EditResult(output_path="/tmp/out.mp4")
+        assert result.thumbnail_base64 is None
+
+    def test_edit_result_both_new_fields(self):
+        """Test that EditResult can have both new fields populated."""
+        result = EditResult(
+            output_path="/tmp/out.mp4",
+            progress=75.5,
+            thumbnail_base64="base64encodedstring",
+        )
+        assert result.progress == 75.5
+        assert result.thumbnail_base64 == "base64encodedstring"
+
+    def test_edit_result_with_progress_serializes(self):
+        """Test that EditResult with progress serializes correctly."""
+        result = EditResult(
+            output_path="/tmp/out.mp4",
+            progress=100.0,
+            operation="convert",
+        )
+        d = result.model_dump()
+        assert d["progress"] == 100.0
+        assert d["operation"] == "convert"
+
+    def test_edit_result_with_thumbnail_serializes(self):
+        """Test that EditResult with thumbnail_base64 serializes correctly."""
+        result = EditResult(
+            output_path="/tmp/out.mp4",
+            thumbnail_base64="iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+        )
+        d = result.model_dump()
+        assert "thumbnail_base64" in d
+        assert d["thumbnail_base64"] == "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="

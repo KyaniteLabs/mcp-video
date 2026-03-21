@@ -1,4 +1,4 @@
-"""Shared test fixtures for AgentCut tests."""
+"""Shared test fixtures for mcp-video tests."""
 
 import os
 import shutil

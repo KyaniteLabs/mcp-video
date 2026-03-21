@@ -1,8 +1,8 @@
 {
   "mcpServers": {
-    "agentcut": {
+    "mcp-video": {
       "command": "uvx",
-      "args": ["agentcut"]
+      "args": ["mcp-video"]
     }
   }
 }

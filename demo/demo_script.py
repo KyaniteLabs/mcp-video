@@ -1,7 +1,7 @@
 """
-AgentCut Live Demo Script
+mcp-video Live Demo Script
 ========================
-Run this to demonstrate AgentCut's capabilities.
+Run this to demonstrate mcp-video's capabilities.
 Requires: a video file (mp4), FFmpeg with drawtext support.
 
 Usage:
@@ -16,10 +16,10 @@ import sys
 import time
 from pathlib import Path
 
-# Add parent to path so we can import agentcut
+# Add parent to path so we can import mcp_video
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from agentcut import Client
+from mcp_video import Client
 
 
 def divider(title: str):
@@ -99,7 +99,7 @@ def main():
     try:
         titled = editor.add_text(
             trimmed.output_path,
-            text="AGENTCUT DEMO",
+            text="MCP-VIDEO DEMO",
             position="top-center",
             size=48,
             color="white",
@@ -169,8 +169,8 @@ def main():
     # ─── Step 12: Template workflow ────────────────────────────────
     divider("TEMPLATE WORKFLOW")
     step(14, "Using TikTok template...")
-    from agentcut.templates import tiktok_template
-    timeline = tiktok_template(trimmed.output_path, caption="Built with AgentCut")
+    from mcp_video.templates import tiktok_template
+    timeline = tiktok_template(trimmed.output_path, caption="Built with mcp-video")
     print(f"  Template: TikTok (1080x1920)")
     print(f"  Tracks: {len(timeline['tracks'])} ({', '.join(t['type'] for t in timeline['tracks'])})")
     print(f"  Export: {timeline['export']['format']} / {timeline['export']['quality']}")

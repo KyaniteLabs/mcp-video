@@ -2,7 +2,7 @@
 
 import pytest
 
-from agentcut.templates import (
+from mcp_video.templates import (
     TEMPLATES,
     instagram_post_template,
     instagram_reel_template,

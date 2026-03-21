@@ -4,8 +4,8 @@ import os
 
 import pytest
 
-from agentcut import Client
-from agentcut.engine import (
+from mcp_video import Client
+from mcp_video.engine import (
     _check_filter_available,
     convert,
     extract_audio,
@@ -14,7 +14,7 @@ from agentcut.engine import (
     storyboard,
     thumbnail,
 )
-from agentcut.templates import tiktok_template
+from mcp_video.templates import tiktok_template
 
 
 def requires_filter(name: str, feature: str):
@@ -188,7 +188,7 @@ class TestErrorRecoveryWorkflow:
     """nonexistent file -> verify error dict with suggested_action"""
 
     def test_error_recovery(self, editor):
-        from agentcut.errors import InputFileError
+        from mcp_video.errors import InputFileError
 
         # Operations on nonexistent file should raise InputFileError
         with pytest.raises(InputFileError) as exc_info:
