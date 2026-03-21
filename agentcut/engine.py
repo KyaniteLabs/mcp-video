@@ -113,12 +113,16 @@ def _validate_input(path: str) -> None:
 def _auto_output(input_path: str, suffix: str = "edited", ext: str | None = None) -> str:
     base, original_ext = os.path.splitext(input_path)
     ext = ext or original_ext or ".mp4"
-    return f"{base}_{suffix}{ext}"
+    # Sanitize colons in base path — they break FFmpeg filter syntax
+    # and are problematic on Windows
+    safe_base = base.replace(":", "_")
+    return f"{safe_base}_{suffix}{ext}"
 
 
 def _auto_output_dir(input_path: str, suffix: str = "output") -> str:
     base, _ = os.path.splitext(input_path)
-    return f"{base}_{suffix}"
+    safe_base = base.replace(":", "_")
+    return f"{safe_base}_{suffix}"
 
 
 def _run_ffmpeg(args: list[str]) -> subprocess.CompletedProcess[str]:
@@ -685,6 +689,7 @@ def resize(
         raise AgentCutError(
             f"Unknown aspect ratio: {aspect_ratio}. "
             f"Available: {', '.join(ASPECT_RATIOS.keys())}",
+            error_type="input_error",
             code="invalid_aspect_ratio",
         )
     elif width and height:
@@ -794,6 +799,16 @@ def convert(
 
     if os.path.isfile(output):
         size_mb = os.path.getsize(output) / (1024 * 1024)
+        if format != "gif":
+            info = probe(output)
+            return EditResult(
+                output_path=output,
+                duration=info.duration,
+                resolution=info.resolution,
+                size_mb=round(size_mb, 2),
+                format=format,
+                operation="convert",
+            )
     else:
         size_mb = None
 
