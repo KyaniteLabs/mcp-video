@@ -148,19 +148,19 @@ class TestAudioExtractionWorkflow:
 
     def test_audio_extraction_workflow(self, editor, sample_video):
         # 1. Extract audio as MP3
-        mp3_path = editor.extract_audio(sample_video, format="mp3")
-        assert os.path.isfile(mp3_path)
-        assert mp3_path.endswith(".mp3")
+        mp3_result = editor.extract_audio(sample_video, format="mp3")
+        assert os.path.isfile(mp3_result.output_path)
+        assert mp3_result.output_path.endswith(".mp3")
 
         # 2. Verify file size is reasonable
-        size = os.path.getsize(mp3_path)
+        size = os.path.getsize(mp3_result.output_path)
         assert size > 0
 
         # 3. Also extract as WAV
-        wav_path = editor.extract_audio(sample_video, format="wav")
-        assert os.path.isfile(wav_path)
-        assert wav_path.endswith(".wav")
-        wav_size = os.path.getsize(wav_path)
+        wav_result = editor.extract_audio(sample_video, format="wav")
+        assert os.path.isfile(wav_result.output_path)
+        assert wav_result.output_path.endswith(".wav")
+        wav_size = os.path.getsize(wav_result.output_path)
         assert wav_size > size  # WAV should be larger
 
 

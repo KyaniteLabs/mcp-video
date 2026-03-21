@@ -388,7 +388,9 @@ def merge(
             concat_file = os.path.join(tmpdir, "concat.txt")
             with open(concat_file, "w") as f:
                 for clip in working_clips:
-                    f.write(f"file '{os.path.abspath(clip)}'\n")
+                    # Escape single quotes for FFmpeg concat demuxer
+                    abs_path = os.path.abspath(clip).replace("'", "'\\''")
+                    f.write(f"file '{abs_path}'\n")
             _run_ffmpeg([
                 "-f", "concat", "-safe", "0",
                 "-i", concat_file,
@@ -507,9 +509,9 @@ def add_text(
     coords = _position_coords(position)
     fontfile = font or _default_font()
 
-    # Escape single quotes and colons in text for FFmpeg
-    escaped_text = text.replace("'", "'\\''")
-    escaped_text = escaped_text.replace(":", "\\:")
+    # Escape FFmpeg drawtext special characters
+    # Inside single-quoted text, only ' itself and \ need escaping
+    escaped_text = text.replace("\\", "\\\\").replace("'", "'\\''")
 
     filter_parts = [
         f"drawtext=text='{escaped_text}'",
@@ -1024,8 +1026,9 @@ def subtitles(
     output = output_path or _auto_output(input_path, "subtitled")
 
     # Escape special characters for FFmpeg subtitle filter path
-    escaped_sub_path = subtitle_path.replace("\\", "/").replace(":", "\\:").replace("'", "\\'")
-    escaped_style = style.replace("'", "\\'")
+    # subtitles filter uses ':' as key=value separator and '\' for escaping
+    escaped_sub_path = subtitle_path.replace("\\", "/").replace("'", "'\\''").replace(":", "\\:").replace("[", "\\[").replace("]", "\\]")
+    escaped_style = style.replace("'", "\\'").replace(":", "\\:")
 
     _run_ffmpeg([
         "-i", input_path,

@@ -49,6 +49,8 @@ def _error_result(err: AgentCutError) -> dict[str, Any]:
 
 
 def _result(result: Any) -> dict[str, Any]:
+    if result is None:
+        return {"success": False, "error": {"type": "processing_error", "code": "no_result", "message": "Operation returned no result"}}
     if hasattr(result, "model_dump"):
         return result.model_dump()
     return {"success": True, "output_path": str(result)}
@@ -531,6 +533,12 @@ def video_extract_audio(
     """
     try:
         result = extract_audio(input_path, output_path=output_path, format=format)
+        if not os.path.isfile(result):
+            return _error_result(AgentCutError(
+                f"Audio extraction completed but output file not found: {result}",
+                error_type="processing_error",
+                code="missing_output",
+            ))
         size_mb = os.path.getsize(result) / (1024 * 1024)
         return {
             "success": True,
@@ -541,3 +549,9 @@ def video_extract_audio(
         }
     except AgentCutError as e:
         return _error_result(e)
+    except OSError as e:
+        return _error_result(AgentCutError(
+            f"File error during audio extraction: {e}",
+            error_type="processing_error",
+            code="file_error",
+        ))

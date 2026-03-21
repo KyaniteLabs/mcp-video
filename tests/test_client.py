@@ -210,7 +210,8 @@ class TestClientEdit:
 
 
 class TestClientExtractAudio:
-    def test_extract_audio_returns_string(self, editor, sample_video):
+    def test_extract_audio_returns_edit_result(self, editor, sample_video):
         result = editor.extract_audio(sample_video)
-        assert isinstance(result, str)
-        assert os.path.isfile(result)
+        assert isinstance(result, EditResult)
+        assert result.operation == "extract_audio"
+        assert os.path.isfile(result.output_path)

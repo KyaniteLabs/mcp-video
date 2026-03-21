@@ -72,12 +72,12 @@ class Client:
             clips: List of video file paths.
             output: Output file path.
             transitions: List of transition types (applied between each clip pair).
-                If fewer transitions than clip pairs, the last transition is repeated.
+                Note: the underlying merge() function applies a single transition
+                type between all clips. If multiple transitions are provided,
+                the first one is used.
             transition_duration: Duration of each transition in seconds.
         """
-        transition = None
-        if transitions:
-            transition = transitions[0] if len(transitions) == 1 else transitions[-1]
+        transition = transitions[0] if transitions else None
         return _merge(clips, output_path=output, transition=transition, transition_duration=transition_duration)
 
     def add_text(
@@ -225,9 +225,14 @@ class Client:
         video: str,
         output: str | None = None,
         format: str = "mp3",
-    ) -> str:
+    ) -> EditResult:
         """Extract audio track from video."""
-        return _extract_audio(video, output_path=output, format=format)
+        result_path = _extract_audio(video, output_path=output, format=format)
+        return EditResult(
+            output_path=result_path,
+            operation="extract_audio",
+            format=format,
+        )
 
 
 # Fix the circular import for resize
