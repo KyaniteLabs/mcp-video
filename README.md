@@ -1,6 +1,6 @@
 <p align="center">
   <img src="https://img.shields.io/badge/version-0.2.0-blue.svg" alt="Version">
-  <img src="https://img.shields.io/badge/tests-262%20passed-green.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/tests-276%20passed-green.svg" alt="Tests">
   <img src="https://img.shields.io/badge/tools-19%20MCP%20tools-orange.svg" alt="Tools">
   <img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="License">
   <img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python">
@@ -527,7 +527,7 @@ mcp-video parses FFmpeg errors and returns structured, actionable error response
 
 ## Testing
 
-mcp-video has **262 tests** across the full testing pyramid:
+mcp-video has **276 tests** across the full testing pyramid:
 
 ```
 tests/

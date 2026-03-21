@@ -84,7 +84,7 @@ tests/
 - Every new tool needs at least: success case, error case (bad input), and one edge case
 - E2E tests chain multiple operations together
 - Run the full suite before pushing: `pytest tests/ -v --tb=short`
-- Target: 262+ tests, 0 failures
+- Target: 276+ tests, 0 failures
 
 ## Commit Messages
 
