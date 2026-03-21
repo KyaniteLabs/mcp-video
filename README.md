@@ -1,6 +1,6 @@
 <p align="center">
   <img src="https://img.shields.io/badge/version-0.3.0-blue.svg" alt="Version">
-  <img src="https://img.shields.io/badge/tests-375%20passed-brightgreen.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/tests-380%20passed-brightgreen.svg" alt="Tests">
   <a href="https://github.com/pastorsimon1798/mcp-video/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/pastorsimon1798/mcp-video/.github/workflows/ci.yml?branch=master&label=CI" alt="CI"></a>
   <a href="https://glama.ai/mcp/servers/pastorsimon1798/mcp-video"><img src="https://glama.ai/mcp/servers/pastorsimon1798/mcp-video/badges/score.svg" alt="Glama Score"></a>
   <img src="https://img.shields.io/badge/pypi-mcp--video-blue.svg" alt="PyPI">
@@ -254,7 +254,7 @@ mcp-video exposes 26 tools for AI agents. All tools return structured JSON with 
 
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
-| `video_batch` | Apply operation to multiple files | `inputs[]`, `operation`, `params` |
+| `video_batch` | Apply operation to multiple files | `inputs[]`, `operation`, `params`, `output_dir` |
 
 ### Analysis & Extraction
 
@@ -595,7 +595,7 @@ mcp-video parses FFmpeg errors and returns structured, actionable error response
 
 ## Testing
 
-mcp-video has **375 tests** across the full testing pyramid:
+mcp-video has **380 tests** across the full testing pyramid:
 
 ```
 tests/
@@ -604,9 +604,9 @@ tests/
 ├── test_errors.py           # 42 tests — Error classes and FFmpeg error parsing (no FFmpeg)
 ├── test_templates.py        # 21 tests — Template functions and registry (no FFmpeg)
 ├── test_client.py           # 42 tests — Python Client API wrapper
-├── test_server.py           # 54 tests — MCP tool layer
+├── test_server.py           # 55 tests — MCP tool layer
 ├── test_engine.py           # 33 tests — Core FFmpeg engine operations
-├── test_engine_advanced.py  # 73 tests — Edge cases, new operations, per-transition merge
+├── test_engine_advanced.py  # 78 tests — Edge cases, new operations, filter validation, per-transition merge
 ├── test_cli.py              # 14 tests — CLI commands via subprocess
 ├── test_e2e.py              # 8 tests  — Full end-to-end workflows
 └── test_real_media.py       # 33 tests — Real-media integration tests (marked @slow)
@@ -639,7 +639,7 @@ pytest tests/ -m "not slow" --cov=mcp_video --cov-report=term-missing
 | Layer | Tests | What It Tests |
 |-------|-------|---------------|
 | **Unit** | 118 | Models, errors, templates — pure Python, no FFmpeg |
-| **Integration** | 216 | Client, server, engine, CLI — real FFmpeg operations |
+| **Integration** | 221 | Client, server, engine, CLI — real FFmpeg operations |
 | **E2E** | 8 | Multi-step workflows (TikTok, YouTube, GIF, speed) |
 | **Real Media** | 33 | iPhone footage integration tests (marked @slow) |
 

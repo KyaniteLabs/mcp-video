@@ -30,7 +30,7 @@ Bugs fixed, 0.1.1 shipped. Here's what would make mcp-video genuinely better to 
 - [ ] **Audio waveform extraction** — Return a text-based waveform representation so agents can "see" the audio without playing it. Useful for finding silence or loud sections.
 - [ ] **Subtitle generation from text** — Given a list of `[(start, end, text)]` tuples, generate an SRT file and burn it in one step. Currently requires creating the SRT manually.
 - [ ] **Frame-accurate seeking** — Use `-ss` before `-i` (input seeking) for speed, but fall back to output seeking for frame accuracy when the user specifies exact timestamps.
-- [ ] **Output directory option** — Currently outputs go next to the input file. Add a global `output_dir` option so all intermediates go to a temp folder.
+- [x] **Output directory option** — Currently outputs go next to the input file. Add a global `output_dir` option so all intermediates go to a temp folder. *(Shipped in v0.3.0 as `video_batch --output-dir` / `output_dir` param)*
 
 ## Observability (For you as the maintainer)
 

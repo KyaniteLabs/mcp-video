@@ -270,11 +270,11 @@
         <span class="gradient">for AI agents.</span>
     </h1>
     <p class="subtitle">
-        19 MCP tools that give Claude Code, Cursor, and any AI agent the ability to trim, merge, overlay text, sync audio, and export video. Local, fast, free.
+        26 MCP tools that give Claude Code, Cursor, and any AI agent the ability to trim, merge, overlay text, sync audio, apply filters, and export video. Local, fast, free.
     </p>
     <div class="badges">
-        <div class="badge"><div class="dot green"></div> 276 tests passing</div>
-        <div class="badge"><div class="dot blue"></div> 19 MCP tools</div>
+        <div class="badge"><div class="dot green"></div> 380 tests passing</div>
+        <div class="badge"><div class="dot blue"></div> 26 MCP tools</div>
         <div class="badge"><div class="dot orange"></div> 3 interfaces</div>
     </div>
     <div class="cta-row">
@@ -297,8 +297,8 @@
     <div class="grid-3">
         <div class="feature-card">
             <div class="icon">&#9881;</div>
-            <h3>19 Video Editing Tools</h3>
-            <p>Trim, merge, add text, sync audio, resize, convert, speed change, watermarks, subtitles, storyboards, crop, rotate, fade, and more.</p>
+            <h3>26 Video Editing Tools</h3>
+            <p>Trim, merge, add text, sync audio, resize, convert, speed change, watermarks, subtitles, storyboards, crop, rotate, fade, filters, color grading, audio normalization, PiP, split-screen, batch processing, and more.</p>
         </div>
         <div class="feature-card">
             <div class="icon">&#9889;</div>
@@ -321,6 +321,35 @@
             <div class="icon">&#128295;</div>
             <h3>Auto-Fix Error Handling</h3>
             <p>Parses FFmpeg errors into structured responses with actionable suggestions. "Codec error: vp9" becomes "Auto-convert from vp9 to H.264/AAC."</p>
+        </div>
+    </div>
+    <div class="grid-3" style="margin-top: 1.5rem;">
+        <div class="feature-card">
+            <div class="icon">&#127912;</div>
+            <h3>Filters & Color Grading</h3>
+            <p>Blur, sharpen, brightness, contrast, saturation, grayscale, sepia, invert, vignette. Plus color presets: warm, cool, vintage, cinematic, noir.</p>
+        </div>
+        <div class="feature-card">
+            <div class="icon">&#127925;</div>
+            <h3>Audio Normalization</h3>
+            <p>Normalize loudness to LUFS targets: YouTube (-16), broadcast (-23), Spotify (-14). Correct true peak for broadcast compliance.</p>
+        </div>
+        <div class="feature-card">
+            <div class="icon">&#128246;</div>
+            <h3>PiP & Split-Screen</h3>
+            <p>Picture-in-picture overlay with positioning, opacity, and timing. Side-by-side or top/bottom split-screen with auto-resize.</p>
+        </div>
+    </div>
+    <div class="grid-2" style="margin-top: 1.5rem;">
+        <div class="feature-card">
+            <div class="icon">&#128230;</div>
+            <h3>Batch Processing</h3>
+            <p>Apply the same operation to multiple files in one call. Trim 10 videos, blur 5, or convert a whole directory at once.</p>
+        </div>
+        <div class="feature-card">
+            <div class="icon">&#9889;</div>
+            <h3>Validation Before Execution</h3>
+            <p>Filter types, color presets, and parameters are validated before hitting FFmpeg. Get clear error messages, not cryptic KeyError tracebacks.</p>
         </div>
     </div>
 </section>
@@ -386,13 +415,13 @@
                 </tr>
                 <tr>
                     <td style="color: var(--text); font-family: inherit;">Discovery</td>
-                    <td style="color: var(--green);">19 self-documenting tools</td>
+                    <td style="color: var(--green);">26 self-documenting tools</td>
                     <td style="color: var(--orange);">Must know hundreds of flags</td>
                     <td style="color: var(--text2);">API docs</td>
                 </tr>
                 <tr>
                     <td style="color: var(--text); font-family: inherit;">Testing</td>
-                    <td style="color: var(--green);">276 tests, CI-ready</td>
+                    <td style="color: var(--green);">380 tests, CI-ready</td>
                     <td style="color: var(--orange);">None (ad-hoc)</td>
                     <td style="color: var(--text2);">Provider's tests</td>
                 </tr>
@@ -494,7 +523,7 @@
 <!-- TOOLS -->
 <section id="tools">
     <div class="section-label">Capabilities</div>
-    <div class="section-title">19 tools. Every operation you need.</div>
+    <div class="section-title">26 tools. Every operation you need.</div>
     <p class="section-desc">
         Every tool returns structured JSON. On success, you get output paths, duration, resolution. On failure, you get error types with auto-fix suggestions.
     </p>
@@ -524,6 +553,13 @@
                 <tr><td>video_crop</td><td>Crop to rectangular region with custom offset</td></tr>
                 <tr><td>video_rotate</td><td>Rotate 90/180/270 degrees or flip horizontal/vertical</td></tr>
                 <tr><td>video_fade</td><td>Add fade in/out effects to video</td></tr>
+                <tr><td>video_filter</td><td>Apply visual filter (blur, sharpen, grayscale, sepia, invert, vignette)</td></tr>
+                <tr><td>video_blur</td><td>Blur video with custom radius and strength</td></tr>
+                <tr><td>video_color_grade</td><td>Apply color preset (warm, cool, vintage, cinematic, noir)</td></tr>
+                <tr><td>video_normalize_audio</td><td>Normalize loudness to LUFS target (YouTube, broadcast, Spotify)</td></tr>
+                <tr><td>video_overlay</td><td>Picture-in-picture overlay with positioning and opacity</td></tr>
+                <tr><td>video_split_screen</td><td>Side-by-side or top/bottom layout for two videos</td></tr>
+                <tr><td>video_batch</td><td>Apply same operation to multiple files at once</td></tr>
             </tbody>
         </table>
     </div>
@@ -661,7 +697,7 @@ $ mcp-video storyboard video.mp4 -n 12</pre></div>
 <!-- TESTING -->
 <section id="testing">
     <div class="section-label">Quality</div>
-    <div class="section-title">276 tests. Full testing pyramid.</div>
+    <div class="section-title">380 tests. Full testing pyramid.</div>
     <p class="section-desc">
         Every model, error class, template, tool, and workflow is tested. Unit tests don't even need FFmpeg installed.
     </p>
@@ -672,14 +708,14 @@ $ mcp-video storyboard video.mp4 -n 12</pre></div>
             <div style="font-size: 0.75rem; color: var(--text3); margin-top: 0.5rem;">Models, errors, templates</div>
         </div>
         <div class="card" style="text-align: center;">
-            <div style="font-size: 2rem; font-weight: 800; color: var(--green);">150</div>
+            <div style="font-size: 2rem; font-weight: 800; color: var(--green);">221</div>
             <div style="font-size: 0.85rem; color: var(--text2);">Integration tests</div>
             <div style="font-size: 0.75rem; color: var(--text3); margin-top: 0.5rem;">Client, server, engine, CLI</div>
         </div>
         <div class="card" style="text-align: center;">
-            <div style="font-size: 2rem; font-weight: 800; color: var(--orange);">8</div>
-            <div style="font-size: 0.85rem; color: var(--text2);">E2E workflow tests</div>
-            <div style="font-size: 0.75rem; color: var(--text3); margin-top: 0.5rem;">TikTok, YouTube, GIF, speed</div>
+            <div style="font-size: 2rem; font-weight: 800; color: var(--orange);">41</div>
+            <div style="font-size: 0.85rem; color: var(--text2);">E2E + Real Media tests</div>
+            <div style="font-size: 0.75rem; color: var(--text3); margin-top: 0.5rem;">Workflows + iPhone footage</div>
         </div>
     </div>
 </section>
