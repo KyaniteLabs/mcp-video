@@ -163,7 +163,7 @@ def main() -> None:
     # filter
     filter_p = subparsers.add_parser("filter", help="Apply a visual filter")
     filter_p.add_argument("input", help="Input video file")
-    filter_p.add_argument("-t", "--type", dest="filter_type", required=True, choices=["blur", "sharpen", "brightness", "contrast", "saturation", "grayscale", "sepia", "invert", "vignette", "color_preset"], help="Filter type")
+    filter_p.add_argument("-t", "--type", dest="filter_type", required=True, choices=["blur", "sharpen", "brightness", "contrast", "saturation", "grayscale", "sepia", "invert", "vignette", "color_preset", "denoise", "deinterlace"], help="Filter type")
     filter_p.add_argument("--params", help="Filter parameters as JSON")
     filter_p.add_argument("-o", "--output", help="Output file path")
 
@@ -173,6 +173,19 @@ def main() -> None:
     blur_p.add_argument("-r", "--radius", type=int, default=5, help="Blur radius (default: 5)")
     blur_p.add_argument("-s", "--strength", type=int, default=1, help="Blur strength (default: 1)")
     blur_p.add_argument("-o", "--output", help="Output file path")
+
+    # reverse
+    reverse_p = subparsers.add_parser("reverse", help="Reverse video playback")
+    reverse_p.add_argument("input", help="Input video file")
+    reverse_p.add_argument("-o", "--output", help="Output file path")
+
+    # chroma-key
+    chroma_p = subparsers.add_parser("chroma-key", help="Remove solid color background (green screen)")
+    chroma_p.add_argument("input", help="Input video file")
+    chroma_p.add_argument("--color", default="0x00FF00", help="Color to remove in hex (default: 0x00FF00 for green)")
+    chroma_p.add_argument("--similarity", type=float, default=0.01, help="Color similarity threshold (default: 0.01)")
+    chroma_p.add_argument("--blend", type=float, default=0.0, help="Blend amount (default: 0.0)")
+    chroma_p.add_argument("-o", "--output", help="Output file path")
 
     # color-grade (convenience)
     grade_p = subparsers.add_parser("color-grade", help="Apply color grading preset")
@@ -348,6 +361,16 @@ def main() -> None:
         elif args.command == "blur":
             from .engine import apply_filter
             result = apply_filter(args.input, filter_type="blur", params={"radius": args.radius, "strength": args.strength}, output_path=args.output)
+            print(json.dumps(result.model_dump(), indent=2))
+
+        elif args.command == "reverse":
+            from .engine import reverse
+            result = reverse(args.input, output_path=args.output)
+            print(json.dumps(result.model_dump(), indent=2))
+
+        elif args.command == "chroma-key":
+            from .engine import chroma_key
+            result = chroma_key(args.input, color=args.color, similarity=args.similarity, blend=args.blend, output_path=args.output)
             print(json.dumps(result.model_dump(), indent=2))
 
         elif args.command == "color-grade":

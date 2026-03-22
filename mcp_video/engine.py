@@ -882,18 +882,21 @@ def convert(
         ], estimated_duration=input_info.duration, on_progress=on_progress)
     elif format == "gif":
         # Two-pass palette-based GIF generation for quality
+        # Scale by quality level: low=320, medium=480, high=640, ultra=800
+        gif_scale = {"low": 320, "medium": 480, "high": 640, "ultra": 800}
+        width = gif_scale.get(quality, 480)
         tmpdir = tempfile.mkdtemp(prefix="mcp_video_gif_")
         try:
             palette = os.path.join(tmpdir, "palette.png")
             _run_ffmpeg([
                 "-i", input_path,
-                "-vf", "fps=15,scale=480:-1:flags=lanczos,palettegen",
+                "-vf", f"fps=15,scale={width}:-1:flags=lanczos,palettegen",
                 "-y", palette,
             ])
             _run_ffmpeg_with_progress([
                 "-i", input_path,
                 "-i", palette,
-                "-lavfi", "fps=15,scale=480:-1:flags=lanczos [x]; [x][1:v] paletteuse",
+                "-lavfi", f"fps=15,scale={width}:-1:flags=lanczos [x]; [x][1:v] paletteuse",
                 "-y", output,
             ], estimated_duration=input_info.duration, on_progress=on_progress)
         finally:
@@ -1602,6 +1605,8 @@ def apply_filter(
         "invert": ("negate", "negate"),
         "vignette": ("vignette", f"vignette=angle={params.get('angle', 'PI/4')}"),
         "color_preset": ("eq", _get_color_preset_filter(params.get("preset", "warm"))),
+        "denoise": ("hqdn3d", f"hqdn3d={params.get('spatial', 4)}:{params.get('temporal', 3)}:{params.get('spatial_c', 6)}:{params.get('temporal_c', 4.5)}"),
+        "deinterlace": ("yadif", "yadif=0:-1:0"),
     }
 
     if filter_type not in filter_map:
@@ -1844,4 +1849,79 @@ def split_screen(
         size_mb=info.size_mb,
         format="mp4",
         operation=f"split_screen_{layout}",
+    )
+
+
+def reverse(
+    input_path: str,
+    output_path: str | None = None,
+) -> EditResult:
+    """Reverse video and audio playback.
+
+    Args:
+        input_path: Path to the input video.
+        output_path: Where to save the output. Auto-generated if omitted.
+    """
+    _validate_input(input_path)
+    output = output_path or _auto_output(input_path, "reversed")
+
+    _run_ffmpeg([
+        "-i", input_path,
+        "-vf", "reverse",
+        "-af", "areverse",
+        "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+        "-c:a", "aac", "-b:a", "128k",
+    ] + _movflags_args(output) + [
+        output,
+    ])
+
+    info = probe(output)
+    return EditResult(
+        output_path=output,
+        duration=info.duration,
+        resolution=info.resolution,
+        size_mb=info.size_mb,
+        format="mp4",
+        operation="reverse",
+    )
+
+
+def chroma_key(
+    input_path: str,
+    color: str = "0x00FF00",
+    similarity: float = 0.01,
+    blend: float = 0.0,
+    output_path: str | None = None,
+) -> EditResult:
+    """Remove a solid color background (green screen / chroma key).
+
+    Args:
+        input_path: Path to the input video.
+        color: Color to make transparent (default green: 0x00FF00).
+        similarity: How similar colors need to be to be keyed out (default 0.01).
+        blend: How much to blend the keyed color (default 0.0).
+        output_path: Where to save the output. Auto-generated if omitted.
+    """
+    _validate_input(input_path)
+    output = output_path or _auto_output(input_path, "chromakey")
+
+    _require_filter("chromakey", "Chroma key filter")
+
+    _run_ffmpeg([
+        "-i", input_path,
+        "-vf", f"chromakey=color={color}:similarity={similarity}:blend={blend}",
+        "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+        "-c:a", "aac", "-b:a", "128k",
+    ] + _movflags_args(output) + [
+        output,
+    ])
+
+    info = probe(output)
+    return EditResult(
+        output_path=output,
+        duration=info.duration,
+        resolution=info.resolution,
+        size_mb=info.size_mb,
+        format="mp4",
+        operation="chroma_key",
     )

@@ -126,6 +126,7 @@ TransitionType = Literal["fade", "dissolve", "wipe-left", "wipe-right", "wipe-up
 FilterType = Literal[
     "blur", "sharpen", "brightness", "contrast", "saturation",
     "grayscale", "sepia", "invert", "vignette", "color_preset",
+    "denoise", "deinterlace",
 ]
 
 ColorPreset = Literal["warm", "cool", "vintage", "cinematic", "noir"]

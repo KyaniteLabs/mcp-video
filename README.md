@@ -1,10 +1,10 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.3.0-blue.svg" alt="Version">
-  <img src="https://img.shields.io/badge/tests-380%20passed-brightgreen.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/version-0.4.0-blue.svg" alt="Version">
+  <img src="https://img.shields.io/badge/tests-387%20passed-brightgreen.svg" alt="Tests">
   <a href="https://github.com/pastorsimon1798/mcp-video/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/pastorsimon1798/mcp-video/.github/workflows/ci.yml?branch=master&label=CI" alt="CI"></a>
   <a href="https://glama.ai/mcp/servers/pastorsimon1798/mcp-video"><img src="https://glama.ai/mcp/servers/pastorsimon1798/mcp-video/badges/score.svg" alt="Glama Score"></a>
   <img src="https://img.shields.io/badge/pypi-mcp--video-blue.svg" alt="PyPI">
-  <img src="https://img.shields.io/badge/tools-26%20MCP%20tools-orange.svg" alt="Tools">
+  <img src="https://img.shields.io/badge/tools-29%20MCP%20tools-orange.svg" alt="Tools">
   <img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="License">
   <img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python">
 </p>
@@ -196,7 +196,9 @@ mcp_video convert video.mp4 -f webm -q high
 
 ## MCP Tools
 
-mcp-video exposes 26 tools for AI agents. All tools return structured JSON with `success`, `output_path`, and operation metadata. On failure, they return `{"success": false, "error": {...}}` with auto-fix suggestions.
+mcp-video exposes 29 tools for AI agents. All tools return structured JSON with `success`, `output_path`, and operation metadata. On failure, they return `{"success": false, "error": {...}}` with auto-fix suggestions.
+
+**New in v0.4.0:** Video reverse playback, green screen / chroma key removal, denoise and deinterlace filters, and smarter GIF output with quality-based scaling.
 
 **New in v0.3.0:** Video filters & effects (blur, sharpen, color grading with presets), audio normalization to LUFS targets, picture-in-picture and split-screen compositing, and batch processing for multi-file workflows.
 
@@ -208,6 +210,7 @@ mcp-video exposes 26 tools for AI agents. All tools return structured JSON with 
 | `video_trim` | Trim clip by timestamp | `input_path`, `start`, `duration`/`end` |
 | `video_merge` | Concatenate multiple clips | `clips[]`, `transitions[]`, `transition_duration` |
 | `video_speed` | Change playback speed | `input_path`, `factor` (0.5=slow, 2.0=fast) |
+| `video_reverse` | Reverse video and audio playback | `input_path` |
 
 ### Effects & Overlays
 
@@ -220,6 +223,7 @@ mcp-video exposes 26 tools for AI agents. All tools return structured JSON with 
 | `video_crop` | Crop to rectangular region | `input_path`, `width`, `height`, `x?`, `y?` |
 | `video_rotate` | Rotate and/or flip video | `input_path`, `angle`, `flip_horizontal`, `flip_vertical` |
 | `video_fade` | Video fade in/out | `input_path`, `fade_in`, `fade_out` |
+| `video_chroma_key` | Remove solid color background (green screen) | `input_path`, `color`, `similarity`, `blend` |
 
 ### Format & Quality
 
@@ -233,7 +237,7 @@ mcp-video exposes 26 tools for AI agents. All tools return structured JSON with 
 
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
-| `video_filter` | Apply visual filter (blur, sharpen, grayscale, sepia, invert, vignette, brightness, contrast, saturation) | `input_path`, `filter_type`, `params` |
+| `video_filter` | Apply visual filter (blur, sharpen, grayscale, sepia, invert, vignette, brightness, contrast, saturation, denoise, deinterlace) | `input_path`, `filter_type`, `params` |
 | `video_blur` | Blur video | `input_path`, `radius`, `strength` |
 | `video_color_grade` | Apply color preset (warm, cool, vintage, cinematic, noir) | `input_path`, `preset` |
 
@@ -320,6 +324,8 @@ editor = Client()
 | `normalize_audio(video, target_lufs?, output?)` | `EditResult` | Normalize audio to LUFS target |
 | `overlay(background, overlay, position?, width?, opacity?, start_time?, duration?, output?)` | `EditResult` | Picture-in-picture overlay |
 | `split_screen(left, right, layout?, output?)` | `EditResult` | Side-by-side or top/bottom layout |
+| `reverse(video, output?)` | `EditResult` | Reverse video and audio playback |
+| `chroma_key(video, color?, similarity?, blend?, output?)` | `EditResult` | Remove solid color background (green screen) |
 | `batch(inputs, operation, params?)` | `dict` | Apply operation to multiple files |
 
 ### Return Models
@@ -370,6 +376,8 @@ Commands:
   normalize-audio Normalize audio to LUFS target
   overlay-video  Picture-in-picture overlay
   split-screen   Side-by-side or top/bottom layout
+  reverse        Reverse video playback
+  chroma-key     Remove solid color background (green screen)
   batch          Apply operation to multiple files
 
 Options:
@@ -595,7 +603,7 @@ mcp-video parses FFmpeg errors and returns structured, actionable error response
 
 ## Testing
 
-mcp-video has **380 tests** across the full testing pyramid:
+mcp-video has **387 tests** across the full testing pyramid:
 
 ```
 tests/
@@ -639,7 +647,7 @@ pytest tests/ -m "not slow" --cov=mcp_video --cov-report=term-missing
 | Layer | Tests | What It Tests |
 |-------|-------|---------------|
 | **Unit** | 118 | Models, errors, templates — pure Python, no FFmpeg |
-| **Integration** | 221 | Client, server, engine, CLI — real FFmpeg operations |
+| **Integration** | 228 | Client, server, engine, CLI — real FFmpeg operations |
 | **E2E** | 8 | Multi-step workflows (TikTok, YouTube, GIF, speed) |
 | **Real Media** | 33 | iPhone footage integration tests (marked @slow) |
 
@@ -716,6 +724,7 @@ pytest tests/ -v --tb=long
 - [x] Audio normalization to LUFS targets (v0.3.0)
 - [x] Picture-in-picture and split-screen compositing (v0.3.0)
 - [x] Batch processing for multi-file workflows (v0.3.0)
+- [x] Video reverse, green screen/chroma key, denoise & deinterlace filters, smarter GIF output (v0.4.0)
 - [ ] Streaming upload/download (S3, GCS integration)
 - [ ] Web UI for non-agent users
 - [ ] FFmpeg filter auto-detection and graceful fallback

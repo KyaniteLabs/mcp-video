@@ -295,6 +295,25 @@ class Client:
             output_path=output,
         )
 
+    def reverse(
+        self,
+        video: str,
+        output: str | None = None,
+    ) -> EditResult:
+        """Reverse video and audio playback."""
+        return self._run_tool("video_reverse", input_path=video, output_path=output)
+
+    def chroma_key(
+        self,
+        video: str,
+        color: str = "0x00FF00",
+        similarity: float = 0.01,
+        blend: float = 0.0,
+        output: str | None = None,
+    ) -> EditResult:
+        """Remove a solid color background (green screen / chroma key)."""
+        return self._run_tool("video_chroma_key", input_path=video, color=color, similarity=similarity, blend=blend, output_path=output)
+
     def color_grade(
         self,
         video: str,

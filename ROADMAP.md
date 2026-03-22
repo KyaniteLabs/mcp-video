@@ -15,6 +15,10 @@ Bugs fixed, 0.1.1 shipped. Here's what would make mcp-video genuinely better to 
 
 - [x] **Video effects/filters** — Blur, sharpen, color grading, color presets (warm/cool/vintage/cinematic/noir), grayscale, sepia, invert, vignette. *(Shipped in v0.3.0 as `video_filter`, `video_blur`, `video_color_grade`)*
 - [x] **Audio editing** — Audio normalization to LUFS targets (YouTube -16, broadcast -23, Spotify -14). *(Shipped in v0.3.0 as `video_normalize_audio`)*
+- [x] **Reverse playback** — Reverse video and audio so it plays backwards. *(Shipped in v0.4.0)*
+- [x] **Green screen / chroma key** — Remove solid color backgrounds using `chromakey` filter. *(Shipped in v0.4.0)*
+- [x] **Denoise & deinterlace filters** — New filter types in `video_filter`: `denoise` (hqdn3d) and `deinterlace` (yadif). *(Shipped in v0.4.0)*
+- [x] **Smarter GIF output** — Quality-based scaling (low=320, medium=480, high=640, ultra=800) instead of fixed 480px. *(Shipped in v0.4.0)*
 
 - [ ] **Crop by percentage** — Currently requires pixel math (`width=1920, height=1080`). Add `crop_percent: 50` so "center 50%" just works. The engine calculates pixels internally.
 - [ ] **Orientation-aware metadata** — `video_info` reports raw stream dimensions (3840x2160) for a portrait phone video that displays as 2160x3840. Read the rotation/side_data metadata from ffprobe and report display orientation.
@@ -42,3 +46,27 @@ Bugs fixed, 0.1.1 shipped. Here's what would make mcp-video genuinely better to 
 
 - **Streaming** — RTMP, HLS output. Different domain.
 - **GPU acceleration** — Keep it simple. CPU FFmpeg is fast enough for the target use case.
+
+## FFmpeg Coverage Gaps
+
+Features that FFmpeg supports but mcp-video doesn't expose yet. Ordered by impact.
+
+### High Impact
+- [ ] **Audio effects** — Reverb (`aecho`), equalizer (`equalizer`), compressor (`acompressor`), pitch shift (`asetrate`+`aresample`), noise reduction (`afftdn`)
+- [ ] **Video stabilization** — Deshake filter (`vidstab`) for shaky handheld footage
+- [ ] **Scene detection** — Auto-detect scene changes using `select` filter, return timestamps
+- [ ] **Quality metrics** — PSNR, SSIM, VMAF calculation for comparing video quality
+
+### Medium Impact
+- [ ] **HLS/DASH streaming** — Segment video for adaptive bitrate streaming
+- [ ] **Advanced codecs** — AV1 (`libaom-av1`), HEVC/H.265 (`libx265`), ProRes (`prores_ks`)
+- [ ] **Image sequences** — Create video from image sequences (`img2pipe`), export frames
+- [ ] **Metadata editing** — Read/write video metadata tags, chapter support
+- [ ] **Audio waveform extraction** — Text-based waveform for silence/loud section detection
+- [ ] **Subtitle generation** — Generate SRT from `[(start, end, text)]` tuples, burn in one step
+
+### Low Impact
+- [ ] **Ken Burns / zoom pan** — Animated zoom/pan effects via `zoompan` filter
+- [ ] **Advanced masking** — Complex mask operations beyond chroma key
+- [ ] **Frame-accurate seeking** — Input seeking for speed, output seeking for accuracy
+- [ ] **Two-pass encoding** — More efficient compression for target file sizes
