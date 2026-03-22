@@ -1941,3 +1941,83 @@ def chroma_key(
         format="mp4",
         operation="chroma_key",
     )
+
+
+# ---------------------------------------------------------------------------
+# Batch processing
+# ---------------------------------------------------------------------------
+
+def video_batch(
+    inputs: list[str],
+    operation: str,
+    params: dict[str, Any] | None = None,
+    output_dir: str | None = None,
+) -> dict[str, Any]:
+    """Apply the same operation to multiple video files.
+
+    Args:
+        inputs: List of absolute paths to input video files.
+        operation: Operation (trim, resize, convert, filter, blur, color_grade, watermark, speed, fade, normalize_audio).
+        params: Parameters for the operation.
+        output_dir: Directory for output files. Auto-generated if omitted.
+    """
+    if not inputs:
+        return {"success": False, "error": {"type": "input_error", "code": "empty_inputs", "message": "No input files provided"}}
+
+    params = params or {}
+    results = []
+    succeeded = 0
+    failed = 0
+
+    for input_path in inputs:
+        try:
+            if output_dir:
+                os.makedirs(output_dir, exist_ok=True)
+
+            def _batch_output(ext: str | None = None) -> str:
+                """Generate output path in output_dir, or auto-generate."""
+                if output_dir:
+                    name = os.path.splitext(os.path.basename(input_path))[0]
+                    ext = ext or ".mp4"
+                    return os.path.join(output_dir, f"{name}_{operation}{ext}")
+                return None  # let the engine auto-generate
+
+            if operation == "trim":
+                result = trim(input_path, start=params.get("start", "0"), duration=params.get("duration"), end=params.get("end"), output_path=_batch_output())
+            elif operation == "resize":
+                result = resize(input_path, width=params.get("width"), height=params.get("height"), aspect_ratio=params.get("aspect_ratio"), quality=params.get("quality", "high"), output_path=_batch_output())
+            elif operation == "convert":
+                out_ext = f".{params.get('format', 'mp4')}"
+                result = convert(input_path, format=params.get("format", "mp4"), quality=params.get("quality", "high"), output_path=_batch_output(out_ext))
+            elif operation == "filter":
+                result = apply_filter(input_path, filter_type=params.get("filter_type", "blur"), params=params.get("filter_params", {}), output_path=_batch_output())
+            elif operation == "blur":
+                result = apply_filter(input_path, filter_type="blur", params=params.get("filter_params", {}), output_path=_batch_output())
+            elif operation == "color_grade":
+                result = apply_filter(input_path, filter_type="color_preset", params={"preset": params.get("preset", "warm")}, output_path=_batch_output())
+            elif operation == "watermark":
+                result = watermark(input_path, image_path=params.get("image_path", ""), position=params.get("position", "bottom-right"), opacity=params.get("opacity", 0.7), output_path=_batch_output())
+            elif operation == "speed":
+                result = speed(input_path, factor=params.get("factor", 1.0), output_path=_batch_output())
+            elif operation == "fade":
+                result = fade(input_path, fade_in=params.get("fade_in", 0.5), fade_out=params.get("fade_out", 0.5), output_path=_batch_output())
+            elif operation == "normalize_audio":
+                result = normalize_audio(input_path, target_lufs=params.get("target_lufs", -16.0), output_path=_batch_output())
+            else:
+                results.append({"input": input_path, "success": False, "error": f"Unknown operation: {operation}"})
+                failed += 1
+                continue
+
+            results.append({"input": input_path, "success": True, "output_path": result.output_path})
+            succeeded += 1
+        except Exception as e:
+            results.append({"input": input_path, "success": False, "error": str(e)})
+            failed += 1
+
+    return {
+        "success": failed == 0,
+        "total": len(inputs),
+        "succeeded": succeeded,
+        "failed": failed,
+        "results": results,
+    }
