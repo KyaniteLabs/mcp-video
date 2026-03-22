@@ -12,6 +12,7 @@ from .engine import (
     add_text,
     apply_filter,
     apply_mask,
+    audio_waveform,
     chroma_key,
     compare_quality,
     convert,
@@ -23,6 +24,7 @@ from .engine import (
     export_video,
     extract_audio,
     fade,
+    generate_subtitles,
     merge,
     normalize_audio,
     overlay_video,
@@ -871,6 +873,25 @@ def video_export_frames(
 
 
 @mcp.tool()
+def video_generate_subtitles(
+    entries: list[dict],
+    input_path: str,
+    burn: bool = False,
+) -> dict[str, Any]:
+    """Generate SRT subtitles from text entries and optionally burn into video.
+
+    Args:
+        entries: List of subtitle entries with keys: start (float), end (float), text (str).
+        input_path: Absolute path to the input video.
+        burn: If True, burn subtitles into the video (default False).
+    """
+    try:
+        return _result(generate_subtitles(entries, input_path, burn=burn))
+    except MCPVideoError as e:
+        return _error_result(e)
+
+
+@mcp.tool()
 def video_compare_quality(
     original_path: str,
     distorted_path: str,
@@ -961,6 +982,23 @@ def video_apply_mask(
     """
     try:
         return _result(apply_mask(input_path, mask_path=mask_path, feather=feather, output_path=output_path))
+    except MCPVideoError as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_audio_waveform(
+    input_path: str,
+    bins: int = 50,
+) -> dict[str, Any]:
+    """Extract audio waveform data (peaks and silence regions).
+
+    Args:
+        input_path: Absolute path to the input video/audio file.
+        bins: Number of time segments to analyze (default 50).
+    """
+    try:
+        return _result(audio_waveform(input_path, bins=bins))
     except MCPVideoError as e:
         return _error_result(e)
 

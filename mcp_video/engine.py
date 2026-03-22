@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import base64
 import json
+import math
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import tempfile
@@ -876,28 +878,30 @@ def convert(
 
     if two_pass and target_bitrate:
         # Two-pass encoding for better quality at target bitrate
-        _run_ffmpeg([
-            "-i", input_path,
-            "-c:v", "libx264",
-            "-b:v", f"{target_bitrate}k",
-            "-pass", "1",
-            "-an", "-f", "null", "/dev/null",
-        ])
-        _run_ffmpeg([
-            "-i", input_path,
-            "-c:v", "libx264",
-            "-b:v", f"{target_bitrate}k",
-            "-pass", "2",
-            "-preset", preset["preset"],
-            "-c:a", "aac", "-b:a", "128k",
-        ] + _movflags_args(output) + [
-            output,
-        ])
-        # Clean up pass log files
-        for suffix in ("-0.log", "-0.log.mbtree"):
-            log = os.path.splitext(os.path.basename(input_path))[0] + suffix
-            if os.path.isfile(log):
-                os.unlink(log)
+        passlogdir = tempfile.mkdtemp(prefix="mcp_video_2pass_")
+        try:
+            passlogfile = os.path.join(passlogdir, "pass")
+            _run_ffmpeg([
+                "-i", input_path,
+                "-c:v", "libx264",
+                "-b:v", f"{target_bitrate}k",
+                "-pass", "1",
+                "-passlogfile", passlogfile,
+                "-an", "-f", "null", "/dev/null",
+            ])
+            _run_ffmpeg([
+                "-i", input_path,
+                "-c:v", "libx264",
+                "-b:v", f"{target_bitrate}k",
+                "-pass", "2",
+                "-passlogfile", passlogfile,
+                "-preset", preset["preset"],
+                "-c:a", "aac", "-b:a", "128k",
+            ] + _movflags_args(output) + [
+                output,
+            ])
+        finally:
+            shutil.rmtree(passlogdir, ignore_errors=True)
     elif format == "mp4":
         _run_ffmpeg_with_progress([
             "-i", input_path,
@@ -1633,7 +1637,6 @@ def _build_pitch_shift_filter(semitones: float = 0) -> str:
         semitones: Number of semitones to shift. Positive = higher, negative = lower.
             Each semitone is a 2^(1/12) ~ 1.0595x multiplier on sample rate.
     """
-    import math
     rate_mult = 2 ** (semitones / 12)
     new_rate = 44100 * rate_mult
     # atempo compensates for the tempo change caused by sample rate shift,
@@ -1662,6 +1665,9 @@ def apply_filter(
     params = params or {}
     output = output_path or _auto_output(input_path, f"filter_{filter_type}")
 
+    # Probe video dimensions for ken_burns filter
+    info = probe(input_path)
+
     # Build the -vf filter string
     # Audio filters use -af; video filters use -vf.
     # filter_map entries: (filter_name, filter_string, is_audio)
@@ -1678,7 +1684,7 @@ def apply_filter(
         "color_preset": ("eq", _get_color_preset_filter(params.get("preset", "warm")), False),
         "denoise": ("hqdn3d", f"hqdn3d={params.get('luma_spatial', 4)}:{params.get('chroma_spatial', 3)}:{params.get('luma_tmp', 6)}:{params.get('chroma_tmp', 4.5)}", False),
         "deinterlace": ("yadif", "yadif=0:-1:0", False),
-        "ken_burns": ("zoompan", f"zoompan=z='min(zoom+{params.get('zoom_speed', 0.0015)},1.5)':d={params.get('duration', 150)}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=640x360", False),
+        "ken_burns": ("zoompan", f"zoompan=z='min(zoom+{params.get('zoom_speed', 0.0015)},1.5)':d={params.get('duration', 150)}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s={info.width}x{info.height}", False),
         "reverb": ("aecho", f"aecho={params.get('in_gain', 0.8)}:{params.get('out_gain', 0.9)}:{params.get('delays', 60)}:{params.get('decay', 0.2)}", True),
         "compressor": ("acompressor", f"acompressor=threshold={params.get('threshold_db', -20)}dB:ratio={params.get('ratio', 4)}:attack={params.get('attack', 5)}:release={params.get('release', 50)}", True),
         "pitch_shift": ("asetrate", _build_pitch_shift_filter(params.get("semitones", 0)), True),
@@ -2101,10 +2107,10 @@ def generate_subtitles(
     if burn:
         _require_filter("subtitles", "Subtitle burn-in")
         video_out = os.path.join(srt_dir, "subtitled.mp4")
-        escaped_srt = srt_file.replace("\\", "/").replace("'", "'\\''").replace(":", "\\:").replace("[", "\\[").replace("]", "\\]")
+        escaped_srt = shlex.quote(srt_file.replace("\\", "/"))
         _run_ffmpeg([
             "-i", input_path,
-            "-vf", f"subtitles='{escaped_srt}'",
+            "-vf", f"subtitles={escaped_srt}",
             "-c:v", "libx264", "-preset", "fast", "-crf", "23",
             "-c:a", "copy",
         ] + _movflags_args(video_out) + [
@@ -2226,6 +2232,7 @@ def audio_waveform(
             max_level=max_level,
             min_level=min_level,
             silence_regions=silence_regions,
+            synthetic=True,
         )
 
     # Use the RMS levels from astats
@@ -2333,8 +2340,8 @@ def detect_scenes(
             scenes.append({
                 "start": round(prev_time, 2),
                 "end": round(t, 2),
-                "start_frame": int(prev_time * info.fps),
-                "end_frame": int(t * info.fps),
+                "start_frame": round(prev_time * info.fps),
+                "end_frame": round(t * info.fps),
             })
             prev_time = t
 
@@ -2343,8 +2350,8 @@ def detect_scenes(
         scenes.append({
             "start": round(prev_time, 2),
             "end": round(duration, 2),
-            "start_frame": int(prev_time * info.fps),
-            "end_frame": int(duration * info.fps),
+            "start_frame": round(prev_time * info.fps),
+            "end_frame": round(duration * info.fps),
         })
 
     return SceneDetectionResult(
@@ -2383,16 +2390,29 @@ def create_from_images(
     output = output_path or _auto_output(images[0], "from_images")
     tmpdir = tempfile.mkdtemp(prefix="mcp_video_imgseq_")
     try:
+        # Detect if any input is PNG (has alpha channel)
+        has_png = any(img.lower().endswith(".png") for img in images)
+        img_format = "png" if has_png else "jpg"
+        ext = f".{img_format}"
+
         # Normalize all images to same dimensions first
         normalized: list[str] = []
         for i, img in enumerate(images):
-            norm_path = os.path.join(tmpdir, f"img_{i:04d}.jpg")
-            _run_ffmpeg([
-                "-y", "-i", img,
-                "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2",
-                "-q:v", "2",
-                norm_path,
-            ])
+            norm_path = os.path.join(tmpdir, f"img_{i:04d}{ext}")
+            if img_format == "png":
+                _run_ffmpeg([
+                    "-y", "-i", img,
+                    "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2",
+                    "-c:v", "png",
+                    norm_path,
+                ])
+            else:
+                _run_ffmpeg([
+                    "-y", "-i", img,
+                    "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2",
+                    "-q:v", "2",
+                    norm_path,
+                ])
             normalized.append(norm_path)
 
         # Build concat file
@@ -2443,6 +2463,12 @@ def export_frames(
         format: Output image format (jpg, png).
     """
     _validate_input(input_path)
+    if format not in ("jpg", "png"):
+        raise MCPVideoError(
+            f"Invalid format '{format}': must be 'jpg' or 'png'",
+            error_type="validation_error",
+            code="invalid_format",
+        )
     info = probe(input_path)
 
     out_dir = output_dir or _auto_output_dir(input_path, "frames")
@@ -2529,8 +2555,11 @@ def compare_quality(
                             computed["ssim"] = float(val_match.group(1))
                     except (ValueError, IndexError):
                         continue
-        except Exception:
-            continue
+        except Exception as e:
+            raise ProcessingError(
+                f"Failed to compute {metric_lower} metric: {str(e)}",
+                input_path=original_path,
+            ) from e
 
     # Determine overall quality
     if "ssim" in computed:
@@ -2612,6 +2641,15 @@ def write_metadata(
             code="empty_metadata",
         )
 
+    # Validate metadata keys don't contain '=' or newline which would break the command
+    for key in metadata.keys():
+        if "=" in key or "\n" in key:
+            raise MCPVideoError(
+                f"Invalid metadata key '{key}': keys cannot contain '=' or newline characters",
+                error_type="validation_error",
+                code="invalid_metadata_key",
+            )
+
     output = output_path or _auto_output(input_path, "tagged")
 
     args = ["-i", input_path]
@@ -2663,7 +2701,7 @@ def stabilize(
     try:
         # Pass 1: detect motion vectors
         vectors_file = os.path.join(tmpdir, "vectors.trf")
-        subprocess.run(
+        result = subprocess.run(
             [
                 _ffmpeg(), "-y",
                 "-i", input_path,
@@ -2672,6 +2710,8 @@ def stabilize(
             ],
             capture_output=True, text=True, timeout=600,
         )
+        if result.returncode != 0:
+            raise parse_ffmpeg_error(result.stderr)
 
         # Pass 2: apply stabilization
         _run_ffmpeg([

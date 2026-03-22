@@ -83,7 +83,12 @@ class SubtitleResult(BaseModel):
 
 
 class WaveformResult(BaseModel):
-    """Result of audio waveform extraction."""
+    """Result of audio waveform extraction.
+
+    The synthetic field indicates whether the peak data was synthetically
+    generated due to astats filter failure (True) or extracted from actual
+    audio analysis (False).
+    """
 
     success: bool = True
     duration: float
@@ -92,6 +97,7 @@ class WaveformResult(BaseModel):
     max_level: float
     min_level: float
     silence_regions: list[dict] = Field(description="List of {start, end} silence regions")
+    synthetic: bool = Field(default=False, description="True if data was synthetically generated due to analysis failure")
 
 
 class SceneDetectionResult(BaseModel):

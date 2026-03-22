@@ -396,6 +396,19 @@ def main() -> None:
     mask_p.add_argument("--feather", type=int, default=5, help="Edge feather in pixels (default: 5)")
     mask_p.add_argument("-o", "--output", help="Output file path")
 
+    # audio-waveform
+    waveform_p = subparsers.add_parser("audio-waveform", help="Extract audio waveform data")
+    waveform_p.add_argument("input", help="Input video/audio file")
+    waveform_p.add_argument("-b", "--bins", type=int, default=50, help="Number of time segments (default: 50)")
+    waveform_p.add_argument("-o", "--output", help="Output file path (optional, data is returned as JSON)")
+
+    # generate-subtitles
+    gen_subs_p = subparsers.add_parser("generate-subtitles", help="Generate SRT subtitles from text entries")
+    gen_subs_p.add_argument("input", help="Input video file")
+    gen_subs_p.add_argument("--entries", required=True, help="Subtitle entries as JSON: '[{\"start\":0,\"end\":2,\"text\":\"Hello\"}]'")
+    gen_subs_p.add_argument("--burn", action="store_true", help="Burn subtitles into video")
+    gen_subs_p.add_argument("-o", "--output", help="Output directory/path (default: auto-generated)")
+
     # templates (list available templates)
     subparsers.add_parser("templates", help="List available video templates")
 
@@ -797,6 +810,40 @@ def main() -> None:
                 output_json(result)
             else:
                 _format_edit_text(result)
+
+        elif args.command == "audio-waveform":
+            from .engine import audio_waveform
+            result = _with_spinner("Extracting waveform...", audio_waveform, args.input, bins=args.bins)
+            if use_json:
+                output_json(result)
+            else:
+                data = result.model_dump()
+                table = Table(title="Audio Waveform")
+                table.add_column("Property", style="bold cyan")
+                table.add_column("Value")
+                table.add_row("Duration", f"{data.get('duration', 0):.2f}s")
+                table.add_row("Mean Level", f"{data.get('mean_level', 0):.1f} dB")
+                table.add_row("Max Level", f"{data.get('max_level', 0):.1f} dB")
+                table.add_row("Min Level", f"{data.get('min_level', 0):.1f} dB")
+                silence_count = len(data.get('silence_regions', []))
+                table.add_row("Silence Regions", str(silence_count))
+                console.print(table)
+
+        elif args.command == "generate-subtitles":
+            from .engine import generate_subtitles
+            entries = json.loads(args.entries)
+            result = _with_spinner("Generating subtitles...", generate_subtitles, entries, args.input, burn=args.burn, output_path=args.output)
+            if use_json:
+                output_json(result)
+            else:
+                data = result.model_dump()
+                lines = [
+                    f"[bold green]Entries:[/bold green] {data.get('entry_count', 0)}",
+                    f"[bold green]SRT Path:[/bold green] {data.get('srt_path', 'N/A')}",
+                ]
+                if data.get('video_path'):
+                    lines.append(f"[bold green]Video Path:[/bold green] {data['video_path']}")
+                console.print(Panel("\n".join(lines), border_style="green", title="Subtitles Generated"))
 
         elif args.command == "templates":
             from .templates import TEMPLATES

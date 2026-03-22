@@ -9,6 +9,7 @@ from .engine import (
     add_text as _add_text,
     apply_filter as _apply_filter,
     apply_mask as _apply_mask,
+    audio_waveform as _audio_waveform,
     compare_quality as _compare_quality,
     convert as _convert,
     create_from_images as _create_from_images,
@@ -19,6 +20,7 @@ from .engine import (
     export_video as _export_video,
     extract_audio as _extract_audio,
     fade as _fade,
+    generate_subtitles as _generate_subtitles,
     merge as _merge,
     normalize_audio as _normalize_audio,
     overlay_video as _overlay_video,
@@ -47,8 +49,10 @@ from .models import (
     QualityMetricsResult,
     SceneDetectionResult,
     StoryboardResult,
+    SubtitleResult,
     ThumbnailResult,
     VideoInfo,
+    WaveformResult,
 )
 
 
@@ -405,6 +409,23 @@ class Client:
     ) -> ImageSequenceResult:
         """Export frames from a video as images."""
         return _export_frames(video, output_dir=output_dir, fps=fps, format=format)
+
+    def generate_subtitles(
+        self,
+        video: str,
+        entries: list[dict],
+        burn: bool = False,
+    ) -> SubtitleResult:
+        """Generate SRT subtitles from text entries and optionally burn into video."""
+        return _generate_subtitles(entries, video, burn=burn)
+
+    def audio_waveform(
+        self,
+        video: str,
+        bins: int = 50,
+    ) -> WaveformResult:
+        """Extract audio waveform data (peaks and silence regions)."""
+        return _audio_waveform(video, bins=bins)
 
     def compare_quality(
         self,
