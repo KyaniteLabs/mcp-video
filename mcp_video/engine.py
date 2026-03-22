@@ -2379,23 +2379,32 @@ def create_from_images(
     output = output_path or _auto_output(images[0], "from_images")
     tmpdir = tempfile.mkdtemp(prefix="mcp_video_imgseq_")
     try:
+        # Normalize all images to same dimensions first
+        normalized: list[str] = []
+        for i, img in enumerate(images):
+            norm_path = os.path.join(tmpdir, f"img_{i:04d}.jpg")
+            _run_ffmpeg([
+                "-y", "-i", img,
+                "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2",
+                "-q:v", "2",
+                norm_path,
+            ])
+            normalized.append(norm_path)
+
         # Build concat file
         concat_file = os.path.join(tmpdir, "concat.txt")
-        # Get duration per image (1/fps)
         img_duration = 1.0 / fps
         with open(concat_file, "w") as f:
-            for img in images:
+            for img in normalized:
                 abs_path = os.path.abspath(img).replace("'", "'\\''")
                 f.write(f"file '{abs_path}'\n")
                 f.write(f"duration {img_duration}\n")
-            # FFmpeg concat demuxer needs the last file repeated without duration
-            abs_last = os.path.abspath(images[-1]).replace("'", "'\\''")
+            abs_last = os.path.abspath(normalized[-1]).replace("'", "'\\''")
             f.write(f"file '{abs_last}'\n")
 
         _run_ffmpeg([
             "-f", "concat", "-safe", "0",
             "-i", concat_file,
-            "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2",
             "-c:v", "libx264", "-preset", "fast", "-crf", "23",
             "-pix_fmt", "yuv420p",
         ] + _movflags_args(output) + [
