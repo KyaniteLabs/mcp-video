@@ -11,28 +11,38 @@ from .engine import (
     add_audio,
     add_text,
     apply_filter,
+    apply_mask,
+    audio_waveform,
     chroma_key,
+    compare_quality,
     convert,
+    create_from_images,
     crop,
+    detect_scenes,
     edit_timeline,
+    export_frames,
     export_video,
     extract_audio,
     fade,
+    generate_subtitles,
     merge,
     normalize_audio,
     overlay_video,
     preview,
     probe,
+    read_metadata,
     resize,
     reverse,
     rotate,
     split_screen,
+    stabilize,
     storyboard,
     subtitles,
     speed,
     thumbnail,
     trim,
     watermark,
+    write_metadata,
 )
 from .errors import MCPVideoError
 from .models import (
@@ -799,6 +809,196 @@ def video_split_screen(
     """
     try:
         return _result(split_screen(left_path, right_path=right_path, layout=layout, output_path=output_path))
+    except MCPVideoError as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_detect_scenes(
+    input_path: str,
+    threshold: float = 0.3,
+    min_scene_duration: float = 1.0,
+) -> dict[str, Any]:
+    """Detect scene changes in a video.
+
+    Args:
+        input_path: Absolute path to the input video.
+        threshold: Scene detection sensitivity (0.0-1.0, lower = more sensitive, default 0.3).
+        min_scene_duration: Minimum scene duration in seconds (default 1.0).
+    """
+    try:
+        return _result(detect_scenes(input_path, threshold=threshold, min_scene_duration=min_scene_duration))
+    except MCPVideoError as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_create_from_images(
+    images: list[str],
+    output_path: str | None = None,
+    fps: float = 30.0,
+) -> dict[str, Any]:
+    """Create a video from a sequence of images.
+
+    Args:
+        images: List of absolute paths to image files (in order).
+        output_path: Where to save the output video. Auto-generated if omitted.
+        fps: Frames per second for the output video (default 30.0).
+    """
+    try:
+        return _result(create_from_images(images, output_path=output_path, fps=fps))
+    except MCPVideoError as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_export_frames(
+    input_path: str,
+    output_dir: str | None = None,
+    fps: float = 1.0,
+    format: str = "jpg",
+) -> dict[str, Any]:
+    """Export frames from a video as individual images.
+
+    Args:
+        input_path: Absolute path to the input video.
+        output_dir: Directory for extracted frames. Auto-generated if omitted.
+        fps: Frames per second to extract (1.0 = 1 frame per second, default 1.0).
+        format: Output image format (jpg or png, default jpg).
+    """
+    try:
+        return _result(export_frames(input_path, output_dir=output_dir, fps=fps, format=format))
+    except MCPVideoError as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_generate_subtitles(
+    entries: list[dict],
+    input_path: str,
+    burn: bool = False,
+) -> dict[str, Any]:
+    """Generate SRT subtitles from text entries and optionally burn into video.
+
+    Args:
+        entries: List of subtitle entries with keys: start (float), end (float), text (str).
+        input_path: Absolute path to the input video.
+        burn: If True, burn subtitles into the video (default False).
+    """
+    try:
+        return _result(generate_subtitles(entries, input_path, burn=burn))
+    except MCPVideoError as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_compare_quality(
+    original_path: str,
+    distorted_path: str,
+    metrics: list[str] | None = None,
+) -> dict[str, Any]:
+    """Compare video quality between original and processed versions.
+
+    Args:
+        original_path: Absolute path to the original/reference video.
+        distorted_path: Absolute path to the processed/distorted video.
+        metrics: Metrics to compute (default: ['psnr', 'ssim']).
+    """
+    try:
+        return _result(compare_quality(original_path, distorted_path, metrics=metrics))
+    except MCPVideoError as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_read_metadata(
+    input_path: str,
+) -> dict[str, Any]:
+    """Read metadata tags from a video/audio file.
+
+    Args:
+        input_path: Absolute path to the video or audio file.
+    """
+    try:
+        return _result(read_metadata(input_path))
+    except MCPVideoError as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_write_metadata(
+    input_path: str,
+    metadata: dict[str, str],
+    output_path: str | None = None,
+) -> dict[str, Any]:
+    """Write metadata tags to a video/audio file.
+
+    Args:
+        input_path: Absolute path to the input file.
+        metadata: Dict of tag key-value pairs (e.g. {'title': 'My Video', 'artist': 'Me'}).
+        output_path: Where to save the output. Auto-generated if omitted.
+    """
+    try:
+        return _result(write_metadata(input_path, metadata=metadata, output_path=output_path))
+    except MCPVideoError as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_stabilize(
+    input_path: str,
+    smoothing: float = 15,
+    zooming: float = 0,
+    output_path: str | None = None,
+) -> dict[str, Any]:
+    """Stabilize a shaky video using motion vector analysis.
+
+    Args:
+        input_path: Absolute path to the input video.
+        smoothing: Smoothing strength (default 15, higher = more stable).
+        zooming: Zoom percentage to avoid black borders (default 0).
+        output_path: Where to save the output. Auto-generated if omitted.
+    """
+    try:
+        return _result(stabilize(input_path, smoothing=smoothing, zooming=zooming, output_path=output_path))
+    except MCPVideoError as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_apply_mask(
+    input_path: str,
+    mask_path: str,
+    feather: int = 5,
+    output_path: str | None = None,
+) -> dict[str, Any]:
+    """Apply an image mask to a video with edge feathering.
+
+    Args:
+        input_path: Absolute path to the input video.
+        mask_path: Absolute path to the mask image (white = visible, black = transparent).
+        feather: Feather/blur amount at mask edges in pixels (default 5).
+        output_path: Where to save the output. Auto-generated if omitted.
+    """
+    try:
+        return _result(apply_mask(input_path, mask_path=mask_path, feather=feather, output_path=output_path))
+    except MCPVideoError as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_audio_waveform(
+    input_path: str,
+    bins: int = 50,
+) -> dict[str, Any]:
+    """Extract audio waveform data (peaks and silence regions).
+
+    Args:
+        input_path: Absolute path to the input video/audio file.
+        bins: Number of time segments to analyze (default 50).
+    """
+    try:
+        return _result(audio_waveform(input_path, bins=bins))
     except MCPVideoError as e:
         return _error_result(e)
 

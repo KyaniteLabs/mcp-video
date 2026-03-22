@@ -347,6 +347,68 @@ def main() -> None:
     batch_p.add_argument("--operation", required=True, choices=["trim", "resize", "convert", "filter", "blur", "color_grade", "watermark", "speed", "fade", "normalize_audio"], help="Operation to apply")
     batch_p.add_argument("--params", help="Operation parameters as JSON")
 
+    # detect-scenes
+    scenes_p = subparsers.add_parser("detect-scenes", help="Detect scene changes in a video")
+    scenes_p.add_argument("input", help="Input video file")
+    scenes_p.add_argument("-t", "--threshold", type=float, default=0.3, help="Detection sensitivity (0.0-1.0, default: 0.3)")
+    scenes_p.add_argument("--min-duration", type=float, default=1.0, help="Minimum scene duration in seconds (default: 1.0)")
+
+    # create-from-images
+    imgseq_p = subparsers.add_parser("create-from-images", help="Create video from image sequence")
+    imgseq_p.add_argument("inputs", nargs="+", help="Input image files")
+    imgseq_p.add_argument("-f", "--fps", type=float, default=30.0, help="Frames per second (default: 30)")
+    imgseq_p.add_argument("-o", "--output", help="Output video file path")
+
+    # export-frames
+    frames_p = subparsers.add_parser("export-frames", help="Export video frames as images")
+    frames_p.add_argument("input", help="Input video file")
+    frames_p.add_argument("-o", "--output-dir", help="Output directory for frames")
+    frames_p.add_argument("-f", "--fps", type=float, default=1.0, help="Frames per second to extract (default: 1)")
+    frames_p.add_argument("--format", default="jpg", choices=["jpg", "png"], help="Image format (default: jpg)")
+
+    # compare-quality
+    quality_p = subparsers.add_parser("compare-quality", help="Compare video quality between two files")
+    quality_p.add_argument("original", help="Original/reference video file")
+    quality_p.add_argument("distorted", help="Processed/distorted video file")
+    quality_p.add_argument("--metrics", nargs="+", choices=["psnr", "ssim"], help="Metrics to compute (default: psnr ssim)")
+
+    # read-metadata
+    read_meta_p = subparsers.add_parser("read-metadata", help="Read metadata tags from a file")
+    read_meta_p.add_argument("input", help="Input video/audio file")
+
+    # write-metadata
+    write_meta_p = subparsers.add_parser("write-metadata", help="Write metadata tags to a file")
+    write_meta_p.add_argument("input", help="Input video/audio file")
+    write_meta_p.add_argument("--tags", required=True, help="Metadata as JSON, e.g. '{\"title\": \"My Video\"}'")
+    write_meta_p.add_argument("-o", "--output", help="Output file path")
+
+    # stabilize
+    stab_p = subparsers.add_parser("stabilize", help="Stabilize a shaky video")
+    stab_p.add_argument("input", help="Input video file")
+    stab_p.add_argument("-s", "--smoothing", type=float, default=15, help="Smoothing strength (default: 15)")
+    stab_p.add_argument("-z", "--zooming", type=float, default=0, help="Zoom to avoid black borders (default: 0)")
+    stab_p.add_argument("-o", "--output", help="Output file path")
+
+    # apply-mask
+    mask_p = subparsers.add_parser("apply-mask", help="Apply an image mask to a video")
+    mask_p.add_argument("input", help="Input video file")
+    mask_p.add_argument("mask", help="Mask image file (white=visible, black=transparent)")
+    mask_p.add_argument("--feather", type=int, default=5, help="Edge feather in pixels (default: 5)")
+    mask_p.add_argument("-o", "--output", help="Output file path")
+
+    # audio-waveform
+    waveform_p = subparsers.add_parser("audio-waveform", help="Extract audio waveform data")
+    waveform_p.add_argument("input", help="Input video/audio file")
+    waveform_p.add_argument("-b", "--bins", type=int, default=50, help="Number of time segments (default: 50)")
+    waveform_p.add_argument("-o", "--output", help="Output file path (optional, data is returned as JSON)")
+
+    # generate-subtitles
+    gen_subs_p = subparsers.add_parser("generate-subtitles", help="Generate SRT subtitles from text entries")
+    gen_subs_p.add_argument("input", help="Input video file")
+    gen_subs_p.add_argument("--entries", required=True, help="Subtitle entries as JSON: '[{\"start\":0,\"end\":2,\"text\":\"Hello\"}]'")
+    gen_subs_p.add_argument("--burn", action="store_true", help="Burn subtitles into video")
+    gen_subs_p.add_argument("-o", "--output", help="Output directory/path (default: auto-generated)")
+
     # templates (list available templates)
     subparsers.add_parser("templates", help="List available video templates")
 
@@ -643,6 +705,145 @@ def main() -> None:
                 print(json.dumps(result, indent=2))
             else:
                 _format_batch_text(result)
+
+        elif args.command == "detect-scenes":
+            from .engine import detect_scenes
+            result = _with_spinner("Detecting scenes...", detect_scenes, args.input, threshold=args.threshold, min_scene_duration=args.min_duration)
+            if use_json:
+                output_json(result)
+            else:
+                data = result.model_dump()
+                table = Table(title="Scene Detection")
+                table.add_column("#", style="bold", justify="right")
+                table.add_column("Start", style="cyan")
+                table.add_column("End", style="cyan")
+                table.add_column("Frames")
+                for i, scene in enumerate(data.get("scenes", []), 1):
+                    table.add_row(str(i), f"{scene['start']:.2f}s", f"{scene['end']:.2f}s", f"{scene['start_frame']}-{scene['end_frame']}")
+                console.print(table)
+                console.print(f"[bold]{data.get('scene_count', 0)} scenes detected[/bold] in {data.get('duration', 0):.2f}s")
+
+        elif args.command == "create-from-images":
+            from .engine import create_from_images
+            result = _with_spinner("Creating video from images...", create_from_images, args.inputs, output_path=args.output, fps=args.fps)
+            if use_json:
+                output_json(result)
+            else:
+                _format_edit_text(result)
+
+        elif args.command == "export-frames":
+            from .engine import export_frames
+            result = _with_spinner("Exporting frames...", export_frames, args.input, output_dir=args.output_dir, fps=args.fps, format=args.format)
+            if use_json:
+                output_json(result)
+            else:
+                data = result.model_dump()
+                lines = [
+                    f"[bold green]Frames:[/bold green] {data.get('frame_count', 0)}",
+                    f"[bold green]Format:[/bold green] {args.format}",
+                    f"[bold green]FPS:[/bold green] {data.get('fps', 0)}",
+                ]
+                if data.get("frame_paths"):
+                    lines.append(f"[bold green]Output dir:[/bold green] {data['frame_paths'][0].rsplit('/', 1)[0]}")
+                console.print(Panel("\n".join(lines), border_style="green", title="Frames Exported"))
+
+        elif args.command == "compare-quality":
+            from .engine import compare_quality
+            metrics = args.metrics if args.metrics else None
+            result = _with_spinner("Comparing quality...", compare_quality, args.original, args.distorted, metrics=metrics)
+            if use_json:
+                output_json(result)
+            else:
+                data = result.model_dump()
+                table = Table(title="Quality Metrics")
+                table.add_column("Metric", style="bold cyan")
+                table.add_column("Value")
+                for k, v in data.get("metrics", {}).items():
+                    table.add_row(k.upper(), f"{v:.4f}")
+                quality = data.get("overall_quality", "unknown")
+                quality_style = {"high": "green", "medium": "yellow", "low": "red"}.get(quality, "white")
+                table.add_row("Overall", f"[{quality_style}]{quality}[/{quality_style}]")
+                console.print(table)
+
+        elif args.command == "read-metadata":
+            from .engine import read_metadata
+            result = read_metadata(args.input)
+            if use_json:
+                output_json(result)
+            else:
+                data = result.model_dump()
+                table = Table(title="Metadata")
+                table.add_column("Field", style="bold cyan")
+                table.add_column("Value")
+                for field in ["title", "artist", "album", "comment", "date"]:
+                    val = data.get(field)
+                    if val:
+                        table.add_row(field.capitalize(), val)
+                for k, v in data.get("tags", {}).items():
+                    table.add_row(k, str(v))
+                if not data.get("title") and not data.get("tags"):
+                    console.print("[yellow]No metadata found.[/yellow]")
+                else:
+                    console.print(table)
+
+        elif args.command == "write-metadata":
+            from .engine import write_metadata
+            tags = json.loads(args.tags)
+            result = _with_spinner("Writing metadata...", write_metadata, args.input, metadata=tags, output_path=args.output)
+            if use_json:
+                output_json(result)
+            else:
+                _format_edit_text(result)
+
+        elif args.command == "stabilize":
+            from .engine import stabilize
+            result = _with_spinner("Stabilizing...", stabilize, args.input, smoothing=args.smoothing, zooming=args.zooming, output_path=args.output)
+            if use_json:
+                output_json(result)
+            else:
+                _format_edit_text(result)
+
+        elif args.command == "apply-mask":
+            from .engine import apply_mask
+            result = _with_spinner("Applying mask...", apply_mask, args.input, mask_path=args.mask, feather=args.feather, output_path=args.output)
+            if use_json:
+                output_json(result)
+            else:
+                _format_edit_text(result)
+
+        elif args.command == "audio-waveform":
+            from .engine import audio_waveform
+            result = _with_spinner("Extracting waveform...", audio_waveform, args.input, bins=args.bins)
+            if use_json:
+                output_json(result)
+            else:
+                data = result.model_dump()
+                table = Table(title="Audio Waveform")
+                table.add_column("Property", style="bold cyan")
+                table.add_column("Value")
+                table.add_row("Duration", f"{data.get('duration', 0):.2f}s")
+                table.add_row("Mean Level", f"{data.get('mean_level', 0):.1f} dB")
+                table.add_row("Max Level", f"{data.get('max_level', 0):.1f} dB")
+                table.add_row("Min Level", f"{data.get('min_level', 0):.1f} dB")
+                silence_count = len(data.get('silence_regions', []))
+                table.add_row("Silence Regions", str(silence_count))
+                console.print(table)
+
+        elif args.command == "generate-subtitles":
+            from .engine import generate_subtitles
+            entries = json.loads(args.entries)
+            result = _with_spinner("Generating subtitles...", generate_subtitles, entries, args.input, burn=args.burn, output_path=args.output)
+            if use_json:
+                output_json(result)
+            else:
+                data = result.model_dump()
+                lines = [
+                    f"[bold green]Entries:[/bold green] {data.get('entry_count', 0)}",
+                    f"[bold green]SRT Path:[/bold green] {data.get('srt_path', 'N/A')}",
+                ]
+                if data.get('video_path'):
+                    lines.append(f"[bold green]Video Path:[/bold green] {data['video_path']}")
+                console.print(Panel("\n".join(lines), border_style="green", title="Subtitles Generated"))
 
         elif args.command == "templates":
             from .templates import TEMPLATES

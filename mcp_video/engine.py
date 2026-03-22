@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import base64
 import json
+import math
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import tempfile
@@ -31,15 +33,21 @@ from .models import (
     ErrorResult,
     ExportFormat,
     FilterType,
+    ImageSequenceResult,
+    MetadataResult,
     Position,
     QualityLevel,
+    QualityMetricsResult,
+    SceneDetectionResult,
     SplitLayout,
     StoryboardResult,
+    SubtitleResult,
     ThumbnailResult,
     Timeline,
     TimelineClip,
     VideoInfo,
     WatermarkSettings,
+    WaveformResult,
 )
 
 
@@ -842,9 +850,25 @@ def convert(
     quality: QualityLevel = "high",
     output_path: str | None = None,
     on_progress: Callable[[float], None] | None = None,
+    two_pass: bool = False,
+    target_bitrate: int | None = None,
 ) -> EditResult:
     """Convert video to a different format."""
     _validate_input(input_path)
+
+    if two_pass and format not in ("mp4", "mov"):
+        raise MCPVideoError(
+            f"Two-pass encoding is only supported for mp4 and mov formats, got '{format}'",
+            error_type="validation_error",
+            code="two_pass_unsupported_format",
+        )
+    if two_pass and target_bitrate is None:
+        raise MCPVideoError(
+            "Two-pass encoding requires target_bitrate to be set",
+            error_type="validation_error",
+            code="two_pass_needs_bitrate",
+        )
+
     preset = QUALITY_PRESETS[quality]
     ext = f".{format}" if not format.startswith(".") else format
     output = output_path or _auto_output(input_path, format, ext=ext)
@@ -852,7 +876,33 @@ def convert(
     # Get input duration for progress estimation
     input_info = probe(input_path)
 
-    if format == "mp4":
+    if two_pass and target_bitrate:
+        # Two-pass encoding for better quality at target bitrate
+        passlogdir = tempfile.mkdtemp(prefix="mcp_video_2pass_")
+        try:
+            passlogfile = os.path.join(passlogdir, "pass")
+            _run_ffmpeg([
+                "-i", input_path,
+                "-c:v", "libx264",
+                "-b:v", f"{target_bitrate}k",
+                "-pass", "1",
+                "-passlogfile", passlogfile,
+                "-an", "-f", "null", "/dev/null",
+            ])
+            _run_ffmpeg([
+                "-i", input_path,
+                "-c:v", "libx264",
+                "-b:v", f"{target_bitrate}k",
+                "-pass", "2",
+                "-passlogfile", passlogfile,
+                "-preset", preset["preset"],
+                "-c:a", "aac", "-b:a", "128k",
+            ] + _movflags_args(output) + [
+                output,
+            ])
+        finally:
+            shutil.rmtree(passlogdir, ignore_errors=True)
+    elif format == "mp4":
         _run_ffmpeg_with_progress([
             "-i", input_path,
             "-c:v", "libx264",
@@ -1407,10 +1457,15 @@ def export_video(
     quality: QualityLevel = "high",
     format: ExportFormat = "mp4",
     on_progress: Callable[[float], None] | None = None,
+    two_pass: bool = False,
+    target_bitrate: int | None = None,
 ) -> EditResult:
     """Export a video with specified quality and format settings."""
     _validate_input(input_path)
-    result = convert(input_path, format=format, quality=quality, output_path=output_path, on_progress=on_progress)
+    result = convert(
+        input_path, format=format, quality=quality, output_path=output_path,
+        on_progress=on_progress, two_pass=two_pass, target_bitrate=target_bitrate,
+    )
     result.operation = "export"
     return result
 
@@ -1575,6 +1630,23 @@ def _get_color_preset_filter(preset: ColorPreset) -> str:
     return preset_filters[preset]
 
 
+def _build_pitch_shift_filter(semitones: float = 0) -> str:
+    """Build FFmpeg audio filter string for pitch shifting.
+
+    Args:
+        semitones: Number of semitones to shift. Positive = higher, negative = lower.
+            Each semitone is a 2^(1/12) ~ 1.0595x multiplier on sample rate.
+    """
+    rate_mult = 2 ** (semitones / 12)
+    new_rate = 44100 * rate_mult
+    # atempo compensates for the tempo change caused by sample rate shift,
+    # restoring original playback speed (avoids A/V desync)
+    tempo = 1.0 / rate_mult
+    # atempo supports 0.5-100.0; chain if needed
+    atempo_str = f"atempo={tempo}"
+    return f"asetrate={new_rate},aresample=44100,{atempo_str}"
+
+
 def apply_filter(
     input_path: str,
     filter_type: FilterType,
@@ -1593,20 +1665,30 @@ def apply_filter(
     params = params or {}
     output = output_path or _auto_output(input_path, f"filter_{filter_type}")
 
+    # Probe video dimensions for ken_burns filter
+    info = probe(input_path)
+
     # Build the -vf filter string
-    filter_map: dict[FilterType, tuple[str, str]] = {
-        "blur": ("boxblur", f"boxblur={params.get('radius', 5)}:{params.get('strength', 1)}"),
-        "sharpen": ("unsharp", f"unsharp=5:5:{params.get('amount', 1.0)}:5:5:0.0"),
-        "brightness": ("eq", f"eq=brightness={params.get('level', 0.1)}"),
-        "contrast": ("eq", f"eq=contrast={params.get('level', 1.5)}"),
-        "saturation": ("eq", f"eq=saturation={params.get('level', 1.5)}"),
-        "grayscale": ("hue", "hue=s=0"),
-        "sepia": ("colorchannelmixer", "colorchannelmixer=.393:.769:.189:0:.349:.686:.168:0:.272:.534:.131"),
-        "invert": ("negate", "negate"),
-        "vignette": ("vignette", f"vignette=angle={params.get('angle', 'PI/4')}"),
-        "color_preset": ("eq", _get_color_preset_filter(params.get("preset", "warm"))),
-        "denoise": ("hqdn3d", f"hqdn3d={params.get('luma_spatial', 4)}:{params.get('chroma_spatial', 3)}:{params.get('luma_tmp', 6)}:{params.get('chroma_tmp', 4.5)}"),
-        "deinterlace": ("yadif", "yadif=0:-1:0"),
+    # Audio filters use -af; video filters use -vf.
+    # filter_map entries: (filter_name, filter_string, is_audio)
+    filter_map: dict[FilterType, tuple[str, str, bool]] = {
+        "blur": ("boxblur", f"boxblur={params.get('radius', 5)}:{params.get('strength', 1)}", False),
+        "sharpen": ("unsharp", f"unsharp=5:5:{params.get('amount', 1.0)}:5:5:0.0", False),
+        "brightness": ("eq", f"eq=brightness={params.get('level', 0.1)}", False),
+        "contrast": ("eq", f"eq=contrast={params.get('level', 1.5)}", False),
+        "saturation": ("eq", f"eq=saturation={params.get('level', 1.5)}", False),
+        "grayscale": ("hue", "hue=s=0", False),
+        "sepia": ("colorchannelmixer", "colorchannelmixer=.393:.769:.189:0:.349:.686:.168:0:.272:.534:.131", False),
+        "invert": ("negate", "negate", False),
+        "vignette": ("vignette", f"vignette=angle={params.get('angle', 'PI/4')}", False),
+        "color_preset": ("eq", _get_color_preset_filter(params.get("preset", "warm")), False),
+        "denoise": ("hqdn3d", f"hqdn3d={params.get('luma_spatial', 4)}:{params.get('chroma_spatial', 3)}:{params.get('luma_tmp', 6)}:{params.get('chroma_tmp', 4.5)}", False),
+        "deinterlace": ("yadif", "yadif=0:-1:0", False),
+        "ken_burns": ("zoompan", f"zoompan=z='min(zoom+{params.get('zoom_speed', 0.0015)},1.5)':d={params.get('duration', 150)}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s={info.width}x{info.height}", False),
+        "reverb": ("aecho", f"aecho={params.get('in_gain', 0.8)}:{params.get('out_gain', 0.9)}:{params.get('delays', 60)}:{params.get('decay', 0.2)}", True),
+        "compressor": ("acompressor", f"acompressor=threshold={params.get('threshold_db', -20)}dB:ratio={params.get('ratio', 4)}:attack={params.get('attack', 5)}:release={params.get('release', 50)}", True),
+        "pitch_shift": ("asetrate", _build_pitch_shift_filter(params.get("semitones", 0)), True),
+        "noise_reduction": ("afftdn", f"afftdn=nf={params.get('noise_level', -25)}", True),
     }
 
     if filter_type not in filter_map:
@@ -1616,17 +1698,35 @@ def apply_filter(
             error_type="validation_error",
             code="invalid_filter_type",
         )
-    filter_name, vf_string = filter_map[filter_type]
+    filter_name, filter_string, is_audio = filter_map[filter_type]
     _require_filter(filter_name, f"Filter '{filter_type}'")
 
-    _run_ffmpeg([
-        "-i", input_path,
-        "-vf", vf_string,
-        "-c:v", "libx264", "-preset", "fast", "-crf", "23",
-        "-c:a", "copy",
-    ] + _movflags_args(output) + [
-        output,
-    ])
+    # Audio filters require an audio stream and use -af instead of -vf
+    if is_audio:
+        input_info = probe(input_path)
+        if input_info.audio_codec is None:
+            raise MCPVideoError(
+                f"Audio filter '{filter_type}' requires an audio stream, but this video has none",
+                error_type="validation_error",
+                code="audio_filter_no_audio",
+            )
+        _run_ffmpeg([
+            "-i", input_path,
+            "-af", filter_string,
+            "-c:v", "copy",
+            "-c:a", "aac", "-b:a", "128k",
+        ] + _movflags_args(output) + [
+            output,
+        ])
+    else:
+        _run_ffmpeg([
+            "-i", input_path,
+            "-vf", filter_string,
+            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+            "-c:a", "copy",
+        ] + _movflags_args(output) + [
+            output,
+        ])
 
     info = probe(output)
     return EditResult(
@@ -1940,6 +2040,775 @@ def chroma_key(
         size_mb=info.size_mb,
         format="mp4",
         operation="chroma_key",
+    )
+
+
+# ---------------------------------------------------------------------------
+# Subtitle generation
+# ---------------------------------------------------------------------------
+
+def generate_subtitles(
+    entries: list[dict],
+    input_path: str,
+    output_path: str | None = None,
+    burn: bool = False,
+) -> SubtitleResult:
+    """Generate SRT subtitles from text entries and optionally burn into video.
+
+    Args:
+        entries: List of dicts with keys: start (float), end (float), text (str).
+        input_path: Path to the input video.
+        output_path: Base path for output files.
+        burn: If True, burn subtitles into the video.
+    """
+    _validate_input(input_path)
+    if not entries:
+        raise MCPVideoError(
+            "entries cannot be empty",
+            error_type="validation_error",
+            code="empty_entries",
+        )
+    for i, entry in enumerate(entries):
+        start = entry.get("start", 0)
+        end = entry.get("end", 0)
+        if start >= end:
+            raise MCPVideoError(
+                f"Entry {i}: start ({start}) must be less than end ({end})",
+                error_type="validation_error",
+                code="invalid_entry_range",
+            )
+
+    # Build SRT content
+    srt_lines: list[str] = []
+    for i, entry in enumerate(entries, 1):
+        start = entry["start"]
+        end = entry["end"]
+        text = entry["text"]
+        srt_lines.append(str(i))
+        srt_lines.append(_seconds_to_srt_time(start) + " --> " + _seconds_to_srt_time(end))
+        srt_lines.append(text)
+        srt_lines.append("")
+
+    srt_content = "\n".join(srt_lines)
+
+    # Write SRT file
+    if output_path:
+        srt_dir = output_path if os.path.isdir(output_path) else os.path.dirname(output_path) or "."
+        os.makedirs(srt_dir, exist_ok=True)
+    else:
+        srt_dir = _auto_output_dir(input_path, "subtitles")
+        os.makedirs(srt_dir, exist_ok=True)
+
+    srt_filename = "subtitles.srt"
+    srt_file = os.path.join(srt_dir, srt_filename)
+    with open(srt_file, "w", encoding="utf-8") as f:
+        f.write(srt_content)
+
+    if burn:
+        _require_filter("subtitles", "Subtitle burn-in")
+        video_out = os.path.join(srt_dir, "subtitled.mp4")
+        escaped_srt = shlex.quote(srt_file.replace("\\", "/"))
+        _run_ffmpeg([
+            "-i", input_path,
+            "-vf", f"subtitles={escaped_srt}",
+            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+            "-c:a", "copy",
+        ] + _movflags_args(video_out) + [
+            video_out,
+        ])
+        return SubtitleResult(
+            srt_path=srt_file,
+            video_path=video_out,
+            entry_count=len(entries),
+        )
+
+    return SubtitleResult(
+        srt_path=srt_file,
+        entry_count=len(entries),
+    )
+
+
+def _seconds_to_srt_time(seconds: float) -> str:
+    """Convert seconds to SRT time format HH:MM:SS,mmm."""
+    hours = int(seconds // 3600)
+    minutes = int((seconds % 3600) // 60)
+    secs = int(seconds % 60)
+    millis = int((seconds % 1) * 1000)
+    return f"{hours:02d}:{minutes:02d}:{secs:02d},{millis:03d}"
+
+
+# ---------------------------------------------------------------------------
+# Audio waveform extraction
+# ---------------------------------------------------------------------------
+
+def audio_waveform(
+    input_path: str,
+    bins: int = 50,
+) -> WaveformResult:
+    """Extract audio waveform data (peaks and silence regions).
+
+    Args:
+        input_path: Path to the input video/audio file.
+        bins: Number of time segments to analyze (default 50).
+    """
+    _validate_input(input_path)
+
+    input_info = probe(input_path)
+    if input_info.audio_codec is None:
+        raise MCPVideoError(
+            "Audio waveform extraction requires an audio stream, but this video has none",
+            error_type="validation_error",
+            code="waveform_no_audio",
+        )
+
+    duration = input_info.duration
+    segment_duration = duration / bins
+
+    # Use astats filter to get per-segment audio levels
+    filter_str = f"astats=metadata=1:reset=0,ametadata=1"
+    proc = subprocess.run(
+        [_ffmpeg(), "-i", input_path, "-af", filter_str, "-f", "null", "-"],
+        capture_output=True, text=True, timeout=120,
+    )
+
+    # Parse astats output for DC_offset and RMS level
+    peaks: list[dict] = []
+    levels: list[float] = []
+
+    for line in proc.stderr.split("\n"):
+        line = line.strip()
+        if "Parsed_dc" in line or "n_samples" in line:
+            continue
+        if "RMS_level_dB" in line:
+            try:
+                # Format: [Parsed_astats_...] RMS_level_dB=...
+                parts = line.split("RMS_level_dB=")
+                if len(parts) >= 2:
+                    val = float(parts[1].split()[0])
+                    levels.append(val)
+            except (ValueError, IndexError):
+                continue
+
+    # If astats didn't produce usable data, use ffprobe + silence detect
+    if not levels:
+        # Fallback: use silencedetect to find silence regions
+        proc2 = subprocess.run(
+            [
+                _ffprobe(), "-v", "quiet",
+                "-f", "lavfi",
+                f"ametadata=mode=print:silence",
+                "-i", input_path,
+            ],
+            capture_output=True, text=True, timeout=120,
+        )
+
+        # Build a simple waveform from silence detection
+        silence_regions: list[dict] = []
+        for line in proc2.stdout.split("\n"):
+            if "silence_start" in line and "silence_end" in line:
+                try:
+                    start = float(line.split("silence_start=")[1].split()[0])
+                    end = float(line.split("silence_end=")[1].split()[0])
+                    silence_regions.append({"start": start, "end": end})
+                except (ValueError, IndexError):
+                    continue
+
+        # Generate simple peak estimates (sine wave as placeholder when real data unavailable)
+        for i in range(bins):
+            t = (i + 0.5) * segment_duration
+            in_silence = any(s.get("start", 0) <= t <= s.get("end", 0) for s in silence_regions)
+            level = -60.0 if in_silence else -20.0
+            peaks.append({"time": round(t, 2), "level": level})
+            levels.append(level)
+
+        mean_level = sum(levels) / len(levels) if levels else -60.0
+        max_level = max(levels) if levels else -60.0
+        min_level = min(levels) if levels else -60.0
+
+        return WaveformResult(
+            duration=duration,
+            peaks=peaks,
+            mean_level=mean_level,
+            max_level=max_level,
+            min_level=min_level,
+            silence_regions=silence_regions,
+            synthetic=True,
+        )
+
+    # Use the RMS levels from astats
+    # astats outputs one line per audio frame, we need to bin them
+    # Typically there are ~90 lines per 3s video at 30fps
+    if len(levels) > 0:
+        # Bin the levels into the requested number of segments
+        samples_per_bin = max(1, len(levels) // bins)
+        binned: list[float] = []
+        for i in range(bins):
+            start_idx = i * samples_per_bin
+            end_idx = min((i + 1) * samples_per_bin, len(levels))
+            if start_idx < len(levels):
+                bin_avg = sum(levels[start_idx:end_idx]) / (end_idx - start_idx)
+                binned.append(bin_avg)
+
+        peaks = []
+        for i, level in enumerate(binned):
+            t = (i + 0.5) * segment_duration
+            peaks.append({"time": round(t, 2), "level": round(level, 1)})
+
+        # Detect silence (below -50 dB)
+        silence_threshold = -50.0
+        silence_regions: list[dict] = []
+        in_silence = False
+        silence_start = 0.0
+        for i, level in enumerate(binned):
+            t = (i + 0.5) * segment_duration
+            if level < silence_threshold and not in_silence:
+                in_silence = True
+                silence_start = t
+            elif level >= silence_threshold and in_silence:
+                in_silence = False
+                silence_regions.append({"start": round(silence_start, 2), "end": round(t, 2)})
+        if in_silence:
+            silence_regions.append({"start": round(silence_start, 2), "end": round(duration, 2)})
+
+        mean_level = sum(binned) / len(binned) if binned else -60.0
+        max_level = max(binned) if binned else -60.0
+        min_level = min(binned) if binned else -60.0
+    else:
+        peaks = []
+        silence_regions = []
+        mean_level = -60.0
+        max_level = -60.0
+        min_level = -60.0
+
+    return WaveformResult(
+        duration=duration,
+        peaks=peaks,
+        mean_level=round(mean_level, 1),
+        max_level=round(max_level, 1),
+        min_level=round(min_level, 1),
+        silence_regions=silence_regions,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Scene detection
+# ---------------------------------------------------------------------------
+
+def detect_scenes(
+    input_path: str,
+    threshold: float = 0.3,
+    min_scene_duration: float = 1.0,
+) -> SceneDetectionResult:
+    """Detect scene changes in a video.
+
+    Args:
+        input_path: Path to the input video.
+        threshold: Scene detection sensitivity (0.0-1.0, lower = more sensitive).
+        min_scene_duration: Minimum duration of a scene in seconds.
+    """
+    _validate_input(input_path)
+    info = probe(input_path)
+    duration = info.duration
+
+    # Use FFmpeg select filter with scene detection
+    proc = subprocess.run(
+        [
+            _ffmpeg(), "-i", input_path,
+            "-vf", f"select='gt(scene,{threshold})',showinfo",
+            "-f", "null", "-",
+        ],
+        capture_output=True, text=True, timeout=300,
+    )
+    if proc.returncode != 0:
+        raise parse_ffmpeg_error(proc.stderr)
+
+    # Parse showinfo output for scene change timestamps
+    scene_times: list[float] = []
+    for line in proc.stderr.split("\n"):
+        if "showinfo" in line and "pts_time:" in line:
+            try:
+                # Format: [showinfo @ ...] pts_time:X ...
+                pts_match = re.search(r"pts_time:(\d+\.?\d*)", line)
+                if pts_match:
+                    scene_times.append(float(pts_match.group(1)))
+            except (ValueError, IndexError):
+                continue
+
+    # Build scene list from timestamps
+    scenes: list[dict] = []
+    prev_time = 0.0
+    for t in scene_times:
+        if t - prev_time >= min_scene_duration:
+            scenes.append({
+                "start": round(prev_time, 2),
+                "end": round(t, 2),
+                "start_frame": round(prev_time * info.fps),
+                "end_frame": round(t * info.fps),
+            })
+            prev_time = t
+
+    # Add final scene
+    if duration - prev_time >= 0.1:
+        scenes.append({
+            "start": round(prev_time, 2),
+            "end": round(duration, 2),
+            "start_frame": round(prev_time * info.fps),
+            "end_frame": round(duration * info.fps),
+        })
+
+    return SceneDetectionResult(
+        scenes=scenes,
+        scene_count=len(scenes),
+        duration=duration,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Image sequences
+# ---------------------------------------------------------------------------
+
+def create_from_images(
+    images: list[str],
+    output_path: str | None = None,
+    fps: float = 30.0,
+) -> EditResult:
+    """Create a video from a sequence of images.
+
+    Args:
+        images: List of image file paths.
+        output_path: Where to save the output video.
+        fps: Frames per second for the output video.
+    """
+    if not images:
+        raise MCPVideoError(
+            "No images provided",
+            error_type="validation_error",
+            code="empty_images",
+        )
+    for img in images:
+        if not os.path.isfile(img):
+            raise InputFileError(img)
+
+    output = output_path or _auto_output(images[0], "from_images")
+    tmpdir = tempfile.mkdtemp(prefix="mcp_video_imgseq_")
+    try:
+        # Detect if any input is PNG (has alpha channel)
+        has_png = any(img.lower().endswith(".png") for img in images)
+        img_format = "png" if has_png else "jpg"
+        ext = f".{img_format}"
+
+        # Normalize all images to same dimensions first
+        normalized: list[str] = []
+        for i, img in enumerate(images):
+            norm_path = os.path.join(tmpdir, f"img_{i:04d}{ext}")
+            if img_format == "png":
+                _run_ffmpeg([
+                    "-y", "-i", img,
+                    "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2",
+                    "-c:v", "png",
+                    norm_path,
+                ])
+            else:
+                _run_ffmpeg([
+                    "-y", "-i", img,
+                    "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2",
+                    "-q:v", "2",
+                    norm_path,
+                ])
+            normalized.append(norm_path)
+
+        # Build concat file
+        concat_file = os.path.join(tmpdir, "concat.txt")
+        img_duration = 1.0 / fps
+        with open(concat_file, "w") as f:
+            for img in normalized:
+                abs_path = os.path.abspath(img).replace("'", "'\\''")
+                f.write(f"file '{abs_path}'\n")
+                f.write(f"duration {img_duration}\n")
+            abs_last = os.path.abspath(normalized[-1]).replace("'", "'\\''")
+            f.write(f"file '{abs_last}'\n")
+
+        _run_ffmpeg([
+            "-f", "concat", "-safe", "0",
+            "-i", concat_file,
+            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+            "-pix_fmt", "yuv420p",
+        ] + _movflags_args(output) + [
+            output,
+        ])
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+    result_info = probe(output)
+    return EditResult(
+        output_path=output,
+        duration=result_info.duration,
+        resolution=result_info.resolution,
+        size_mb=result_info.size_mb,
+        format="mp4",
+        operation="create_from_images",
+    )
+
+
+def export_frames(
+    input_path: str,
+    output_dir: str | None = None,
+    fps: float = 1.0,
+    format: str = "jpg",
+) -> ImageSequenceResult:
+    """Export frames from a video as individual images.
+
+    Args:
+        input_path: Path to the input video.
+        output_dir: Directory for extracted frames.
+        fps: Frames per second to extract (1.0 = 1 frame per second).
+        format: Output image format (jpg, png).
+    """
+    _validate_input(input_path)
+    if format not in ("jpg", "png"):
+        raise MCPVideoError(
+            f"Invalid format '{format}': must be 'jpg' or 'png'",
+            error_type="validation_error",
+            code="invalid_format",
+        )
+    info = probe(input_path)
+
+    out_dir = output_dir or _auto_output_dir(input_path, "frames")
+    os.makedirs(out_dir, exist_ok=True)
+
+    ext = format if format.startswith(".") else f".{format}"
+    pattern = os.path.join(out_dir, f"frame_%04d{ext}")
+
+    _run_ffmpeg([
+        "-i", input_path,
+        "-vf", f"fps={fps}",
+        "-q:v", "2",
+        "-y",
+        pattern,
+    ])
+
+    # Collect generated frame paths
+    frame_paths = sorted([
+        os.path.join(out_dir, f)
+        for f in os.listdir(out_dir)
+        if f.startswith("frame_") and f.endswith(ext)
+    ])
+
+    return ImageSequenceResult(
+        frame_paths=frame_paths,
+        frame_count=len(frame_paths),
+        fps=fps,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Quality metrics
+# ---------------------------------------------------------------------------
+
+def compare_quality(
+    original_path: str,
+    distorted_path: str,
+    metrics: list[str] | None = None,
+) -> QualityMetricsResult:
+    """Compare video quality between original and distorted versions.
+
+    Args:
+        original_path: Path to the original/reference video.
+        distorted_path: Path to the distorted/processed video.
+        metrics: List of metrics to compute (default: ["psnr", "ssim"]).
+    """
+    _validate_input(original_path)
+    _validate_input(distorted_path)
+    metrics = metrics or ["psnr", "ssim"]
+
+    computed: dict[str, float] = {}
+
+    for metric in metrics:
+        metric_lower = metric.lower()
+        if metric_lower not in ("psnr", "ssim"):
+            continue
+
+        try:
+            filter_str = f"[0:v][1:v]{metric_lower}"
+            proc = subprocess.run(
+                [
+                    _ffmpeg(), "-i", original_path, "-i", distorted_path,
+                    "-lavfi", filter_str,
+                    "-f", "null", "-",
+                ],
+                capture_output=True, text=True, timeout=300,
+            )
+            if proc.returncode != 0:
+                raise ProcessingError(
+                    f"FFmpeg failed to compute {metric_lower} metric",
+                    input_path=original_path,
+                    stderr=proc.stderr[:500],
+                )
+
+            # Parse metric value from stderr
+            for line in proc.stderr.split("\n"):
+                if metric_lower == "psnr" and "average:" in line.lower():
+                    try:
+                        # Format: [Parsed_psnr ...] average:XX.XX
+                        val_match = re.search(r"average:\s*([0-9.]+)", line, re.IGNORECASE)
+                        if val_match:
+                            computed["psnr"] = float(val_match.group(1))
+                    except (ValueError, IndexError):
+                        continue
+                elif metric_lower == "ssim" and "All:" in line:
+                    try:
+                        # Format: [Parsed_ssim ...] All:X.XXXXXX
+                        val_match = re.search(r"All[:\s]+([0-9.]+)", line)
+                        if val_match:
+                            computed["ssim"] = float(val_match.group(1))
+                    except (ValueError, IndexError):
+                        continue
+        except Exception as e:
+            raise ProcessingError(
+                f"Failed to compute {metric_lower} metric: {str(e)}",
+                input_path=original_path,
+            ) from e
+
+    # Determine overall quality
+    if "ssim" in computed:
+        ssim_val = computed["ssim"]
+        if ssim_val >= 0.95:
+            overall = "high"
+        elif ssim_val >= 0.80:
+            overall = "medium"
+        else:
+            overall = "low"
+    elif "psnr" in computed:
+        psnr_val = computed["psnr"]
+        if psnr_val >= 40:
+            overall = "high"
+        elif psnr_val >= 30:
+            overall = "medium"
+        else:
+            overall = "low"
+    else:
+        overall = "unknown"
+
+    return QualityMetricsResult(
+        metrics=computed,
+        overall_quality=overall,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Metadata editing
+# ---------------------------------------------------------------------------
+
+def read_metadata(input_path: str) -> MetadataResult:
+    """Read metadata tags from a video/audio file.
+
+    Args:
+        input_path: Path to the input file.
+    """
+    _validate_input(input_path)
+    data = _run_ffprobe_json(input_path)
+
+    # Extract tags from format
+    fmt_tags = data.get("format", {}).get("tags", {})
+    # Also check stream tags
+    stream_tags: dict[str, str] = {}
+    for stream in data.get("streams", []):
+        for k, v in stream.get("tags", {}).items():
+            if k not in stream_tags:
+                stream_tags[k] = v
+
+    all_tags = {**stream_tags, **fmt_tags}
+
+    return MetadataResult(
+        title=all_tags.pop("title", None),
+        artist=all_tags.pop("artist", None),
+        album=all_tags.pop("album", None),
+        comment=all_tags.pop("comment", None),
+        date=all_tags.pop("date", None) or all_tags.pop("creation_time", None),
+        tags=all_tags,
+    )
+
+
+def write_metadata(
+    input_path: str,
+    metadata: dict[str, str],
+    output_path: str | None = None,
+) -> EditResult:
+    """Write metadata tags to a video/audio file.
+
+    Args:
+        input_path: Path to the input file.
+        metadata: Dict of tag key-value pairs (e.g. {"title": "My Video", "artist": "Me"}).
+        output_path: Where to save the output. If None, overwrites in place with a temp file.
+    """
+    _validate_input(input_path)
+    if not metadata:
+        raise MCPVideoError(
+            "No metadata provided",
+            error_type="validation_error",
+            code="empty_metadata",
+        )
+
+    # Validate metadata keys and values don't contain '=' or newline which would break the command
+    for key, value in metadata.items():
+        if "=" in key or "\n" in key:
+            raise MCPVideoError(
+                f"Invalid metadata key '{key}': keys cannot contain '=' or newline characters",
+                error_type="validation_error",
+                code="invalid_metadata_key",
+            )
+        if "=" in str(value) or "\n" in str(value):
+            raise MCPVideoError(
+                f"Invalid metadata value for '{key}': values cannot contain '=' or newline characters",
+                error_type="validation_error",
+                code="invalid_metadata_value",
+            )
+
+    output = output_path or _auto_output(input_path, "tagged")
+
+    args = ["-i", input_path]
+    for key, value in metadata.items():
+        args.extend(["-metadata", f"{key}={value}"])
+    args.extend([
+        "-c:v", "copy", "-c:a", "copy",
+    ] + _movflags_args(output) + [
+        output,
+    ])
+    _run_ffmpeg(args)
+
+    result_info = probe(output)
+    return EditResult(
+        output_path=output,
+        duration=result_info.duration,
+        resolution=result_info.resolution,
+        size_mb=result_info.size_mb,
+        format=result_info.format,
+        operation="write_metadata",
+    )
+
+
+# ---------------------------------------------------------------------------
+# Video stabilization
+# ---------------------------------------------------------------------------
+
+def stabilize(
+    input_path: str,
+    smoothing: float = 15,
+    zooming: float = 0,
+    output_path: str | None = None,
+) -> EditResult:
+    """Stabilize a shaky video using motion vector analysis.
+
+    Uses vidstab filter (two-pass: detect then transform).
+
+    Args:
+        input_path: Path to the input video.
+        smoothing: Smoothing strength (default 15, higher = more stable).
+        zooming: Zoom percentage to avoid black borders (default 0).
+        output_path: Where to save the output.
+    """
+    _validate_input(input_path)
+    _require_filter("vidstabdetect", "Video stabilization")
+    output = output_path or _auto_output(input_path, "stabilized")
+
+    tmpdir = tempfile.mkdtemp(prefix="mcp_video_stab_")
+    try:
+        # Pass 1: detect motion vectors
+        vectors_file = os.path.join(tmpdir, "vectors.trf")
+        result = subprocess.run(
+            [
+                _ffmpeg(), "-y",
+                "-i", input_path,
+                "-vf", "vidstabdetect=shakiness=10:accuracy=15:result=" + vectors_file,
+                "-f", "null", "-",
+            ],
+            capture_output=True, text=True, timeout=600,
+        )
+        if result.returncode != 0:
+            raise parse_ffmpeg_error(result.stderr)
+
+        # Pass 2: apply stabilization
+        _run_ffmpeg([
+            "-i", input_path,
+            "-vf", f"vidstabtransform=input={vectors_file}:smoothing={smoothing}:zooming={zooming}:crop=black",
+            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+            "-c:a", "aac", "-b:a", "128k",
+        ] + _movflags_args(output) + [
+            output,
+        ])
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+    result_info = probe(output)
+    return EditResult(
+        output_path=output,
+        duration=result_info.duration,
+        resolution=result_info.resolution,
+        size_mb=result_info.size_mb,
+        format="mp4",
+        operation="stabilize",
+    )
+
+
+# ---------------------------------------------------------------------------
+# Advanced masking
+# ---------------------------------------------------------------------------
+
+def apply_mask(
+    input_path: str,
+    mask_path: str,
+    feather: int = 5,
+    output_path: str | None = None,
+) -> EditResult:
+    """Apply an image mask to a video with edge feathering.
+
+    Uses alphamerge filter to composite the mask as an alpha channel.
+
+    Args:
+        input_path: Path to the input video.
+        mask_path: Path to the mask image (white = visible, black = transparent).
+        feather: Feather/blur amount at mask edges in pixels (default 5).
+        output_path: Where to save the output.
+    """
+    _validate_input(input_path)
+    _validate_input(mask_path)
+    _require_filter("alphamerge", "Advanced masking")
+    output = output_path or _auto_output(input_path, "masked")
+
+    # Get video dimensions to scale mask
+    info = probe(input_path)
+    w, h = info.width, info.height
+
+    # Scale mask to video dimensions, convert to alpha, and alphamerge
+    if feather > 0:
+        filter_complex = (
+            f"[1:v]format=gray,scale={w}:{h},colorchannelmixer=aa=1.0,boxblur={feather}[alpha];"
+            f"[0:v][alpha]alphamerge,format=yuv420p[out]"
+        )
+    else:
+        filter_complex = (
+            f"[1:v]format=gray,scale={w}:{h},colorchannelmixer=aa=1.0[alpha];"
+            f"[0:v][alpha]alphamerge,format=yuv420p[out]"
+        )
+
+    _run_ffmpeg([
+        "-i", input_path, "-i", mask_path,
+        "-filter_complex", filter_complex,
+        "-map", "[out]", "-map", "0:a?",
+        "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+        "-c:a", "copy",
+    ] + _movflags_args(output) + [
+        output,
+    ])
+
+    result_info = probe(output)
+    return EditResult(
+        output_path=output,
+        duration=result_info.duration,
+        resolution=result_info.resolution,
+        size_mb=result_info.size_mb,
+        format="mp4",
+        operation="apply_mask",
     )
 
 

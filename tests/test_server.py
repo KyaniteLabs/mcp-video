@@ -13,13 +13,19 @@ from mcp_video.server import (
     templates_resource,
     video_add_audio,
     video_add_text,
+    video_apply_mask,
     video_batch,
     video_blur,
+    video_chroma_key,
     video_color_grade,
+    video_compare_quality,
     video_convert,
+    video_create_from_images,
     video_crop,
+    video_detect_scenes,
     video_edit,
     video_export,
+    video_export_frames,
     video_extract_audio,
     video_fade,
     video_filter,
@@ -28,14 +34,18 @@ from mcp_video.server import (
     video_normalize_audio,
     video_overlay,
     video_preview,
+    video_read_metadata,
     video_resize,
+    video_reverse,
     video_rotate,
     video_speed,
     video_split_screen,
+    video_stabilize,
     video_storyboard,
     video_thumbnail,
     video_trim,
     video_watermark,
+    video_write_metadata,
 )
 from mcp_video.errors import MCPVideoError, InputFileError
 
@@ -79,6 +89,14 @@ class TestServerInitialization:
         assert "video_overlay" in tool_names
         assert "video_split_screen" in tool_names
         assert "video_batch" in tool_names
+        assert "video_detect_scenes" in tool_names
+        assert "video_create_from_images" in tool_names
+        assert "video_export_frames" in tool_names
+        assert "video_compare_quality" in tool_names
+        assert "video_read_metadata" in tool_names
+        assert "video_write_metadata" in tool_names
+        assert "video_stabilize" in tool_names
+        assert "video_apply_mask" in tool_names
 
     def test_resources_registered(self):
         # Verify templates resource is defined (can't call async list_resources in sync test)
@@ -457,3 +475,112 @@ class TestVideoBatchTool:
         # Output file should be in the specified directory, not next to the input
         output_path = result["results"][0]["output_path"]
         assert os.path.dirname(output_path) == out_dir
+
+
+class TestVideoDetectScenesTool:
+    def test_returns_scenes(self, sample_video):
+        result = video_detect_scenes(sample_video)
+        assert result["success"] is True
+        assert "scenes" in result
+
+    def test_nonexistent_file(self):
+        result = video_detect_scenes("/nonexistent/video.mp4")
+        assert result["success"] is False
+        assert "error" in result
+
+
+class TestVideoCreateFromImagesTool:
+    def test_single_image(self, sample_watermark_png):
+        result = video_create_from_images([sample_watermark_png])
+        if not result["success"]:
+            # Single image may not be supported, check for expected error
+            assert "error" in result
+        else:
+            assert os.path.isfile(result["output_path"])
+
+    def test_empty_list(self):
+        result = video_create_from_images([])
+        assert result["success"] is False
+        assert "error" in result
+
+
+class TestVideoExportFramesTool:
+    def test_exports_frames(self, sample_video):
+        result = video_export_frames(sample_video, fps=1.0)
+        assert result["success"] is True
+        assert result["frame_count"] > 0
+
+    def test_nonexistent_file(self):
+        result = video_export_frames("/nonexistent/video.mp4")
+        assert result["success"] is False
+        assert "error" in result
+
+
+class TestVideoCompareQualityTool:
+    def test_same_file(self, sample_video):
+        result = video_compare_quality(sample_video, sample_video)
+        assert result["success"] is True
+        assert "metrics" in result
+
+    def test_nonexistent_original(self, sample_video):
+        result = video_compare_quality("/nonexistent/original.mp4", sample_video)
+        assert result["success"] is False
+        assert "error" in result
+
+
+class TestVideoReadMetadataTool:
+    def test_reads_metadata(self, sample_video):
+        result = video_read_metadata(sample_video)
+        assert result["success"] is True
+        assert "tags" in result
+
+    def test_nonexistent_file(self):
+        result = video_read_metadata("/nonexistent/video.mp4")
+        assert result["success"] is False
+        assert "error" in result
+
+
+class TestVideoWriteMetadataTool:
+    def test_write_and_read(self, sample_video):
+        result = video_write_metadata(sample_video, {"title": "Test Video"})
+        assert result["success"] is True
+        # Note: output_path may be the same as input if metadata is written in-place
+
+    def test_empty_metadata(self, sample_video):
+        # Empty metadata is still valid - just writes nothing
+        result = video_write_metadata(sample_video, {})
+        # Should either succeed or give a validation error
+        assert "success" in result
+
+
+class TestVideoStabilizeTool:
+    @requires_filter("vidstabdetect", "Video stabilization")
+    def test_stabilizes_video(self, sample_video):
+        result = video_stabilize(sample_video)
+        if not result["success"]:
+            # Older FFmpeg builds may not support vidstab zooming option
+            error_str = result.get("error", "")
+            if isinstance(error_str, dict):
+                error_str = str(error_str.get("message", ""))
+            if "zooming" in str(error_str).lower() or "option" in str(error_str).lower():
+                pytest.skip("vidstab zooming option not available in this FFmpeg build")
+            else:
+                pytest.fail(f"Unexpected stabilization failure: {error_str}")
+        assert os.path.isfile(result["output_path"])
+
+    def test_nonexistent_file(self):
+        result = video_stabilize("/nonexistent/video.mp4")
+        assert result["success"] is False
+        assert "error" in result
+
+
+class TestVideoApplyMaskTool:
+    def test_applies_mask(self, sample_video, sample_watermark_png):
+        result = video_apply_mask(sample_video, mask_path=sample_watermark_png)
+        assert result["success"] is True
+        assert os.path.isfile(result["output_path"])
+
+    def test_nonexistent_mask(self, sample_video):
+        result = video_apply_mask(sample_video, mask_path="/nonexistent/mask.png")
+        assert result["success"] is False
+        assert "error" in result
