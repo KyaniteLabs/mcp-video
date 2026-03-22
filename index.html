@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>mcp-video — Video Editing for AI Agents</title>
+    <title>mcp-video — Video Editing for AI Agents and Humans</title>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -267,10 +267,10 @@
 <div class="hero">
     <h1>
         Video editing<br>
-        <span class="gradient">for AI agents.</span>
+        <span class="gradient">for AI agents and humans.</span>
     </h1>
     <p class="subtitle">
-        29 MCP tools that give Claude Code, Cursor, and any AI agent the ability to trim, merge, overlay text, sync audio, apply filters, reverse video, remove green screens, and export video. Local, fast, free.
+        29 MCP tools that give Claude Code, Cursor, and any AI agent the ability to trim, merge, overlay text, sync audio, apply filters, reverse video, remove green screens, and export video. Plus a rich CLI with templates for humans. Local, fast, free.
     </p>
     <div class="badges">
         <div class="badge"><div class="dot green"></div> 387 tests passing</div>
@@ -572,7 +572,7 @@
     <div class="section-label">Three Interfaces</div>
     <div class="section-title">However you want to use it.</div>
     <p class="section-desc">
-        mcp-video works as an MCP server for AI agents, a Python library for scripts, and a CLI tool for the terminal.
+        mcp-video works as an MCP server for AI agents, a Python library for scripts, and a rich CLI tool for the terminal with human-friendly output and templates.
     </p>
 
     <div class="grid-2">
@@ -609,16 +609,31 @@ result = editor.<span class="func">export</span>(final.output_path)
     </div>
 
     <div style="margin-top: 2rem;">
-        <h3 style="margin-bottom: 0.75rem;">CLI Tool</h3>
-        <div class="code-block"><pre><span class="comment"># Get info</span>
+        <h3 style="margin-bottom: 0.75rem;">CLI Tool <span style="color: var(--accent); font-size: 0.8rem;">Rich output &middot; Spinners &middot; Templates</span></h3>
+        <p style="color: var(--text2); font-size: 0.9rem; margin-bottom: 1rem;">
+            Human-friendly terminal output by default. Add <code>--format json</code> for scripts and piping.
+        </p>
+        <div class="code-block"><pre><span class="comment"># Rich table output (default)</span>
 $ mcp-video info video.mp4
+<span class="comment"># ┌─────────────┬──────────────────┐</span>
+<span class="comment"># │ Property    │ Value            │</span>
+<span class="comment"># ├─────────────┼──────────────────┤</span>
+<span class="comment"># │ Duration    │ 45.23s           │</span>
+<span class="comment"># │ Resolution  │ 1920x1080        │</span>
+<span class="comment"># │ FPS         │ 30               │</span>
+<span class="comment"># └─────────────┴──────────────────┘</span>
 
-<span class="comment"># Trim and convert</span>
+<span class="comment"># JSON output for scripts</span>
+$ mcp-video --format json info video.mp4
+
+<span class="comment"># Trim with progress spinner</span>
 $ mcp-video trim video.mp4 -s 0:30 -d 15
-$ mcp-video convert video.mp4 -f webm -q high
 
-<span class="comment"># Generate storyboard</span>
-$ mcp-video storyboard video.mp4 -n 12</pre></div>
+<span class="comment"># Apply a TikTok template</span>
+$ mcp-video template tiktok video.mp4 --caption "Check this out!"
+
+<span class="comment"># List all templates</span>
+$ mcp-video templates</pre></div>
     </div>
 </section>
 

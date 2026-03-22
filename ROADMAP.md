@@ -19,6 +19,7 @@ Bugs fixed, 0.1.1 shipped. Here's what would make mcp-video genuinely better to 
 - [x] **Green screen / chroma key** — Remove solid color backgrounds using `chromakey` filter. *(Shipped in v0.4.0)*
 - [x] **Denoise & deinterlace filters** — New filter types in `video_filter`: `denoise` (hqdn3d) and `deinterlace` (yadif). *(Shipped in v0.4.0)*
 - [x] **Smarter GIF output** — Quality-based scaling (low=320, medium=480, high=640, ultra=800) instead of fixed 480px. *(Shipped in v0.4.0)*
+- [x] **Rich CLI output** — Human-friendly terminal UI with tables, spinners, styled error panels. `--format json` for scripts. `--version` flag. Video templates (TikTok, YouTube Shorts, Instagram Reel, YouTube, Instagram Post). *(Shipped in v0.4.0)*
 
 - [ ] **Crop by percentage** — Currently requires pixel math (`width=1920, height=1080`). Add `crop_percent: 50` so "center 50%" just works. The engine calculates pixels internally.
 - [ ] **Orientation-aware metadata** — `video_info` reports raw stream dimensions (3840x2160) for a portrait phone video that displays as 2160x3840. Read the rotation/side_data metadata from ffprobe and report display orientation.

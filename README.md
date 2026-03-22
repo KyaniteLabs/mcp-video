@@ -1,6 +1,6 @@
 <p align="center">
   <img src="https://img.shields.io/badge/version-0.4.0-blue.svg" alt="Version">
-  <img src="https://img.shields.io/badge/tests-387%20passed-brightgreen.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/tests-388%20passed-brightgreen.svg" alt="Tests">
   <a href="https://github.com/pastorsimon1798/mcp-video/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/pastorsimon1798/mcp-video/.github/workflows/ci.yml?branch=master&label=CI" alt="CI"></a>
   <a href="https://glama.ai/mcp/servers/pastorsimon1798/mcp-video"><img src="https://glama.ai/mcp/servers/pastorsimon1798/mcp-video/badges/score.svg" alt="Glama Score"></a>
   <img src="https://img.shields.io/badge/pypi-mcp--video-blue.svg" alt="PyPI">
@@ -12,8 +12,8 @@
 <h1 align="center">mcp-video</h1>
 
 <p align="center">
-  <strong>The video editing MCP server for AI agents.</strong><br>
-  26 tools. 3 interfaces. Purpose-built for AI agents.
+  <strong>The video editing MCP server for AI agents and humans.</strong><br>
+  26 tools. 3 interfaces. Rich CLI. Purpose-built for AI agents.
 </p>
 
 <p align="center">
@@ -31,9 +31,9 @@
 
 ## What is mcp-video?
 
-mcp-video is an open-source video editing server built on the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). It gives AI agents and any MCP-compatible client the ability to programmatically edit video files.
+mcp-video is an open-source video editing server built on the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). It gives AI agents, developers, and video creators the ability to programmatically edit video files.
 
-Think of it as **ffmpeg with an API that AI agents can actually use**. Instead of memorizing cryptic command-line flags, an agent calls structured tools with clear parameters and gets structured results back.
+Think of it as **ffmpeg with an API that AI agents can actually use**. Instead of memorizing cryptic command-line flags, an agent calls structured tools with clear parameters and gets structured results back — or a human uses the rich CLI with spinners, tables, and error panels.
 
 ### The Problem It Solves
 
@@ -50,7 +50,7 @@ mcp-video bridges this gap. It's a local, fast, free video editing layer that an
 |-----------|----------|---------|
 | **MCP Server** | AI agents (Claude Code, Cursor) | *"Trim this video and add a title"* |
 | **Python Client** | Scripts, automation, pipelines | `editor.trim("v.mp4", start="0:30", duration="15")` |
-| **CLI** | Shell scripts, quick ops | `mcp_video trim video.mp4 -s 0:30 -d 15` |
+| **CLI** | Shell scripts, quick ops, humans | `mcp_video trim video.mp4 -s 0:30 -d 15` |
 
 ---
 
@@ -175,9 +175,17 @@ print(result)
 
 ### 3. As a CLI Tool
 
+The CLI outputs rich formatted tables, spinners, and styled error panels by default. Add `--format json` for scripted/pipe-friendly JSON output.
+
 ```bash
-# Get video metadata
+# Show version
+mcp_video --version
+
+# Get video metadata (rich table output)
 mcp_video info video.mp4
+
+# Same, but as JSON for scripts
+mcp_video --format json info video.mp4
 
 # Generate a fast low-res preview
 mcp_video preview video.mp4
@@ -190,6 +198,12 @@ mcp_video trim video.mp4 -s 00:02:15 -d 30 -o trimmed.mp4
 
 # Convert to a different format
 mcp_video convert video.mp4 -f webm -q high
+
+# List available templates
+mcp_video templates
+
+# Apply a TikTok template with caption
+mcp_video template tiktok video.mp4 --caption "Check this out!"
 ```
 
 ---
@@ -379,17 +393,24 @@ Commands:
   reverse        Reverse video playback
   chroma-key     Remove solid color background (green screen)
   batch          Apply operation to multiple files
+  templates      List available video templates
+  template       Apply a video template (tiktok, youtube-shorts, etc.)
 
-Options:
-  --mcp      Run as MCP server (default when no command given)
-  -h, --help Show help
+Global Options:
+  --format text|json  Output format (default: text — rich tables & spinners)
+  --version           Show version and exit
+  --mcp               Run as MCP server (default when no command given)
+  -h, --help          Show help
 ```
 
 ### Examples
 
 ```bash
-# Get metadata as JSON
+# Get metadata (rich table by default)
 mcp_video info video.mp4
+
+# Get metadata as JSON (for scripts and piping)
+mcp_video --format json info video.mp4
 
 # Preview with custom downscale
 mcp_video preview video.mp4 -s 2
@@ -417,6 +438,15 @@ mcp_video split-screen left.mp4 right.mp4 --layout side-by-side
 
 # Batch blur 3 videos at once
 mcp_video batch video1.mp4 video2.mp4 video3.mp4 --operation blur
+
+# List available templates
+mcp_video templates
+
+# Apply a TikTok template with caption and music
+mcp_video template tiktok video.mp4 --caption "Check this out!" --music bgm.mp3
+
+# Apply a YouTube template with title card and outro
+mcp_video template youtube video.mp4 --title "My Video" --outro subscribe.mp4
 
 # Default: run MCP server
 mcp_video --mcp
@@ -603,7 +633,7 @@ mcp-video parses FFmpeg errors and returns structured, actionable error response
 
 ## Testing
 
-mcp-video has **387 tests** across the full testing pyramid:
+mcp-video has **388 tests** across the full testing pyramid:
 
 ```
 tests/
@@ -615,7 +645,7 @@ tests/
 ├── test_server.py           # 55 tests — MCP tool layer
 ├── test_engine.py           # 33 tests — Core FFmpeg engine operations
 ├── test_engine_advanced.py  # 78 tests — Edge cases, new operations, filter validation, per-transition merge
-├── test_cli.py              # 14 tests — CLI commands via subprocess
+├── test_cli.py              # 22 tests — CLI commands via subprocess (text + JSON output)
 ├── test_e2e.py              # 8 tests  — Full end-to-end workflows
 └── test_real_media.py       # 33 tests — Real-media integration tests (marked @slow)
 ```
@@ -647,7 +677,7 @@ pytest tests/ -m "not slow" --cov=mcp_video --cov-report=term-missing
 | Layer | Tests | What It Tests |
 |-------|-------|---------------|
 | **Unit** | 118 | Models, errors, templates — pure Python, no FFmpeg |
-| **Integration** | 228 | Client, server, engine, CLI — real FFmpeg operations |
+| **Integration** | 229 | Client, server, engine, CLI — real FFmpeg operations |
 | **E2E** | 8 | Multi-step workflows (TikTok, YouTube, GIF, speed) |
 | **Real Media** | 33 | iPhone footage integration tests (marked @slow) |
 
@@ -670,6 +700,7 @@ mcp_video/
 **Dependencies:**
 - `mcp>=1.0.0` — Model Context Protocol SDK
 - `pydantic>=2.0` — Data validation
+- `rich>=13.0` — Rich CLI output (tables, spinners, panels)
 - `ffmpeg` — Video processing (external, required)
 
 ---
@@ -725,6 +756,7 @@ pytest tests/ -v --tb=long
 - [x] Picture-in-picture and split-screen compositing (v0.3.0)
 - [x] Batch processing for multi-file workflows (v0.3.0)
 - [x] Video reverse, green screen/chroma key, denoise & deinterlace filters, smarter GIF output (v0.4.0)
+- [x] Rich CLI with human-friendly output, templates, and `--format json` mode (v0.4.0)
 - [ ] Streaming upload/download (S3, GCS integration)
 - [ ] Web UI for non-agent users
 - [ ] FFmpeg filter auto-detection and graceful fallback

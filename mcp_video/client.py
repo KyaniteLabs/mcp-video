@@ -373,7 +373,7 @@ class Client:
         params: dict | None = None,
     ) -> dict:
         """Apply the same operation to multiple video files."""
-        from .server import video_batch
+        from .engine import video_batch
         return video_batch(inputs, operation=operation, params=params)
 
 
