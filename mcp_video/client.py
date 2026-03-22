@@ -162,9 +162,11 @@ class Client:
         format: str = "mp4",
         quality: str = "high",
         output: str | None = None,
+        two_pass: bool = False,
+        target_bitrate: int | None = None,
     ) -> EditResult:
         """Convert video to a different format."""
-        return _convert(video, format=format, quality=quality, output_path=output)
+        return _convert(video, format=format, quality=quality, output_path=output, two_pass=two_pass, target_bitrate=target_bitrate)
 
     def speed(
         self,
