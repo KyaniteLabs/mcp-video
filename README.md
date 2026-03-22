@@ -1,6 +1,6 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.4.0-blue.svg" alt="Version">
-  <img src="https://img.shields.io/badge/tests-388%20passed-brightgreen.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/version-0.4.1-blue.svg" alt="Version">
+  <img src="https://img.shields.io/badge/tests-396%20passed-brightgreen.svg" alt="Tests">
   <a href="https://github.com/pastorsimon1798/mcp-video/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/pastorsimon1798/mcp-video/.github/workflows/ci.yml?branch=master&label=CI" alt="CI"></a>
   <a href="https://glama.ai/mcp/servers/pastorsimon1798/mcp-video"><img src="https://glama.ai/mcp/servers/pastorsimon1798/mcp-video/badges/score.svg" alt="Glama Score"></a>
   <img src="https://img.shields.io/badge/pypi-mcp--video-blue.svg" alt="PyPI">
@@ -633,7 +633,7 @@ mcp-video parses FFmpeg errors and returns structured, actionable error response
 
 ## Testing
 
-mcp-video has **388 tests** across the full testing pyramid:
+mcp-video has **396 tests** across the full testing pyramid:
 
 ```
 tests/
@@ -677,7 +677,7 @@ pytest tests/ -m "not slow" --cov=mcp_video --cov-report=term-missing
 | Layer | Tests | What It Tests |
 |-------|-------|---------------|
 | **Unit** | 118 | Models, errors, templates — pure Python, no FFmpeg |
-| **Integration** | 229 | Client, server, engine, CLI — real FFmpeg operations |
+| **Integration** | 237 | Client, server, engine, CLI — real FFmpeg operations |
 | **E2E** | 8 | Multi-step workflows (TikTok, YouTube, GIF, speed) |
 | **Real Media** | 33 | iPhone footage integration tests (marked @slow) |
 
