@@ -8,6 +8,7 @@ from .engine import (
     add_audio as _add_audio,
     add_text as _add_text,
     apply_filter as _apply_filter,
+    apply_mask as _apply_mask,
     compare_quality as _compare_quality,
     convert as _convert,
     create_from_images as _create_from_images,
@@ -27,6 +28,7 @@ from .engine import (
     resize as _resize,
     rotate as _rotate,
     split_screen as _split_screen,
+    stabilize as _stabilize,
     storyboard as _storyboard,
     subtitles as _subtitles,
     speed as _speed,
@@ -428,6 +430,26 @@ class Client:
     ) -> EditResult:
         """Write metadata tags to a video/audio file."""
         return _write_metadata(video, metadata=metadata, output_path=output)
+
+    def stabilize(
+        self,
+        video: str,
+        smoothing: float = 15,
+        zooming: float = 0,
+        output: str | None = None,
+    ) -> EditResult:
+        """Stabilize a shaky video."""
+        return _stabilize(video, smoothing=smoothing, zooming=zooming, output_path=output)
+
+    def apply_mask(
+        self,
+        video: str,
+        mask: str,
+        feather: int = 5,
+        output: str | None = None,
+    ) -> EditResult:
+        """Apply an image mask to a video with edge feathering."""
+        return _apply_mask(video, mask_path=mask, feather=feather, output_path=output)
 
     def batch(
         self,

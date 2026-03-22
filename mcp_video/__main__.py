@@ -382,6 +382,20 @@ def main() -> None:
     write_meta_p.add_argument("--tags", required=True, help="Metadata as JSON, e.g. '{\"title\": \"My Video\"}'")
     write_meta_p.add_argument("-o", "--output", help="Output file path")
 
+    # stabilize
+    stab_p = subparsers.add_parser("stabilize", help="Stabilize a shaky video")
+    stab_p.add_argument("input", help="Input video file")
+    stab_p.add_argument("-s", "--smoothing", type=float, default=15, help="Smoothing strength (default: 15)")
+    stab_p.add_argument("-z", "--zooming", type=float, default=0, help="Zoom to avoid black borders (default: 0)")
+    stab_p.add_argument("-o", "--output", help="Output file path")
+
+    # apply-mask
+    mask_p = subparsers.add_parser("apply-mask", help="Apply an image mask to a video")
+    mask_p.add_argument("input", help="Input video file")
+    mask_p.add_argument("mask", help="Mask image file (white=visible, black=transparent)")
+    mask_p.add_argument("--feather", type=int, default=5, help="Edge feather in pixels (default: 5)")
+    mask_p.add_argument("-o", "--output", help="Output file path")
+
     # templates (list available templates)
     subparsers.add_parser("templates", help="List available video templates")
 
@@ -763,6 +777,22 @@ def main() -> None:
             from .engine import write_metadata
             tags = json.loads(args.tags)
             result = _with_spinner("Writing metadata...", write_metadata, args.input, metadata=tags, output_path=args.output)
+            if use_json:
+                output_json(result)
+            else:
+                _format_edit_text(result)
+
+        elif args.command == "stabilize":
+            from .engine import stabilize
+            result = _with_spinner("Stabilizing...", stabilize, args.input, smoothing=args.smoothing, zooming=args.zooming, output_path=args.output)
+            if use_json:
+                output_json(result)
+            else:
+                _format_edit_text(result)
+
+        elif args.command == "apply-mask":
+            from .engine import apply_mask
+            result = _with_spinner("Applying mask...", apply_mask, args.input, mask_path=args.mask, feather=args.feather, output_path=args.output)
             if use_json:
                 output_json(result)
             else:

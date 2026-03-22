@@ -882,3 +882,59 @@ class TestMetadataEditing:
         with pytest.raises(MCPVideoError, match="No metadata"):
             write_metadata(sample_video, metadata={})
 
+
+# ---------------------------------------------------------------------------
+# Wave 4: Video Stabilization
+# ---------------------------------------------------------------------------
+
+class TestStabilize:
+    def test_stabilize(self, sample_video, tmp_path):
+        from mcp_video.engine import stabilize
+        if not _check_filter_available("vidstab"):
+            pytest.skip("vidstab filter not available")
+        out = str(tmp_path / "stabilized.mp4")
+        result = stabilize(sample_video, output_path=out)
+        assert os.path.isfile(result.output_path)
+        assert result.operation == "stabilize"
+
+    def test_stabilize_with_params(self, sample_video, tmp_path):
+        from mcp_video.engine import stabilize
+        if not _check_filter_available("vidstab"):
+            pytest.skip("vidstab filter not available")
+        out = str(tmp_path / "stabilized_zoom.mp4")
+        result = stabilize(sample_video, smoothing=20, zooming=5, output_path=out)
+        assert os.path.isfile(result.output_path)
+
+    def test_stabilize_nonexistent_file(self):
+        from mcp_video.engine import stabilize
+        with pytest.raises(InputFileError):
+            stabilize("/nonexistent/video.mp4")
+
+
+# ---------------------------------------------------------------------------
+# Wave 4: Advanced Masking
+# ---------------------------------------------------------------------------
+
+class TestApplyMask:
+    def test_apply_mask(self, sample_video, sample_watermark_png, tmp_path):
+        from mcp_video.engine import apply_mask
+        if not _check_filter_available("alphamerge"):
+            pytest.skip("alphamerge filter not available")
+        out = str(tmp_path / "masked.mp4")
+        result = apply_mask(sample_video, mask_path=sample_watermark_png, output_path=out)
+        assert os.path.isfile(result.output_path)
+        assert result.operation == "apply_mask"
+
+    def test_apply_mask_with_feather(self, sample_video, sample_watermark_png, tmp_path):
+        from mcp_video.engine import apply_mask
+        if not _check_filter_available("alphamerge"):
+            pytest.skip("alphamerge filter not available")
+        out = str(tmp_path / "masked_feather.mp4")
+        result = apply_mask(sample_video, mask_path=sample_watermark_png, feather=10, output_path=out)
+        assert os.path.isfile(result.output_path)
+
+    def test_apply_mask_nonexistent_input(self, sample_watermark_png):
+        from mcp_video.engine import apply_mask
+        with pytest.raises(InputFileError):
+            apply_mask("/nonexistent/video.mp4", mask_path=sample_watermark_png)
+

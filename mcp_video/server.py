@@ -11,6 +11,7 @@ from .engine import (
     add_audio,
     add_text,
     apply_filter,
+    apply_mask,
     chroma_key,
     compare_quality,
     convert,
@@ -32,6 +33,7 @@ from .engine import (
     reverse,
     rotate,
     split_screen,
+    stabilize,
     storyboard,
     subtitles,
     speed,
@@ -917,6 +919,48 @@ def video_write_metadata(
     """
     try:
         return _result(write_metadata(input_path, metadata=metadata, output_path=output_path))
+    except MCPVideoError as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_stabilize(
+    input_path: str,
+    smoothing: float = 15,
+    zooming: float = 0,
+    output_path: str | None = None,
+) -> dict[str, Any]:
+    """Stabilize a shaky video using motion vector analysis.
+
+    Args:
+        input_path: Absolute path to the input video.
+        smoothing: Smoothing strength (default 15, higher = more stable).
+        zooming: Zoom percentage to avoid black borders (default 0).
+        output_path: Where to save the output. Auto-generated if omitted.
+    """
+    try:
+        return _result(stabilize(input_path, smoothing=smoothing, zooming=zooming, output_path=output_path))
+    except MCPVideoError as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_apply_mask(
+    input_path: str,
+    mask_path: str,
+    feather: int = 5,
+    output_path: str | None = None,
+) -> dict[str, Any]:
+    """Apply an image mask to a video with edge feathering.
+
+    Args:
+        input_path: Absolute path to the input video.
+        mask_path: Absolute path to the mask image (white = visible, black = transparent).
+        feather: Feather/blur amount at mask edges in pixels (default 5).
+        output_path: Where to save the output. Auto-generated if omitted.
+    """
+    try:
+        return _result(apply_mask(input_path, mask_path=mask_path, feather=feather, output_path=output_path))
     except MCPVideoError as e:
         return _error_result(e)
 

@@ -2623,6 +2623,129 @@ def write_metadata(
 
 
 # ---------------------------------------------------------------------------
+# Video stabilization
+# ---------------------------------------------------------------------------
+
+def stabilize(
+    input_path: str,
+    smoothing: float = 15,
+    zooming: float = 0,
+    output_path: str | None = None,
+) -> EditResult:
+    """Stabilize a shaky video using motion vector analysis.
+
+    Uses vidstab filter (two-pass: detect then transform).
+
+    Args:
+        input_path: Path to the input video.
+        smoothing: Smoothing strength (default 15, higher = more stable).
+        zooming: Zoom percentage to avoid black borders (default 0).
+        output_path: Where to save the output.
+    """
+    _validate_input(input_path)
+    _require_filter("vidstab", "Video stabilization")
+    output = output_path or _auto_output(input_path, "stabilized")
+
+    tmpdir = tempfile.mkdtemp(prefix="mcp_video_stab_")
+    try:
+        # Pass 1: detect motion vectors
+        vectors_file = os.path.join(tmpdir, "vectors.trf")
+        subprocess.run(
+            [
+                _ffmpeg(), "-y",
+                "-i", input_path,
+                "-vf", "vidstabdetect=shakiness=10:accuracy=15:result=" + vectors_file,
+                "-f", "null", "-",
+            ],
+            capture_output=True, text=True, timeout=600,
+        )
+
+        # Pass 2: apply stabilization
+        _run_ffmpeg([
+            "-i", input_path,
+            "-vf", f"vidstabtransform=input={vectors_file}:smoothing={smoothing}:zooming={zooming}:crop=black",
+            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+            "-c:a", "aac", "-b:a", "128k",
+        ] + _movflags_args(output) + [
+            output,
+        ])
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+    result_info = probe(output)
+    return EditResult(
+        output_path=output,
+        duration=result_info.duration,
+        resolution=result_info.resolution,
+        size_mb=result_info.size_mb,
+        format="mp4",
+        operation="stabilize",
+    )
+
+
+# ---------------------------------------------------------------------------
+# Advanced masking
+# ---------------------------------------------------------------------------
+
+def apply_mask(
+    input_path: str,
+    mask_path: str,
+    feather: int = 5,
+    output_path: str | None = None,
+) -> EditResult:
+    """Apply an image mask to a video with edge feathering.
+
+    Uses alphamerge filter to composite the mask as an alpha channel.
+
+    Args:
+        input_path: Path to the input video.
+        mask_path: Path to the mask image (white = visible, black = transparent).
+        feather: Feather/blur amount at mask edges in pixels (default 5).
+        output_path: Where to save the output.
+    """
+    _validate_input(input_path)
+    _validate_input(mask_path)
+    _require_filter("alphamerge", "Advanced masking")
+    output = output_path or _auto_output(input_path, "masked")
+
+    # Get video dimensions to scale mask
+    info = probe(input_path)
+    w, h = info.width, info.height
+
+    # Scale mask to video dimensions, convert to alpha, and alphamerge
+    if feather > 0:
+        filter_complex = (
+            f"[1:v]format=gray,scale={w}:{h},colorchannelmixer=aa=1.0,boxblur={feather}[alpha];"
+            f"[0:v][alpha]alphamerge,format=yuv420p[out]"
+        )
+    else:
+        filter_complex = (
+            f"[1:v]format=gray,scale={w}:{h},colorchannelmixer=aa=1.0[alpha];"
+            f"[0:v][alpha]alphamerge,format=yuv420p[out]"
+        )
+
+    _run_ffmpeg([
+        "-i", input_path, "-i", mask_path,
+        "-filter_complex", filter_complex,
+        "-map", "[out]",
+        "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+        "-an",
+    ] + _movflags_args(output) + [
+        output,
+    ])
+
+    result_info = probe(output)
+    return EditResult(
+        output_path=output,
+        duration=result_info.duration,
+        resolution=result_info.resolution,
+        size_mb=result_info.size_mb,
+        format="mp4",
+        operation="apply_mask",
+    )
+
+
+# ---------------------------------------------------------------------------
 # Batch processing
 # ---------------------------------------------------------------------------
 
