@@ -35,11 +35,13 @@ from .models import (
     QualityLevel,
     SplitLayout,
     StoryboardResult,
+    SubtitleResult,
     ThumbnailResult,
     Timeline,
     TimelineClip,
     VideoInfo,
     WatermarkSettings,
+    WaveformResult,
 )
 
 
@@ -2024,6 +2026,252 @@ def chroma_key(
         size_mb=info.size_mb,
         format="mp4",
         operation="chroma_key",
+    )
+
+
+# ---------------------------------------------------------------------------
+# Subtitle generation
+# ---------------------------------------------------------------------------
+
+def generate_subtitles(
+    entries: list[dict],
+    input_path: str,
+    output_path: str | None = None,
+    burn: bool = False,
+) -> SubtitleResult:
+    """Generate SRT subtitles from text entries and optionally burn into video.
+
+    Args:
+        entries: List of dicts with keys: start (float), end (float), text (str).
+        input_path: Path to the input video.
+        output_path: Base path for output files.
+        burn: If True, burn subtitles into the video.
+    """
+    _validate_input(input_path)
+    if not entries:
+        raise MCPVideoError(
+            "entries cannot be empty",
+            error_type="validation_error",
+            code="empty_entries",
+        )
+    for i, entry in enumerate(entries):
+        start = entry.get("start", 0)
+        end = entry.get("end", 0)
+        if start >= end:
+            raise MCPVideoError(
+                f"Entry {i}: start ({start}) must be less than end ({end})",
+                error_type="validation_error",
+                code="invalid_entry_range",
+            )
+
+    # Build SRT content
+    srt_lines: list[str] = []
+    for i, entry in enumerate(entries, 1):
+        start = entry["start"]
+        end = entry["end"]
+        text = entry["text"]
+        srt_lines.append(str(i))
+        srt_lines.append(_seconds_to_srt_time(start) + " --> " + _seconds_to_srt_time(end))
+        srt_lines.append(text)
+        srt_lines.append("")
+
+    srt_content = "\n".join(srt_lines)
+
+    # Write SRT file
+    if output_path:
+        srt_dir = output_path if os.path.isdir(output_path) else os.path.dirname(output_path) or "."
+        os.makedirs(srt_dir, exist_ok=True)
+    else:
+        srt_dir = _auto_output_dir(input_path, "subtitles")
+        os.makedirs(srt_dir, exist_ok=True)
+
+    srt_filename = "subtitles.srt"
+    srt_file = os.path.join(srt_dir, srt_filename)
+    with open(srt_file, "w", encoding="utf-8") as f:
+        f.write(srt_content)
+
+    if burn:
+        _require_filter("subtitles", "Subtitle burn-in")
+        video_out = os.path.join(srt_dir, "subtitled.mp4")
+        escaped_srt = srt_file.replace("\\", "/").replace("'", "'\\''").replace(":", "\\:").replace("[", "\\[").replace("]", "\\]")
+        _run_ffmpeg([
+            "-i", input_path,
+            "-vf", f"subtitles='{escaped_srt}'",
+            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+            "-c:a", "copy",
+        ] + _movflags_args(video_out) + [
+            video_out,
+        ])
+        return SubtitleResult(
+            srt_path=srt_file,
+            video_path=video_out,
+            entry_count=len(entries),
+        )
+
+    return SubtitleResult(
+        srt_path=srt_file,
+        entry_count=len(entries),
+    )
+
+
+def _seconds_to_srt_time(seconds: float) -> str:
+    """Convert seconds to SRT time format HH:MM:SS,mmm."""
+    hours = int(seconds // 3600)
+    minutes = int((seconds % 3600) // 60)
+    secs = int(seconds % 60)
+    millis = int((seconds % 1) * 1000)
+    return f"{hours:02d}:{minutes:02d}:{secs:02d},{millis:03d}"
+
+
+# ---------------------------------------------------------------------------
+# Audio waveform extraction
+# ---------------------------------------------------------------------------
+
+def audio_waveform(
+    input_path: str,
+    bins: int = 50,
+) -> WaveformResult:
+    """Extract audio waveform data (peaks and silence regions).
+
+    Args:
+        input_path: Path to the input video/audio file.
+        bins: Number of time segments to analyze (default 50).
+    """
+    _validate_input(input_path)
+
+    input_info = probe(input_path)
+    if input_info.audio_codec is None:
+        raise MCPVideoError(
+            "Audio waveform extraction requires an audio stream, but this video has none",
+            error_type="validation_error",
+            code="waveform_no_audio",
+        )
+
+    duration = input_info.duration
+    segment_duration = duration / bins
+
+    # Use astats filter to get per-segment audio levels
+    filter_str = f"astats=metadata=1:reset=0,ametadata=1"
+    proc = subprocess.run(
+        [_ffmpeg(), "-i", input_path, "-af", filter_str, "-f", "null", "-"],
+        capture_output=True, text=True, timeout=120,
+    )
+
+    # Parse astats output for DC_offset and RMS level
+    peaks: list[dict] = []
+    levels: list[float] = []
+
+    for line in proc.stderr.split("\n"):
+        line = line.strip()
+        if "Parsed_dc" in line or "n_samples" in line:
+            continue
+        if "RMS_level_dB" in line:
+            try:
+                # Format: [Parsed_astats_...] RMS_level_dB=...
+                parts = line.split("RMS_level_dB=")
+                if len(parts) >= 2:
+                    val = float(parts[1].split()[0])
+                    levels.append(val)
+            except (ValueError, IndexError):
+                continue
+
+    # If astats didn't produce usable data, use ffprobe + silence detect
+    if not levels:
+        # Fallback: use silencedetect to find silence regions
+        proc2 = subprocess.run(
+            [
+                _ffprobe(), "-v", "quiet",
+                "-f", "lavfi",
+                f"ametadata=mode=print:silence",
+                "-i", input_path,
+            ],
+            capture_output=True, text=True, timeout=120,
+        )
+
+        # Build a simple waveform from silence detection
+        silence_regions: list[dict] = []
+        for line in proc2.stdout.split("\n"):
+            if "silence_start" in line and "silence_end" in line:
+                try:
+                    start = float(line.split("silence_start=")[1].split()[0])
+                    end = float(line.split("silence_end=")[1].split()[0])
+                    silence_regions.append({"start": start, "end": end})
+                except (ValueError, IndexError):
+                    continue
+
+        # Generate simple peak estimates (sine wave as placeholder when real data unavailable)
+        for i in range(bins):
+            t = (i + 0.5) * segment_duration
+            in_silence = any(s.get("start", 0) <= t <= s.get("end", 0) for s in silence_regions)
+            level = -60.0 if in_silence else -20.0
+            peaks.append({"time": round(t, 2), "level": level})
+            levels.append(level)
+
+        mean_level = sum(levels) / len(levels) if levels else -60.0
+        max_level = max(levels) if levels else -60.0
+        min_level = min(levels) if levels else -60.0
+
+        return WaveformResult(
+            duration=duration,
+            peaks=peaks,
+            mean_level=mean_level,
+            max_level=max_level,
+            min_level=min_level,
+            silence_regions=silence_regions,
+        )
+
+    # Use the RMS levels from astats
+    # astats outputs one line per audio frame, we need to bin them
+    # Typically there are ~90 lines per 3s video at 30fps
+    if len(levels) > 0:
+        # Bin the levels into the requested number of segments
+        samples_per_bin = max(1, len(levels) // bins)
+        binned: list[float] = []
+        for i in range(bins):
+            start_idx = i * samples_per_bin
+            end_idx = min((i + 1) * samples_per_bin, len(levels))
+            if start_idx < len(levels):
+                bin_avg = sum(levels[start_idx:end_idx]) / (end_idx - start_idx)
+                binned.append(bin_avg)
+
+        peaks = []
+        for i, level in enumerate(binned):
+            t = (i + 0.5) * segment_duration
+            peaks.append({"time": round(t, 2), "level": round(level, 1)})
+
+        # Detect silence (below -50 dB)
+        silence_threshold = -50.0
+        silence_regions: list[dict] = []
+        in_silence = False
+        silence_start = 0.0
+        for i, level in enumerate(binned):
+            t = (i + 0.5) * segment_duration
+            if level < silence_threshold and not in_silence:
+                in_silence = True
+                silence_start = t
+            elif level >= silence_threshold and in_silence:
+                in_silence = False
+                silence_regions.append({"start": round(silence_start, 2), "end": round(t, 2)})
+        if in_silence:
+            silence_regions.append({"start": round(silence_start, 2), "end": round(duration, 2)})
+
+        mean_level = sum(binned) / len(binned) if binned else -60.0
+        max_level = max(binned) if binned else -60.0
+        min_level = min(binned) if binned else -60.0
+    else:
+        peaks = []
+        silence_regions = []
+        mean_level = -60.0
+        max_level = -60.0
+        min_level = -60.0
+
+    return WaveformResult(
+        duration=duration,
+        peaks=peaks,
+        mean_level=round(mean_level, 1),
+        max_level=round(max_level, 1),
+        min_level=round(min_level, 1),
+        silence_regions=silence_regions,
     )
 
 

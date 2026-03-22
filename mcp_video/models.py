@@ -73,6 +73,27 @@ class StoryboardResult(BaseModel):
     count: int
 
 
+class SubtitleResult(BaseModel):
+    """Result of subtitle generation."""
+
+    success: bool = True
+    srt_path: str | None = Field(default=None, description="Path to generated SRT file")
+    video_path: str | None = Field(default=None, description="Path to burned-in video (if burn=True)")
+    entry_count: int
+
+
+class WaveformResult(BaseModel):
+    """Result of audio waveform extraction."""
+
+    success: bool = True
+    duration: float
+    peaks: list[dict] = Field(description="List of {time, level} data points")
+    mean_level: float
+    max_level: float
+    min_level: float
+    silence_regions: list[dict] = Field(description="List of {start, end} silence regions")
+
+
 class ThumbnailResult(BaseModel):
     """Result of thumbnail extraction."""
 

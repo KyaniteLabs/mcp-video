@@ -655,6 +655,69 @@ class TestKenBurns:
         assert os.path.isfile(result.output_path)
 
 
+class TestGenerateSubtitles:
+    """Tests for subtitle generation from text entries."""
+
+    def test_generate_srt_file(self, sample_video, tmp_path):
+        from mcp_video.engine import generate_subtitles
+        out = str(tmp_path / "subs")
+        entries = [
+            {"start": 0.0, "end": 1.5, "text": "Hello World"},
+            {"start": 1.5, "end": 3.0, "text": "This is a test"},
+        ]
+        result = generate_subtitles(entries, sample_video, output_path=out)
+        assert result.success is True
+        assert result.srt_path is not None
+        assert os.path.isfile(result.srt_path)
+        assert result.entry_count == 2
+        assert result.video_path is None
+
+    def test_burn_subtitles_into_video(self, sample_video, tmp_path):
+        from mcp_video.engine import generate_subtitles
+        out = str(tmp_path / "burned")
+        entries = [{"start": 0.0, "end": 2.0, "text": "Burned text"}]
+        result = generate_subtitles(entries, sample_video, output_path=out, burn=True)
+        assert result.success is True
+        assert result.video_path is not None
+        assert os.path.isfile(result.video_path)
+
+    def test_empty_entries_raises(self, sample_video):
+        from mcp_video.engine import generate_subtitles
+        with pytest.raises(MCPVideoError, match="entries"):
+            generate_subtitles([], sample_video)
+
+    def test_invalid_time_range_raises(self, sample_video):
+        from mcp_video.engine import generate_subtitles
+        entries = [{"start": 2.0, "end": 1.0, "text": "Bad range"}]
+        with pytest.raises(MCPVideoError, match="start.*end"):
+            generate_subtitles(entries, sample_video)
+
+
+class TestAudioWaveform:
+    """Tests for audio waveform extraction."""
+
+    def test_waveform_extraction(self, sample_video):
+        from mcp_video.engine import audio_waveform
+        result = audio_waveform(sample_video, bins=10)
+        assert result.success is True
+        assert result.duration > 0
+        assert len(result.peaks) > 0
+        assert isinstance(result.mean_level, float)
+        assert isinstance(result.max_level, float)
+        assert isinstance(result.min_level, float)
+        assert isinstance(result.silence_regions, list)
+
+    def test_waveform_no_audio_raises(self, sample_video_no_audio):
+        from mcp_video.engine import audio_waveform
+        with pytest.raises(MCPVideoError, match="audio"):
+            audio_waveform(sample_video_no_audio)
+
+    def test_waveform_custom_bins(self, sample_video):
+        from mcp_video.engine import audio_waveform
+        result = audio_waveform(sample_video, bins=20)
+        assert len(result.peaks) == 20
+
+
 class TestTwoPassEncoding:
     """Tests for two-pass encoding in convert and export_video."""
 
