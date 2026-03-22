@@ -127,6 +127,7 @@ FilterType = Literal[
     "blur", "sharpen", "brightness", "contrast", "saturation",
     "grayscale", "sepia", "invert", "vignette", "color_preset",
     "denoise", "deinterlace",
+    "reverb", "compressor", "pitch_shift", "noise_reduction",
 ]
 
 ColorPreset = Literal["warm", "cool", "vintage", "cinematic", "noir"]

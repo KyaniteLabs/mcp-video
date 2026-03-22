@@ -569,6 +569,63 @@ class TestFilterValidation:
             apply_filter(sample_video, filter_type="color_preset", params={"preset": "neon"})
 
 
+class TestAudioEffects:
+    """Tests for audio effect filter types (reverb, compressor, pitch_shift, noise_reduction)."""
+
+    @requires_filter("aecho", "Reverb filter")
+    def test_reverb_default(self, sample_video):
+        result = apply_filter(sample_video, filter_type="reverb")
+        assert os.path.isfile(result.output_path)
+        assert result.operation == "filter_reverb"
+
+    @requires_filter("aecho", "Reverb filter")
+    def test_reverb_with_params(self, sample_video):
+        result = apply_filter(sample_video, filter_type="reverb", params={
+            "in_gain": 0.6, "out_gain": 0.8, "delays": 80, "decay": 0.3,
+        })
+        assert os.path.isfile(result.output_path)
+
+    @requires_filter("acompressor", "Compressor filter")
+    def test_compressor_default(self, sample_video):
+        result = apply_filter(sample_video, filter_type="compressor")
+        assert os.path.isfile(result.output_path)
+        assert result.operation == "filter_compressor"
+
+    @requires_filter("acompressor", "Compressor filter")
+    def test_compressor_with_params(self, sample_video):
+        result = apply_filter(sample_video, filter_type="compressor", params={
+            "threshold_db": -15, "ratio": 6, "attack": 3, "release": 100,
+        })
+        assert os.path.isfile(result.output_path)
+
+    @requires_filter("asetrate", "Pitch shift filter")
+    def test_pitch_shift_default(self, sample_video):
+        result = apply_filter(sample_video, filter_type="pitch_shift")
+        assert os.path.isfile(result.output_path)
+        assert result.operation == "filter_pitch_shift"
+
+    @requires_filter("asetrate", "Pitch shift filter")
+    def test_pitch_shift_with_semitones(self, sample_video):
+        result = apply_filter(sample_video, filter_type="pitch_shift", params={"semitones": 5})
+        assert os.path.isfile(result.output_path)
+
+    @requires_filter("afftdn", "Noise reduction filter")
+    def test_noise_reduction_default(self, sample_video):
+        result = apply_filter(sample_video, filter_type="noise_reduction")
+        assert os.path.isfile(result.output_path)
+        assert result.operation == "filter_noise_reduction"
+
+    @requires_filter("afftdn", "Noise reduction filter")
+    def test_noise_reduction_with_level(self, sample_video):
+        result = apply_filter(sample_video, filter_type="noise_reduction", params={"noise_level": -30})
+        assert os.path.isfile(result.output_path)
+
+    def test_audio_filter_rejects_no_audio_video(self, sample_video_no_audio):
+        """Audio effect filters should raise an error on video without audio."""
+        with pytest.raises(MCPVideoError, match="audio"):
+            apply_filter(sample_video_no_audio, filter_type="reverb")
+
+
 class TestLoudnormTruePeak:
     """Regression test for loudnorm TP formula (bugbot #6)."""
 

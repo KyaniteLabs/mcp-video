@@ -1575,6 +1575,20 @@ def _get_color_preset_filter(preset: ColorPreset) -> str:
     return preset_filters[preset]
 
 
+def _build_pitch_shift_filter(semitones: float = 0) -> str:
+    """Build FFmpeg audio filter string for pitch shifting.
+
+    Args:
+        semitones: Number of semitones to shift. Positive = higher, negative = lower.
+            Each semitone is a 2^(1/12) ~ 1.0595x multiplier on sample rate.
+    """
+    # 2^(semitones/12) gives the sample rate multiplier
+    import math
+    rate_mult = 2 ** (semitones / 12)
+    new_rate = 44100 * rate_mult
+    return f"asetrate={new_rate},aresample=44100"
+
+
 def apply_filter(
     input_path: str,
     filter_type: FilterType,
@@ -1594,19 +1608,25 @@ def apply_filter(
     output = output_path or _auto_output(input_path, f"filter_{filter_type}")
 
     # Build the -vf filter string
-    filter_map: dict[FilterType, tuple[str, str]] = {
-        "blur": ("boxblur", f"boxblur={params.get('radius', 5)}:{params.get('strength', 1)}"),
-        "sharpen": ("unsharp", f"unsharp=5:5:{params.get('amount', 1.0)}:5:5:0.0"),
-        "brightness": ("eq", f"eq=brightness={params.get('level', 0.1)}"),
-        "contrast": ("eq", f"eq=contrast={params.get('level', 1.5)}"),
-        "saturation": ("eq", f"eq=saturation={params.get('level', 1.5)}"),
-        "grayscale": ("hue", "hue=s=0"),
-        "sepia": ("colorchannelmixer", "colorchannelmixer=.393:.769:.189:0:.349:.686:.168:0:.272:.534:.131"),
-        "invert": ("negate", "negate"),
-        "vignette": ("vignette", f"vignette=angle={params.get('angle', 'PI/4')}"),
-        "color_preset": ("eq", _get_color_preset_filter(params.get("preset", "warm"))),
-        "denoise": ("hqdn3d", f"hqdn3d={params.get('luma_spatial', 4)}:{params.get('chroma_spatial', 3)}:{params.get('luma_tmp', 6)}:{params.get('chroma_tmp', 4.5)}"),
-        "deinterlace": ("yadif", "yadif=0:-1:0"),
+    # Audio filters use -af; video filters use -vf.
+    # filter_map entries: (filter_name, filter_string, is_audio)
+    filter_map: dict[FilterType, tuple[str, str, bool]] = {
+        "blur": ("boxblur", f"boxblur={params.get('radius', 5)}:{params.get('strength', 1)}", False),
+        "sharpen": ("unsharp", f"unsharp=5:5:{params.get('amount', 1.0)}:5:5:0.0", False),
+        "brightness": ("eq", f"eq=brightness={params.get('level', 0.1)}", False),
+        "contrast": ("eq", f"eq=contrast={params.get('level', 1.5)}", False),
+        "saturation": ("eq", f"eq=saturation={params.get('level', 1.5)}", False),
+        "grayscale": ("hue", "hue=s=0", False),
+        "sepia": ("colorchannelmixer", "colorchannelmixer=.393:.769:.189:0:.349:.686:.168:0:.272:.534:.131", False),
+        "invert": ("negate", "negate", False),
+        "vignette": ("vignette", f"vignette=angle={params.get('angle', 'PI/4')}", False),
+        "color_preset": ("eq", _get_color_preset_filter(params.get("preset", "warm")), False),
+        "denoise": ("hqdn3d", f"hqdn3d={params.get('luma_spatial', 4)}:{params.get('chroma_spatial', 3)}:{params.get('luma_tmp', 6)}:{params.get('chroma_tmp', 4.5)}", False),
+        "deinterlace": ("yadif", "yadif=0:-1:0", False),
+        "reverb": ("aecho", f"aecho={params.get('in_gain', 0.8)}:{params.get('out_gain', 0.9)}:{params.get('delays', 60)}:{params.get('decay', 0.2)}", True),
+        "compressor": ("acompressor", f"acompressor=threshold={params.get('threshold_db', -20)}dB:ratio={params.get('ratio', 4)}:attack={params.get('attack', 5)}:release={params.get('release', 50)}", True),
+        "pitch_shift": ("asetrate", _build_pitch_shift_filter(params.get("semitones", 0)), True),
+        "noise_reduction": ("afftdn", f"afftdn=nf={params.get('noise_level', -25)}", True),
     }
 
     if filter_type not in filter_map:
@@ -1616,17 +1636,35 @@ def apply_filter(
             error_type="validation_error",
             code="invalid_filter_type",
         )
-    filter_name, vf_string = filter_map[filter_type]
+    filter_name, filter_string, is_audio = filter_map[filter_type]
     _require_filter(filter_name, f"Filter '{filter_type}'")
 
-    _run_ffmpeg([
-        "-i", input_path,
-        "-vf", vf_string,
-        "-c:v", "libx264", "-preset", "fast", "-crf", "23",
-        "-c:a", "copy",
-    ] + _movflags_args(output) + [
-        output,
-    ])
+    # Audio filters require an audio stream and use -af instead of -vf
+    if is_audio:
+        input_info = probe(input_path)
+        if input_info.audio_codec is None:
+            raise MCPVideoError(
+                f"Audio filter '{filter_type}' requires an audio stream, but this video has none",
+                error_type="validation_error",
+                code="audio_filter_no_audio",
+            )
+        _run_ffmpeg([
+            "-i", input_path,
+            "-af", filter_string,
+            "-c:v", "copy",
+            "-c:a", "aac", "-b:a", "128k",
+        ] + _movflags_args(output) + [
+            output,
+        ])
+    else:
+        _run_ffmpeg([
+            "-i", input_path,
+            "-vf", filter_string,
+            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+            "-c:a", "copy",
+        ] + _movflags_args(output) + [
+            output,
+        ])
 
     info = probe(output)
     return EditResult(
