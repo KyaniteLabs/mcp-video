@@ -274,7 +274,7 @@ def main() -> None:
     # extract_audio
     extract_p = subparsers.add_parser("extract-audio", help="Extract audio from video")
     extract_p.add_argument("input", help="Input video file")
-    extract_p.add_argument("-f", "--format", "--fmt", dest="format", default="mp3", choices=["mp3", "aac", "wav", "ogg", "flac"])
+    extract_p.add_argument("-f", "--format", "--fmt", dest="audio_format", default="mp3", choices=["mp3", "aac", "wav", "ogg", "flac"])
     extract_p.add_argument("-o", "--output", help="Output audio file path")
 
     # edit (timeline)
@@ -548,9 +548,9 @@ def main() -> None:
 
         elif args.command == "extract-audio":
             from .engine import extract_audio
-            result = _with_spinner("Extracting audio...", extract_audio, args.input, output_path=args.output, format=args.format)
+            result = _with_spinner("Extracting audio...", extract_audio, args.input, output_path=args.output, format=args.audio_format)
             if use_json:
-                print(result)
+                output_json({"success": True, "output_path": result})
             else:
                 _format_extract_audio_text(result)
 
@@ -640,9 +640,6 @@ def main() -> None:
 
         elif args.command == "templates":
             from .templates import TEMPLATES
-            table = Table(title="Available Templates")
-            table.add_column("Name", style="bold cyan")
-            table.add_column("Description")
             descriptions = {
                 "tiktok": "TikTok (9:16, 1080x1920) — vertical video with optional caption and music",
                 "youtube-shorts": "YouTube Shorts (9:16) — title at top, vertical video",
@@ -650,9 +647,15 @@ def main() -> None:
                 "youtube": "YouTube (16:9, 1920x1080) — horizontal video with title card and outro",
                 "instagram-post": "Instagram Post (1:1, 1080x1080) — square video with caption",
             }
-            for name in TEMPLATES:
-                table.add_row(name, descriptions.get(name, ""))
-            console.print(table)
+            if use_json:
+                output_json({"templates": {name: descriptions.get(name, "") for name in TEMPLATES}})
+            else:
+                table = Table(title="Available Templates")
+                table.add_column("Name", style="bold cyan")
+                table.add_column("Description")
+                for name in TEMPLATES:
+                    table.add_row(name, descriptions.get(name, ""))
+                console.print(table)
 
         elif args.command == "template":
             from .templates import TEMPLATES
