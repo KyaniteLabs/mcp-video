@@ -842,9 +842,25 @@ def convert(
     quality: QualityLevel = "high",
     output_path: str | None = None,
     on_progress: Callable[[float], None] | None = None,
+    two_pass: bool = False,
+    target_bitrate: int | None = None,
 ) -> EditResult:
     """Convert video to a different format."""
     _validate_input(input_path)
+
+    if two_pass and format not in ("mp4", "mov"):
+        raise MCPVideoError(
+            f"Two-pass encoding is only supported for mp4 and mov formats, got '{format}'",
+            error_type="validation_error",
+            code="two_pass_unsupported_format",
+        )
+    if two_pass and target_bitrate is None:
+        raise MCPVideoError(
+            "Two-pass encoding requires target_bitrate to be set",
+            error_type="validation_error",
+            code="two_pass_needs_bitrate",
+        )
+
     preset = QUALITY_PRESETS[quality]
     ext = f".{format}" if not format.startswith(".") else format
     output = output_path or _auto_output(input_path, format, ext=ext)
@@ -852,7 +868,31 @@ def convert(
     # Get input duration for progress estimation
     input_info = probe(input_path)
 
-    if format == "mp4":
+    if two_pass and target_bitrate:
+        # Two-pass encoding for better quality at target bitrate
+        _run_ffmpeg([
+            "-i", input_path,
+            "-c:v", "libx264",
+            "-b:v", f"{target_bitrate}k",
+            "-pass", "1",
+            "-an", "-f", "null", "/dev/null",
+        ])
+        _run_ffmpeg([
+            "-i", input_path,
+            "-c:v", "libx264",
+            "-b:v", f"{target_bitrate}k",
+            "-pass", "2",
+            "-preset", preset["preset"],
+            "-c:a", "aac", "-b:a", "128k",
+        ] + _movflags_args(output) + [
+            output,
+        ])
+        # Clean up pass log files
+        for suffix in ("-0.log", "-0.log.mbtree"):
+            log = os.path.splitext(os.path.basename(input_path))[0] + suffix
+            if os.path.isfile(log):
+                os.unlink(log)
+    elif format == "mp4":
         _run_ffmpeg_with_progress([
             "-i", input_path,
             "-c:v", "libx264",
@@ -1407,10 +1447,15 @@ def export_video(
     quality: QualityLevel = "high",
     format: ExportFormat = "mp4",
     on_progress: Callable[[float], None] | None = None,
+    two_pass: bool = False,
+    target_bitrate: int | None = None,
 ) -> EditResult:
     """Export a video with specified quality and format settings."""
     _validate_input(input_path)
-    result = convert(input_path, format=format, quality=quality, output_path=output_path, on_progress=on_progress)
+    result = convert(
+        input_path, format=format, quality=quality, output_path=output_path,
+        on_progress=on_progress, two_pass=two_pass, target_bitrate=target_bitrate,
+    )
     result.operation = "export"
     return result
 
@@ -1623,6 +1668,7 @@ def apply_filter(
         "color_preset": ("eq", _get_color_preset_filter(params.get("preset", "warm")), False),
         "denoise": ("hqdn3d", f"hqdn3d={params.get('luma_spatial', 4)}:{params.get('chroma_spatial', 3)}:{params.get('luma_tmp', 6)}:{params.get('chroma_tmp', 4.5)}", False),
         "deinterlace": ("yadif", "yadif=0:-1:0", False),
+        "ken_burns": ("zoompan", f"zoompan=z='min(zoom+{params.get('zoom_speed', 0.0015)},1.5)':d={params.get('duration', 150)}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=640x360", False),
         "reverb": ("aecho", f"aecho={params.get('in_gain', 0.8)}:{params.get('out_gain', 0.9)}:{params.get('delays', 60)}:{params.get('decay', 0.2)}", True),
         "compressor": ("acompressor", f"acompressor=threshold={params.get('threshold_db', -20)}dB:ratio={params.get('ratio', 4)}:attack={params.get('attack', 5)}:release={params.get('release', 50)}", True),
         "pitch_shift": ("asetrate", _build_pitch_shift_filter(params.get("semitones", 0)), True),

@@ -636,3 +636,47 @@ class TestLoudnormTruePeak:
         out = str(tmp_path / "norm_broadcast.mp4")
         result = normalize_audio(sample_video, target_lufs=-23.0, output_path=out)
         assert os.path.isfile(result.output_path)
+
+
+class TestKenBurns:
+    """Tests for Ken Burns / zoom pan filter type."""
+
+    @requires_filter("zoompan", "Zoom pan filter")
+    def test_ken_burns_default(self, sample_video):
+        result = apply_filter(sample_video, filter_type="ken_burns")
+        assert os.path.isfile(result.output_path)
+        assert result.operation == "filter_ken_burns"
+
+    @requires_filter("zoompan", "Zoom pan filter")
+    def test_ken_burns_with_params(self, sample_video):
+        result = apply_filter(sample_video, filter_type="ken_burns", params={
+            "zoom_speed": 0.002, "duration": 100,
+        })
+        assert os.path.isfile(result.output_path)
+
+
+class TestTwoPassEncoding:
+    """Tests for two-pass encoding in convert and export_video."""
+
+    def test_convert_two_pass(self, sample_video, tmp_path):
+        out = str(tmp_path / "two_pass.mp4")
+        result = convert(sample_video, output_path=out, two_pass=True, target_bitrate=1000)
+        assert os.path.isfile(result.output_path)
+        assert result.operation == "convert"
+        assert os.path.getsize(result.output_path) > 0
+
+    def test_convert_two_pass_without_bitrate_raises(self, sample_video):
+        with pytest.raises(MCPVideoError, match="target_bitrate"):
+            convert(sample_video, two_pass=True, target_bitrate=None)
+
+    def test_export_video_two_pass(self, sample_video, tmp_path):
+        from mcp_video.engine import export_video
+        out = str(tmp_path / "export_two_pass.mp4")
+        result = export_video(sample_video, output_path=out, two_pass=True, target_bitrate=1500)
+        assert os.path.isfile(result.output_path)
+        assert result.operation == "export"
+
+    def test_convert_two_pass_webm_raises(self, sample_video):
+        """Two-pass encoding only supports mp4 and mov formats."""
+        with pytest.raises(MCPVideoError, match="[Tt]wo.pass"):
+            convert(sample_video, format="webm", two_pass=True, target_bitrate=1000)
