@@ -1605,7 +1605,7 @@ def apply_filter(
         "invert": ("negate", "negate"),
         "vignette": ("vignette", f"vignette=angle={params.get('angle', 'PI/4')}"),
         "color_preset": ("eq", _get_color_preset_filter(params.get("preset", "warm"))),
-        "denoise": ("hqdn3d", f"hqdn3d={params.get('spatial', 4)}:{params.get('temporal', 3)}:{params.get('spatial_c', 6)}:{params.get('temporal_c', 4.5)}"),
+        "denoise": ("hqdn3d", f"hqdn3d={params.get('luma_spatial', 4)}:{params.get('chroma_spatial', 3)}:{params.get('luma_tmp', 6)}:{params.get('chroma_tmp', 4.5)}"),
         "deinterlace": ("yadif", "yadif=0:-1:0"),
     }
 
@@ -1865,13 +1865,17 @@ def reverse(
     _validate_input(input_path)
     output = output_path or _auto_output(input_path, "reversed")
 
-    _run_ffmpeg([
-        "-i", input_path,
-        "-vf", "reverse",
-        "-af", "areverse",
-        "-c:v", "libx264", "-preset", "fast", "-crf", "23",
-        "-c:a", "aac", "-b:a", "128k",
-    ] + _movflags_args(output) + [
+    input_info = probe(input_path)
+
+    args = ["-i", input_path, "-vf", "reverse"]
+    # Only reverse audio if the input has an audio stream
+    if input_info.audio_codec:
+        args += ["-af", "areverse", "-c:a", "aac", "-b:a", "128k"]
+    else:
+        args += ["-an"]
+    args += ["-c:v", "libx264", "-preset", "fast", "-crf", "23"]
+
+    _run_ffmpeg(args + _movflags_args(output) + [
         output,
     ])
 
@@ -1901,18 +1905,30 @@ def chroma_key(
         similarity: How similar colors need to be to be keyed out (default 0.01).
         blend: How much to blend the keyed color (default 0.0).
         output_path: Where to save the output. Auto-generated if omitted.
+
+    Note: Use a .mov output path to preserve the alpha channel (transparent
+    background). Non-MOV outputs will encode with libx264 which does not
+    support transparency.
     """
     _validate_input(input_path)
     output = output_path or _auto_output(input_path, "chromakey")
 
     _require_filter("chromakey", "Chroma key filter")
 
+    # Use MOV with prores_ks (supports alpha) when outputting with transparency
+    is_mov = output.lower().endswith(".mov")
+
+    if is_mov:
+        vf = f"chromakey=color={color}:similarity={similarity}:blend={blend},format=yuva444p16le"
+        codec_args = ["-c:v", "prores_ks", "-pix_fmt", "yuva444p12le"]
+    else:
+        vf = f"chromakey=color={color}:similarity={similarity}:blend={blend}"
+        codec_args = ["-c:v", "libx264", "-preset", "fast", "-crf", "23", "-c:a", "aac", "-b:a", "128k"]
+
     _run_ffmpeg([
         "-i", input_path,
-        "-vf", f"chromakey=color={color}:similarity={similarity}:blend={blend}",
-        "-c:v", "libx264", "-preset", "fast", "-crf", "23",
-        "-c:a", "aac", "-b:a", "128k",
-    ] + _movflags_args(output) + [
+        "-vf", vf,
+    ] + codec_args + _movflags_args(output) + [
         output,
     ])
 

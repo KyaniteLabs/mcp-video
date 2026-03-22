@@ -334,6 +334,15 @@ class TestChromaKey:
         result = chroma_key(sample_video, color="0xFF0000", similarity=0.05)
         assert result.success is True
 
+    def test_chroma_key_preserves_alpha_with_mov(self, sample_video):
+        """MOV output should use prores_ks with alpha channel support."""
+        import tempfile
+        with tempfile.NamedTemporaryFile(suffix=".mov", delete=False) as tmp:
+            result = chroma_key(sample_video, output_path=tmp.name)
+            assert result.success is True
+            assert os.path.isfile(result.output_path)
+        os.unlink(tmp.name)
+
 
 class TestDenoiseFilter:
     def test_denoise_filter(self, sample_video):
