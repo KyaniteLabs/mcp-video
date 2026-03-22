@@ -203,7 +203,7 @@ def main() -> None:
     # convert
     convert_p = subparsers.add_parser("convert", help="Convert video format")
     convert_p.add_argument("input", help="Input video file")
-    convert_p.add_argument("-f", "--fmt", default="mp4", choices=["mp4", "webm", "gif", "mov"], help="Output format")
+    convert_p.add_argument("-f", "--format", "--fmt", dest="fmt", default="mp4", choices=["mp4", "webm", "gif", "mov"], help="Output format")
     convert_p.add_argument("-q", "--quality", default="high", choices=["low", "medium", "high", "ultra"])
     convert_p.add_argument("-o", "--output", help="Output file path")
 
@@ -268,13 +268,13 @@ def main() -> None:
     export_p = subparsers.add_parser("export", help="Export video with quality settings")
     export_p.add_argument("input", help="Input video file")
     export_p.add_argument("-q", "--quality", default="high", choices=["low", "medium", "high", "ultra"])
-    export_p.add_argument("-f", "--fmt", default="mp4", choices=["mp4", "webm", "gif", "mov"], help="Output format")
+    export_p.add_argument("-f", "--format", "--fmt", dest="fmt", default="mp4", choices=["mp4", "webm", "gif", "mov"], help="Output format")
     export_p.add_argument("-o", "--output", help="Output file path")
 
     # extract_audio
     extract_p = subparsers.add_parser("extract-audio", help="Extract audio from video")
     extract_p.add_argument("input", help="Input video file")
-    extract_p.add_argument("-f", "--format", default="mp3", choices=["mp3", "aac", "wav", "ogg", "flac"])
+    extract_p.add_argument("-f", "--format", "--fmt", dest="format", default="mp3", choices=["mp3", "aac", "wav", "ogg", "flac"])
     extract_p.add_argument("-o", "--output", help="Output audio file path")
 
     # edit (timeline)
