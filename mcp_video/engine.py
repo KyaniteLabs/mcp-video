@@ -2170,6 +2170,9 @@ def audio_waveform(
         [_ffmpeg(), "-i", input_path, "-af", filter_str, "-f", "null", "-"],
         capture_output=True, text=True, timeout=120,
     )
+    # Check return code - if FFmpeg failed, fall through to silencedetect fallback
+    if proc.returncode != 0:
+        levels = []  # Force fallback to silencedetect
 
     # Parse astats output for DC_offset and RMS level
     peaks: list[dict] = []
