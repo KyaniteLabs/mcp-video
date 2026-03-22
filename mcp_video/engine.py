@@ -1633,11 +1633,15 @@ def _build_pitch_shift_filter(semitones: float = 0) -> str:
         semitones: Number of semitones to shift. Positive = higher, negative = lower.
             Each semitone is a 2^(1/12) ~ 1.0595x multiplier on sample rate.
     """
-    # 2^(semitones/12) gives the sample rate multiplier
     import math
     rate_mult = 2 ** (semitones / 12)
     new_rate = 44100 * rate_mult
-    return f"asetrate={new_rate},aresample=44100"
+    # atempo compensates for the tempo change caused by sample rate shift,
+    # restoring original playback speed (avoids A/V desync)
+    tempo = 1.0 / rate_mult
+    # atempo supports 0.5-100.0; chain if needed
+    atempo_str = f"atempo={tempo}"
+    return f"asetrate={new_rate},aresample=44100,{atempo_str}"
 
 
 def apply_filter(
@@ -2509,15 +2513,15 @@ def compare_quality(
 
             # Parse metric value from stderr
             for line in proc.stderr.split("\n"):
-                if metric_lower == "psnr" and "psnr" in line.lower():
+                if metric_lower == "psnr" and "average:" in line.lower():
                     try:
-                        # Format: [Parsed_psnr ...] psnr=XX.XX
-                        val_match = re.search(r"psnr[=:]?\s*([0-9.]+)", line, re.IGNORECASE)
+                        # Format: [Parsed_psnr ...] average:XX.XX
+                        val_match = re.search(r"average:\s*([0-9.]+)", line, re.IGNORECASE)
                         if val_match:
                             computed["psnr"] = float(val_match.group(1))
                     except (ValueError, IndexError):
                         continue
-                elif metric_lower == "ssim" and "ssim" in line.lower():
+                elif metric_lower == "ssim" and "All:" in line:
                     try:
                         # Format: [Parsed_ssim ...] All:X.XXXXXX
                         val_match = re.search(r"All[:\s]+([0-9.]+)", line)
@@ -2652,7 +2656,7 @@ def stabilize(
         output_path: Where to save the output.
     """
     _validate_input(input_path)
-    _require_filter("vidstab", "Video stabilization")
+    _require_filter("vidstabdetect", "Video stabilization")
     output = output_path or _auto_output(input_path, "stabilized")
 
     tmpdir = tempfile.mkdtemp(prefix="mcp_video_stab_")
@@ -2736,9 +2740,9 @@ def apply_mask(
     _run_ffmpeg([
         "-i", input_path, "-i", mask_path,
         "-filter_complex", filter_complex,
-        "-map", "[out]",
+        "-map", "[out]", "-map", "0:a?",
         "-c:v", "libx264", "-preset", "fast", "-crf", "23",
-        "-an",
+        "-c:a", "copy",
     ] + _movflags_args(output) + [
         output,
     ])
