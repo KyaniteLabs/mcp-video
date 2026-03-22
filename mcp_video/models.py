@@ -94,6 +94,44 @@ class WaveformResult(BaseModel):
     silence_regions: list[dict] = Field(description="List of {start, end} silence regions")
 
 
+class SceneDetectionResult(BaseModel):
+    """Result of scene detection."""
+
+    success: bool = True
+    scenes: list[dict] = Field(description="List of {start, end, start_frame, end_frame} dicts")
+    scene_count: int
+    duration: float
+
+
+class ImageSequenceResult(BaseModel):
+    """Result of image sequence operations."""
+
+    success: bool = True
+    frame_paths: list[str] = Field(description="Paths to extracted/generated frame images")
+    frame_count: int
+    fps: float
+
+
+class QualityMetricsResult(BaseModel):
+    """Result of quality comparison between two videos."""
+
+    success: bool = True
+    metrics: dict[str, float] = Field(description="Metric scores, e.g. {'psnr': 42.5, 'ssim': 0.95}")
+    overall_quality: str = Field(description="Quality assessment: high, medium, or low")
+
+
+class MetadataResult(BaseModel):
+    """Result of metadata read operation."""
+
+    success: bool = True
+    title: str | None = None
+    artist: str | None = None
+    album: str | None = None
+    comment: str | None = None
+    date: str | None = None
+    tags: dict[str, str] = Field(default_factory=dict, description="All metadata tags")
+
+
 class ThumbnailResult(BaseModel):
     """Result of thumbnail extraction."""
 

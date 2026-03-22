@@ -12,9 +12,13 @@ from .engine import (
     add_text,
     apply_filter,
     chroma_key,
+    compare_quality,
     convert,
+    create_from_images,
     crop,
+    detect_scenes,
     edit_timeline,
+    export_frames,
     export_video,
     extract_audio,
     fade,
@@ -23,6 +27,7 @@ from .engine import (
     overlay_video,
     preview,
     probe,
+    read_metadata,
     resize,
     reverse,
     rotate,
@@ -33,6 +38,7 @@ from .engine import (
     thumbnail,
     trim,
     watermark,
+    write_metadata,
 )
 from .errors import MCPVideoError
 from .models import (
@@ -799,6 +805,118 @@ def video_split_screen(
     """
     try:
         return _result(split_screen(left_path, right_path=right_path, layout=layout, output_path=output_path))
+    except MCPVideoError as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_detect_scenes(
+    input_path: str,
+    threshold: float = 0.3,
+    min_scene_duration: float = 1.0,
+) -> dict[str, Any]:
+    """Detect scene changes in a video.
+
+    Args:
+        input_path: Absolute path to the input video.
+        threshold: Scene detection sensitivity (0.0-1.0, lower = more sensitive, default 0.3).
+        min_scene_duration: Minimum scene duration in seconds (default 1.0).
+    """
+    try:
+        return _result(detect_scenes(input_path, threshold=threshold, min_scene_duration=min_scene_duration))
+    except MCPVideoError as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_create_from_images(
+    images: list[str],
+    output_path: str | None = None,
+    fps: float = 30.0,
+) -> dict[str, Any]:
+    """Create a video from a sequence of images.
+
+    Args:
+        images: List of absolute paths to image files (in order).
+        output_path: Where to save the output video. Auto-generated if omitted.
+        fps: Frames per second for the output video (default 30.0).
+    """
+    try:
+        return _result(create_from_images(images, output_path=output_path, fps=fps))
+    except MCPVideoError as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_export_frames(
+    input_path: str,
+    output_dir: str | None = None,
+    fps: float = 1.0,
+    format: str = "jpg",
+) -> dict[str, Any]:
+    """Export frames from a video as individual images.
+
+    Args:
+        input_path: Absolute path to the input video.
+        output_dir: Directory for extracted frames. Auto-generated if omitted.
+        fps: Frames per second to extract (1.0 = 1 frame per second, default 1.0).
+        format: Output image format (jpg or png, default jpg).
+    """
+    try:
+        return _result(export_frames(input_path, output_dir=output_dir, fps=fps, format=format))
+    except MCPVideoError as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_compare_quality(
+    original_path: str,
+    distorted_path: str,
+    metrics: list[str] | None = None,
+) -> dict[str, Any]:
+    """Compare video quality between original and processed versions.
+
+    Args:
+        original_path: Absolute path to the original/reference video.
+        distorted_path: Absolute path to the processed/distorted video.
+        metrics: Metrics to compute (default: ['psnr', 'ssim']).
+    """
+    try:
+        return _result(compare_quality(original_path, distorted_path, metrics=metrics))
+    except MCPVideoError as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_read_metadata(
+    input_path: str,
+) -> dict[str, Any]:
+    """Read metadata tags from a video/audio file.
+
+    Args:
+        input_path: Absolute path to the video or audio file.
+    """
+    try:
+        return _result(read_metadata(input_path))
+    except MCPVideoError as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_write_metadata(
+    input_path: str,
+    metadata: dict[str, str],
+    output_path: str | None = None,
+) -> dict[str, Any]:
+    """Write metadata tags to a video/audio file.
+
+    Args:
+        input_path: Absolute path to the input file.
+        metadata: Dict of tag key-value pairs (e.g. {'title': 'My Video', 'artist': 'Me'}).
+        output_path: Where to save the output. Auto-generated if omitted.
+    """
+    try:
+        return _result(write_metadata(input_path, metadata=metadata, output_path=output_path))
     except MCPVideoError as e:
         return _error_result(e)
 

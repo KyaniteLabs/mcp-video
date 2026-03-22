@@ -31,8 +31,12 @@ from .models import (
     ErrorResult,
     ExportFormat,
     FilterType,
+    ImageSequenceResult,
+    MetadataResult,
     Position,
     QualityLevel,
+    QualityMetricsResult,
+    SceneDetectionResult,
     SplitLayout,
     StoryboardResult,
     SubtitleResult,
@@ -2272,6 +2276,349 @@ def audio_waveform(
         max_level=round(max_level, 1),
         min_level=round(min_level, 1),
         silence_regions=silence_regions,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Scene detection
+# ---------------------------------------------------------------------------
+
+def detect_scenes(
+    input_path: str,
+    threshold: float = 0.3,
+    min_scene_duration: float = 1.0,
+) -> SceneDetectionResult:
+    """Detect scene changes in a video.
+
+    Args:
+        input_path: Path to the input video.
+        threshold: Scene detection sensitivity (0.0-1.0, lower = more sensitive).
+        min_scene_duration: Minimum duration of a scene in seconds.
+    """
+    _validate_input(input_path)
+    info = probe(input_path)
+    duration = info.duration
+
+    # Use FFmpeg select filter with scene detection
+    proc = subprocess.run(
+        [
+            _ffmpeg(), "-i", input_path,
+            "-vf", f"select='gt(scene,{threshold})',showinfo",
+            "-f", "null", "-",
+        ],
+        capture_output=True, text=True, timeout=300,
+    )
+
+    # Parse showinfo output for scene change timestamps
+    scene_times: list[float] = []
+    for line in proc.stderr.split("\n"):
+        if "showinfo" in line and "pts_time:" in line:
+            try:
+                # Format: [showinfo @ ...] pts_time:X ...
+                pts_match = re.search(r"pts_time:(\d+\.?\d*)", line)
+                if pts_match:
+                    scene_times.append(float(pts_match.group(1)))
+            except (ValueError, IndexError):
+                continue
+
+    # Build scene list from timestamps
+    scenes: list[dict] = []
+    prev_time = 0.0
+    for t in scene_times:
+        if t - prev_time >= min_scene_duration:
+            scenes.append({
+                "start": round(prev_time, 2),
+                "end": round(t, 2),
+                "start_frame": int(prev_time * info.fps),
+                "end_frame": int(t * info.fps),
+            })
+            prev_time = t
+
+    # Add final scene
+    if duration - prev_time >= 0.1:
+        scenes.append({
+            "start": round(prev_time, 2),
+            "end": round(duration, 2),
+            "start_frame": int(prev_time * info.fps),
+            "end_frame": int(duration * info.fps),
+        })
+
+    return SceneDetectionResult(
+        scenes=scenes,
+        scene_count=len(scenes),
+        duration=duration,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Image sequences
+# ---------------------------------------------------------------------------
+
+def create_from_images(
+    images: list[str],
+    output_path: str | None = None,
+    fps: float = 30.0,
+) -> EditResult:
+    """Create a video from a sequence of images.
+
+    Args:
+        images: List of image file paths.
+        output_path: Where to save the output video.
+        fps: Frames per second for the output video.
+    """
+    if not images:
+        raise MCPVideoError(
+            "No images provided",
+            error_type="validation_error",
+            code="empty_images",
+        )
+    for img in images:
+        if not os.path.isfile(img):
+            raise InputFileError(img)
+
+    output = output_path or _auto_output(images[0], "from_images")
+    tmpdir = tempfile.mkdtemp(prefix="mcp_video_imgseq_")
+    try:
+        # Build concat file
+        concat_file = os.path.join(tmpdir, "concat.txt")
+        # Get duration per image (1/fps)
+        img_duration = 1.0 / fps
+        with open(concat_file, "w") as f:
+            for img in images:
+                abs_path = os.path.abspath(img).replace("'", "'\\''")
+                f.write(f"file '{abs_path}'\n")
+                f.write(f"duration {img_duration}\n")
+            # FFmpeg concat demuxer needs the last file repeated without duration
+            abs_last = os.path.abspath(images[-1]).replace("'", "'\\''")
+            f.write(f"file '{abs_last}'\n")
+
+        _run_ffmpeg([
+            "-f", "concat", "-safe", "0",
+            "-i", concat_file,
+            "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2",
+            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+            "-pix_fmt", "yuv420p",
+        ] + _movflags_args(output) + [
+            output,
+        ])
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+    result_info = probe(output)
+    return EditResult(
+        output_path=output,
+        duration=result_info.duration,
+        resolution=result_info.resolution,
+        size_mb=result_info.size_mb,
+        format="mp4",
+        operation="create_from_images",
+    )
+
+
+def export_frames(
+    input_path: str,
+    output_dir: str | None = None,
+    fps: float = 1.0,
+    format: str = "jpg",
+) -> ImageSequenceResult:
+    """Export frames from a video as individual images.
+
+    Args:
+        input_path: Path to the input video.
+        output_dir: Directory for extracted frames.
+        fps: Frames per second to extract (1.0 = 1 frame per second).
+        format: Output image format (jpg, png).
+    """
+    _validate_input(input_path)
+    info = probe(input_path)
+
+    out_dir = output_dir or _auto_output_dir(input_path, "frames")
+    os.makedirs(out_dir, exist_ok=True)
+
+    ext = format if format.startswith(".") else f".{format}"
+    pattern = os.path.join(out_dir, f"frame_%04d{ext}")
+
+    _run_ffmpeg([
+        "-i", input_path,
+        "-vf", f"fps={fps}",
+        "-q:v", "2",
+        "-y",
+        pattern,
+    ])
+
+    # Collect generated frame paths
+    frame_paths = sorted([
+        os.path.join(out_dir, f)
+        for f in os.listdir(out_dir)
+        if f.startswith("frame_") and f.endswith(ext)
+    ])
+
+    return ImageSequenceResult(
+        frame_paths=frame_paths,
+        frame_count=len(frame_paths),
+        fps=fps,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Quality metrics
+# ---------------------------------------------------------------------------
+
+def compare_quality(
+    original_path: str,
+    distorted_path: str,
+    metrics: list[str] | None = None,
+) -> QualityMetricsResult:
+    """Compare video quality between original and distorted versions.
+
+    Args:
+        original_path: Path to the original/reference video.
+        distorted_path: Path to the distorted/processed video.
+        metrics: List of metrics to compute (default: ["psnr", "ssim"]).
+    """
+    _validate_input(original_path)
+    _validate_input(distorted_path)
+    metrics = metrics or ["psnr", "ssim"]
+
+    computed: dict[str, float] = {}
+
+    for metric in metrics:
+        metric_lower = metric.lower()
+        if metric_lower not in ("psnr", "ssim"):
+            continue
+
+        try:
+            filter_str = f"[0:v][1:v]{metric_lower}"
+            proc = subprocess.run(
+                [
+                    _ffmpeg(), "-i", original_path, "-i", distorted_path,
+                    "-lavfi", filter_str,
+                    "-f", "null", "-",
+                ],
+                capture_output=True, text=True, timeout=300,
+            )
+
+            # Parse metric value from stderr
+            for line in proc.stderr.split("\n"):
+                if metric_lower == "psnr" and "psnr" in line.lower():
+                    try:
+                        # Format: [Parsed_psnr ...] psnr=XX.XX
+                        val_match = re.search(r"psnr[=:]?\s*([0-9.]+)", line, re.IGNORECASE)
+                        if val_match:
+                            computed["psnr"] = float(val_match.group(1))
+                    except (ValueError, IndexError):
+                        continue
+                elif metric_lower == "ssim" and "ssim" in line.lower():
+                    try:
+                        # Format: [Parsed_ssim ...] All:X.XXXXXX
+                        val_match = re.search(r"All[:\s]+([0-9.]+)", line)
+                        if val_match:
+                            computed["ssim"] = float(val_match.group(1))
+                    except (ValueError, IndexError):
+                        continue
+        except Exception:
+            continue
+
+    # Determine overall quality
+    if "ssim" in computed:
+        ssim_val = computed["ssim"]
+        if ssim_val >= 0.95:
+            overall = "high"
+        elif ssim_val >= 0.80:
+            overall = "medium"
+        else:
+            overall = "low"
+    elif "psnr" in computed:
+        psnr_val = computed["psnr"]
+        if psnr_val >= 40:
+            overall = "high"
+        elif psnr_val >= 30:
+            overall = "medium"
+        else:
+            overall = "low"
+    else:
+        overall = "unknown"
+
+    return QualityMetricsResult(
+        metrics=computed,
+        overall_quality=overall,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Metadata editing
+# ---------------------------------------------------------------------------
+
+def read_metadata(input_path: str) -> MetadataResult:
+    """Read metadata tags from a video/audio file.
+
+    Args:
+        input_path: Path to the input file.
+    """
+    _validate_input(input_path)
+    data = _run_ffprobe_json(input_path)
+
+    # Extract tags from format
+    fmt_tags = data.get("format", {}).get("tags", {})
+    # Also check stream tags
+    stream_tags: dict[str, str] = {}
+    for stream in data.get("streams", []):
+        for k, v in stream.get("tags", {}).items():
+            if k not in stream_tags:
+                stream_tags[k] = v
+
+    all_tags = {**stream_tags, **fmt_tags}
+
+    return MetadataResult(
+        title=all_tags.pop("title", None),
+        artist=all_tags.pop("artist", None),
+        album=all_tags.pop("album", None),
+        comment=all_tags.pop("comment", None),
+        date=all_tags.pop("date", None) or all_tags.pop("creation_time", None),
+        tags=all_tags,
+    )
+
+
+def write_metadata(
+    input_path: str,
+    metadata: dict[str, str],
+    output_path: str | None = None,
+) -> EditResult:
+    """Write metadata tags to a video/audio file.
+
+    Args:
+        input_path: Path to the input file.
+        metadata: Dict of tag key-value pairs (e.g. {"title": "My Video", "artist": "Me"}).
+        output_path: Where to save the output. If None, overwrites in place with a temp file.
+    """
+    _validate_input(input_path)
+    if not metadata:
+        raise MCPVideoError(
+            "No metadata provided",
+            error_type="validation_error",
+            code="empty_metadata",
+        )
+
+    output = output_path or _auto_output(input_path, "tagged")
+
+    args = ["-i", input_path]
+    for key, value in metadata.items():
+        args.extend(["-metadata", f"{key}={value}"])
+    args.extend([
+        "-c:v", "copy", "-c:a", "copy",
+    ] + _movflags_args(output) + [
+        output,
+    ])
+    _run_ffmpeg(args)
+
+    result_info = probe(output)
+    return EditResult(
+        output_path=output,
+        duration=result_info.duration,
+        resolution=result_info.resolution,
+        size_mb=result_info.size_mb,
+        format=result_info.format,
+        operation="write_metadata",
     )
 
 

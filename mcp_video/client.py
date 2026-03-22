@@ -8,9 +8,13 @@ from .engine import (
     add_audio as _add_audio,
     add_text as _add_text,
     apply_filter as _apply_filter,
+    compare_quality as _compare_quality,
     convert as _convert,
+    create_from_images as _create_from_images,
     crop as _crop,
+    detect_scenes as _detect_scenes,
     edit_timeline as _edit_timeline,
+    export_frames as _export_frames,
     export_video as _export_video,
     extract_audio as _extract_audio,
     fade as _fade,
@@ -19,6 +23,7 @@ from .engine import (
     overlay_video as _overlay_video,
     preview as _preview,
     probe as _probe,
+    read_metadata as _read_metadata,
     resize as _resize,
     rotate as _rotate,
     split_screen as _split_screen,
@@ -28,12 +33,17 @@ from .engine import (
     thumbnail as _thumbnail,
     trim as _trim,
     watermark as _watermark,
+    write_metadata as _write_metadata,
 )
 from .models import (
     EditResult,
     ExportFormat,
+    ImageSequenceResult,
+    MetadataResult,
     Position,
     QualityLevel,
+    QualityMetricsResult,
+    SceneDetectionResult,
     StoryboardResult,
     ThumbnailResult,
     VideoInfo,
@@ -365,6 +375,59 @@ class Client:
     ) -> EditResult:
         """Place two videos side by side or top/bottom."""
         return _split_screen(left, right_path=right, layout=layout, output_path=output)
+
+    def detect_scenes(
+        self,
+        video: str,
+        threshold: float = 0.3,
+        min_scene_duration: float = 1.0,
+    ) -> SceneDetectionResult:
+        """Detect scene changes in a video."""
+        return _detect_scenes(video, threshold=threshold, min_scene_duration=min_scene_duration)
+
+    def create_from_images(
+        self,
+        images: list[str],
+        output: str | None = None,
+        fps: float = 30.0,
+    ) -> EditResult:
+        """Create a video from a sequence of images."""
+        return _create_from_images(images, output_path=output, fps=fps)
+
+    def export_frames(
+        self,
+        video: str,
+        output_dir: str | None = None,
+        fps: float = 1.0,
+        format: str = "jpg",
+    ) -> ImageSequenceResult:
+        """Export frames from a video as images."""
+        return _export_frames(video, output_dir=output_dir, fps=fps, format=format)
+
+    def compare_quality(
+        self,
+        original: str,
+        distorted: str,
+        metrics: list[str] | None = None,
+    ) -> QualityMetricsResult:
+        """Compare video quality between original and processed versions."""
+        return _compare_quality(original, distorted, metrics=metrics)
+
+    def read_metadata(
+        self,
+        video: str,
+    ) -> MetadataResult:
+        """Read metadata tags from a video/audio file."""
+        return _read_metadata(video)
+
+    def write_metadata(
+        self,
+        video: str,
+        metadata: dict[str, str],
+        output: str | None = None,
+    ) -> EditResult:
+        """Write metadata tags to a video/audio file."""
+        return _write_metadata(video, metadata=metadata, output_path=output)
 
     def batch(
         self,

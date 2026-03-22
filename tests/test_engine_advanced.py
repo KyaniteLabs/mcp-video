@@ -743,3 +743,142 @@ class TestTwoPassEncoding:
         """Two-pass encoding only supports mp4 and mov formats."""
         with pytest.raises(MCPVideoError, match="[Tt]wo.pass"):
             convert(sample_video, format="webm", two_pass=True, target_bitrate=1000)
+
+
+# ---------------------------------------------------------------------------
+# Wave 3: Scene Detection
+# ---------------------------------------------------------------------------
+
+class TestSceneDetection:
+    def test_detect_scenes_returns_result(self, sample_video):
+        from mcp_video.engine import detect_scenes
+        result = detect_scenes(sample_video)
+        assert result.success is True
+        assert result.duration > 0
+        assert isinstance(result.scenes, list)
+        assert isinstance(result.scene_count, int)
+
+    def test_detect_scenes_custom_threshold(self, sample_video):
+        from mcp_video.engine import detect_scenes
+        result = detect_scenes(sample_video, threshold=0.5)
+        assert result.success is True
+
+    def test_detect_scenes_min_duration(self, sample_video):
+        from mcp_video.engine import detect_scenes
+        result = detect_scenes(sample_video, min_scene_duration=0.5)
+        assert result.success is True
+        # Verify no scene is shorter than min_duration
+        for scene in result.scenes:
+            assert scene["end"] - scene["start"] >= 0.4  # small tolerance
+
+    def test_detect_scenes_nonexistent_file(self):
+        from mcp_video.engine import detect_scenes
+        with pytest.raises(InputFileError):
+            detect_scenes("/nonexistent/video.mp4")
+
+
+# ---------------------------------------------------------------------------
+# Wave 3: Image Sequences
+# ---------------------------------------------------------------------------
+
+class TestImageSequences:
+    def test_create_from_images(self, sample_video, tmp_path):
+        from mcp_video.engine import create_from_images
+        # First export frames, then create video from them
+        from mcp_video.engine import export_frames
+        frames_dir = str(tmp_path / "frames")
+        frames_result = export_frames(sample_video, output_dir=frames_dir, fps=1.0)
+        assert len(frames_result.frame_paths) > 0
+
+        out = str(tmp_path / "from_images.mp4")
+        result = create_from_images(frames_result.frame_paths, output_path=out, fps=1.0)
+        assert os.path.isfile(result.output_path)
+        assert result.operation == "create_from_images"
+
+    def test_create_from_images_empty_raises(self):
+        from mcp_video.engine import create_from_images
+        with pytest.raises(MCPVideoError, match="No images"):
+            create_from_images([])
+
+    def test_create_from_images_invalid_file_raises(self):
+        from mcp_video.engine import create_from_images
+        with pytest.raises(InputFileError):
+            create_from_images(["/nonexistent/image.jpg"])
+
+    def test_export_frames(self, sample_video, tmp_path):
+        from mcp_video.engine import export_frames
+        out_dir = str(tmp_path / "exported")
+        result = export_frames(sample_video, output_dir=out_dir, fps=1.0)
+        assert result.success is True
+        assert result.frame_count > 0
+        assert result.fps == 1.0
+        for fp in result.frame_paths:
+            assert os.path.isfile(fp)
+
+    def test_export_frames_png(self, sample_video, tmp_path):
+        from mcp_video.engine import export_frames
+        out_dir = str(tmp_path / "exported_png")
+        result = export_frames(sample_video, output_dir=out_dir, fps=1.0, format="png")
+        assert result.frame_count > 0
+        for fp in result.frame_paths:
+            assert fp.endswith(".png")
+
+
+# ---------------------------------------------------------------------------
+# Wave 3: Quality Metrics
+# ---------------------------------------------------------------------------
+
+class TestQualityMetrics:
+    def test_compare_quality_same_file(self, sample_video):
+        """Comparing a file to itself should yield high quality."""
+        from mcp_video.engine import compare_quality
+        result = compare_quality(sample_video, sample_video)
+        assert result.success is True
+        assert isinstance(result.metrics, dict)
+        assert result.overall_quality == "high"
+
+    def test_compare_quality_default_metrics(self, sample_video):
+        from mcp_video.engine import compare_quality
+        result = compare_quality(sample_video, sample_video, metrics=["psnr", "ssim"])
+        assert "psnr" in result.metrics or "ssim" in result.metrics
+
+    def test_compare_quality_nonexistent_original(self, sample_video):
+        from mcp_video.engine import compare_quality
+        with pytest.raises(InputFileError):
+            compare_quality("/nonexistent/original.mp4", sample_video)
+
+
+# ---------------------------------------------------------------------------
+# Wave 3: Metadata Editing
+# ---------------------------------------------------------------------------
+
+class TestMetadataEditing:
+    def test_read_metadata(self, sample_video):
+        from mcp_video.engine import read_metadata
+        result = read_metadata(sample_video)
+        assert result.success is True
+        assert isinstance(result.tags, dict)
+
+    def test_read_metadata_nonexistent(self):
+        from mcp_video.engine import read_metadata
+        with pytest.raises(InputFileError):
+            read_metadata("/nonexistent/video.mp4")
+
+    def test_write_and_read_metadata(self, sample_video, tmp_path):
+        from mcp_video.engine import read_metadata, write_metadata
+        out = str(tmp_path / "tagged.mp4")
+        tags = {"title": "Test Video", "artist": "Test Artist"}
+        result = write_metadata(sample_video, metadata=tags, output_path=out)
+        assert os.path.isfile(result.output_path)
+        assert result.operation == "write_metadata"
+
+        # Read back and verify
+        read_back = read_metadata(out)
+        assert read_back.title == "Test Video"
+        assert read_back.artist == "Test Artist"
+
+    def test_write_metadata_empty_raises(self, sample_video):
+        from mcp_video.engine import write_metadata
+        with pytest.raises(MCPVideoError, match="No metadata"):
+            write_metadata(sample_video, metadata={})
+
