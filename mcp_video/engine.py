@@ -2319,6 +2319,8 @@ def detect_scenes(
         ],
         capture_output=True, text=True, timeout=300,
     )
+    if proc.returncode != 0:
+        raise parse_ffmpeg_error(proc.stderr)
 
     # Parse showinfo output for scene change timestamps
     scene_times: list[float] = []
@@ -2536,6 +2538,12 @@ def compare_quality(
                 ],
                 capture_output=True, text=True, timeout=300,
             )
+            if proc.returncode != 0:
+                raise ProcessingError(
+                    f"FFmpeg failed to compute {metric_lower} metric",
+                    input_path=original_path,
+                    stderr=proc.stderr[:500],
+                )
 
             # Parse metric value from stderr
             for line in proc.stderr.split("\n"):
@@ -2641,13 +2649,19 @@ def write_metadata(
             code="empty_metadata",
         )
 
-    # Validate metadata keys don't contain '=' or newline which would break the command
-    for key in metadata.keys():
+    # Validate metadata keys and values don't contain '=' or newline which would break the command
+    for key, value in metadata.items():
         if "=" in key or "\n" in key:
             raise MCPVideoError(
                 f"Invalid metadata key '{key}': keys cannot contain '=' or newline characters",
                 error_type="validation_error",
                 code="invalid_metadata_key",
+            )
+        if "=" in str(value) or "\n" in str(value):
+            raise MCPVideoError(
+                f"Invalid metadata value for '{key}': values cannot contain '=' or newline characters",
+                error_type="validation_error",
+                code="invalid_metadata_value",
             )
 
     output = output_path or _auto_output(input_path, "tagged")
