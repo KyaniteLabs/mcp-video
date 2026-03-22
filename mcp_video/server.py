@@ -11,6 +11,7 @@ from .engine import (
     add_audio,
     add_text,
     apply_filter,
+    chroma_key,
     convert,
     crop,
     edit_timeline,
@@ -23,6 +24,7 @@ from .engine import (
     preview,
     probe,
     resize,
+    reverse,
     rotate,
     split_screen,
     storyboard,
@@ -631,6 +633,46 @@ def video_filter(
     """
     try:
         return _result(apply_filter(input_path, filter_type=filter_type, params=params, output_path=output_path))
+    except MCPVideoError as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_reverse(
+    input_path: str,
+    output_path: str | None = None,
+) -> dict[str, Any]:
+    """Reverse video and audio playback so it plays backwards.
+
+    Args:
+        input_path: Absolute path to the input video.
+        output_path: Where to save the output. Auto-generated if omitted.
+    """
+    try:
+        return _result(reverse(input_path, output_path=output_path))
+    except MCPVideoError as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_chroma_key(
+    input_path: str,
+    color: str = "0x00FF00",
+    similarity: float = 0.01,
+    blend: float = 0.0,
+    output_path: str | None = None,
+) -> dict[str, Any]:
+    """Remove a solid color background (green screen / chroma key).
+
+    Args:
+        input_path: Absolute path to the input video.
+        color: Color to make transparent in hex format (default green: 0x00FF00).
+        similarity: How similar colors need to be to be keyed out (0.0-1.0, default 0.01).
+        blend: How much to blend the keyed color (default 0.0).
+        output_path: Where to save the output. Auto-generated if omitted.
+    """
+    try:
+        return _result(chroma_key(input_path, color=color, similarity=similarity, blend=blend, output_path=output_path))
     except MCPVideoError as e:
         return _error_result(e)
 

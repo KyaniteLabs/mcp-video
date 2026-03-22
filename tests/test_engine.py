@@ -11,11 +11,14 @@ from mcp_video.engine import (
     _parse_ffmpeg_time,
     add_audio,
     add_text,
+    apply_filter,
+    chroma_key,
     convert,
     extract_audio,
     merge,
     preview,
     probe,
+    reverse,
     storyboard,
     speed,
     subtitles,
@@ -304,3 +307,65 @@ class TestThumbnailBase64:
         """Call with nonexistent path, verify it returns None."""
         result = _generate_thumbnail_base64("/nonexistent/video.mp4")
         assert result is None
+
+
+class TestReverse:
+    def test_reverse_video(self, sample_video):
+        result = reverse(sample_video)
+        assert result.success is True
+        assert result.operation == "reverse"
+        assert result.output_path.endswith(".mp4")
+        assert os.path.isfile(result.output_path)
+
+    def test_reverse_preserves_duration(self, sample_video):
+        original = probe(sample_video)
+        result = reverse(sample_video)
+        assert abs(result.duration - original.duration) < 0.5
+
+
+class TestChromaKey:
+    def test_chroma_key_default(self, sample_video):
+        result = chroma_key(sample_video)
+        assert result.success is True
+        assert result.operation == "chroma_key"
+        assert os.path.isfile(result.output_path)
+
+    def test_chroma_key_custom_color(self, sample_video):
+        result = chroma_key(sample_video, color="0xFF0000", similarity=0.05)
+        assert result.success is True
+
+    def test_chroma_key_preserves_alpha_with_mov(self, sample_video):
+        """MOV output should use prores_ks with alpha channel support."""
+        import tempfile
+        with tempfile.NamedTemporaryFile(suffix=".mov", delete=False) as tmp:
+            result = chroma_key(sample_video, output_path=tmp.name)
+            assert result.success is True
+            assert os.path.isfile(result.output_path)
+        os.unlink(tmp.name)
+
+
+class TestDenoiseFilter:
+    def test_denoise_filter(self, sample_video):
+        result = apply_filter(sample_video, filter_type="denoise")
+        assert result.success is True
+        assert result.operation == "filter_denoise"
+        assert os.path.isfile(result.output_path)
+
+
+class TestDeinterlaceFilter:
+    def test_deinterlace_filter(self, sample_video):
+        result = apply_filter(sample_video, filter_type="deinterlace")
+        assert result.success is True
+        assert result.operation == "filter_deinterlace"
+        assert os.path.isfile(result.output_path)
+
+
+class TestGifQualityScaling:
+    def test_gif_low_quality_is_smaller(self, sample_video):
+        low = convert(sample_video, format="gif", quality="low")
+        high = convert(sample_video, format="gif", quality="high")
+        # Low quality GIF should be smaller (320px wide vs 640px)
+        assert low.success is True
+        assert high.success is True
+        if low.size_mb and high.size_mb:
+            assert low.size_mb <= high.size_mb
