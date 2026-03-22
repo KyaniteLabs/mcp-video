@@ -584,13 +584,19 @@ def main() -> None:
 
         elif args.command == "reverse":
             from .engine import reverse
-            result = reverse(args.input, output_path=args.output)
-            print(json.dumps(result.model_dump(), indent=2))
+            result = _with_spinner("Reversing...", reverse, args.input, output_path=args.output)
+            if use_json:
+                output_json(result)
+            else:
+                _format_edit_text(result)
 
         elif args.command == "chroma-key":
             from .engine import chroma_key
-            result = chroma_key(args.input, color=args.color, similarity=args.similarity, blend=args.blend, output_path=args.output)
-            print(json.dumps(result.model_dump(), indent=2))
+            result = _with_spinner("Removing green screen...", chroma_key, args.input, color=args.color, similarity=args.similarity, blend=args.blend, output_path=args.output)
+            if use_json:
+                output_json(result)
+            else:
+                _format_edit_text(result)
 
         elif args.command == "color-grade":
             from .engine import apply_filter
