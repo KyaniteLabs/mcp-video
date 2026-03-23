@@ -1,10 +1,10 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.4.1-blue.svg" alt="Version">
-  <img src="https://img.shields.io/badge/tests-396%20passed-brightgreen.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/version-0.5.0-blue.svg" alt="Version">
+  <img src="https://img.shields.io/badge/tests-545%20passed-brightgreen.svg" alt="Tests">
   <a href="https://github.com/pastorsimon1798/mcp-video/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/pastorsimon1798/mcp-video/.github/workflows/ci.yml?branch=master&label=CI" alt="CI"></a>
   <a href="https://glama.ai/mcp/servers/pastorsimon1798/mcp-video"><img src="https://glama.ai/mcp/servers/pastorsimon1798/mcp-video/badges/score.svg" alt="Glama Score"></a>
   <img src="https://img.shields.io/badge/pypi-mcp--video-blue.svg" alt="PyPI">
-  <img src="https://img.shields.io/badge/tools-29%20MCP%20tools-orange.svg" alt="Tools">
+  <img src="https://img.shields.io/badge/tools-40%20MCP%20tools-orange.svg" alt="Tools">
   <img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="License">
   <img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python">
 </p>
@@ -13,7 +13,7 @@
 
 <p align="center">
   <strong>The video editing MCP server for AI agents and humans.</strong><br>
-  26 tools. 3 interfaces. Rich CLI. Purpose-built for AI agents.
+  40 tools. 3 interfaces. Rich CLI. Purpose-built for AI agents.
 </p>
 
 <p align="center">
@@ -210,7 +210,9 @@ mcp_video template tiktok video.mp4 --caption "Check this out!"
 
 ## MCP Tools
 
-mcp-video exposes 29 tools for AI agents. All tools return structured JSON with `success`, `output_path`, and operation metadata. On failure, they return `{"success": false, "error": {...}}` with auto-fix suggestions.
+mcp-video exposes 40 tools for AI agents. All tools return structured JSON with `success`, `output_path`, and operation metadata. On failure, they return `{"success": false, "error": {...}}` with auto-fix suggestions.
+
+**New in v0.5.0:** Ken Burns effect, two-pass encoding, audio effects (reverb, compressor, pitch shift, noise reduction), scene detection, image sequences, quality metrics (PSNR/SSIM), metadata editing, video stabilization, subtitle generation, and audio waveform extraction.
 
 **New in v0.4.0:** Video reverse playback, green screen / chroma key removal, denoise and deinterlace filters, and smarter GIF output with quality-based scaling.
 
@@ -225,6 +227,13 @@ mcp-video exposes 29 tools for AI agents. All tools return structured JSON with 
 | `video_merge` | Concatenate multiple clips | `clips[]`, `transitions[]`, `transition_duration` |
 | `video_speed` | Change playback speed | `input_path`, `factor` (0.5=slow, 2.0=fast) |
 | `video_reverse` | Reverse video and audio playback | `input_path` |
+| `video_stabilize` | Stabilize shaky footage (requires vidstab) | `input_path`, `smoothing`, `zoom` |
+| `video_detect_scenes` | Auto-detect scene changes | `input_path`, `threshold` |
+| `video_create_from_images` | Create video from image sequence | `images[]`, `fps`, `output_path` |
+| `video_export_frames` | Export video as image frames | `input_path`, `fps`, `output_dir` |
+| `video_compare_quality` | Compare PSNR/SSIM metrics | `input_path`, `reference_path` |
+| `video_read_metadata` | Read video metadata tags | `input_path` |
+| `video_write_metadata` | Write video metadata tags | `input_path`, `metadata` |
 
 ### Effects & Overlays
 
@@ -233,6 +242,7 @@ mcp-video exposes 29 tools for AI agents. All tools return structured JSON with 
 | `video_add_text` | Overlay text/title | `input_path`, `text`, `position`, `size`, `color` |
 | `video_add_audio` | Add or replace audio | `video_path`, `audio_path`, `volume`, `mix` |
 | `video_subtitles` | Burn SRT/VTT subtitles | `input_path`, `subtitle_path` |
+| `video_generate_subtitles` | Create SRT from text entries | `entries[]`, `output_path`, `burn` |
 | `video_watermark` | Add image watermark | `input_path`, `image_path`, `position`, `opacity` |
 | `video_crop` | Crop to rectangular region | `input_path`, `width`, `height`, `x?`, `y?` |
 | `video_rotate` | Rotate and/or flip video | `input_path`, `angle`, `flip_horizontal`, `flip_vertical` |
@@ -251,7 +261,8 @@ mcp-video exposes 29 tools for AI agents. All tools return structured JSON with 
 
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
-| `video_filter` | Apply visual filter (blur, sharpen, grayscale, sepia, invert, vignette, brightness, contrast, saturation, denoise, deinterlace) | `input_path`, `filter_type`, `params` |
+| `video_filter` | Apply visual filter (blur, sharpen, grayscale, sepia, invert, vignette, brightness, contrast, saturation, denoise, deinterlace, ken_burns) | `input_path`, `filter_type`, `params` |
+| `video_apply_mask` | Apply image mask with feathering | `input_path`, `mask_path`, `feather` |
 | `video_blur` | Blur video | `input_path`, `radius`, `strength` |
 | `video_color_grade` | Apply color preset (warm, cool, vintage, cinematic, noir) | `input_path`, `preset` |
 
@@ -260,6 +271,11 @@ mcp-video exposes 29 tools for AI agents. All tools return structured JSON with 
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
 | `video_normalize_audio` | Normalize loudness to LUFS target | `input_path`, `target_lufs` (-16 YouTube, -23 broadcast, -14 Spotify) |
+| `video_audio_waveform` | Extract audio waveform peaks/silence | `input_path`, `bins` |
+| `video_audio_reverb` | Add echo/reverb effect | `input_path`, `room_size`, `damping` |
+| `video_audio_compressor` | Dynamic range compression | `input_path`, `threshold`, `ratio` |
+| `video_audio_pitch_shift` | Change pitch (maintains duration) | `input_path`, `semitones` |
+| `video_audio_noise_reduction` | Remove background noise | `input_path`, `strength` |
 
 ### Composition
 
@@ -340,6 +356,20 @@ editor = Client()
 | `split_screen(left, right, layout?, output?)` | `EditResult` | Side-by-side or top/bottom layout |
 | `reverse(video, output?)` | `EditResult` | Reverse video and audio playback |
 | `chroma_key(video, color?, similarity?, blend?, output?)` | `EditResult` | Remove solid color background (green screen) |
+| `stabilize(video, smoothing?, zoom?, output?)` | `EditResult` | Stabilize shaky footage |
+| `apply_mask(video, mask, feather?, output?)` | `EditResult` | Apply image mask with feathering |
+| `detect_scenes(video, threshold?, output?)` | `SceneDetectionResult` | Auto-detect scene changes |
+| `create_from_images(images, fps?, output?)` | `ImageSequenceResult` | Create video from image sequence |
+| `export_frames(video, fps?, output_dir?)` | `ImageSequenceResult` | Export video as image frames |
+| `compare_quality(video, reference, output?)` | `QualityMetricsResult` | Compare PSNR/SSIM metrics |
+| `read_metadata(video)` | `MetadataResult` | Read video metadata tags |
+| `write_metadata(video, metadata, output?)` | `EditResult` | Write video metadata tags |
+| `generate_subtitles(entries, output?, burn?)` | `SubtitleResult` | Create SRT subtitles |
+| `audio_waveform(video, bins?)` | `WaveformResult` | Extract audio waveform |
+| `audio_reverb(video, room_size?, damping?, output?)` | `EditResult` | Add reverb effect |
+| `audio_compressor(video, threshold?, ratio?, output?)` | `EditResult` | Dynamic range compression |
+| `audio_pitch_shift(video, semitones?, output?)` | `EditResult` | Change pitch |
+| `audio_noise_reduction(video, strength?, output?)` | `EditResult` | Remove background noise |
 | `batch(inputs, operation, params?)` | `dict` | Apply operation to multiple files |
 
 ### Return Models
@@ -355,6 +385,18 @@ EditResult(success=True, output_path, duration, resolution, size_mb, format, ope
 ThumbnailResult(success=True, frame_path, timestamp)
 
 StoryboardResult(success=True, frames=["f1.jpg", ...], grid="grid.jpg", count=8)
+
+SceneDetectionResult(success=True, scenes=[(start, end), ...], scene_count=5)
+
+ImageSequenceResult(success=True, frame_count=120, fps=30, duration=4.0, output_path)
+
+SubtitleResult(success=True, subtitle_path, entries_count=15)
+
+WaveformResult(success=True, peaks=[...], silence_regions=[...], bin_count=50)
+
+QualityMetricsResult(success=True, psnr=45.2, ssim=0.98)
+
+MetadataResult(success=True, metadata={...})
 ```
 
 ---
@@ -365,36 +407,50 @@ StoryboardResult(success=True, frames=["f1.jpg", ...], grid="grid.jpg", count=8)
 mcp_video [command] [options]
 
 Commands:
-  info           Get video metadata
-  trim           Trim a video
-  merge          Merge multiple clips
-  add-text       Overlay text on a video
-  add-audio      Add or replace audio track
-  resize         Resize or change aspect ratio
-  convert        Convert video format
-  speed          Change playback speed
-  thumbnail      Extract a single frame
-  preview        Generate fast low-res preview
-  storyboard     Extract key frames as storyboard
-  subtitles      Burn subtitles into video
-  watermark      Add image watermark
-  crop           Crop to rectangular region
-  rotate         Rotate and/or flip video
-  fade           Add video fade in/out
-  export         Export with quality settings
-  extract-audio  Extract audio track
-  edit           Execute timeline-based edit from JSON
-  filter         Apply visual filter (blur, sharpen, grayscale, etc.)
-  blur           Blur video
-  color-grade    Apply color preset (warm, cool, vintage, etc.)
-  normalize-audio Normalize audio to LUFS target
-  overlay-video  Picture-in-picture overlay
-  split-screen   Side-by-side or top/bottom layout
-  reverse        Reverse video playback
-  chroma-key     Remove solid color background (green screen)
-  batch          Apply operation to multiple files
-  templates      List available video templates
-  template       Apply a video template (tiktok, youtube-shorts, etc.)
+  info               Get video metadata
+  trim               Trim a video
+  merge              Merge multiple clips
+  add-text           Overlay text on a video
+  add-audio          Add or replace audio track
+  resize             Resize or change aspect ratio
+  convert            Convert video format (with two-pass encoding)
+  speed              Change playback speed
+  thumbnail          Extract a single frame
+  preview            Generate fast low-res preview
+  storyboard         Extract key frames as storyboard
+  subtitles          Burn subtitles into video
+  generate-subtitles Create SRT subtitles from text
+  watermark          Add image watermark
+  crop               Crop to rectangular region
+  rotate             Rotate and/or flip video
+  fade               Add video fade in/out
+  export             Export with quality settings
+  extract-audio      Extract audio track
+  edit               Execute timeline-based edit from JSON
+  filter             Apply visual filter (blur, sharpen, grayscale, ken_burns, etc.)
+  blur               Blur video
+  color-grade        Apply color preset (warm, cool, vintage, etc.)
+  normalize-audio    Normalize audio to LUFS target
+  audio-waveform     Extract audio waveform data
+  audio-reverb       Add reverb effect
+  audio-compressor   Dynamic range compression
+  audio-pitch-shift  Change pitch while maintaining duration
+  audio-noise-reduction Remove background noise
+  overlay-video      Picture-in-picture overlay
+  split-screen       Side-by-side or top/bottom layout
+  reverse            Reverse video playback
+  chroma-key         Remove solid color background (green screen)
+  stabilize          Stabilize shaky footage
+  apply-mask         Apply image mask with feathering
+  detect-scenes      Detect scene changes automatically
+  create-from-images Create video from image sequence
+  export-frames      Export video as image frames
+  compare-quality    Compare PSNR/SSIM quality metrics
+  read-metadata      Read video metadata tags
+  write-metadata     Write video metadata tags
+  batch              Apply operation to multiple files
+  templates          List available video templates
+  template           Apply a video template (tiktok, youtube-shorts, etc.)
 
 Global Options:
   --format text|json  Output format (default: text — rich tables & spinners)
@@ -633,7 +689,7 @@ mcp-video parses FFmpeg errors and returns structured, actionable error response
 
 ## Testing
 
-mcp-video has **396 tests** across the full testing pyramid:
+mcp-video has **545 tests** across the full testing pyramid:
 
 ```
 tests/
