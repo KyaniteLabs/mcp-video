@@ -206,8 +206,11 @@
             background: var(--bg3);
             border-radius: 10px;
             display: flex; align-items: center; justify-content: center;
-            font-size: 1.3rem;
             margin-bottom: 1rem;
+        }
+        .feature-card .icon svg {
+            width: 22px; height: 22px;
+            fill: var(--accent2);
         }
         .feature-card h3 { font-size: 1.05rem; font-weight: 600; margin-bottom: 0.5rem; }
         .feature-card p { color: var(--text2); font-size: 0.9rem; }
@@ -296,70 +299,78 @@
     </p>
     <div class="grid-3">
         <div class="feature-card">
-            <div class="icon">&#9881;</div>
-            <h3>26 Video Editing Tools</h3>
-            <p>Trim, merge, add text, sync audio, resize, convert, speed change, watermarks, subtitles, storyboards, crop, rotate, fade, filters, color grading, audio normalization, PiP, split-screen, batch processing, and more.</p>
+            <div class="icon">
+                <svg viewBox="0 0 24 24"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
+            </div>
+            <h3>40 Video Editing Tools</h3>
+            <p>Trim, merge, add text, sync audio, resize, convert, speed change, watermarks, subtitles, storyboards, crop, rotate, fade, filters, color grading, audio processing, stabilization, scene detection, and more.</p>
         </div>
         <div class="feature-card">
-            <div class="icon">&#9889;</div>
-            <h3>Progress Callbacks</h3>
-            <p>Real-time progress reporting on long operations. Agents can tell you "50% done..." instead of going silent during converts and merges.</p>
-        </div>
-        <div class="feature-card">
-            <div class="icon">&#128274;</div>
+            <div class="icon">
+                <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
+            </div>
             <h3>Local & Private</h3>
             <p>Runs on your machine. No cloud uploads, no API keys, no per-minute billing. Your video never leaves your computer.</p>
         </div>
-    </div>
-    <div class="grid-2" style="margin-top: 1.5rem;">
         <div class="feature-card">
-            <div class="icon">&#128247;</div>
-            <h3>Visual Verification</h3>
-            <p>Returns a thumbnail of the output after every operation. Agents can confirm results look right without opening the file.</p>
-        </div>
-        <div class="feature-card">
-            <div class="icon">&#128295;</div>
+            <div class="icon">
+                <svg viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+            </div>
             <h3>Auto-Fix Error Handling</h3>
             <p>Parses FFmpeg errors into structured responses with actionable suggestions. "Codec error: vp9" becomes "Auto-convert from vp9 to H.264/AAC."</p>
         </div>
     </div>
     <div class="grid-3" style="margin-top: 1.5rem;">
         <div class="feature-card">
-            <div class="icon">&#127912;</div>
+            <div class="icon">
+                <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-2h2v2zm0-4H7v-2h2v2zm0-4H7V7h2v2zm4 8h-2v-2h2v2zm0-4h-2v-2h2v2zm0-4h-2V7h2v2zm4 8h-2v-2h2v2zm0-4h-2v-2h2v2zm0-4h-2V7h2v2z"/></svg>
+            </div>
             <h3>Filters & Color Grading</h3>
             <p>Blur, sharpen, brightness, contrast, saturation, grayscale, sepia, invert, vignette, Ken Burns animation. Plus color presets: warm, cool, vintage, cinematic, noir.</p>
         </div>
         <div class="feature-card">
-            <div class="icon">&#127925;</div>
+            <div class="icon">
+                <svg viewBox="0 0 24 24"><path d="M12 3v9.28c-.47-.17-.97-.28-1.5-.28C8.01 12 6 14.01 6 16.5S8.01 21 10.5 21c2.31 0 4.2-1.75 4.45-4H15V6h4V3h-7z"/></svg>
+            </div>
             <h3>Audio Processing Suite</h3>
             <p>Normalize to LUFS, add reverb, compress, pitch shift, reduce noise. Extract waveforms with peak detection and silence region analysis.</p>
         </div>
         <div class="feature-card">
-            <div class="icon">&#128246;</div>
+            <div class="icon">
+                <svg viewBox="0 0 24 24"><path d="M22 7h-7V2h-2v5H6V2H4v5H2v2h2v7H2v2h2v7h2v-7h7v7h2v-7h7v-2h-7V9h7V7zM8 9h7v7H8V9z"/></svg>
+            </div>
             <h3>Composition Tools</h3>
             <p>Picture-in-picture, split-screen, masks with feathering, and multi-track timeline editing for complex projects.</p>
         </div>
     </div>
     <div class="grid-2" style="margin-top: 1.5rem;">
         <div class="feature-card">
-            <div class="icon">&#128200;</div>
+            <div class="icon">
+                <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
+            </div>
             <h3>Video Analysis</h3>
             <p>Auto scene detection with threshold control, quality metrics (PSNR/SSIM) comparison, and comprehensive metadata editing.</p>
         </div>
         <div class="feature-card">
-            <div class="icon">&#127891;</div>
+            <div class="icon">
+                <svg viewBox="0 0 24 24"><path d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9 9H3V5h9v7zM3 19v-5h9v5H3zm18 0h-7v-5h7v5zm0-7h-7V5h7v7z"/></svg>
+            </div>
             <h3>Stabilization & Effects</h3>
             <p>Stabilize shaky footage with motion vectors. Create videos from image sequences. Generate and burn subtitles from text.</p>
         </div>
     </div>
     <div class="grid-2" style="margin-top: 1.5rem;">
         <div class="feature-card">
-            <div class="icon">&#128230;</div>
+            <div class="icon">
+                <svg viewBox="0 0 24 24"><path d="M18 4V3c0-.55-.45-1-1-1H5c-.55 0-1 .45-1 1v4c0 .55.45 1 1 1h12c.55 0 1-.45 1-1V6h1v4H9v11c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-9h8V4h-3z"/></svg>
+            </div>
             <h3>Batch Processing</h3>
             <p>Apply the same operation to multiple files in one call. Trim 10 videos, blur 5, or convert a whole directory at once.</p>
         </div>
         <div class="feature-card">
-            <div class="icon">&#9889;</div>
+            <div class="icon">
+                <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+            </div>
             <h3>Validation Before Execution</h3>
             <p>Filter types, color presets, and parameters are validated before hitting FFmpeg. Get clear error messages, not cryptic KeyError tracebacks.</p>
         </div>
@@ -427,27 +438,15 @@
                 </tr>
                 <tr>
                     <td style="color: var(--text); font-family: inherit;">Discovery</td>
-                    <td style="color: var(--green);">26 self-documenting tools</td>
+                    <td style="color: var(--green);">40 self-documenting tools</td>
                     <td style="color: var(--orange);">Must know hundreds of flags</td>
                     <td style="color: var(--text2);">API docs</td>
                 </tr>
                 <tr>
                     <td style="color: var(--text); font-family: inherit;">Testing</td>
-                    <td style="color: var(--green);">396 tests, CI-ready</td>
+                    <td style="color: var(--green);">545 tests, CI-ready</td>
                     <td style="color: var(--orange);">None (ad-hoc)</td>
                     <td style="color: var(--text2);">Provider's tests</td>
-                </tr>
-                <tr>
-                    <td style="color: var(--text); font-family: inherit;">Progress reporting</td>
-                    <td style="color: var(--green);">Real-time %</td>
-                    <td style="color: var(--orange);">Silence until done</td>
-                    <td style="color: var(--text2);">Varies</td>
-                </tr>
-                <tr>
-                    <td style="color: var(--text); font-family: inherit;">Visual verification</td>
-                    <td style="color: var(--green);">Thumbnail after ops</td>
-                    <td style="color: var(--orange);">No</td>
-                    <td style="color: var(--text2);">Varies</td>
                 </tr>
             </tbody>
         </table>
@@ -484,49 +483,6 @@
             <h3>Vendor lock-in</h3>
             <p>Your workflow depends on their API staying up, their pricing not changing, and their model versions not breaking your prompts. With mcp-video, FFmpeg runs on your machine &mdash; no API deprecation risk.</p>
         </div>
-    </div>
-
-    <div class="section-title" style="font-size: 1.3rem; margin-bottom: 1.5rem;">Saves tokens. Saves turns.</div>
-    <p style="color: var(--text2); font-size: 0.95rem; max-width: 650px; margin-bottom: 1.5rem;">
-        Every wasted turn costs money. With raw FFmpeg, Claude spends tokens parsing hundreds of lines of stderr, retrying failed commands, and re-probing files it already processed. mcp-video eliminates all of that.
-    </p>
-    <div class="table-wrap" style="margin-bottom: 0;">
-        <table>
-            <thead>
-                <tr>
-                    <th></th>
-                    <th style="color: var(--accent2);">mcp-video</th>
-                    <th>Claude Code + FFmpeg</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td style="color: var(--text); font-family: inherit;">Turns for 5 operations</td>
-                    <td style="color: var(--green);">4&ndash;5</td>
-                    <td style="color: var(--orange);">6&ndash;10</td>
-                </tr>
-                <tr>
-                    <td style="color: var(--text); font-family: inherit;">Output tokens per turn</td>
-                    <td style="color: var(--green);">50&ndash;80 (JSON)</td>
-                    <td style="color: var(--orange);">200&ndash;500 (stderr)</td>
-                </tr>
-                <tr>
-                    <td style="color: var(--text); font-family: inherit;">Error retries</td>
-                    <td style="color: var(--green);">0&ndash;1 (pre-validated)</td>
-                    <td style="color: var(--orange);">2&ndash;3 typical</td>
-                </tr>
-                <tr>
-                    <td style="color: var(--text); font-family: inherit;">Re-probing between steps</td>
-                    <td style="color: var(--green);">Never</td>
-                    <td style="color: var(--orange);">Every step</td>
-                </tr>
-                <tr>
-                    <td style="color: var(--text); font-family: inherit;">Token reduction</td>
-                    <td style="color: var(--green); font-weight: 600;">~40&ndash;50% fewer turns</td>
-                    <td style="color: var(--text3);">baseline</td>
-                </tr>
-            </tbody>
-        </table>
     </div>
 </section>
 
