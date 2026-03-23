@@ -2733,7 +2733,7 @@ def stabilize(
         # Pass 2: apply stabilization
         _run_ffmpeg([
             "-i", input_path,
-            "-vf", f"vidstabtransform=input={vectors_file}:smoothing={smoothing}:zooming={zooming}:crop=black",
+            "-vf", f"vidstabtransform=input={vectors_file}:smoothing={smoothing}:zoom={zooming}:crop=black",
             "-c:v", "libx264", "-preset", "fast", "-crf", "23",
             "-c:a", "aac", "-b:a", "128k",
         ] + _movflags_args(output) + [
