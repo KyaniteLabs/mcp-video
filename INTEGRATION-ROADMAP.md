@@ -44,74 +44,74 @@ Blender MCP (3D vessel modeling + rotation animation)
 
 ---
 
-## 2. Image Analysis MCP — HIGH PRIORITY - APPROVED
+## 2. Image Analysis MCP — COMPLETED
 
-### Status: Build thin wrapper (recommended approach)
+### Status: Shipped in v0.7.0
 
-### Option A: Build Custom (Recommended)
-**Why:** scikit-image already installed in mcp-video deps, zero additional cost for color extraction.
+Three image analysis tools built directly into mcp-video using scikit-learn K-means (already a dependency) and optional Claude Vision API for AI descriptions.
+
+**Tools shipped:**
+1. `image_extract_colors(image_path, n_colors=5)` — dominant colors with hex codes + percentages
+2. `image_analyze_product(image_path, use_ai=False)` — color extraction + optional AI product description
+3. `image_generate_palette(image_path, harmony="complementary")` — color harmony palette generation
 
 **Architecture:**
 ```
-Thin MCP server (Python)
-  ├── Color extraction (scikit-image K-means) — FREE, LOCAL
+Built into mcp-video server (no separate MCP server needed)
+  ├── Color extraction (scikit-learn K-means) — FREE, LOCAL
   └── AI descriptions (Claude Vision API) — OPTIONAL, $0.15/image
 ```
-
-**Tools to build:**
-1. `extract_colors(image_path, n_colors=5)` — dominant colors with hex codes + percentages
-2. `analyze_product(image_path, use_ai=False)` — color + optional AI description
-3. `generate_palette(image_path, harmony="complementary")` — color scheme suggestions
-
-**Dependencies:** scikit-image (already installed), webcolors (already installed), optional anthropic SDK
 
 **Pipeline Integration:**
 ```
 mcp-video (video_export_frames)
-  → Image Analysis MCP (extract colors, descriptions)
+  → Image Analysis tools (extract colors, descriptions)
     → mcp-video (use metadata in text overlays)
 ```
 
-### Option B: Use Existing Servers
-- `2squirrelsai/local-mcp-image-analysis-server` — local color analysis, no AI
-- `mario-andreschak/mcp-image-recognition` — Claude/GPT-4 Vision wrapper
-
-### Cerafica Use Cases
-- Auto-extract glaze colors from product videos
-- Generate product descriptions for e-commerce
-- Color-match UI overlays to product colors
-
-### Effort: 2-3 days (thin wrapper + optional AI layer)
-
 ---
 
-## 3. Remotion Integration — High Priority - Approved - also investigate a workspace inside ICM called [text](../../Desktop/Interpreted-Context-Methdology/workspaces/script-to-animation)
-  
-### Status: No existing MCP server. Evaluate after v0.6.0 ships.
+## 3. Remotion Integration — MEDIUM PRIORITY — APPROVED
 
-### What Remotion Does
-- React-based programmatic video creation
-- Render React components to MP4/WebM
-- Server-side rendering via CLI or Lambda
-- Strong for: templated videos, data-driven content, motion graphics
+### Status: Third-party template available as reference. Complementary to mcp-video.
 
-### Why Defer
-1. The `video_edit` timeline improvements (v0.6.0) may cover most overlay/compositing needs
-2. Remotion requires Node.js/TypeScript — separate ecosystem from mcp-video (Python)
-3. Building a `remotion-mcp` server is a significant new project
-4. For Cerafica's current needs (text + image overlays on product videos), mcp-video is sufficient
+### Available Reference Material
 
-### When to Reconsider
+A third-party `script-to-animation` template exists at `~/Desktop/Interpreted-Context-Methdology/workspaces/script-to-animation`. It was downloaded (not built by us) and has never been configured or used.
+
+**What it contains:**
+- 60+ markdown files defining a 3-stage pipeline: Script → Spec → Build (Remotion components)
+- A Remotion best-practices skill (35 rule files covering animations, sequencing, transitions, timing, etc.)
+- A design aesthetics skill
+- All `{{PLACEHOLDER}}` values are unfilled — brand, voice, audience, colors, fonts
+- Targets TikTok/Reels (9:16), YouTube (16:9), YouTube Shorts (9:16)
+
+### Complementary Relationship
+
+**script-to-animation** and **mcp-video** are complementary, not competing:
+
+| | script-to-animation | mcp-video |
+|---|---|---|
+| **Purpose** | Generate original video from scratch | Manipulate existing video |
+| **Engine** | React/Remotion (programmatic animation) | FFmpeg (editing, overlays, export) |
+| **Ecosystem** | Node.js/TypeScript | Python |
+| **Best for** | Motion graphics, kinetic typography, data-driven templates | Post-processing, overlays, platform export |
+
+**Pipeline:** `script-to-animation (generate) → mcp-video (polish/export)`
+
+### Recommended Approach
+
+1. **Reuse the Remotion skill** — the 35 rule files are high-quality reference material for animations, sequencing, transitions, and timing
+2. **Adapt the build conventions** — project structure (composition → beats → constants → assets) is well-designed
+3. **Skip the brand questionnaire** — configure for Cerafica or a specific use case when ready
+4. **No custom MCP server needed** — Remotion renders via CLI, output feeds directly into mcp-video
+
+### When to Build
 - If you need complex motion graphics (animated transitions, kinetic typography)
 - If you need to generate 100+ data-driven video variants from templates
 - If clients request After Effects-style animations programmatically
 
-### If Built Later
-1. Create `remotion-mcp` as separate TypeScript MCP server
-2. Define React video templates (Cerafica brand, product cards, etc.)
-3. Pipeline: Data → Remotion MCP (render) → mcp-video (final export)
-
-### Effort: 5-10 days (new project + template design + testing)
+### Effort: 5-10 days (Remotion project setup + template design + mcp-video pipeline integration)
 
 ---
 
@@ -120,5 +120,5 @@ mcp-video (video_export_frames)
 | Integration | Priority | Effort | Status | Approved | ROI |
 |-------------|----------|--------|--------|---------|-----|
 | Blender MCP | LOW | 1-2 days | Defer | No | Medium |
-| Image Analysis | MEDIUM | 2-3 days | Build wrapper | Yes | Medium |
-| Remotion | LOW | 5-10 days | Defer | Yes | Medium (later) |
+| Image Analysis | MEDIUM | 2-3 days | **Completed (v0.7.0)** | Yes | Medium |
+| Remotion | MEDIUM | 5-10 days | Reference material available | Yes | Medium (later) |

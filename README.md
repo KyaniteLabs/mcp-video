@@ -1,10 +1,10 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.6.0-blue.svg" alt="Version">
+  <img src="https://img.shields.io/badge/version-0.7.0-blue.svg" alt="Version">
   <img src="https://img.shields.io/badge/tests-545%20passed-brightgreen.svg" alt="Tests">
   <a href="https://github.com/pastorsimon1798/mcp-video/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/pastorsimon1798/mcp-video/.github/workflows/ci.yml?branch=master&label=CI" alt="CI"></a>
   <a href="https://glama.ai/mcp/servers/pastorsimon1798/mcp-video"><img src="https://glama.ai/mcp/servers/pastorsimon1798/mcp-video/badges/score.svg" alt="Glama Score"></a>
   <img src="https://img.shields.io/badge/pypi-mcp--video-blue.svg" alt="PyPI">
-  <img src="https://img.shields.io/badge/tools-40%20MCP%20tools-orange.svg" alt="Tools">
+  <img src="https://img.shields.io/badge/tools-43%20MCP%20tools-orange.svg" alt="Tools">
   <img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="License">
   <img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python">
 </p>
@@ -13,7 +13,7 @@
 
 <p align="center">
   <strong>The video editing MCP server for AI agents and humans.</strong><br>
-  40 tools. 3 interfaces. Rich CLI. Purpose-built for AI agents.
+  43 tools. 3 interfaces. Rich CLI. Purpose-built for AI agents.
 </p>
 
 <p align="center">
@@ -210,9 +210,11 @@ mcp_video template tiktok video.mp4 --caption "Check this out!"
 
 ## MCP Tools
 
-mcp-video exposes 40 tools for AI agents. All tools return structured JSON with `success`, `output_path`, and operation metadata. On failure, they return `{"success": false, "error": {...}}` with auto-fix suggestions.
+mcp-video exposes 43 tools for AI agents. All tools return structured JSON with `success`, `output_path`, and operation metadata. On failure, they return `{"success": false, "error": {...}}` with auto-fix suggestions.
 
 **New in v0.6.0:** Per-tool CRF/preset quality control, pixel/percentage positioning, image overlays in timeline DSL (single-pass compositing), `video_extract_frame` alias, and batch/preview documentation.
+
+**New in v0.7.0:** Image analysis tools — extract dominant colors, generate color harmony palettes, and analyze product images with optional AI descriptions.
 
 **New in v0.5.0:** Ken Burns effect, two-pass encoding, audio effects (reverb, compressor, pitch shift, noise reduction), scene detection, image sequences, quality metrics (PSNR/SSIM), metadata editing, video stabilization, subtitle generation, and audio waveform extraction.
 
@@ -302,6 +304,14 @@ mcp-video exposes 40 tools for AI agents. All tools return structured JSON with 
 | `video_storyboard` | Extract key frames as grid | `input_path`, `frame_count` |
 | `video_extract_audio` | Extract audio track | `input_path`, `format` (mp3/wav/aac/ogg/flac) |
 
+### Image Analysis
+
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `image_extract_colors` | Extract dominant colors via K-means clustering | `image_path`, `n_colors` (1-20) |
+| `image_generate_palette` | Generate color harmony palette from image | `image_path`, `harmony`, `n_colors` |
+| `image_analyze_product` | Extract colors + optional AI product description | `image_path`, `use_ai`, `n_colors` |
+
 ### Advanced
 
 | Tool | Description | Key Parameters |
@@ -374,6 +384,9 @@ editor = Client()
 | `audio_pitch_shift(video, semitones?, output?)` | `EditResult` | Change pitch |
 | `audio_noise_reduction(video, strength?, output?)` | `EditResult` | Remove background noise |
 | `batch(inputs, operation, params?)` | `dict` | Apply operation to multiple files |
+| `extract_colors(image_path, n_colors?)` | `ColorExtractionResult` | Extract dominant colors via K-means clustering |
+| `generate_palette(image_path, harmony?, n_colors?)` | `PaletteResult` | Generate color harmony palette from image |
+| `analyze_product(image_path, use_ai?, n_colors?)` | `ProductAnalysisResult` | Extract colors + optional AI product description |
 
 ### Return Models
 
