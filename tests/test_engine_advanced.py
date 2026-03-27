@@ -31,7 +31,7 @@ from mcp_video.engine import (
     watermark,
 )
 from mcp_video.models import Timeline, TimelineClip, TimelineTrack
-from mcp_video.errors import InputFileError, MCPVideoError
+from mcp_video.errors import InputFileError, MCPVideoError, ProcessingError
 
 
 def requires_filter(name: str, feature: str):
@@ -906,30 +906,26 @@ class TestMetadataEditing:
 class TestStabilize:
     def test_stabilize(self, sample_video, tmp_path):
         from mcp_video.engine import stabilize
-        if not _check_filter_available("vidstabdetect"):
-            pytest.skip("vidstab filter not available")
         out = str(tmp_path / "stabilized.mp4")
-        try:
+        if _check_filter_available("vidstabdetect"):
             result = stabilize(sample_video, output_path=out)
             assert os.path.isfile(result.output_path)
             assert result.operation == "stabilize"
-        except Exception as e:
-            if "zooming" in str(e).lower() or "option" in str(e).lower():
-                pytest.skip("vidstab zooming option not available in this FFmpeg build")
-            raise
+        else:
+            # vidstab not compiled into this FFmpeg — verify we get a ProcessingError
+            with pytest.raises(MCPVideoError):
+                stabilize(sample_video, output_path=out)
 
     def test_stabilize_with_params(self, sample_video, tmp_path):
         from mcp_video.engine import stabilize
-        if not _check_filter_available("vidstabdetect"):
-            pytest.skip("vidstab filter not available")
         out = str(tmp_path / "stabilized_zoom.mp4")
-        try:
+        if _check_filter_available("vidstabdetect"):
             result = stabilize(sample_video, smoothing=20, zooming=5, output_path=out)
             assert os.path.isfile(result.output_path)
-        except Exception as e:
-            if "zooming" in str(e).lower() or "option" in str(e).lower():
-                pytest.skip("vidstab zooming option not available in this FFmpeg build")
-            raise
+            assert result.operation == "stabilize"
+        else:
+            with pytest.raises(MCPVideoError):
+                stabilize(sample_video, smoothing=20, zooming=5, output_path=out)
 
     def test_stabilize_nonexistent_file(self):
         from mcp_video.engine import stabilize

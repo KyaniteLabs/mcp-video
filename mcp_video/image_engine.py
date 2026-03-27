@@ -91,7 +91,11 @@ def _closest_color_name(r: int, g: int, b: int) -> str:
     # Find closest by Euclidean distance
     best_name = ""
     best_dist = float("inf")
-    for hex_val, name in webcolors.CSS3_NAMES_TO_HEX.items():
+    for name in webcolors.names(webcolors.CSS3):
+        try:
+            hex_val = webcolors.name_to_hex(name)
+        except ValueError:
+            continue
         cr = int(hex_val[1:3], 16)
         cg = int(hex_val[3:5], 16)
         cb = int(hex_val[5:7], 16)

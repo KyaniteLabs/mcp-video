@@ -543,6 +543,87 @@ class Client:
         from .image_engine import analyze_product
         return analyze_product(image_path, use_ai=use_ai, n_colors=n_colors)
 
+    # ------------------------------------------------------------------
+    # Remotion Integration
+    # ------------------------------------------------------------------
+
+    def remotion_render(
+        self,
+        project_path: str,
+        composition_id: str,
+        output: str | None = None,
+        codec: str = "h264",
+        crf: int | None = None,
+        width: int | None = None,
+        height: int | None = None,
+        fps: float | None = None,
+        concurrency: int | None = None,
+        frames: str | None = None,
+        props: dict | None = None,
+        scale: float | None = None,
+    ):
+        """Render a Remotion composition to video."""
+        from .remotion_engine import render
+        return render(project_path, composition_id, output_path=output, codec=codec, crf=crf, width=width, height=height, fps=fps, concurrency=concurrency, frames=frames, props=props, scale=scale)
+
+    def remotion_compositions(self, project_path: str):
+        """List compositions in a Remotion project."""
+        from .remotion_engine import compositions
+        return compositions(project_path)
+
+    def remotion_studio(self, project_path: str, port: int = 3000):
+        """Launch Remotion Studio for live preview."""
+        from .remotion_engine import studio
+        return studio(project_path, port=port)
+
+    def remotion_still(
+        self,
+        project_path: str,
+        composition_id: str,
+        output: str | None = None,
+        frame: int = 0,
+        image_format: str = "png",
+    ):
+        """Render a single frame as image."""
+        from .remotion_engine import still
+        return still(project_path, composition_id, output_path=output, frame=frame, image_format=image_format)
+
+    def remotion_create_project(
+        self,
+        name: str,
+        output_dir: str | None = None,
+        template: str = "blank",
+    ):
+        """Scaffold a new Remotion project."""
+        from .remotion_engine import create_project
+        return create_project(name, output_dir=output_dir, template=template)
+
+    def remotion_scaffold_template(
+        self,
+        project_path: str,
+        spec: dict,
+        slug: str,
+    ):
+        """Generate composition from spec."""
+        from .remotion_engine import scaffold_template
+        return scaffold_template(project_path, spec, slug)
+
+    def remotion_validate(self, project_path: str, composition_id: str | None = None):
+        """Validate project for rendering."""
+        from .remotion_engine import validate
+        return validate(project_path, composition_id=composition_id)
+
+    def remotion_to_mcpvideo(
+        self,
+        project_path: str,
+        composition_id: str,
+        post_process: list[dict],
+        output: str | None = None,
+    ):
+        """Render + post-process in one step."""
+        from .remotion_engine import render_and_post
+        return render_and_post(project_path, composition_id, post_process, output_path=output)
+
 
 # Fix the circular import for resize
 from .engine import resize as _resize

@@ -422,6 +422,70 @@ def main() -> None:
     template_p.add_argument("--outro", help="Outro video file (for youtube)")
     template_p.add_argument("-o", "--output", help="Output file path")
 
+    # ------------------------------------------------------------------
+    # Remotion commands
+    # ------------------------------------------------------------------
+
+    # remotion-render
+    remotion_render_p = subparsers.add_parser("remotion-render", help="Render a Remotion composition to video")
+    remotion_render_p.add_argument("project_path", help="Path to Remotion project")
+    remotion_render_p.add_argument("composition_id", help="Composition ID to render")
+    remotion_render_p.add_argument("-o", "--output", help="Output video file path")
+    remotion_render_p.add_argument("--codec", default="h264", choices=["h264", "h265", "vp8", "vp9", "prores", "gif"], help="Video codec (default: h264)")
+    remotion_render_p.add_argument("--crf", type=int, default=18, help="CRF quality (default: 18)")
+    remotion_render_p.add_argument("--width", type=int, help="Output width in pixels")
+    remotion_render_p.add_argument("--height", type=int, help="Output height in pixels")
+    remotion_render_p.add_argument("--fps", type=float, default=30.0, help="Frames per second (default: 30)")
+    remotion_render_p.add_argument("--concurrency", type=int, default=1, help="Number of concurrent render threads")
+    remotion_render_p.add_argument("--frames", help="Frame range (e.g. '0-90' or '10-50')")
+    remotion_render_p.add_argument("--props", help="Input props as JSON")
+    remotion_render_p.add_argument("--scale", type=float, default=1.0, help="Render scale factor")
+
+    # remotion-compositions
+    remotion_comps_p = subparsers.add_parser("remotion-compositions", help="List compositions in a Remotion project")
+    remotion_comps_p.add_argument("project_path", help="Path to Remotion project")
+    remotion_comps_p.add_argument("--composition-id", help="Filter by specific composition ID")
+    remotion_comps_p.add_argument("--json", action="store_true", help="Output raw JSON")
+    remotion_comps_p.add_argument("-o", "--output", help="Output file path")
+
+    # remotion-studio
+    remotion_studio_p = subparsers.add_parser("remotion-studio", help="Launch Remotion Studio for live preview")
+    remotion_studio_p.add_argument("project_path", help="Path to Remotion project")
+    remotion_studio_p.add_argument("-p", "--port", type=int, default=3000, help="Studio port (default: 3000)")
+    remotion_studio_p.add_argument("--json", action="store_true", help="Output raw JSON")
+
+    # remotion-still
+    remotion_still_p = subparsers.add_parser("remotion-still", help="Render a single frame as image")
+    remotion_still_p.add_argument("project_path", help="Path to Remotion project")
+    remotion_still_p.add_argument("composition_id", help="Composition ID to render")
+    remotion_still_p.add_argument("-o", "--output", help="Output image file path")
+    remotion_still_p.add_argument("--frame", type=int, default=0, help="Frame number to render (default: 0)")
+    remotion_still_p.add_argument("--image-format", default="png", choices=["png", "jpeg", "webp"], help="Image format (default: png)")
+
+    # remotion-create
+    remotion_create_p = subparsers.add_parser("remotion-create", help="Scaffold a new Remotion project")
+    remotion_create_p.add_argument("name", help="Project name")
+    remotion_create_p.add_argument("-d", "--output-dir", help="Output directory (default: current directory)")
+    remotion_create_p.add_argument("-t", "--template", default="blank", choices=["blank", "hello-world"], help="Project template (default: blank)")
+
+    # remotion-scaffold
+    remotion_scaffold_p = subparsers.add_parser("remotion-scaffold", help="Generate composition from spec")
+    remotion_scaffold_p.add_argument("project_path", help="Path to Remotion project")
+    remotion_scaffold_p.add_argument("--spec", required=True, help="Composition spec as JSON")
+    remotion_scaffold_p.add_argument("--slug", required=True, help="Slug for the composition (used for filenames)")
+
+    # remotion-validate
+    remotion_validate_p = subparsers.add_parser("remotion-validate", help="Validate a Remotion project")
+    remotion_validate_p.add_argument("project_path", help="Path to Remotion project")
+    remotion_validate_p.add_argument("--composition-id", help="Specific composition ID to validate")
+
+    # remotion-pipeline
+    remotion_pipeline_p = subparsers.add_parser("remotion-pipeline", help="Render + post-process in one step")
+    remotion_pipeline_p.add_argument("project_path", help="Path to Remotion project")
+    remotion_pipeline_p.add_argument("composition_id", help="Composition ID to render")
+    remotion_pipeline_p.add_argument("--post-process", required=True, help="Post-processing operations as JSON list")
+    remotion_pipeline_p.add_argument("-o", "--output", help="Final output file path")
+
     args = parser.parse_args()
 
     # --version
@@ -883,6 +947,203 @@ def main() -> None:
                 output_json(result)
             else:
                 _format_edit_text(result)
+
+        # ------------------------------------------------------------------
+        # Remotion commands
+        # ------------------------------------------------------------------
+
+        elif args.command == "remotion-render":
+            from .remotion_engine import render_composition
+            props = json.loads(args.props) if args.props else None
+            result = _with_spinner(
+                f"Rendering {args.composition_id}...",
+                render_composition,
+                args.project_path, args.composition_id,
+                output_path=args.output, codec=args.codec, crf=args.crf,
+                width=args.width, height=args.height, fps=args.fps,
+                concurrency=args.concurrency, frames=args.frames,
+                props=props, scale=args.scale,
+            )
+            if use_json:
+                output_json(result)
+            else:
+                data = result.model_dump()
+                lines = [
+                    f"[bold green]Composition:[/bold green] {args.composition_id}",
+                    f"[bold green]Output:[/bold green] {data.get('output_path', 'N/A')}",
+                ]
+                if data.get("resolution"):
+                    lines.append(f"[bold green]Resolution:[/bold green] {data['resolution']}")
+                if data.get("codec"):
+                    lines.append(f"[bold green]Codec:[/bold green] {data['codec']}")
+                if data.get("size_mb") is not None:
+                    lines.append(f"[bold green]Size:[/bold green] {data['size_mb']:.2f} MB")
+                if data.get("render_time") is not None:
+                    lines.append(f"[bold green]Render time:[/bold green] {data['render_time']:.1f}s")
+                console.print(Panel("\n".join(lines), border_style="green", title="Remotion Render"))
+
+        elif args.command == "remotion-compositions":
+            from .remotion_engine import list_compositions
+            result = _with_spinner(
+                "Listing compositions...",
+                list_compositions,
+                args.project_path,
+                composition_id=args.composition_id,
+            )
+            if use_json or args.json:
+                output_json(result)
+            else:
+                data = result.model_dump()
+                table = Table(title=f"Compositions — {args.project_path}")
+                table.add_column("ID", style="bold cyan")
+                table.add_column("Width")
+                table.add_column("Height")
+                table.add_column("FPS")
+                table.add_column("Frames")
+                for comp in data.get("compositions", []):
+                    table.add_row(
+                        comp.get("id", ""),
+                        str(comp.get("width", "")),
+                        str(comp.get("height", "")),
+                        str(comp.get("fps", "")),
+                        str(comp.get("duration_in_frames", "")),
+                    )
+                console.print(table)
+
+        elif args.command == "remotion-studio":
+            from .remotion_engine import launch_studio
+            result = _with_spinner(
+                "Launching Remotion Studio...",
+                launch_studio,
+                args.project_path,
+                port=args.port,
+            )
+            if use_json or args.json:
+                output_json(result)
+            else:
+                data = result.model_dump()
+                console.print(Panel(
+                    f"[bold green]Studio running:[/bold green] {data.get('url', 'N/A')}\n"
+                    f"[bold green]Port:[/bold green] {data.get('port', 'N/A')}\n"
+                    f"[bold green]Project:[/bold green] {data.get('project_path', 'N/A')}",
+                    border_style="green",
+                    title="Remotion Studio",
+                ))
+
+        elif args.command == "remotion-still":
+            from .remotion_engine import render_still
+            result = _with_spinner(
+                f"Rendering still frame {args.frame}...",
+                render_still,
+                args.project_path, args.composition_id,
+                output_path=args.output, frame=args.frame,
+                image_format=args.image_format,
+            )
+            if use_json:
+                output_json(result)
+            else:
+                data = result.model_dump()
+                lines = [
+                    f"[bold green]Composition:[/bold green] {args.composition_id}",
+                    f"[bold green]Frame:[/bold green] {data.get('frame', 0)}",
+                    f"[bold green]Output:[/bold green] {data.get('output_path', 'N/A')}",
+                ]
+                if data.get("resolution"):
+                    lines.append(f"[bold green]Resolution:[/bold green] {data['resolution']}")
+                console.print(Panel("\n".join(lines), border_style="green", title="Remotion Still"))
+
+        elif args.command == "remotion-create":
+            from .remotion_engine import create_project
+            result = _with_spinner(
+                f"Creating project '{args.name}'...",
+                create_project,
+                args.name,
+                output_dir=args.output_dir,
+                template=args.template,
+            )
+            if use_json:
+                output_json(result)
+            else:
+                data = result.model_dump()
+                lines = [
+                    f"[bold green]Project:[/bold green] {data.get('project_path', 'N/A')}",
+                    f"[bold green]Template:[/bold green] {data.get('template', 'N/A')}",
+                ]
+                if data.get("files"):
+                    lines.append(f"[bold green]Files created:[/bold green] {len(data['files'])}")
+                console.print(Panel("\n".join(lines), border_style="green", title="Remotion Project Created"))
+
+        elif args.command == "remotion-scaffold":
+            from .remotion_engine import scaffold_composition
+            spec = json.loads(args.spec)
+            result = _with_spinner(
+                f"Scaffolding '{args.slug}'...",
+                scaffold_composition,
+                args.project_path,
+                spec=spec,
+                slug=args.slug,
+            )
+            if use_json:
+                output_json(result)
+            else:
+                data = result.model_dump()
+                lines = [
+                    f"[bold green]Project:[/bold green] {data.get('project_path', 'N/A')}",
+                    f"[bold green]Slug:[/bold green] {data.get('slug', 'N/A')}",
+                ]
+                if data.get("files"):
+                    lines.append(f"[bold green]Files created:[/bold green] {len(data['files'])}")
+                console.print(Panel("\n".join(lines), border_style="green", title="Remotion Scaffold"))
+
+        elif args.command == "remotion-validate":
+            from .remotion_engine import validate_project
+            result = _with_spinner(
+                "Validating project...",
+                validate_project,
+                args.project_path,
+                composition_id=args.composition_id,
+            )
+            if use_json:
+                output_json(result)
+            else:
+                data = result.model_dump()
+                status = "[green]Valid[/green]" if data.get("valid") else "[red]Invalid[/red]"
+                lines = [
+                    f"[bold green]Project:[/bold green] {data.get('project_path', 'N/A')}",
+                    f"[bold green]Status:[/bold green] {status}",
+                ]
+                if data.get("issues"):
+                    lines.append(f"[red]Issues ({len(data['issues'])}):[/red]")
+                    for issue in data["issues"]:
+                        lines.append(f"  - {issue}")
+                if data.get("warnings"):
+                    lines.append(f"[yellow]Warnings ({len(data['warnings'])}):[/yellow]")
+                    for warning in data["warnings"]:
+                        lines.append(f"  - {warning}")
+                console.print(Panel("\n".join(lines), border_style="green" if data.get("valid") else "red", title="Remotion Validate"))
+
+        elif args.command == "remotion-pipeline":
+            from .remotion_engine import render_pipeline
+            post_process = json.loads(args.post_process)
+            result = _with_spinner(
+                f"Running pipeline for {args.composition_id}...",
+                render_pipeline,
+                args.project_path, args.composition_id,
+                post_process=post_process,
+                output_path=args.output,
+            )
+            if use_json:
+                output_json(result)
+            else:
+                data = result.model_dump()
+                lines = [
+                    f"[bold green]Composition:[/bold green] {args.composition_id}",
+                    f"[bold green]Remotion output:[/bold green] {data.get('remotion_output', 'N/A')}",
+                    f"[bold green]Final output:[/bold green] {data.get('final_output', 'N/A')}",
+                ]
+                if data.get("operations"):
+                    lines.append(f"[bold green]Post-process ops:[/bold green] {', '.join(data['operations'])}")
+                console.print(Panel("\n".join(lines), border_style="green", title="Remotion Pipeline"))
 
     except Exception as e:
         if use_json:

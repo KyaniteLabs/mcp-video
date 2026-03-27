@@ -554,19 +554,18 @@ class TestVideoWriteMetadataTool:
 
 
 class TestVideoStabilizeTool:
-    @requires_filter("vidstabdetect", "Video stabilization")
     def test_stabilizes_video(self, sample_video):
         result = video_stabilize(sample_video)
-        if not result["success"]:
-            # Older FFmpeg builds may not support vidstab zooming option
-            error_str = result.get("error", "")
-            if isinstance(error_str, dict):
-                error_str = str(error_str.get("message", ""))
-            if "zooming" in str(error_str).lower() or "option" in str(error_str).lower():
-                pytest.skip("vidstab zooming option not available in this FFmpeg build")
-            else:
-                pytest.fail(f"Unexpected stabilization failure: {error_str}")
-        assert os.path.isfile(result["output_path"])
+        if _check_filter_available("vidstabdetect"):
+            if not result["success"]:
+                error_str = result.get("error", "")
+                if isinstance(error_str, dict):
+                    error_str = str(error_str.get("message", ""))
+                pytest.fail(f"Stabilization failed unexpectedly: {error_str}")
+            assert os.path.isfile(result["output_path"])
+        else:
+            # vidstab not compiled into this FFmpeg — verify we get a proper error
+            assert result["success"] is False
 
     def test_nonexistent_file(self):
         result = video_stabilize("/nonexistent/video.mp4")

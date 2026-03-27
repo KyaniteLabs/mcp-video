@@ -108,6 +108,66 @@ class ResolutionMismatchError(MCPVideoError):
         )
 
 
+class RemotionNotFoundError(MCPVideoError):
+    """Node.js or npx not found on PATH."""
+
+    def __init__(self, detail: str = "") -> None:
+        msg = "Remotion requires Node.js and npx. Install Node.js from https://nodejs.org"
+        if detail:
+            msg += f" — {detail}"
+        super().__init__(
+            msg,
+            error_type="dependency_error",
+            code="remotion_not_found",
+            suggested_action={
+                "auto_fix": False,
+                "description": "Install Node.js (v18+) and ensure npx is on PATH",
+            },
+        )
+
+
+class RemotionProjectError(MCPVideoError):
+    """Invalid Remotion project structure."""
+
+    def __init__(self, path: str, reason: str = "Invalid project") -> None:
+        super().__init__(
+            f"Remotion project error: {path} — {reason}",
+            error_type="project_error",
+            code="invalid_remotion_project",
+            suggested_action={
+                "auto_fix": False,
+                "description": "Ensure the project has package.json and src/Root.tsx",
+            },
+        )
+
+
+class RemotionRenderError(MCPVideoError):
+    """Remotion render failure."""
+
+    def __init__(self, command: str, returncode: int, stderr: str) -> None:
+        stderr_short = stderr[-500:] if len(stderr) > 500 else stderr
+        super().__init__(
+            f"Remotion render failed (exit code {returncode}): {stderr_short}",
+            error_type="render_error",
+            code=f"remotion_exit_{returncode}",
+        )
+        self.command = command
+        self.returncode = returncode
+        self.full_stderr = stderr
+
+
+class RemotionValidationError(MCPVideoError):
+    """Remotion project validation failure."""
+
+    def __init__(self, issues: list[str]) -> None:
+        msg = "Remotion validation failed: " + "; ".join(issues)
+        super().__init__(
+            msg,
+            error_type="validation_error",
+            code="remotion_validation_failed",
+        )
+
+
 class ProcessingError(MCPVideoError):
     """FFmpeg processing failed."""
 

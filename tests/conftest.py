@@ -15,6 +15,16 @@ def has_ffprobe() -> bool:
     return shutil.which("ffprobe") is not None
 
 
+def has_node() -> bool:
+    """Check if Node.js is available on PATH."""
+    return shutil.which("node") is not None
+
+
+def has_npx() -> bool:
+    """Check if npx is available on PATH."""
+    return shutil.which("npx") is not None
+
+
 @pytest.fixture(scope="session")
 def sample_video(tmp_path_factory) -> str:
     """Create a 3-second test video with a color bar pattern."""
@@ -220,3 +230,52 @@ def sample_video_2(tmp_path_factory) -> str:
         pytest.skip("Could not generate second test video")
 
     return video_path
+
+
+@pytest.fixture
+def sample_remotion_project(tmp_path):
+    """Create a minimal Remotion project directory with required files.
+
+    This creates a temp directory containing:
+      - package.json
+      - src/Root.tsx
+      - src/index.ts
+
+    Returns the project directory as a string.
+    """
+    project_dir = tmp_path / "remotion-project"
+    project_dir.mkdir()
+
+    # package.json
+    (project_dir / "package.json").write_text(
+        '{"name": "test-project", "version": "1.0.0", "dependencies": {"remotion": "^4.0.0"}}'
+    )
+
+    # src/ directory
+    src_dir = project_dir / "src"
+    src_dir.mkdir()
+
+    # src/Root.tsx
+    (src_dir / "Root.tsx").write_text(
+        'import { Composition } from "remotion";\n'
+        'import React from "react";\n'
+        "\n"
+        "export const RemotionRoot: React.FC = () => {\n"
+        "  return (\n"
+        "    <>\n"
+        "      <Composition id=\"Test\" component={() => null} "
+        "durationInFrames={90} fps={30} compositionWidth={1920} "
+        "compositionHeight={1080} />\n"
+        "    </>\n"
+        "  );\n"
+        "};\n"
+    )
+
+    # src/index.ts
+    (src_dir / "index.ts").write_text(
+        'import { registerRoot } from "remotion";\n'
+        'import { RemotionRoot } from "./Root";\n'
+        "registerRoot(RemotionRoot);\n"
+    )
+
+    return str(project_dir)
