@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.5.0-blue.svg" alt="Version">
+  <img src="https://img.shields.io/badge/version-0.6.0-blue.svg" alt="Version">
   <img src="https://img.shields.io/badge/tests-545%20passed-brightgreen.svg" alt="Tests">
   <a href="https://github.com/pastorsimon1798/mcp-video/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/pastorsimon1798/mcp-video/.github/workflows/ci.yml?branch=master&label=CI" alt="CI"></a>
   <a href="https://glama.ai/mcp/servers/pastorsimon1798/mcp-video"><img src="https://glama.ai/mcp/servers/pastorsimon1798/mcp-video/badges/score.svg" alt="Glama Score"></a>
@@ -212,6 +212,8 @@ mcp_video template tiktok video.mp4 --caption "Check this out!"
 
 mcp-video exposes 40 tools for AI agents. All tools return structured JSON with `success`, `output_path`, and operation metadata. On failure, they return `{"success": false, "error": {...}}` with auto-fix suggestions.
 
+**New in v0.6.0:** Per-tool CRF/preset quality control, pixel/percentage positioning, image overlays in timeline DSL (single-pass compositing), `video_extract_frame` alias, and batch/preview documentation.
+
 **New in v0.5.0:** Ken Burns effect, two-pass encoding, audio effects (reverb, compressor, pitch shift, noise reduction), scene detection, image sequences, quality metrics (PSNR/SSIM), metadata editing, video stabilization, subtitle generation, and audio waveform extraction.
 
 **New in v0.4.0:** Video reverse playback, green screen / chroma key removal, denoise and deinterlace filters, and smarter GIF output with quality-based scaling.
@@ -295,6 +297,7 @@ mcp-video exposes 40 tools for AI agents. All tools return structured JSON with 
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
 | `video_thumbnail` | Extract a single frame | `input_path`, `timestamp` |
+| `video_extract_frame` | Extract a single frame (alias) | `input_path`, `timestamp` |
 | `video_preview` | Generate fast low-res preview | `input_path`, `scale_factor` |
 | `video_storyboard` | Extract key frames as grid | `input_path`, `frame_count` |
 | `video_extract_audio` | Extract audio track | `input_path`, `format` (mp3/wav/aac/ogg/flac) |
@@ -544,6 +547,13 @@ editor.edit({
                  "style": {"size": 48, "color": "white", "shadow": True}},
             ],
         },
+        {
+            "type": "image",
+            "images": [
+                {"source": "logo.png", "position": "top-right", "width": 200, "opacity": 0.8},
+                {"source": "product.png", "position": {"x_pct": 0.5, "y_pct": 0.7}, "width": 400},
+            ],
+        },
     ],
     "export": {"format": "mp4", "quality": "high"},
 })
@@ -555,11 +565,11 @@ editor.edit({
 |-------|------|---------|-------------|
 | `width` | int | 1920 | Output width |
 | `height` | int | 1080 | Output height |
-| `tracks` | Track[] | [] | Video, audio, and text tracks |
+| `tracks` | Track[] | [] | Video, audio, text, and image tracks |
 | `export.format` | str | "mp4" | mp4, webm, gif, mov |
 | `export.quality` | str | "high" | low, medium, high, ultra |
 
-**Track types:** `video`, `audio`, `text`
+**Track types:** `video`, `audio`, `text`, `image`
 
 **Video clip fields:** `source`, `start`, `duration`, `trim_start`, `trim_end`, `volume`, `fade_in`, `fade_out`
 
@@ -567,7 +577,9 @@ editor.edit({
 
 **Text element fields:** `text`, `start`, `duration`, `position`, `style` (font/size/color/shadow)
 
-**Positions:** top-left, top-center, top-right, center-left, center, center-right, bottom-left, bottom-center, bottom-right
+**Image overlay fields:** `source`, `position`, `x`, `y`, `width`, `height`, `opacity`, `start`, `duration`
+
+**Positions:** Named (top-left, top-center, etc.), pixel (`{"x": 100, "y": 50}`), or percentage (`{"x_pct": 0.5, "y_pct": 0.5}`)
 
 ---
 
@@ -630,6 +642,41 @@ timeline = TEMPLATES["tiktok"](video_path="clip.mp4", caption="Hello!")
 | `ultra` | 18 | veryslow | 1080p | Final output |
 
 Lower CRF = better quality, larger file. The `preset` controls encoding speed (slower = better compression).
+
+### Per-Tool Quality Control
+
+Tools that re-encode video (`video_add_text`, `video_watermark`, `video_overlay`, `video_filter`, `video_fade`, `video_color_grade`) accept optional `crf` and `preset` parameters to override the default encoding quality:
+
+```python
+# High-quality text overlay (CRF 18 = near-lossless)
+editor.add_text("video.mp4", "Title", crf=18, preset="slow")
+
+# Fast draft with lower quality
+editor.add_text("video.mp4", "Title", crf=30, preset="ultrafast")
+```
+
+### Batch Processing & Preview
+
+**Batch processing** applies the same operation to multiple files at once:
+
+```python
+# Apply the same blur to all product videos
+result = editor.batch(
+    inputs=["product1.mp4", "product2.mp4", "product3.mp4"],
+    operation="blur",
+    params={"radius": 5, "strength": 1},
+)
+```
+
+**Preview** generates a fast low-resolution version for quick review before committing to a full-quality render:
+
+```python
+# Quick preview at 1/4 resolution
+editor.preview("video.mp4", scale_factor=4)
+
+# Even faster at 1/8 resolution
+editor.preview("video.mp4", scale_factor=8)
+```
 
 ---
 

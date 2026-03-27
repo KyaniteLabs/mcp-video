@@ -35,6 +35,7 @@ from .models import (
     FilterType,
     ImageSequenceResult,
     MetadataResult,
+    NamedPosition,
     Position,
     QualityLevel,
     QualityMetricsResult,
@@ -45,6 +46,7 @@ from .models import (
     ThumbnailResult,
     Timeline,
     TimelineClip,
+    TimelineImageOverlay,
     VideoInfo,
     WatermarkSettings,
     WaveformResult,
@@ -269,10 +271,42 @@ def _movflags_args(output_path: str) -> list[str]:
     return []
 
 
+def _quality_args(
+    crf: int | None = None,
+    preset: str | None = None,
+    default_crf: int = 23,
+    default_preset: str = "fast",
+) -> list[str]:
+    """Build FFmpeg quality args [-preset, X, -crf, Y].
+
+    If crf or preset are provided, they override the defaults.
+    """
+    return ["-preset", preset or default_preset, "-crf", str(crf if crf is not None else default_crf)]
+
+
 def _position_coords(position: Position, width: int = 0, height: int = 0) -> str:
-    """Return drawtext x,y expression for a named position."""
+    """Return drawtext x,y expression for a named position or dict coords.
+
+    Accepts:
+    - Named positions: "top-left", "top-center", etc.
+    - Pixel coordinates: {"x": 100, "y": 50}
+    - Percentage: {"x_pct": 0.5, "y_pct": 0.5}
+    """
+    if isinstance(position, dict):
+        if "x_pct" in position and "y_pct" in position:
+            x_pct = position["x_pct"]
+            y_pct = position["y_pct"]
+            return f"x=w*{x_pct}-text_w/2:y=h*{y_pct}-text_h/2"
+        elif "x" in position and "y" in position:
+            return f"x={position['x']}:y={position['y']}"
+        else:
+            raise MCPVideoError(
+                "Position dict must have 'x'+'y' (pixels) or 'x_pct'+'y_pct' (percentage)",
+                code="invalid_position_dict",
+            )
+
     # These expressions use FFmpeg's text_w/text_h variables
-    mapping: dict[Position, str] = {
+    mapping: dict[NamedPosition, str] = {
         "top-left": "x=10:y=10",
         "top-center": "x=(w-text_w)/2:y=10",
         "top-right": f"x=w-text_w-10:y=10",
@@ -284,6 +318,30 @@ def _position_coords(position: Position, width: int = 0, height: int = 0) -> str
         "bottom-right": "x=w-text_w-10:y=h-text_h-10",
     }
     return mapping.get(position, mapping["center"])
+
+
+def _resolve_position(
+    position: Position,
+    position_map: dict[NamedPosition, str],
+    default: NamedPosition = "center",
+) -> str:
+    """Resolve a Position (named or dict) to an FFmpeg overlay coordinate string.
+
+    Used by watermark, overlay_video, and similar overlay-based operations.
+    """
+    if isinstance(position, dict):
+        if "x_pct" in position and "y_pct" in position:
+            x_pct = position["x_pct"]
+            y_pct = position["y_pct"]
+            return f"(main_w*{x_pct}-overlay_w/2):(main_h*{y_pct}-overlay_h/2)"
+        elif "x" in position and "y" in position:
+            return f"{position['x']}:{position['y']}"
+        else:
+            raise MCPVideoError(
+                "Position dict must have 'x'+'y' (pixels) or 'x_pct'+'y_pct' (percentage)",
+                code="invalid_position_dict",
+            )
+    return position_map.get(position, position_map[default])
 
 
 def _default_font() -> str:
@@ -637,6 +695,8 @@ def add_text(
     start_time: float | None = None,
     duration: float | None = None,
     output_path: str | None = None,
+    crf: int | None = None,
+    preset: str | None = None,
 ) -> EditResult:
     """Overlay text on a video."""
     _validate_input(input_path)
@@ -674,7 +734,8 @@ def add_text(
     _run_ffmpeg([
         "-i", input_path,
         "-vf", vf,
-        "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+        "-c:v", "libx264",
+    ] + _quality_args(crf=crf, preset=preset) + [
         "-c:a", "copy",
     ] + _movflags_args(output) + [
         output,
@@ -1261,6 +1322,8 @@ def watermark(
     opacity: float = 0.7,
     margin: int = 20,
     output_path: str | None = None,
+    crf: int | None = None,
+    preset: str | None = None,
 ) -> EditResult:
     """Add an image watermark to a video."""
     _validate_input(input_path)
@@ -1268,7 +1331,7 @@ def watermark(
     output = output_path or _auto_output(input_path, "watermarked")
 
     # Position expressions for the overlay
-    position_map: dict[Position, str] = {
+    position_map: dict[NamedPosition, str] = {
         "top-left": f"{margin}:{margin}",
         "top-center": "(main_w-overlay_w)/2:{margin}",
         "top-right": f"main_w-overlay_w-{margin}:{margin}",
@@ -1280,7 +1343,7 @@ def watermark(
         "bottom-right": f"main_w-overlay_w-{margin}:main_h-overlay_h-{margin}",
     }
 
-    overlay_pos = position_map.get(position, position_map["bottom-right"])
+    overlay_pos = _resolve_position(position, position_map, "bottom-right")
     # Format opacity for FFmpeg (0.0 to 1.0)
     opacity_fmt = f"{opacity:.2f}"
 
@@ -1288,7 +1351,8 @@ def watermark(
         "-i", input_path, "-i", image_path,
         "-filter_complex",
         f"[1:v]format=rgba,colorchannelmixer=aa={opacity_fmt}[wm];[0:v][wm]overlay={overlay_pos}",
-        "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+        "-c:v", "libx264",
+    ] + _quality_args(crf=crf, preset=preset) + [
         "-c:a", "copy",
     ] + _movflags_args(output) + [
         output,
@@ -1413,6 +1477,8 @@ def fade(
     fade_in: float = 0.0,
     fade_out: float = 0.0,
     output_path: str | None = None,
+    crf: int | None = None,
+    preset: str | None = None,
 ) -> EditResult:
     """Add fade in/out effect to a video."""
     _validate_input(input_path)
@@ -1434,7 +1500,8 @@ def fade(
     _run_ffmpeg([
         "-i", input_path,
         "-vf", vf,
-        "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+        "-c:v", "libx264",
+    ] + _quality_args(crf=crf, preset=preset) + [
         "-c:a", "copy",
     ] + _movflags_args(output) + [
         output,
@@ -1482,8 +1549,10 @@ def edit_timeline(timeline: Timeline | dict, output_path: str | None = None) -> 
     try:
         video_clips: list[str] = []
         audio_clips: list[str] = []
+        text_elements: list = []
+        image_overlays: list[TimelineImageOverlay] = []
 
-        # Process video tracks
+        # Collect all elements from tracks
         for track in timeline.tracks:
             if track.type == "video":
                 for clip in track.clips:
@@ -1500,11 +1569,27 @@ def edit_timeline(timeline: Timeline | dict, output_path: str | None = None) -> 
                         video_clips.append(result.output_path)
                     else:
                         video_clips.append(clip.source)
+                text_elements.extend(track.elements)
 
             elif track.type == "audio":
                 for clip in track.clips:
                     _validate_input(clip.source)
                     audio_clips.append(clip.source)
+
+            elif track.type == "text":
+                text_elements.extend(track.elements)
+
+            elif track.type == "image":
+                for img in track.images:
+                    _validate_input(img.source)
+                    image_overlays.append(img)
+
+            # Also collect images from any track that has them
+            if track.images:
+                for img in track.images:
+                    _validate_input(img.source)
+                    if img not in image_overlays:
+                        image_overlays.append(img)
 
         if not video_clips:
             raise MCPVideoError("Timeline must have at least one video clip")
@@ -1525,23 +1610,15 @@ def edit_timeline(timeline: Timeline | dict, output_path: str | None = None) -> 
                     break
             merge(video_clips, output_path=merged, transitions=transition_list, transition_duration=trans_duration)
 
-        # Apply text overlays
+        # Apply text overlays and image overlays in a single filtergraph pass
+        # to avoid multiple re-encodes
         current = merged
-        for track in timeline.tracks:
-            if track.type == "text":
-                for elem in track.elements:
-                    out = os.path.join(tmpdir, f"text_{len(video_clips):04d}.mp4")
-                    add_text(
-                        current,
-                        text=elem.text,
-                        position=elem.position,
-                        start_time=elem.start,
-                        duration=elem.duration,
-                        **{k: v for k, v in elem.style.items() if k in ("font", "size", "color")},
-                        shadow=elem.style.get("shadow", True),
-                        output_path=out,
-                    )
-                    current = out
+        if text_elements or image_overlays:
+            composited = os.path.join(tmpdir, "composited.mp4")
+            _apply_composite_overlays(
+                merged, composited, text_elements, image_overlays,
+            )
+            current = composited
 
         # Add audio
         if audio_clips:
@@ -1575,6 +1652,163 @@ def edit_timeline(timeline: Timeline | dict, output_path: str | None = None) -> 
 
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+def _apply_composite_overlays(
+    input_path: str,
+    output_path: str,
+    text_elements: list,
+    image_overlays: list[TimelineImageOverlay],
+) -> None:
+    """Apply text and image overlays in a single FFmpeg filtergraph pass.
+
+    This avoids multiple re-encodes when applying multiple overlays.
+    """
+    info = probe(input_path)
+
+    # Build filter_complex
+    inputs: list[str] = ["-i", input_path]
+    filter_parts: list[str] = []
+    input_idx = 1  # Next input index (0 is the main video)
+
+    # Named overlay position map (no margin for timeline overlays)
+    overlay_position_map: dict[NamedPosition, str] = {
+        "top-left": "0:0",
+        "top-center": "(main_w-overlay_w)/2:0",
+        "top-right": "main_w-overlay_w:0",
+        "center-left": "0:(main_h-overlay_h)/2",
+        "center": "(main_w-overlay_w)/2:(main_h-overlay_h)/2",
+        "center-right": "main_w-overlay_w:(main_h-overlay_h)/2",
+        "bottom-left": "0:main_h-overlay_h",
+        "bottom-center": "(main_w-overlay_w)/2:main_h-overlay_h",
+        "bottom-right": "main_w-overlay_w:main_h-overlay_h",
+    }
+
+    # Process image overlays first — they use FFmpeg overlay filter
+    prev_label = "0:v"
+    for i, img in enumerate(image_overlays):
+        img_label = f"img{i}"
+        ov_label = f"ov{i}"
+
+        inputs.extend(["-i", img.source])
+
+        # Build scale + opacity chain for this image
+        chain_parts: list[str] = []
+        if img.width and img.height:
+            chain_parts.append(f"scale={img.width}:{img.height}")
+        elif img.width:
+            chain_parts.append(f"scale={img.width}:-1")
+        elif img.height:
+            chain_parts.append(f"scale=-1:{img.height}")
+
+        if img.opacity < 1.0:
+            chain_parts.append("format=rgba")
+            chain_parts.append(f"colorchannelmixer=aa={img.opacity:.2f}")
+
+        chain = ",".join(chain_parts) if chain_parts else "null"
+        filter_parts.append(f"[{input_idx}:v]{chain}[{img_label}]")
+
+        # Resolve position
+        if isinstance(img.position, dict):
+            if "x_pct" in img.position and "y_pct" in img.position:
+                pos = f"(main_w*{img.position['x_pct']}-overlay_w/2):(main_h*{img.position['y_pct']}-overlay_h/2)"
+            elif "x" in img.position and "y" in img.position:
+                pos = f"{img.position['x']}:{img.position['y']}"
+            else:
+                pos = overlay_position_map["center"]
+        elif img.x is not None and img.y is not None:
+            pos = f"{img.x}:{img.y}"
+        else:
+            pos = overlay_position_map.get(img.position, overlay_position_map["center"])
+
+        # Enable expression for timing
+        enable_expr = ""
+        if img.start is not None or img.duration is not None:
+            parts = []
+            if img.start is not None and img.duration is not None:
+                end = img.start + img.duration
+                parts.append(f"between(t,{img.start},{end})")
+            elif img.start is not None:
+                parts.append(f"gte(t,{img.start})")
+            elif img.duration is not None:
+                parts.append(f"lte(t,{img.duration})")
+            enable_expr = f":enable='{parts[0]}'"
+
+        filter_parts.append(f"[{prev_label}][{img_label}]overlay={pos}{enable_expr}[{ov_label}]")
+        prev_label = ov_label
+        input_idx += 1
+
+    # Process text overlays — use drawtext on the final video
+    # If there were image overlays, we append drawtext to the last overlay output
+    # Otherwise we apply directly to the base video
+    vf_parts: list[str] = []
+    for elem in text_elements:
+        fontfile = elem.style.get("font") or _default_font()
+        size = elem.style.get("size", 48)
+        color = elem.style.get("color", "white")
+
+        escaped_text = elem.text.replace("\\", "\\\\").replace("'", "'\\''").replace(":", "\\:")
+        coords = _position_coords(elem.position, info.width, info.height)
+
+        drawtext_parts = [
+            f"drawtext=text='{escaped_text}'",
+            f"fontsize={size}",
+            f"fontcolor={color}",
+            f"fontfile={fontfile}",
+            coords,
+        ]
+
+        if elem.style.get("shadow", True):
+            drawtext_parts.append("shadowcolor=black@0.5")
+            drawtext_parts.append("shadowx=2")
+            drawtext_parts.append("shadowy=2")
+
+        if elem.start is not None and elem.duration is not None:
+            drawtext_parts.append(f"enable='between(t\\,{elem.start}\\,{elem.start + elem.duration})'")
+        elif elem.start is not None:
+            drawtext_parts.append(f"enable='gte(t\\,{elem.start})'")
+
+        vf_parts.append(":".join(drawtext_parts))
+
+    # Combine: filter_complex for overlays + vf for drawtext
+    if image_overlays and vf_parts:
+        # Apply drawtext to the last overlay output
+        last_label = prev_label
+        for vf in vf_parts:
+            filter_parts.append(f"[{last_label}]{vf}[vout]")
+            last_label = "vout"
+
+        # Final map
+        cmd = inputs + [
+            "-filter_complex", ";".join(filter_parts),
+            "-map", f"[{last_label}]",
+            "-map", "0:a?",
+            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+            "-c:a", "copy",
+        ] + _movflags_args(output_path) + [output_path]
+        _run_ffmpeg(cmd)
+
+    elif image_overlays:
+        # Only image overlays, no text
+        cmd = inputs + [
+            "-filter_complex", ";".join(filter_parts),
+            "-map", f"[{prev_label}]",
+            "-map", "0:a?",
+            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+            "-c:a", "copy",
+        ] + _movflags_args(output_path) + [output_path]
+        _run_ffmpeg(cmd)
+
+    elif text_elements:
+        # Only text overlays (no images) — use -vf
+        vf = ",".join(vf_parts)
+        _run_ffmpeg(
+            inputs + [
+                "-vf", vf,
+                "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+                "-c:a", "copy",
+            ] + _movflags_args(output_path) + [output_path]
+        )
 
 
 def extract_audio(
@@ -1652,6 +1886,8 @@ def apply_filter(
     filter_type: FilterType,
     params: dict[str, Any] | None = None,
     output_path: str | None = None,
+    crf: int | None = None,
+    preset: str | None = None,
 ) -> EditResult:
     """Apply a visual filter to a video.
 
@@ -1722,7 +1958,8 @@ def apply_filter(
         _run_ffmpeg([
             "-i", input_path,
             "-vf", filter_string,
-            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+            "-c:v", "libx264",
+        ] + _quality_args(crf=crf, preset=preset) + [
             "-c:a", "copy",
         ] + _movflags_args(output) + [
             output,
@@ -1800,6 +2037,8 @@ def overlay_video(
     start_time: float | None = None,
     duration: float | None = None,
     output_path: str | None = None,
+    crf: int | None = None,
+    preset: str | None = None,
 ) -> EditResult:
     """Picture-in-picture: overlay a video on top of another.
 
@@ -1837,7 +2076,7 @@ def overlay_video(
     overlay_chain = ",".join(overlay_chain_parts)
 
     # Position map (same as watermark but without margin)
-    position_map: dict[Position, str] = {
+    position_map: dict[NamedPosition, str] = {
         "top-left": "0:0",
         "top-center": "(main_w-overlay_w)/2:0",
         "top-right": "main_w-overlay_w:0",
@@ -1848,7 +2087,7 @@ def overlay_video(
         "bottom-center": "(main_w-overlay_w)/2:main_h-overlay_h",
         "bottom-right": "main_w-overlay_w:main_h-overlay_h",
     }
-    overlay_pos = position_map.get(position, position_map["top-right"])
+    overlay_pos = _resolve_position(position, position_map, "top-right")
 
     # Optional enable expression for timing
     enable_expr = ""
@@ -1868,7 +2107,8 @@ def overlay_video(
     _run_ffmpeg([
         "-i", background_path, "-i", overlay_path,
         "-filter_complex", filter_complex,
-        "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+        "-c:v", "libx264",
+    ] + _quality_args(crf=crf, preset=preset) + [
         "-c:a", "aac", "-b:a", "128k",
     ] + _movflags_args(output) + [
         output,

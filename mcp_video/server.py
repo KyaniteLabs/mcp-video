@@ -217,7 +217,7 @@ def video_merge(
 def video_add_text(
     input_path: str,
     text: str,
-    position: str = "top-center",
+    position: str | dict = "top-center",
     font: str | None = None,
     size: int = 48,
     color: str = "white",
@@ -225,13 +225,15 @@ def video_add_text(
     start_time: float | None = None,
     duration: float | None = None,
     output_path: str | None = None,
+    crf: int | None = None,
+    preset: str | None = None,
 ) -> dict[str, Any]:
     """Overlay text on a video (titles, captions, watermarks).
 
     Args:
         input_path: Absolute path to the input video.
         text: Text to overlay.
-        position: Position on screen (top-left, top-center, top-right, center-left, center, center-right, bottom-left, bottom-center, bottom-right).
+        position: Position on screen. Named (top-left, top-center, etc.), pixel {"x": 100, "y": 50}, or percentage {"x_pct": 0.5, "y_pct": 0.5}.
         font: Path to font file. Uses system default if omitted.
         size: Font size in pixels.
         color: Text color (CSS color name or hex).
@@ -239,13 +241,15 @@ def video_add_text(
         start_time: When the text appears (seconds). Null = always visible.
         duration: How long text is visible (seconds). Requires start_time.
         output_path: Where to save the output. Auto-generated if omitted.
+        crf: Override CRF value (0-51, lower = better quality). Default 23.
+        preset: Override FFmpeg encoding preset (ultrafast, fast, medium, slow, veryslow).
     """
     try:
         return _result(add_text(
             input_path, text=text, position=position, font=font,
             size=size, color=color, shadow=shadow,
             start_time=start_time, duration=duration,
-            output_path=output_path,
+            output_path=output_path, crf=crf, preset=preset,
         ))
     except MCPVideoError as e:
         return _error_result(e)
@@ -448,25 +452,30 @@ def video_subtitles(
 def video_watermark(
     input_path: str,
     image_path: str,
-    position: str = "bottom-right",
+    position: str | dict = "bottom-right",
     opacity: float = 0.7,
     margin: int = 20,
     output_path: str | None = None,
+    crf: int | None = None,
+    preset: str | None = None,
 ) -> dict[str, Any]:
     """Add an image watermark to a video.
 
     Args:
         input_path: Absolute path to the input video.
         image_path: Absolute path to the watermark image (PNG with transparency recommended).
-        position: Position on screen (top-left, top-center, top-right, center, bottom-left, bottom-center, bottom-right).
+        position: Position on screen. Named (top-left, etc.), pixel {"x": 100, "y": 50}, or percentage {"x_pct": 0.5, "y_pct": 0.5}.
         opacity: Watermark opacity (0.0 to 1.0).
         margin: Margin from edge in pixels.
         output_path: Where to save the output. Auto-generated if omitted.
+        crf: Override CRF value (0-51, lower = better quality). Default 23.
+        preset: Override FFmpeg encoding preset (ultrafast, fast, medium, slow, veryslow).
     """
     try:
         return _result(watermark(
             input_path, image_path=image_path, position=position,
             opacity=opacity, margin=margin, output_path=output_path,
+            crf=crf, preset=preset,
         ))
     except MCPVideoError as e:
         return _error_result(e)
@@ -550,6 +559,8 @@ def video_fade(
     fade_in: float = 0.0,
     fade_out: float = 0.0,
     output_path: str | None = None,
+    crf: int | None = None,
+    preset: str | None = None,
 ) -> dict[str, Any]:
     """Add fade in/out effect to a video.
 
@@ -558,9 +569,14 @@ def video_fade(
         fade_in: Fade in duration in seconds (from black).
         fade_out: Fade out duration in seconds (to black).
         output_path: Where to save the output. Auto-generated if omitted.
+        crf: Override CRF value (0-51, lower = better quality). Default 23.
+        preset: Override FFmpeg encoding preset (ultrafast, fast, medium, slow, veryslow).
     """
     try:
-        return _result(fade(input_path, fade_in=fade_in, fade_out=fade_out, output_path=output_path))
+        return _result(fade(
+            input_path, fade_in=fade_in, fade_out=fade_out,
+            output_path=output_path, crf=crf, preset=preset,
+        ))
     except MCPVideoError as e:
         return _error_result(e)
 
@@ -573,10 +589,13 @@ def video_edit(
     """Execute a full timeline-based edit from a JSON specification.
 
     The timeline JSON describes video clips, audio tracks, text overlays,
-    transitions, and export settings in a single operation.
+    image overlays, transitions, and export settings in a single operation.
+
+    Image overlays are applied in a single filtergraph pass (no multiple re-encodes).
 
     Args:
-        timeline: JSON object with keys: width, height, tracks (video/audio/text), export.
+        timeline: JSON object with keys: width, height, tracks (video/audio/text/image), export.
+            Image overlays in tracks: {"type": "image", "images": [{"source": "logo.png", "position": "top-right", "width": 200, "opacity": 0.8}]}
         output_path: Where to save the final video. Auto-generated if omitted.
     """
     try:
@@ -632,6 +651,8 @@ def video_filter(
     filter_type: str,
     params: dict[str, Any] | None = None,
     output_path: str | None = None,
+    crf: int | None = None,
+    preset: str | None = None,
 ) -> dict[str, Any]:
     """Apply a visual filter to a video.
 
@@ -640,9 +661,14 @@ def video_filter(
         filter_type: Filter type (blur, sharpen, brightness, contrast, saturation, grayscale, sepia, invert, vignette, color_preset).
         params: Optional filter parameters (e.g. radius for blur, preset for color_preset).
         output_path: Where to save the output. Auto-generated if omitted.
+        crf: Override CRF value (0-51, lower = better quality). Default 23.
+        preset: Override FFmpeg encoding preset (ultrafast, fast, medium, slow, veryslow).
     """
     try:
-        return _result(apply_filter(input_path, filter_type=filter_type, params=params, output_path=output_path))
+        return _result(apply_filter(
+            input_path, filter_type=filter_type, params=params,
+            output_path=output_path, crf=crf, preset=preset,
+        ))
     except MCPVideoError as e:
         return _error_result(e)
 
@@ -760,33 +786,37 @@ def video_normalize_audio(
 def video_overlay(
     background_path: str,
     overlay_path: str,
-    position: str = "top-right",
+    position: str | dict = "top-right",
     width: int | None = None,
     height: int | None = None,
     opacity: float = 0.8,
     start_time: float | None = None,
     duration: float | None = None,
     output_path: str | None = None,
+    crf: int | None = None,
+    preset: str | None = None,
 ) -> dict[str, Any]:
     """Picture-in-picture: overlay a video on top of another.
 
     Args:
         background_path: Absolute path to the background video.
         overlay_path: Absolute path to the overlay video.
-        position: Position on screen (top-left, top-center, top-right, center, bottom-left, bottom-center, bottom-right).
+        position: Position on screen. Named (top-left, etc.), pixel {"x": 100, "y": 50}, or percentage {"x_pct": 0.5, "y_pct": 0.5}.
         width: Width to scale the overlay to (pixels).
         height: Height to scale the overlay to (pixels).
         opacity: Overlay opacity (0.0 to 1.0).
         start_time: When the overlay appears (seconds).
         duration: How long the overlay is visible (seconds).
         output_path: Where to save the output. Auto-generated if omitted.
+        crf: Override CRF value (0-51, lower = better quality). Default 23.
+        preset: Override FFmpeg encoding preset (ultrafast, fast, medium, slow, veryslow).
     """
     try:
         return _result(overlay_video(
             background_path, overlay_path=overlay_path, position=position,
             width=width, height=height, opacity=opacity,
             start_time=start_time, duration=duration,
-            output_path=output_path,
+            output_path=output_path, crf=crf, preset=preset,
         ))
     except MCPVideoError as e:
         return _error_result(e)
@@ -1022,3 +1052,22 @@ def video_batch(
         output_dir: Directory for output files. Auto-generated if omitted.
     """
     return _video_batch(inputs, operation, params, output_dir)
+
+
+@mcp.tool()
+def video_extract_frame(
+    input_path: str,
+    timestamp: float | None = None,
+    output_path: str | None = None,
+) -> dict[str, Any]:
+    """Extract a single frame from a video. Alias for video_thumbnail.
+
+    Args:
+        input_path: Absolute path to the input video.
+        timestamp: Time in seconds to extract frame. Defaults to 10% of video duration.
+        output_path: Where to save the frame image. Auto-generated if omitted.
+    """
+    try:
+        return _result(thumbnail(input_path, timestamp=timestamp, output_path=output_path))
+    except MCPVideoError as e:
+        return _error_result(e)

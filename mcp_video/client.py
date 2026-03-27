@@ -113,13 +113,15 @@ class Client:
         start_time: float | None = None,
         duration: float | None = None,
         output: str | None = None,
+        crf: int | None = None,
+        preset: str | None = None,
     ) -> EditResult:
         """Overlay text on a video."""
         return _add_text(
             video, text=text, position=position, font=font,
             size=size, color=color, shadow=shadow,
             start_time=start_time, duration=duration,
-            output_path=output,
+            output_path=output, crf=crf, preset=preset,
         )
 
     def add_audio(
@@ -186,6 +188,15 @@ class Client:
         """Extract a frame from a video."""
         return _thumbnail(video, timestamp=timestamp, output_path=output)
 
+    def extract_frame(
+        self,
+        video: str,
+        timestamp: float | None = None,
+        output: str | None = None,
+    ) -> ThumbnailResult:
+        """Extract a frame from a video. Alias for thumbnail()."""
+        return _thumbnail(video, timestamp=timestamp, output_path=output)
+
     def preview(
         self,
         video: str,
@@ -221,11 +232,14 @@ class Client:
         opacity: float = 0.7,
         margin: int = 20,
         output: str | None = None,
+        crf: int | None = None,
+        preset: str | None = None,
     ) -> EditResult:
         """Add image watermark."""
         return _watermark(
             video, image_path=image, position=position,
             opacity=opacity, margin=margin, output_path=output,
+            crf=crf, preset=preset,
         )
 
     def crop(
@@ -257,9 +271,14 @@ class Client:
         fade_in: float = 0.0,
         fade_out: float = 0.0,
         output: str | None = None,
+        crf: int | None = None,
+        preset: str | None = None,
     ) -> EditResult:
         """Add fade in/out effect to a video."""
-        return _fade(video, fade_in=fade_in, fade_out=fade_out, output_path=output)
+        return _fade(
+            video, fade_in=fade_in, fade_out=fade_out,
+            output_path=output, crf=crf, preset=preset,
+        )
 
     def export(
         self,
@@ -295,9 +314,14 @@ class Client:
         filter_type: str,
         params: dict | None = None,
         output: str | None = None,
+        crf: int | None = None,
+        preset: str | None = None,
     ) -> EditResult:
         """Apply a visual filter to a video."""
-        return _apply_filter(video, filter_type=filter_type, params=params, output_path=output)
+        return _apply_filter(
+            video, filter_type=filter_type, params=params,
+            output_path=output, crf=crf, preset=preset,
+        )
 
     def blur(
         self,
@@ -365,13 +389,15 @@ class Client:
         start_time: float | None = None,
         duration: float | None = None,
         output: str | None = None,
+        crf: int | None = None,
+        preset: str | None = None,
     ) -> EditResult:
         """Picture-in-picture: overlay a video on top of another."""
         return _overlay_video(
             background, overlay_path=overlay, position=position,
             width=width, height=height, opacity=opacity,
             start_time=start_time, duration=duration,
-            output_path=output,
+            output_path=output, crf=crf, preset=preset,
         )
 
     def split_screen(

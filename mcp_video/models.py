@@ -176,11 +176,14 @@ ASPECT_RATIOS: dict[str, tuple[int, int]] = {
 
 # --- Text positioning ---
 
-Position = Literal[
+NamedPosition = Literal[
     "top-left", "top-center", "top-right",
     "center-left", "center", "center-right",
     "bottom-left", "bottom-center", "bottom-right",
 ]
+
+# Position can be a named position string, pixel coordinates, or percentage coordinates
+Position = NamedPosition | dict[str, float]
 
 # --- Transition types ---
 
@@ -243,13 +246,28 @@ class TimelineTextElement(BaseModel):
     })
 
 
-class TimelineTrack(BaseModel):
-    """A track in the timeline (video, audio, or text)."""
+class TimelineImageOverlay(BaseModel):
+    """An image overlay element in a timeline."""
 
-    type: Literal["video", "audio", "text"]
+    source: str
+    position: Position = "center"
+    x: int | None = None
+    y: int | None = None
+    width: int | None = None
+    height: int | None = None
+    opacity: float = 1.0
+    start: float = 0.0
+    duration: float | None = None
+
+
+class TimelineTrack(BaseModel):
+    """A track in the timeline (video, audio, text, or image)."""
+
+    type: Literal["video", "audio", "text", "image"]
     clips: list[TimelineClip] = Field(default_factory=list)
     transitions: list[TimelineTransition] = Field(default_factory=list)
     elements: list[TimelineTextElement] = Field(default_factory=list)
+    images: list[TimelineImageOverlay] = Field(default_factory=list)
 
 
 class TimelineExport(BaseModel):
