@@ -107,6 +107,18 @@ export const S6Remotion: React.FC = () => {
         >
           <span style={{ color: COLORS.NEON_PURPLE }}>Remotion</span> Integration
         </div>
+        <div
+          style={{
+            ...TEXT.subtitle,
+            fontSize: 20,
+            color: COLORS.TEXT_SECONDARY,
+            textAlign: 'center',
+            opacity: interpolate(browserSpring, [0, 0.3], [0, 1]),
+            marginTop: 4,
+          }}
+        >
+          The React framework for programmatic video
+        </div>
 
         {/* Browser mockup */}
         <div

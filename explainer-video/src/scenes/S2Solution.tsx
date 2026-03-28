@@ -51,7 +51,7 @@ export const S2Solution: React.FC = () => {
   });
 
   // Orbit rotation
-  const orbitAngle = (frame * 1.5) * (Math.PI / 180);
+  const orbitAngle = (frame * 0.75) * (Math.PI / 180);
 
   // Background glow intensifies with counter
   const glowIntensity = interpolate(counterValue, [0, 43], [0.06, 0.2]);
@@ -100,7 +100,7 @@ export const S2Solution: React.FC = () => {
             transform: `translateY(${interpolate(subtitleSpring, [0, 1], [12, 0])}px)`,
           }}
         >
-          MCP Tools for AI Agents
+          43 video editing tools
         </div>
 
         {/* Orbit ring */}

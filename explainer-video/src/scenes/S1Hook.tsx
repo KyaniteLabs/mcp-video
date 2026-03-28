@@ -21,7 +21,7 @@ import {
   useAmbientMotion,
 } from '../lib/animations';
 
-const HOOK_TEXT = 'CLI video editing is broken';
+const HOOK_TEXT = 'What if AI could edit video?';
 const TAGLINE = 'The video editing MCP server for AI agents';
 
 export const S1Hook: React.FC = () => {

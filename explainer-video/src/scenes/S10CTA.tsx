@@ -27,7 +27,7 @@ const STATS = [
   { value: 'Apache 2.0', label: 'License' },
 ];
 
-export const S8CTA: React.FC = () => {
+export const S10CTA: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const { breathe, drift } = useAmbientMotion(frame);
@@ -71,8 +71,17 @@ export const S8CTA: React.FC = () => {
     })),
   );
 
-  // Fade to black over last 45 frames (frame 165-210)
-  const fadeToBlack = interpolate(frame, [165, 210], [0, 1], {
+  // Typewriter effect for pip install
+  const pipText = 'pip install mcp-video';
+  const charsTyped = Math.min(
+    pipText.length,
+    Math.floor(interpolate(frame, [25, 50], [0, pipText.length], {
+      extrapolateRight: 'clamp',
+    })),
+  );
+
+  // Fade to black over last 45 frames (frame 275-320)
+  const fadeToBlack = interpolate(frame, [275, 320], [0, 1], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
@@ -125,7 +134,7 @@ export const S8CTA: React.FC = () => {
           </GlowText>
         </div>
 
-        {/* Terminal with pip install */}
+        {/* Terminal with pip install — typewriter effect */}
         <div
           style={{
             opacity: interpolate(terminalSpring, [0, 0.3], [0, 1]),
@@ -134,6 +143,7 @@ export const S8CTA: React.FC = () => {
             borderRadius: 12,
             padding: '20px 32px',
             border: '1px solid rgba(255,255,255,0.06)',
+            position: 'relative',
           }}
         >
           <div
@@ -144,11 +154,36 @@ export const S8CTA: React.FC = () => {
             }}
           >
             <span style={{ color: COLORS.NEON_GREEN }}>$</span>{' '}
-            pip install mcp-video
-            <span style={{ color: COLORS.NEON_CYAN, opacity: cursorVisible ? 1 : 0 }}>
+            <span style={{ color: COLORS.TEXT_PRIMARY }}>
+              {pipText.slice(0, charsTyped)}
+            </span>
+            <span style={{
+              color: COLORS.NEON_CYAN,
+              opacity: charsTyped >= pipText.length ? (cursorVisible ? 1 : 0) : 1,
+            }}>
               {' '}▊
             </span>
           </div>
+
+          {/* "Copied!" confirmation after typing */}
+          {frame > 60 && (
+            <div
+              style={{
+                position: 'absolute',
+                top: -16,
+                right: 0,
+                opacity: interpolate(frame, [60, 70], [0, 1], {
+                  extrapolateLeft: 'clamp',
+                  extrapolateRight: 'clamp',
+                }),
+                ...TEXT.caption,
+                fontSize: 14,
+                color: COLORS.NEON_GREEN,
+              }}
+            >
+              ✓ Copied!
+            </div>
+          )}
         </div>
 
         {/* Stat cards */}
@@ -195,7 +230,7 @@ export const S8CTA: React.FC = () => {
           ))}
         </div>
 
-        {/* GitHub URL pill */}
+        {/* GitHub URL pill with underline sweep */}
         <div
           style={{
             opacity: interpolate(pillSpring, [0, 0.3], [0, 1]),
@@ -204,13 +239,29 @@ export const S8CTA: React.FC = () => {
             borderRadius: 999,
             padding: '10px 28px',
             border: '1px solid rgba(255,255,255,0.08)',
+            position: 'relative',
+            overflow: 'hidden',
           }}
         >
+          {/* Underline sweep */}
+          <div
+            style={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              height: 2,
+              width: `${interpolate(frame, [70, 90], [0, 100], { extrapolateRight: 'clamp' })}%`,
+              background: COLORS.NEON_CYAN,
+              borderRadius: 1,
+            }}
+          />
           <span
             style={{
               fontFamily: FONT_MONO,
               fontSize: 16,
               color: COLORS.NEON_CYAN,
+              position: 'relative',
+              zIndex: 1,
             }}
           >
             github.com/simonbraz/mcp-video

@@ -40,20 +40,6 @@ export const S4ProFeatures: React.FC = () => {
   // Traveling wave pulse across nodes
   const pulseIndex = Math.floor(frame / 15) % NODES.length;
 
-  // Waveform bars
-  const waveformBars = 24;
-  const waveformHeights = Array.from({ length: waveformBars }, (_, i) =>
-    interpolate(
-      Math.sin(frame * 0.1 + i * 0.4),
-      [-1, 1],
-      [8, 60],
-    ),
-  );
-
-  // Ken Burns pan
-  const kbX = interpolate(frame, [0, 210], [0, 40]);
-  const kbScale = interpolate(frame, [0, 210], [1.0, 1.15]);
-
   return (
     <AbsoluteFill style={{ backgroundColor: COLORS.BG_DEEP }}>
       <GradientBackground
@@ -175,68 +161,89 @@ export const S4ProFeatures: React.FC = () => {
           })}
         </div>
 
-        {/* Bottom row: Waveform + Ken Burns */}
+        {/* Bottom row: Micro-demos */}
         <div
           style={{
             flexDirection: 'row',
-            gap: 40,
+            gap: 24,
             height: 200,
-            alignItems: 'flex-end',
+            alignItems: 'center',
           }}
         >
-          {/* Waveform bars */}
+          {/* Stabilize demo */}
           <div
             style={{
-              display: 'flex',
-              alignItems: 'flex-end',
-              gap: 3,
-              height: 120,
               flex: 1,
-            }}
-          >
-            {waveformHeights.map((h, i) => (
-              <div
-                key={i}
-                style={{
-                  flex: 1,
-                  height: h,
-                  background: `linear-gradient(180deg, ${COLORS.NEON_PURPLE}, ${COLORS.NEON_PURPLE}40)`,
-                  borderRadius: 2,
-                  minHeight: 4,
-                }}
-              />
-            ))}
-          </div>
-
-          {/* Ken Burns demo */}
-          <div
-            style={{
-              width: 360,
               height: 200,
               borderRadius: 12,
               overflow: 'hidden',
-              border: `1px solid ${COLORS.NEON_PURPLE}40`,
-              boxShadow: glowShadow(COLORS.NEON_PURPLE, 0.3),
-              flexShrink: 0,
+              border: '1px solid rgba(255,255,255,0.06)',
+              position: 'relative',
             }}
           >
-            <div
-              style={{
-                width: '120%',
-                height: '120%',
-                marginLeft: `${-kbX}px`,
-                background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 30%, #0f3460 60%, #533483 100%)',
-                transform: `scale(${kbScale})`,
-                transformOrigin: 'center center',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <span style={{ ...TEXT.overline, color: COLORS.TEXT_MUTED }}>
-                KEN BURNS
-              </span>
+            <div style={{
+              width: '100%', height: '100%',
+              background: 'linear-gradient(135deg, #1a1a2e, #2d1b3d, #0f3460)',
+              transform: `translateX(${Math.sin(frame * 0.3) * 15}px) translateY(${Math.cos(frame * 0.2) * 10}px)`,
+            }}>
+              <span style={{
+                position: 'absolute', top: 12, left: 12,
+                ...TEXT.overline, color: COLORS.TEXT_MUTED, fontSize: 11,
+              }}>BEFORE: Shaky</span>
             </div>
+          </div>
+
+          {/* Arrow */}
+          <div style={{ fontSize: 28, color: COLORS.NEON_PURPLE }}>→</div>
+
+          {/* Stabilized result */}
+          <div
+            style={{
+              flex: 1,
+              height: 200,
+              borderRadius: 12,
+              overflow: 'hidden',
+              border: `1px solid ${COLORS.NEON_PURPLE}30`,
+              position: 'relative',
+            }}
+          >
+            <div style={{
+              width: '100%', height: '100%',
+              background: 'linear-gradient(135deg, #1a1a2e, #2d1b3d, #0f3460)',
+            }}>
+              <span style={{
+                position: 'absolute', top: 12, left: 12,
+                ...TEXT.overline, color: COLORS.NEON_GREEN, fontSize: 11,
+              }}>AFTER: Smooth</span>
+            </div>
+          </div>
+
+          {/* Chroma key demo */}
+          <div
+            style={{
+              flex: 1,
+              height: 200,
+              borderRadius: 12,
+              overflow: 'hidden',
+              border: '1px solid rgba(255,255,255,0.06)',
+              position: 'relative',
+            }}
+          >
+            <div style={{
+              width: '100%', height: '100%',
+              background: '#00FF00',
+              borderRadius: 12,
+            }} />
+            <div style={{
+              position: 'absolute', inset: 0,
+              background: 'linear-gradient(135deg, #0f3460, #533483, #e94560)',
+              clipPath: `inset(0 0 0 ${interpolate(frame, [0, 210], [100, 0], { extrapolateRight: 'clamp' })}%)`,
+              borderRadius: 12,
+            }} />
+            <span style={{
+              position: 'absolute', bottom: 12, left: 12,
+              ...TEXT.overline, color: COLORS.NEON_MAGENTA, fontSize: 11,
+            }}>CHROMA KEY</span>
           </div>
         </div>
       </AbsoluteFill>

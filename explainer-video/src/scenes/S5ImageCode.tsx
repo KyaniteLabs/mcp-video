@@ -80,6 +80,21 @@ export const S5ImageCode: React.FC = () => {
           gap: 40,
         }}
       >
+        {/* Context header */}
+        <div style={{ textAlign: 'center', marginBottom: 8 }}>
+          <div style={{
+            ...TEXT.title, fontSize: 32, color: COLORS.NEON_MAGENTA,
+            marginBottom: 4,
+          }}>
+            AI-Powered Color Analysis
+          </div>
+          <div style={{
+            ...TEXT.subtitle, fontSize: 20, color: COLORS.TEXT_SECONDARY,
+          }}>
+            Extract brand colors from any image automatically
+          </div>
+        </div>
+
         {/* Top: Product image placeholder with swatches */}
         <div
           style={{
@@ -135,14 +150,14 @@ export const S5ImageCode: React.FC = () => {
               width: 300,
               background: `${COLORS.NEON_MAGENTA}15`,
             }} />
-            <span style={{ ...TEXT.caption, color: COLORS.NEON_MAGENTA, fontSize: 12, opacity: 0.6 }}>
+            <span style={{ ...TEXT.caption, color: COLORS.NEON_MAGENTA, fontSize: 14, opacity: 0.6 }}>
               ANALYZING
             </span>
           </div>
 
           {/* Swatch circles */}
           <div style={{ flexDirection: 'column', gap: 12 }}>
-            <span style={{ ...TEXT.overline, color: COLORS.TEXT_MUTED, fontSize: 12, marginBottom: 8 }}>
+            <span style={{ ...TEXT.overline, color: COLORS.TEXT_MUTED, fontSize: 14, marginBottom: 8 }}>
               EXTRACTED PALETTE
             </span>
             <div style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
@@ -161,6 +176,29 @@ export const S5ImageCode: React.FC = () => {
                       border: '2px solid rgba(255,255,255,0.1)',
                     }}
                   />
+                );
+              })}
+            </div>
+
+            {/* Floating hex codes */}
+            <div style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
+              {EXTRACTED_COLORS.map((color, i) => {
+                const offset = (i - 2) * swatchSpread * 50;
+                const hexOpacity = interpolate(frame, [40, 80], [0, 1], { extrapolateRight: 'clamp' });
+                return (
+                  <span
+                    key={color}
+                    style={{
+                      ...TEXT.code,
+                      fontSize: 14,
+                      color: color,
+                      opacity: hexOpacity,
+                      transform: `translateX(${offset}px)`,
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {color}
+                  </span>
                 );
               })}
             </div>
@@ -192,8 +230,8 @@ export const S5ImageCode: React.FC = () => {
                   key={label}
                   style={{
                     ...TEXT.caption,
-                    fontSize: 10,
-                    color: COLORS.TEXT_MUTED,
+                    fontSize: 12,
+                    color: COLORS.TEXT_SECONDARY,
                     position: 'absolute',
                     left: '50%',
                     top: '50%',

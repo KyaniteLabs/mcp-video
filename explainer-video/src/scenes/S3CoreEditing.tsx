@@ -63,6 +63,8 @@ export const S3CoreEditing: React.FC = () => {
               config: SPRING_GLASS,
             });
             const rotate = interpolate(cardSpring, [0, 1], [2, 0]);
+            const demoIndex = Math.floor((frame % 210) / 70);
+            const isActive = i === demoIndex;
 
             return (
               <div
@@ -73,7 +75,7 @@ export const S3CoreEditing: React.FC = () => {
                 }}
               >
                 <GlassCard
-                  accentColor={COLORS.NEON_PURPLE}
+                  accentColor={isActive ? COLORS.NEON_CYAN : COLORS.NEON_PURPLE}
                   accentTop
                   shimmer
                   style={{ padding: '20px 16px' }}
@@ -106,7 +108,7 @@ export const S3CoreEditing: React.FC = () => {
           })}
         </div>
 
-        {/* Right: Before/after color grading slider */}
+        {/* Right: Cycling demo panel */}
         <div
           style={{
             flex: 1,
@@ -119,58 +121,117 @@ export const S3CoreEditing: React.FC = () => {
             style={{
               width: '100%',
               maxWidth: 500,
-              position: 'relative',
               borderRadius: 12,
               overflow: 'hidden',
               border: '1px solid rgba(255,255,255,0.08)',
+              background: 'rgba(0,0,0,0.3)',
+              padding: 24,
             }}
           >
-            {/* Before side */}
-            <div
-              style={{
-                width: '100%',
-                height: 400,
-                background: 'linear-gradient(135deg, #2d1b3d, #1a1a2e, #16213e)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <span style={{ ...TEXT.overline, color: COLORS.TEXT_MUTED, fontSize: 14 }}>
-                BEFORE
-              </span>
+            <div style={{ ...TEXT.overline, color: COLORS.NEON_PURPLE, fontSize: 13, marginBottom: 20 }}>
+              DEMO
             </div>
-            {/* After overlay with moving divider */}
-            <div
-              style={{
-                position: 'absolute',
-                top: 0,
-                right: 0,
-                width: `${interpolate(Math.sin(frame * 0.02), [-1, 1], [35, 65])}%`,
-                height: '100%',
-                background: 'linear-gradient(135deg, #0f3460, #533483, #e94560)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: '0 12px 12px 0',
-              }}
-            >
-              <span style={{ ...TEXT.overline, color: '#fff', fontSize: 14 }}>
-                AFTER
-              </span>
-            </div>
-            {/* Divider line */}
-            <div
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: `${interpolate(Math.sin(frame * 0.02), [-1, 1], [35, 65])}%`,
-                height: '100%',
-                width: 3,
-                background: COLORS.NEON_PURPLE,
-                boxShadow: glowShadow(COLORS.NEON_PURPLE),
-              }}
-            />
+
+            {(() => {
+              const cycleFrame = frame % 210;
+              const demoIdx = Math.floor(cycleFrame / 70);
+
+              const demos = [
+                {
+                  title: 'Trim & Cut',
+                  desc: 'Precision frame selection',
+                  icon: '✂️',
+                  visual: (
+                    <div style={{ position: 'relative', height: 200 }}>
+                      <div style={{
+                        position: 'absolute', top: '50%', left: 0, right: 0,
+                        height: 40, transform: 'translateY(-50%)',
+                        background: 'rgba(255,255,255,0.06)', borderRadius: 8,
+                      }}>
+                        <div style={{
+                          position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                          background: 'rgba(255,255,255,0.04)', borderRadius: 8,
+                        }} />
+                        <div style={{
+                          position: 'absolute', top: 0,
+                          left: `${interpolate(cycleFrame, [0, 70], [10, 60], { extrapolateRight: 'clamp' })}%`,
+                          width: '30%', height: '100%',
+                          background: COLORS.NEON_PURPLE, borderRadius: 8,
+                          boxShadow: glowShadow(COLORS.NEON_PURPLE, 0.4),
+                        }} />
+                        <div style={{
+                          position: 'absolute',
+                          left: `${interpolate(cycleFrame, [0, 70], [10, 60], { extrapolateRight: 'clamp' })}%`,
+                          top: -16, fontSize: 24, transform: 'translateX(-50%)',
+                        }}>✂️</div>
+                      </div>
+                    </div>
+                  ),
+                },
+                {
+                  title: 'Color Grade',
+                  desc: 'Cinematic presets',
+                  icon: '🎨',
+                  visual: (
+                    <div style={{ height: 200, position: 'relative', borderRadius: 8, overflow: 'hidden' }}>
+                      <div style={{
+                        position: 'absolute', inset: 0,
+                        background: 'linear-gradient(135deg, #3a3a3a, #4a4a4a, #3a3a3a)',
+                      }} />
+                      <div style={{
+                        position: 'absolute', inset: 0,
+                        background: 'linear-gradient(135deg, #0f3460, #533483, #e94560)',
+                        clipPath: `inset(0 ${100 - interpolate(cycleFrame, [0, 70], [0, 100], { extrapolateRight: 'clamp' })}% 0 0)`,
+                      }} />
+                    </div>
+                  ),
+                },
+                {
+                  title: 'Merge',
+                  desc: 'Multi-clip composition',
+                  icon: '🔗',
+                  visual: (
+                    <div style={{ height: 200, display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <div style={{
+                        flex: 1, height: 180, borderRadius: 8,
+                        background: 'linear-gradient(135deg, #1a1a2e, #16213e)',
+                        border: '1px solid rgba(255,255,255,0.06)',
+                        opacity: interpolate(cycleFrame, [0, 70], [0.5, 1], { extrapolateRight: 'clamp' }),
+                      }} />
+                      <div style={{
+                        flex: 1, height: 180, borderRadius: 8,
+                        background: 'linear-gradient(135deg, #2d1b3d, #0f3460)',
+                        border: '1px solid rgba(255,255,255,0.06)',
+                        transform: `translateX(${interpolate(cycleFrame, [0, 70], [200, 0], { extrapolateRight: 'clamp' })}px)`,
+                      }} />
+                    </div>
+                  ),
+                },
+              ];
+
+              const demo = demos[demoIdx];
+              const demoProgress = spring({
+                frame: Math.max(0, frame - demoIdx * 70),
+                fps,
+                config: { damping: 25, stiffness: 80, mass: 0.8 },
+              });
+
+              return (
+                <div key={demo.title} style={{
+                  opacity: interpolate(demoProgress, [0, 0.3], [0, 1]),
+                  transform: `translateY(${interpolate(demoProgress, [0, 1], [10, 0])}px)`,
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                    <span style={{ fontSize: 28 }}>{demo.icon}</span>
+                    <div>
+                      <div style={{ ...TEXT.title, fontSize: 20, color: COLORS.TEXT_PRIMARY }}>{demo.title}</div>
+                      <div style={{ ...TEXT.caption, fontSize: 14, color: COLORS.TEXT_MUTED }}>{demo.desc}</div>
+                    </div>
+                  </div>
+                  {demo.visual}
+                </div>
+              );
+            })()}
           </div>
         </div>
       </AbsoluteFill>
