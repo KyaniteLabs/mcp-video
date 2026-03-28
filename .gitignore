@@ -27,3 +27,4 @@ venv/
 *.png
 !index.html
 .DS_Store
+.worktrees/
