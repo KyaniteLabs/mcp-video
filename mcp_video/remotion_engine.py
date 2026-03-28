@@ -49,8 +49,31 @@ def _require_remotion_deps() -> None:
         raise RemotionNotFoundError("npx not found on PATH")
 
 
-def _validate_project(project_path: str) -> Path:
-    """Check that the project directory has the expected structure."""
+def _find_entry_point(project: Path) -> Path:
+    """Locate the Remotion entry point (file that calls registerRoot)."""
+    # Common entry point locations
+    for candidate in ["src/index.ts", "src/index.tsx", "src/root.ts", "src/root.tsx"]:
+        if (project / candidate).is_file():
+            return project / candidate
+    # Fallback: search for registerRoot in src/
+    src_dir = project / "src"
+    if src_dir.is_dir():
+        for f in src_dir.iterdir():
+            if f.suffix in (".ts", ".tsx") and f.is_file():
+                try:
+                    content = f.read_text()
+                    if "registerRoot" in content:
+                        return f
+                except Exception:
+                    pass
+    raise RemotionProjectError(str(project), "Could not find entry point (file with registerRoot)")
+
+
+def _validate_project(project_path: str) -> tuple[Path, Path]:
+    """Check that the project directory has the expected structure.
+
+    Returns (project_dir, entry_point) tuple.
+    """
     p = Path(project_path).resolve()
     if not p.is_dir():
         raise RemotionProjectError(str(p), "Directory does not exist")
@@ -59,7 +82,8 @@ def _validate_project(project_path: str) -> Path:
     src_root = p / "src" / "Root.tsx"
     if not src_root.is_file():
         raise RemotionProjectError(str(p), "Missing src/Root.tsx")
-    return p
+    entry_point = _find_entry_point(p)
+    return p, entry_point
 
 
 def _run_remotion(
@@ -103,7 +127,7 @@ def render(
 ) -> RemotionRenderResult:
     """Render a Remotion composition to video."""
     _require_remotion_deps()
-    project = _validate_project(project_path)
+    project, entry_point = _validate_project(project_path)
 
     if output_path is None:
         os.makedirs("out", exist_ok=True)
@@ -111,7 +135,7 @@ def render(
 
     args = [
         "render",
-        str(project),
+        str(entry_point),
         composition_id,
         output_path,
         "--codec", codec,
@@ -155,15 +179,48 @@ def render(
     )
 
 
+def _parse_compositions_output(stdout: str) -> list[dict[str, Any]]:
+    """Parse compositions from remotion CLI output (JSON or text format)."""
+    # Try JSON first (some Remotion versions support --json)
+    try:
+        data = json.loads(stdout)
+        if isinstance(data, list):
+            return data
+        if isinstance(data, dict):
+            return data.get("compositions", [data])
+    except json.JSONDecodeError:
+        pass
+
+    # Fallback: parse text format like:
+    # McpVideoExplainer    30      1920x1080      1500 (50.00 sec)
+    import re
+    comps = []
+    # Match lines with: Name  fps  WxH  frames (duration)
+    pattern = re.compile(
+        r"^(\S+)\s+(\d+)\s+(\d+)x(\d+)\s+(\d+)\s+\(.*\)$",
+        re.MULTILINE,
+    )
+    for m in pattern.finditer(stdout):
+        comps.append({
+            "id": m.group(1),
+            "fps": int(m.group(2)),
+            "width": int(m.group(3)),
+            "height": int(m.group(4)),
+            "durationInFrames": int(m.group(5)),
+            "defaultProps": {},
+        })
+    return comps
+
+
 def compositions(
     project_path: str,
     composition_id: str | None = None,
 ) -> CompositionsResult:
     """List compositions in a Remotion project."""
     _require_remotion_deps()
-    project = _validate_project(project_path)
+    project, entry_point = _validate_project(project_path)
 
-    args = ["compositions", str(project), "--json"]
+    args = ["compositions", str(entry_point)]
     if composition_id:
         args += ["--composition", composition_id]
 
@@ -172,13 +229,9 @@ def compositions(
     if result.returncode != 0:
         raise RemotionRenderError(" ".join(args), result.returncode, result.stderr)
 
-    try:
-        data = json.loads(result.stdout)
-    except json.JSONDecodeError:
-        data = []
+    raw = _parse_compositions_output(result.stdout)
 
     comp_list = []
-    raw = data if isinstance(data, list) else data.get("compositions", [data])
     for c in raw:
         comp_list.append(CompositionInfo(
             id=c.get("id", c.get("compositionId", "")),
@@ -228,7 +281,7 @@ def still(
 ) -> RemotionStillResult:
     """Render a single frame from a Remotion composition."""
     _require_remotion_deps()
-    project = _validate_project(project_path)
+    project, entry_point = _validate_project(project_path)
 
     if output_path is None:
         ext = "jpg" if image_format == "jpeg" else image_format
@@ -237,7 +290,7 @@ def still(
 
     args = [
         "still",
-        str(project),
+        str(entry_point),
         composition_id,
         output_path,
         "--frame", str(frame),

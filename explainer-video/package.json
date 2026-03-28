@@ -1,0 +1,21 @@
+{
+  "name": "mcp-video-explainer",
+  "version": "1.0.0",
+  "description": "Explainer video for mcp-video project",
+  "scripts": {
+    "studio": "remotion studio",
+    "render": "remotion render",
+    "compositions": "remotion compositions --json"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.261",
+    "@remotion/transitions": "^4.0.261",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "remotion": "4.0.261"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "typescript": "^5.7.0"
+  }
+}
