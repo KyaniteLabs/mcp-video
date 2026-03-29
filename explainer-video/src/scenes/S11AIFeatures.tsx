@@ -4,6 +4,9 @@ import GlassCard from '../components/GlassCard';
 import { BurnedCaption } from '../components/BurnedCaption';
 import { COLORS, TEXT, FONT_SIZE, glowShadow } from '../lib/theme';
 
+// REAL demo video from mcp-video operation on pottery footage
+const upscaleDemo = staticFile('demos/upscale_demo.mp4');
+
 // AI Features Scene for v1.0 - Now showing real capabilities
 export const S11AIFeatures: React.FC = () => {
   const frame = useCurrentFrame();
@@ -209,49 +212,59 @@ export const S11AIFeatures: React.FC = () => {
         })}
       </div>
       
-      {/* Demo Video Preview - Color Extraction */}
+      {/* REAL Demo Video - AI Upscale on Pottery Footage */}
       <div
         style={{
           position: 'absolute',
-          bottom: 120,
+          bottom: 100,
           left: '50%',
           transform: 'translateX(-50%)',
           opacity: getCardProgress(7),
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
         }}
       >
-        <GlassCard
+        <div
           style={{
-            padding: '12px 20px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 16,
-            borderColor: `${COLORS.VIOLET_MID}30`,
+            ...TEXT.caption,
+            fontSize: 12,
+            color: COLORS.TEXT_MUTED,
+            marginBottom: 8,
           }}
         >
-          <div style={{ fontSize: 24 }}>🎨</div>
-          <div>
-            <div style={{ ...TEXT.caption, fontSize: 12, color: COLORS.TEXT_MUTED }}>
-              Color Extraction Demo
-            </div>
-            <div style={{ ...TEXT.body, fontSize: 14, color: COLORS.TEXT_PRIMARY }}>
-              5 dominant colors extracted from video frame
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: 4 }}>
-            {['#533483', '#CCFF00', '#141414', '#E94560', '#0F3460'].map((color, i) => (
-              <div
-                key={i}
-                style={{
-                  width: 24,
-                  height: 24,
-                  background: color,
-                  borderRadius: 4,
-                  border: '1px solid rgba(255,255,255,0.2)',
-                }}
-              />
-            ))}
-          </div>
+          AI Upscale Demo — Real pottery footage 360p → 720p
+        </div>
+        <GlassCard
+          style={{
+            padding: 8,
+            borderColor: `${COLORS.CYAN_BRIGHT}40`,
+            boxShadow: `0 0 30px ${COLORS.CYAN_BRIGHT}20`,
+          }}
+        >
+          <Video
+            src={upscaleDemo}
+            style={{
+              width: 480,
+              height: 270,
+              borderRadius: 8,
+            }}
+          />
         </GlassCard>
+        <div
+          style={{
+            display: 'flex',
+            gap: 20,
+            marginTop: 12,
+          }}
+        >
+          <span style={{ ...TEXT.caption, fontSize: 12, color: COLORS.TEXT_SECONDARY }}>
+            ← Low-res input
+          </span>
+          <span style={{ ...TEXT.caption, fontSize: 12, color: COLORS.CYAN_BRIGHT }}>
+            AI Upscale 2x →
+          </span>
+        </div>
       </div>
       
       <BurnedCaption text="7 AI-powered features for intelligent video editing" />
