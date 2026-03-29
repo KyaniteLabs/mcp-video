@@ -164,14 +164,16 @@ def effect_scanlines(
     Returns:
         Path to output video
     """
-    # Create scanline pattern using geq
-    scanline_expr = f"if(mod(Y,{line_height*2})<{line_height},1,{1-opacity})"
+    # Use drawgrid filter to create scanlines - simpler and more reliable
+    # drawgrid creates horizontal lines with specified spacing
+    grid_spacing = line_height * 2
+    line_thickness = line_height
     
-    filters = f"geq=lum='lum(X,Y)*{scanline_expr}'"
+    filters = f"drawgrid=w=iw:h={grid_spacing}:t={line_thickness}:c=black@{opacity}"
     
     if flicker > 0:
-        # Add subtle flicker using random
-        filters += f",geq=lum='lum(X,Y)*(1+{flicker}*(random(0)*2-1))'"
+        # Add subtle flicker using eq filter
+        filters += f",eq=brightness={flicker}*sin(t*10)"
     
     cmd = [
         "ffmpeg", "-y",
@@ -312,15 +314,15 @@ def layout_grid(
     padding: int = 20,
     background: str = "#141414",
 ) -> str:
-    """Create grid-based multi-video layout.
+    """Create grid-based multi-video layout using hstack/vstack.
     
     Args:
         clips: List of video file paths
         layout: Grid layout - "2x2", "3x1", "1x3", "2x3"
         output: Output video path
-        gap: Pixels between clips
-        padding: Padding around grid
-        background: Background color (hex)
+        gap: Pixels between clips (not used with hstack/vstack)
+        padding: Padding around grid (not used with hstack/vstack)
+        background: Background color (not used with hstack/vstack)
     
     Returns:
         Path to output video
@@ -330,59 +332,63 @@ def layout_grid(
     
     # Parse layout
     cols, rows = map(int, layout.split('x'))
+    n_clips = min(len(clips), cols * rows)
     
-    # Calculate cell dimensions (assuming 1920x1080 output)
-    out_w, out_h = 1920, 1080
-    usable_w = out_w - 2 * padding - (cols - 1) * gap
-    usable_h = out_h - 2 * padding - (rows - 1) * gap
-    cell_w = usable_w // cols
-    cell_h = usable_h // rows
+    # Use even dimensions that work for x264
+    cell_w = 640  # Standard width
+    cell_h = 480  # Standard height
     
-    # Build filter complex
     inputs = []
-    for clip in clips:
+    for clip in clips[:n_clips]:
         inputs.extend(["-i", clip])
     
-    # Scale and position each input
+    # Build filter complex
     filter_parts = []
-    for i, clip in enumerate(clips[:cols*rows]):
-        row = i // cols
-        col = i % cols
-        x = padding + col * (cell_w + gap)
-        y = padding + row * (cell_h + gap)
-        
+    
+    # Scale each input to cell size
+    for i in range(n_clips):
         filter_parts.append(
             f"[{i}:v]scale={cell_w}:{cell_h}:force_original_aspect_ratio=decrease,"
-            f"setsar=1,pad={cell_w}:{cell_h}:(ow-iw)/2:(oh-ih)/2:color={background}[v{i}];"
+            f"setsar=1,pad={cell_w}:{cell_h}:(ow-iw)/2:(oh-ih)/2:black[s{i}];"
         )
     
-    # Build overlay chain
-    last = "v0"
-    for i in range(1, min(len(clips), cols*rows)):
-        row = i // cols
-        col = i % cols
-        x = padding + col * (cell_w + gap)
-        y = padding + row * (cell_h + gap)
-        filter_parts.append(
-            f"[{last}][v{i}]overlay={x}:{y}[ov{i}];"
-        )
-        last = f"ov{i}"
+    # Stack horizontally within each row, then vertically
+    # First, stack each row
+    row_outputs = []
+    for row in range(rows):
+        row_inputs = []
+        for col in range(cols):
+            idx = row * cols + col
+            if idx < n_clips:
+                row_inputs.append(f"[s{idx}]")
+        
+        if len(row_inputs) == 1:
+            # Single column, just rename
+            filter_parts.append(f"{row_inputs[0]}format=pix_fmts=yuv420p[row{row}];")
+        else:
+            # Stack horizontally
+            hstack_in = "".join(row_inputs)
+            filter_parts.append(f"{hstack_in}hstack=inputs={len(row_inputs)}[row{row}];")
+        row_outputs.append(f"[row{row}]")
     
-    # Remove trailing semicolon from last filter
+    # Then stack rows vertically
+    if len(row_outputs) == 1:
+        filter_parts.append(f"{row_outputs[0]}format=pix_fmts=yuv420p[out];")
+    else:
+        vstack_in = "".join(row_outputs)
+        filter_parts.append(f"{vstack_in}vstack=inputs={len(row_outputs)}[out];")
+    
     filter_complex = "".join(filter_parts).rstrip(";")
-    
-    # Add background color
-    bg_filter = f"color=c={background}:s={out_w}x{out_h}:d=1[bg];[bg][v0]overlay={padding}:{padding}[tmp];"
-    filter_complex = bg_filter + filter_complex.replace("[v0]", "[tmp]", 1)
     
     cmd = [
         "ffmpeg", "-y",
         *inputs,
         "-filter_complex", filter_complex,
-        "-map", f"[{last}]",
+        "-map", "[out]",
         "-c:v", "libx264",
         "-pix_fmt", "yuv420p",
         "-crf", "23",
+        "-shortest",
         output,
     ]
     

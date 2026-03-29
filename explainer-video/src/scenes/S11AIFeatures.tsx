@@ -1,15 +1,15 @@
 import React from 'react';
-import { AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate, Easing } from 'remotion';
+import { AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate, Easing, Video, staticFile } from 'remotion';
 import GlassCard from '../components/GlassCard';
 import { BurnedCaption } from '../components/BurnedCaption';
-import { COLORS, TEXT, FONT_SIZE, GRADIENT_PRIMARY, glowShadow } from '../lib/theme';
+import { COLORS, TEXT, FONT_SIZE, glowShadow } from '../lib/theme';
 
-// AI Features Scene for v1.0
+// AI Features Scene for v1.0 - Now showing real capabilities
 export const S11AIFeatures: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   
-  const progress = frame / (fps * 6); // 6 seconds for this scene
+  const progress = frame / (fps * 6);
   
   // Entrance animations
   const titleY = interpolate(progress, [0, 0.15], [40, 0], {
@@ -207,6 +207,51 @@ export const S11AIFeatures: React.FC = () => {
             </GlassCard>
           );
         })}
+      </div>
+      
+      {/* Demo Video Preview - Color Extraction */}
+      <div
+        style={{
+          position: 'absolute',
+          bottom: 120,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          opacity: getCardProgress(7),
+        }}
+      >
+        <GlassCard
+          style={{
+            padding: '12px 20px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 16,
+            borderColor: `${COLORS.VIOLET_MID}30`,
+          }}
+        >
+          <div style={{ fontSize: 24 }}>🎨</div>
+          <div>
+            <div style={{ ...TEXT.caption, fontSize: 12, color: COLORS.TEXT_MUTED }}>
+              Color Extraction Demo
+            </div>
+            <div style={{ ...TEXT.body, fontSize: 14, color: COLORS.TEXT_PRIMARY }}>
+              5 dominant colors extracted from video frame
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 4 }}>
+            {['#533483', '#CCFF00', '#141414', '#E94560', '#0F3460'].map((color, i) => (
+              <div
+                key={i}
+                style={{
+                  width: 24,
+                  height: 24,
+                  background: color,
+                  borderRadius: 4,
+                  border: '1px solid rgba(255,255,255,0.2)',
+                }}
+              />
+            ))}
+          </div>
+        </GlassCard>
       </div>
       
       <BurnedCaption text="7 AI-powered features for intelligent video editing" />

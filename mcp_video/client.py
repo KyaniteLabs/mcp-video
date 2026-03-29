@@ -343,7 +343,8 @@ class Client:
         output: str | None = None,
     ) -> EditResult:
         """Reverse video and audio playback."""
-        return self._run_tool("video_reverse", input_path=video, output_path=output)
+        from .engine import reverse as _reverse
+        return _reverse(input_path=video, output_path=output)
 
     def chroma_key(
         self,
@@ -354,7 +355,8 @@ class Client:
         output: str | None = None,
     ) -> EditResult:
         """Remove a solid color background (green screen / chroma key)."""
-        return self._run_tool("video_chroma_key", input_path=video, color=color, similarity=similarity, blend=blend, output_path=output)
+        from .engine import chroma_key as _chroma_key
+        return _chroma_key(input_path=video, color=color, similarity=similarity, blend=blend, output_path=output)
 
     def color_grade(
         self,

@@ -5,6 +5,8 @@ import {
   useVideoConfig,
   spring,
   interpolate,
+  Video,
+  staticFile,
 } from 'remotion';
 import GradientBackground from '../components/GradientBackground';
 import {
@@ -27,7 +29,7 @@ const NODES = [
 
 export const S4ProFeatures: React.FC = () => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+  const { fps, durationInFrames } = useVideoConfig();
   const { shimmer } = useAmbientMotion(frame);
 
   // Node entrance
@@ -40,10 +42,16 @@ export const S4ProFeatures: React.FC = () => {
   // Traveling wave pulse across nodes
   const pulseIndex = Math.floor(frame / 15) % NODES.length;
 
+  // Demo video fade in
+  const demoOpacity = interpolate(frame, [30, 60], [0, 1], {
+    extrapolateLeft: 'clamp',
+    extrapolateRight: 'clamp',
+  });
+
   return (
     <AbsoluteFill style={{ backgroundColor: COLORS.BG_DEEP }}>
       <GradientBackground
-        glowColor={COLORS.NEON_PURPLE}
+        glowColor={COLORS.VIOLET_MID}
         glowX={0.5}
         glowY={0.45}
       />
@@ -167,18 +175,20 @@ export const S4ProFeatures: React.FC = () => {
           })}
         </div>
 
-        {/* Bottom row: Micro-demos - centered */}
+        {/* Bottom row: Real Video Demos */}
         <div
           style={{
             flexDirection: 'row',
+            display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
             gap: 24,
             height: 200,
             width: '100%',
+            opacity: demoOpacity,
           }}
         >
-          {/* Stabilize demo */}
+          {/* Stabilize demo - BEFORE (Real Video) */}
           <div
             style={{
               flex: 1,
@@ -189,22 +199,27 @@ export const S4ProFeatures: React.FC = () => {
               position: 'relative',
             }}
           >
-            <div style={{
-              width: '100%', height: '100%',
-              background: 'linear-gradient(135deg, #1a1a2e, #2d1b3d, #0f3460)',
-              transform: `translateX(${Math.sin(frame * 0.3) * 15}px) translateY(${Math.cos(frame * 0.2) * 10}px)`,
-            }}>
-              <span style={{
-                position: 'absolute', top: 12, left: 12,
-                ...TEXT.overline, color: COLORS.TEXT_MUTED, fontSize: 11,
-              }}>BEFORE: Shaky</span>
-            </div>
+            <Video
+              src={staticFile('demos/stabilize_before.mp4')}
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+              }}
+            />
+            <span style={{
+              position: 'absolute', top: 12, left: 12,
+              ...TEXT.overline, color: COLORS.TEXT_MUTED, fontSize: 11,
+              background: 'rgba(0,0,0,0.5)',
+              padding: '2px 6px',
+              borderRadius: 4,
+            }}>BEFORE: Shaky</span>
           </div>
 
           {/* Arrow */}
           <div style={{ fontSize: 28, color: COLORS.VIOLET_MID }}>→</div>
 
-          {/* Stabilized result */}
+          {/* Stabilize demo - AFTER (Real Video) */}
           <div
             style={{
               flex: 1,
@@ -215,18 +230,24 @@ export const S4ProFeatures: React.FC = () => {
               position: 'relative',
             }}
           >
-            <div style={{
-              width: '100%', height: '100%',
-              background: 'linear-gradient(135deg, #1a1a2e, #2d1b3d, #0f3460)',
-            }}>
-              <span style={{
-                position: 'absolute', top: 12, left: 12,
-                ...TEXT.overline, color: COLORS.LIME, fontSize: 11,
-              }}>AFTER: Smooth</span>
-            </div>
+            <Video
+              src={staticFile('demos/stabilize_after.mp4')}
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+              }}
+            />
+            <span style={{
+              position: 'absolute', top: 12, left: 12,
+              ...TEXT.overline, color: COLORS.LIME, fontSize: 11,
+              background: 'rgba(0,0,0,0.5)',
+              padding: '2px 6px',
+              borderRadius: 4,
+            }}>AFTER: Smooth</span>
           </div>
 
-          {/* Chroma key demo */}
+          {/* Chroma key demo - Real Video */}
           <div
             style={{
               flex: 1,
@@ -237,20 +258,38 @@ export const S4ProFeatures: React.FC = () => {
               position: 'relative',
             }}
           >
+            {/* Show before/after with a sliding wipe */}
+            <Video
+              src={staticFile('demos/chroma_after.mp4')}
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+              }}
+            />
             <div style={{
-              width: '100%', height: '100%',
-              background: '#00FF00',
-              borderRadius: 12,
-            }} />
-            <div style={{
-              position: 'absolute', inset: 0,
-              background: 'linear-gradient(135deg, #0f3460, #533483, #e94560)',
-              clipPath: `inset(0 0 0 ${interpolate(frame, [0, 210], [100, 0], { extrapolateRight: 'clamp' })}%)`,
-              borderRadius: 12,
-            }} />
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: `${interpolate(frame, [90, 150], [100, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })}%`,
+              height: '100%',
+              overflow: 'hidden',
+            }}>
+              <Video
+                src={staticFile('demos/chroma_before.mp4')}
+                style={{
+                  width: '300%',  // Compensate for container width shrink
+                  height: '100%',
+                  objectFit: 'cover',
+                }}
+              />
+            </div>
             <span style={{
               position: 'absolute', bottom: 12, left: 12,
-              ...TEXT.overline, color: COLORS.NEON_MAGENTA, fontSize: 11,
+              ...TEXT.overline, color: COLORS.VIOLET_BRIGHT, fontSize: 11,
+              background: 'rgba(0,0,0,0.5)',
+              padding: '2px 6px',
+              borderRadius: 4,
             }}>CHROMA KEY</span>
           </div>
         </div>

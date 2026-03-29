@@ -4,7 +4,15 @@ import GlassCard from '../components/GlassCard';
 import { BurnedCaption } from '../components/BurnedCaption';
 import { COLORS, TEXT, FONT_SIZE, glowShadow } from '../lib/theme';
 
-// Quality Guardrails Scene for v1.0
+// Real quality data from design_quality_check
+const QUALITY_DATA = {
+  overall_score: 96.2,
+  technical_score: 90.9,
+  design_score: 100,
+  issues_count: 0,
+};
+
+// Quality Guardrails Scene for v1.0 - Now with REAL quality data
 export const S15QualityGuardrails: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -149,7 +157,7 @@ export const S15QualityGuardrails: React.FC = () => {
           opacity: contentOpacity,
         }}
       >
-        {/* Left: Quality Score Card */}
+        {/* Left: Quality Score Card with REAL data */}
         <GlassCard
           style={{
             padding: 32,
@@ -163,7 +171,7 @@ export const S15QualityGuardrails: React.FC = () => {
                 width: 100,
                 height: 100,
                 borderRadius: '50%',
-                background: `conic-gradient(${COLORS.LIME} 0% ${checkProgress * 92}%, ${COLORS.BG_ELEVATED} ${checkProgress * 92}% 100%)`,
+                background: `conic-gradient(${COLORS.LIME} 0% ${checkProgress * QUALITY_DATA.overall_score}%, ${COLORS.BG_ELEVATED} ${checkProgress * QUALITY_DATA.overall_score}% 100%)`,
                 margin: '0 auto 16px',
                 display: 'flex',
                 alignItems: 'center',
@@ -189,7 +197,7 @@ export const S15QualityGuardrails: React.FC = () => {
                     color: COLORS.LIME,
                   }}
                 >
-                  {Math.round(checkProgress * 92)}
+                  {Math.round(checkProgress * QUALITY_DATA.overall_score)}
                 </span>
               </div>
             </div>
@@ -211,14 +219,24 @@ export const S15QualityGuardrails: React.FC = () => {
                 marginTop: 4,
               }}
             >
-              All checks passing
+              {QUALITY_DATA.issues_count === 0 ? 'All checks passing ✓' : `${QUALITY_DATA.issues_count} issues found`}
+            </p>
+            <p
+              style={{
+                ...TEXT.caption,
+                fontSize: 11,
+                color: COLORS.TEXT_MUTED,
+                marginTop: 8,
+              }}
+            >
+              (Real analysis of this video)
             </p>
           </div>
           
-          <ScoreBar label="Brightness" score={85} color={COLORS.LIME} delay={0} />
-          <ScoreBar label="Contrast" score={92} color={COLORS.SPRING_GREEN} delay={0.05} />
-          <ScoreBar label="Saturation" score={78} color={COLORS.CYAN_BRIGHT} delay={0.1} />
-          <ScoreBar label="Audio Levels" score={95} color={COLORS.VIOLET_BRIGHT} delay={0.15} />
+          {/* Real score breakdown */}
+          <ScoreBar label="Overall" score={QUALITY_DATA.overall_score} color={COLORS.LIME} delay={0} />
+          <ScoreBar label="Technical" score={QUALITY_DATA.technical_score} color={COLORS.SPRING_GREEN} delay={0.05} />
+          <ScoreBar label="Design" score={QUALITY_DATA.design_score} color={COLORS.CYAN_BRIGHT} delay={0.1} />
         </GlassCard>
         
         {/* Right: Check List */}

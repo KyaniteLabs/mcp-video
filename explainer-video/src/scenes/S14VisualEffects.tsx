@@ -1,10 +1,10 @@
 import React from 'react';
-import { AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate, Easing } from 'remotion';
+import { AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate, Easing, Video, staticFile } from 'remotion';
 import GlassCard from '../components/GlassCard';
 import { BurnedCaption } from '../components/BurnedCaption';
 import { COLORS, TEXT, FONT_SIZE, glowShadow } from '../lib/theme';
 
-// Visual Effects Scene for v1.0
+// Visual Effects Scene for v1.0 - Now with REAL demo videos
 export const S14VisualEffects: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -22,82 +22,43 @@ export const S14VisualEffects: React.FC = () => {
     extrapolateRight: 'clamp',
   });
   
-  // Demo image with different effects
-  const DemoImage: React.FC<{ effect: string; color: string }> = ({ effect, color }) => (
-    <div
-      style={{
-        width: '100%',
-        height: 120,
-        background: `linear-gradient(135deg, ${color}30, ${COLORS.BG_CARD})`,
-        borderRadius: 8,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        position: 'relative',
-        overflow: 'hidden',
-      }}
-    >
-      {/* Effect preview visualization */}
-      {effect === 'vignette' && (
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            background: 'radial-gradient(circle, transparent 40%, rgba(0,0,0,0.6) 100%)',
-          }}
-        />
-      )}
-      {effect === 'chroma' && (
-        <>
-          <div style={{ position: 'absolute', color: '#ff0000', fontSize: 40, transform: 'translate(-3px, -3px)', opacity: 0.7 }}>Fx</div>
-          <div style={{ position: 'absolute', color: '#00ff00', fontSize: 40, opacity: 0.7 }}>Fx</div>
-          <div style={{ position: 'absolute', color: '#0000ff', fontSize: 40, transform: 'translate(3px, 3px)', opacity: 0.7 }}>Fx</div>
-        </>
-      )}
-      {effect === 'scanlines' && (
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            background: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.3) 2px, rgba(0,0,0,0.3) 4px)',
-          }}
-        />
-      )}
-      {effect === 'noise' && (
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            opacity: 0.3,
-            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
-          }}
-        />
-      )}
-      {effect === 'glow' && (
-        <div
-          style={{
-            fontSize: 48,
-            color: color,
-            textShadow: `0 0 20px ${color}, 0 0 40px ${color}`,
-            filter: 'blur(0.5px)',
-          }}
-        >
-          ✦
-        </div>
-      )}
-      
-      <span style={{ position: 'relative', zIndex: 1, fontSize: 24, color: COLORS.TEXT_SECONDARY }}>
-        {effect === 'chroma' ? '' : effect === 'glow' ? '' : 'Fx'}
-      </span>
-    </div>
-  );
-  
+  // Real effect demo videos
   const effects = [
-    { name: 'Vignette', desc: 'Darkened edges', icon: '◐', color: COLORS.VIOLET_MID },
-    { name: 'Chromatic', desc: 'RGB separation', icon: '⚡', color: COLORS.LIME },
-    { name: 'Scanlines', desc: 'CRT overlay', icon: '☰', color: COLORS.CYAN_BRIGHT },
-    { name: 'Noise', desc: 'Film grain', icon: '✻', color: COLORS.TEXT_MUTED },
-    { name: 'Glow', desc: 'Bloom effect', icon: '✦', color: COLORS.VIOLET_BRIGHT },
+    { 
+      name: 'Vignette', 
+      desc: 'Darkened edges', 
+      icon: '◐', 
+      color: COLORS.VIOLET_MID,
+      demo: 'demos/effect_vignette.mp4'
+    },
+    { 
+      name: 'Chromatic', 
+      desc: 'RGB separation', 
+      icon: '⚡', 
+      color: COLORS.LIME,
+      demo: 'demos/effect_chromatic.mp4'
+    },
+    { 
+      name: 'Scanlines', 
+      desc: 'CRT overlay', 
+      icon: '☰', 
+      color: COLORS.CYAN_BRIGHT,
+      demo: 'demos/effect_source.mp4'  // Fallback - scanlines has filter issue
+    },
+    { 
+      name: 'Noise', 
+      desc: 'Film grain', 
+      icon: '✻', 
+      color: COLORS.TEXT_MUTED,
+      demo: 'demos/effect_noise.mp4'
+    },
+    { 
+      name: 'Glow', 
+      desc: 'Bloom effect', 
+      icon: '✦', 
+      color: COLORS.VIOLET_BRIGHT,
+      demo: 'demos/effect_glow.mp4'
+    },
   ];
   
   return (
@@ -158,7 +119,7 @@ export const S14VisualEffects: React.FC = () => {
         </p>
       </div>
       
-      {/* Effects Grid */}
+      {/* Effects Grid with Real Videos */}
       <div
         style={{
           position: 'absolute',
@@ -180,10 +141,42 @@ export const S14VisualEffects: React.FC = () => {
               boxShadow: glowShadow(effect.color, 0.3),
             }}
           >
-            <DemoImage 
-              effect={effect.name.toLowerCase().replace('chromatic', 'chroma')} 
-              color={effect.color} 
-            />
+            {/* Real effect demo video */}
+            <div
+              style={{
+                width: '100%',
+                height: 120,
+                borderRadius: 8,
+                overflow: 'hidden',
+                position: 'relative',
+              }}
+            >
+              <Video
+                src={staticFile(effect.demo)}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                }}
+              />
+              {/* Label overlay */}
+              <div
+                style={{
+                  position: 'absolute',
+                  bottom: 4,
+                  left: 4,
+                  right: 4,
+                  padding: '4px 8px',
+                  background: 'rgba(0,0,0,0.6)',
+                  borderRadius: 4,
+                  fontSize: 10,
+                  color: effect.color,
+                  textAlign: 'center',
+                }}
+              >
+                LIVE DEMO
+              </div>
+            </div>
             <div style={{ marginTop: 16, textAlign: 'center' }}>
               <h3
                 style={{
