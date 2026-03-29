@@ -2772,7 +2772,13 @@ def compare_quality(
             continue
 
         try:
-            filter_str = f"[0:v][1:v]{metric_lower}"
+            # Get original resolution to scale distorted video to match
+            orig_info = probe(original_path)
+            target_w = orig_info.width
+            target_h = orig_info.height
+            
+            # Scale distorted to match original resolution, then compare
+            filter_str = f"[1:v]scale={target_w}:{target_h}[scaled];[0:v][scaled]{metric_lower}"
             proc = subprocess.run(
                 [
                     _ffmpeg(), "-i", original_path, "-i", distorted_path,
@@ -2783,9 +2789,9 @@ def compare_quality(
             )
             if proc.returncode != 0:
                 raise ProcessingError(
-                    f"FFmpeg failed to compute {metric_lower} metric",
-                    input_path=original_path,
-                    stderr=proc.stderr[:500],
+                    f"ffmpeg -i {original_path} -i {distorted_path} -lavfi {metric_lower}",
+                    proc.returncode,
+                    proc.stderr[:500],
                 )
 
             # Parse metric value from stderr
@@ -2807,9 +2813,12 @@ def compare_quality(
                     except (ValueError, IndexError):
                         continue
         except Exception as e:
+            if isinstance(e, ProcessingError):
+                raise
             raise ProcessingError(
-                f"Failed to compute {metric_lower} metric: {str(e)}",
-                input_path=original_path,
+                f"ffmpeg -i {original_path} -i {distorted_path} -lavfi {metric_lower}",
+                1,
+                str(e)[:500],
             ) from e
 
     # Determine overall quality

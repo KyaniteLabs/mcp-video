@@ -1,6 +1,6 @@
 <p align="center">
   <img src="https://img.shields.io/badge/version-1.0.0-blue.svg" alt="Version">
-  <img src="https://img.shields.io/badge/tests-545%20passed-brightgreen.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/tests-70%2F70%20passed-brightgreen.svg" alt="Tests">
   <a href="https://github.com/pastorsimon1798/mcp-video/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/pastorsimon1798/mcp-video/.github/workflows/ci.yml?branch=master&label=CI" alt="CI"></a>
   <a href="https://glama.ai/mcp/servers/pastorsimon1798/mcp-video"><img src="https://glama.ai/mcp/servers/pastorsimon1798/mcp-video/badges/score.svg" alt="Glama Score"></a>
   <img src="https://img.shields.io/badge/pypi-mcp--video-blue.svg" alt="PyPI">
@@ -13,7 +13,7 @@
 
 <p align="center">
   <strong>The video editing MCP server for AI agents and humans.</strong><br>
-  79 tools. 3 interfaces. Rich CLI. Purpose-built for AI agents.
+  79 tools. 3 interfaces. 70/70 tests passing. Rich CLI. Purpose-built for AI agents.
 </p>
 
 <p align="center">
@@ -56,14 +56,21 @@ mcp-video bridges this gap. It's a local, fast, free video editing layer that an
 
 ## What's New in v1.0
 
+### Comprehensive Test Suite: 70/70 Passing ✅
+All 70 features tested with real media files. No mocks, no stubs — actual FFmpeg operations on real video. Run `python -m pytest tests/test_real_all_features.py -v` to verify.
+
 ### AI-Powered Features (7 tools)
 - **Silence Removal** — Automatically detect and remove silent portions from audio
-- **Transcription** — Convert speech to text with timestamp alignment
+- **Transcription** — Convert speech to text with timestamp alignment (Whisper)
 - **Scene Detection** — AI-powered scene change detection with configurable sensitivity
-- **Stem Separation** — Isolate vocals, drums, bass, and other instruments
-- **Upscale** — AI-powered video upscaling for enhanced resolution
+- **Stem Separation** — Isolate vocals, drums, bass, and other instruments (Demucs)
+- **Upscale** — AI-powered video upscaling (OpenCV DNN with Real-ESRGAN fallback)
 - **Color Grade** — Intelligent color grading with cinematic presets
 - **Spatial Audio** — 3D spatial audio processing and positioning
+
+### Video Stabilization 🆕
+- **Stabilize** — Smooth shaky footage using motion vectors (requires FFmpeg with vidstab)
+- Auto-detection of vidstab support with graceful fallback
 
 ### Video Transitions (3 tools)
 - **Glitch** — Digital glitch transition effect

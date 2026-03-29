@@ -77,6 +77,21 @@ def sample_clips(output_dir):
     return clips
 
 
+@pytest.fixture
+def short_test_clip(output_dir):
+    """Create a short test clip (3s) for quality checks that would timeout on full video."""
+    clip_path = os.path.join(output_dir, 'short_test.mp4')
+    subprocess.run([
+        'ffmpeg', '-y', '-f', 'lavfi',
+        '-i', 'color=c=blue:s=640x480:d=3',
+        '-f', 'lavfi', '-i', 'sine=frequency=1000:duration=3',
+        '-c:v', 'libx264', '-c:a', 'aac', '-pix_fmt', 'yuv420p',
+        '-vf', 'drawtext=text=Test:fontsize=30:fontcolor=white:x=10:y=10',
+        clip_path
+    ], capture_output=True, check=True)
+    return clip_path
+
+
 # =============================================================================
 # CATEGORY A: CORE VIDEO EDITING (Tests 01-18)
 # =============================================================================
@@ -221,12 +236,12 @@ class TestCoreVideoEditing:
         ).stdout.find("vidstabdetect") == -1,
         reason="Requires FFmpeg with vidstabdetect filter"
     )
-    def test_12_stabilize_video(self, client, test_video, output_dir):
+    def test_12_stabilize_video(self, client, sample_clips, output_dir):
         """Stabilize shaky video."""
         output = os.path.join(output_dir, 'stabilized.mp4')
         
-        # Use a short segment for faster test
-        result = client.stabilize(test_video, smoothing=10, output=output)
+        # Use a short clip for faster test
+        result = client.stabilize(sample_clips[0], smoothing=10, output=output)
         
         assert result.success
         assert os.path.exists(result.output_path)
@@ -656,19 +671,17 @@ class TestAIFeatures:
         assert isinstance(result, dict)
         print(f"✓ Stems separated: {list(result.keys())}")
     
-    @pytest.mark.skipif(
-        not importlib.util.find_spec("realesrgan"),
-        reason="Real-ESRGAN not installed"
-    )
     def test_44_ai_upscale(self, client, sample_clips, output_dir):
-        """Upscale video using AI (requires Real-ESRGAN)."""
+        """Upscale video using AI (OpenCV DNN fallback if Real-ESRGAN not available)."""
         output = os.path.join(output_dir, 'upscaled.mp4')
         
         result = client.ai_upscale(sample_clips[0], output, scale=2)
         
         assert os.path.exists(result)
         info = client.info(result)
-        # Should be 2x resolution
+        # Should be 2x resolution (640x480 -> 1280x960)
+        assert info.width == 1280, f"Expected width 1280, got {info.width}"
+        assert info.height == 960, f"Expected height 960, got {info.height}"
         print(f"✓ Upscaled to {info.width}x{info.height}")
     
     def test_45_ai_color_grade(self, client, sample_clips, output_dir):
@@ -846,21 +859,30 @@ Test Subtitle
 class TestQualityMetadata:
     """Test quality checks and metadata operations."""
     
-    def test_56_quality_check(self, client, test_video):
+    def test_56_quality_check(self, client, short_test_clip):
         """Run quality guardrails."""
-        result = client.quality_check(test_video)
+        result = client.quality_check(short_test_clip)
         
-        assert isinstance(result, dict)
-        assert 'valid' in result
-        print(f"✓ Quality check: {'PASS' if result.get('valid') else 'FAIL'}")
+        # Result can be dict or QualityReport object
+        if isinstance(result, dict):
+            assert 'all_passed' in result or 'valid' in result
+        else:
+            # QualityReport object has all_passed attribute
+            assert hasattr(result, 'all_passed')
+        print(f"✓ Quality check completed")
     
-    def test_57_design_quality_check(self, client, test_video):
+    def test_57_design_quality_check(self, client, short_test_clip):
         """Run design quality analysis."""
-        result = client.design_quality_check(test_video)
+        result = client.design_quality_check(short_test_clip)
         
-        assert isinstance(result, dict)
-        assert 'overall_score' in result or hasattr(result, 'overall_score')
-        score = result.get('overall_score', 0) if isinstance(result, dict) else result.overall_score
+        # Result can be dict or DesignQualityReport object
+        if isinstance(result, dict):
+            assert 'overall_score' in result
+            score = result.get('overall_score', 0)
+        else:
+            # DesignQualityReport object
+            assert hasattr(result, 'overall_score')
+            score = result.overall_score
         print(f"✓ Design quality score: {score}")
     
     def test_58_fix_design_issues(self, client, sample_clips, output_dir):
@@ -872,17 +894,17 @@ class TestQualityMetadata:
         assert os.path.exists(result)
         print(f"✓ Design issues auto-fixed")
     
-    def test_59_compare_quality(self, client, sample_clips, output_dir):
+    def test_59_compare_quality(self, client, short_test_clip, output_dir):
         """Compare video quality."""
         # Create a lower quality version for comparison
         distorted = os.path.join(output_dir, 'distorted.mp4')
         subprocess.run([
-            'ffmpeg', '-y', '-i', sample_clips[0],
+            'ffmpeg', '-y', '-i', short_test_clip,
             '-crf', '35', '-vf', 'scale=320:240',
             distorted
         ], capture_output=True, check=True)
         
-        result = client.compare_quality(sample_clips[0], distorted)
+        result = client.compare_quality(short_test_clip, distorted)
         
         assert isinstance(result, dict) or hasattr(result, 'metrics')
         print(f"✓ Quality comparison complete")

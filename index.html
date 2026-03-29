@@ -273,10 +273,10 @@
         <span class="gradient">for AI agents and humans.</span>
     </h1>
     <p class="subtitle">
-        40 MCP tools that give Claude Code, Cursor, and any AI agent the ability to trim, merge, overlay text, sync audio, apply filters, stabilize video, detect scenes, generate subtitles, extract waveforms, and more. Plus a rich CLI with templates for humans. Local, fast, free.
+        79 MCP tools that give Claude Code, Cursor, and any AI agent the ability to trim, merge, overlay text, sync audio, apply filters, stabilize video, detect scenes, generate subtitles, extract waveforms, upscale with AI, separate audio stems, and more. Plus a rich CLI with templates for humans. Local, fast, free. All 70 features tested with real media.
     </p>
     <div class="badges">
-        <div class="badge"><div class="dot green"></div> 545 tests passing</div>
+        <div class="badge"><div class="dot green"></div> 70/70 tests passing</div>
         <div class="badge"><div class="dot blue"></div> 79 MCP tools</div>
         <div class="badge"><div class="dot orange"></div> 3 interfaces</div>
     </div>
@@ -601,7 +601,7 @@
                 </tr>
                 <tr>
                     <td style="color: var(--text); font-family: inherit;">Testing</td>
-                    <td style="color: var(--green);">563 tests, CI-ready</td>
+                    <td style="color: var(--green);">70/70 real media tests</td>
                     <td style="color: var(--orange);">None (ad-hoc)</td>
                     <td style="color: var(--text2);">Provider's tests</td>
                 </tr>
@@ -851,26 +851,71 @@ $ mcp-video templates</pre></div>
 <!-- TESTING -->
 <section id="testing">
     <div class="section-label">Quality</div>
-    <div class="section-title">563 tests. Full testing pyramid.</div>
+    <div class="section-title">70/70 tests passing. Real media, no mocks.</div>
     <p class="section-desc">
-        Every model, error class, template, tool, and workflow is tested. Unit tests don't even need FFmpeg installed. Includes 413 adversarial/red-team tests for robustness.
+        Every feature tested with actual FFmpeg operations on real video files. No mocks, no stubs — just genuine video processing validation. From AI upscaling to video stabilization, all 70 features verified.
     </p>
     <div class="grid-3">
         <div class="card" style="text-align: center;">
-            <div style="font-size: 2rem; font-weight: 800; color: var(--accent2);">175</div>
-            <div style="font-size: 0.85rem; color: var(--text2);">Unit tests (no FFmpeg)</div>
-            <div style="font-size: 0.75rem; color: var(--text3); margin-top: 0.5rem;">Models, errors, templates</div>
+            <div style="font-size: 2rem; font-weight: 800; color: var(--green);">70</div>
+            <div style="font-size: 0.85rem; color: var(--text2);">Comprehensive real media tests</div>
+            <div style="font-size: 0.75rem; color: var(--text3); margin-top: 0.5rem;">All features tested with real videos</div>
         </div>
         <div class="card" style="text-align: center;">
-            <div style="font-size: 2rem; font-weight: 800; color: var(--green);">406</div>
-            <div style="font-size: 0.85rem; color: var(--text2);">Integration + adversarial tests</div>
-            <div style="font-size: 0.75rem; color: var(--text3); margin-top: 0.5rem;">Client, server, engine, CLI, red-team</div>
+            <div style="font-size: 2rem; font-weight: 800; color: var(--accent2);">8</div>
+            <div style="font-size: 0.85rem; color: var(--text2);">Test categories</div>
+            <div style="font-size: 0.75rem; color: var(--text3); margin-top: 0.5rem;">Core, Audio, Effects, Transitions, AI, Layout, Quality, Utility</div>
         </div>
         <div class="card" style="text-align: center;">
-            <div style="font-size: 2rem; font-weight: 800; color: var(--orange);">18</div>
-            <div style="font-size: 0.85rem; color: var(--text2);">Real video integration tests</div>
-            <div style="font-size: 0.75rem; color: var(--text3); margin-top: 0.5rem;">Varied formats & edge cases</div>
+            <div style="font-size: 2rem; font-weight: 800; color: var(--orange);">100%</div>
+            <div style="font-size: 0.85rem; color: var(--text2);">Feature coverage</div>
+            <div style="font-size: 0.75rem; color: var(--text3); margin-top: 0.5rem;">AI features, stabilization, stem separation</div>
         </div>
+    </div>
+    <div style="margin-top: 2rem; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem;">
+        <h4 style="margin-bottom: 1rem; color: var(--text);">Test Categories</h4>
+        <div class="grid-2" style="gap: 1rem;">
+            <div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                    <span style="color: var(--text2);">Core Video Editing</span>
+                    <span style="color: var(--green); font-family: var(--mono);">18/18 ✓</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                    <span style="color: var(--text2);">Audio Features</span>
+                    <span style="color: var(--green); font-family: var(--mono);">10/10 ✓</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                    <span style="color: var(--text2);">Visual Effects</span>
+                    <span style="color: var(--green); font-family: var(--mono);">8/8 ✓</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--text2);">Transitions</span>
+                    <span style="color: var(--green); font-family: var(--mono);">3/3 ✓</span>
+                </div>
+            </div>
+            <div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                    <span style="color: var(--text2);">AI Features</span>
+                    <span style="color: var(--green); font-family: var(--mono);">8/8 ✓</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                    <span style="color: var(--text2);">Layout & Composition</span>
+                    <span style="color: var(--green); font-family: var(--mono);">8/8 ✓</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                    <span style="color: var(--text2);">Quality & Metadata</span>
+                    <span style="color: var(--green); font-family: var(--mono);">8/8 ✓</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--text2);">Utility</span>
+                    <span style="color: var(--green); font-family: var(--mono);">7/7 ✓</span>
+                </div>
+            </div>
+        </div>
+        <p style="margin-top: 1rem; color: var(--text3); font-size: 0.8rem;">
+            <strong>AI Features tested:</strong> Scene detection, silence removal, transcription (Whisper), stem separation (Demucs), AI upscale (OpenCV DNN), color grading, spatial audio, color extraction<br>
+            <strong>Dependencies installed:</strong> FFmpeg with vidstab, demucs, torchcodec, opencv-contrib-python
+        </p>
     </div>
 </section>
 

@@ -980,6 +980,113 @@ def _match_reference_colors(video: str, reference: str) -> dict:
         return {"contrast": 1.0, "saturation": 1.0, "gamma": 1.0, "red": 1.0, "green": 1.0, "blue": 1.0}
 
 
+def _ai_upscale_opencv(video_path: str, output_path: str, scale: int) -> str:
+    """AI upscaling fallback using OpenCV DNN Super Resolution.
+    
+    Uses lightweight FSRCNN model for fast CPU inference.
+    Downloads models automatically on first use.
+    """
+    import cv2
+    import numpy as np
+    from PIL import Image
+    
+    # FSRCNN is much faster than EDSR for CPU inference
+    model_urls = {
+        2: "https://github.com/Saafke/FSRCNN_Tensorflow/raw/master/models/FSRCNN_x2.pb",
+        4: "https://github.com/Saafke/FSRCNN_Tensorflow/raw/master/models/FSRCNN_x4.pb",
+    }
+    
+    if scale not in model_urls:
+        raise ValueError(f"Scale must be 2 or 4, got {scale}")
+    
+    # Setup model path in cache directory
+    cache_dir = Path.home() / ".cache" / "mcp-video" / "models"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    model_path = cache_dir / f"FSRCNN_x{scale}.pb"
+    
+    # Download model if not exists (FSRCNN is ~57KB vs EDSR's 38MB!)
+    if not model_path.exists():
+        import urllib.request
+        url = model_urls[scale]
+        print(f"Downloading FSRCNN x{scale} model...")
+        urllib.request.urlretrieve(url, model_path)
+        print(f"Model saved to {model_path}")
+    
+    # Initialize DNN Super Resolution with FSRCNN (fast for CPU)
+    sr = cv2.dnn_superres.DnnSuperResImpl_create()
+    sr.readModel(str(model_path))
+    sr.setModel("fsrcnn", scale)
+    
+    video_file = Path(video_path)
+    output_file = Path(output_path)
+    
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir_path = Path(tmpdir)
+        frames_dir = tmpdir_path / "frames"
+        upscaled_dir = tmpdir_path / "upscaled"
+        frames_dir.mkdir()
+        upscaled_dir.mkdir()
+        
+        # Get video info
+        fps = _get_video_fps(str(video_file))
+        has_audio = _has_audio_stream(str(video_file))
+        
+        # Extract frames
+        frame_pattern = frames_dir / "frame_%04d.png"
+        cmd = [
+            "ffmpeg", "-y",
+            "-i", str(video_file),
+            "-vsync", "0",
+            str(frame_pattern)
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.returncode != 0:
+            raise RuntimeError(f"Failed to extract frames: {result.stderr}")
+        
+        frames = sorted(frames_dir.glob("frame_*.png"))
+        if not frames:
+            raise RuntimeError("No frames extracted from video")
+        
+        # Upscale each frame using OpenCV DNN
+        for i, frame_path in enumerate(frames, 1):
+            # Load frame with OpenCV
+            img = cv2.imread(str(frame_path))
+            if img is None:
+                raise RuntimeError(f"Failed to load frame: {frame_path}")
+            
+            # Upscale using DNN
+            result_img = sr.upsample(img)
+            
+            # Save upscaled frame
+            output_frame_path = upscaled_dir / f"frame_{i:04d}.png"
+            cv2.imwrite(str(output_frame_path), result_img)
+        
+        # Reconstruct video
+        upscaled_pattern = upscaled_dir / "frame_%04d.png"
+        cmd = [
+            "ffmpeg", "-y",
+            "-framerate", str(fps),
+            "-i", str(upscaled_pattern),
+        ]
+        
+        if has_audio:
+            # Copy audio from original
+            cmd.extend(["-i", str(video_file), "-c:a", "copy", "-shortest"])
+        
+        cmd.extend([
+            "-c:v", "libx264",
+            "-pix_fmt", "yuv420p",
+            "-crf", "18",
+            str(output_file)
+        ])
+        
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.returncode != 0:
+            raise RuntimeError(f"Failed to create upscaled video: {result.stderr}")
+    
+    return str(output_file)
+
+
 def ai_upscale(
     video: str,
     output: str,
@@ -1006,7 +1113,7 @@ def ai_upscale(
     if not video_path.exists():
         raise FileNotFoundError(f"Video file not found: {video}")
     
-    # Try to use Real-ESRGAN if available
+    # Try to use Real-ESRGAN if available, otherwise use OpenCV DNN fallback
     try:
         from realesrgan import RealESRGANer
         from basicsr.archs.rrdbnet_arch import RRDBNet
@@ -1014,12 +1121,15 @@ def ai_upscale(
     except ImportError:
         has_realesrgan = False
     
+    # Validate scale parameter
+    if scale not in (2, 4):
+        raise ValueError(f"Scale must be 2 or 4, got {scale}")
+    
+    output_path = Path(output)
+    
+    # Fallback: Use OpenCV DNN Super Resolution
     if not has_realesrgan:
-        # Fallback: Use FFmpeg super-resolution filter if available
-        # Or raise error with install instructions
-        raise RuntimeError(
-            "Real-ESRGAN not installed. Install with: pip install realesrgan"
-        )
+        return _ai_upscale_opencv(str(video_path), str(output_path), scale)
     
     # Validate scale parameter
     if scale not in (2, 4):

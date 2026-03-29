@@ -86,21 +86,21 @@ Bugs fixed, 0.1.1 shipped. Here's what would make mcp-video genuinely better to 
 Features that FFmpeg supports but mcp-video doesn't expose yet. Ordered by impact.
 
 ### High Impact
-- [ ] **Audio effects** — Reverb (`aecho`), equalizer (`equalizer`), compressor (`acompressor`), pitch shift (`asetrate`+`aresample`), noise reduction (`afftdn`)
-- [ ] **Video stabilization** — Deshake filter (`vidstab`) for shaky handheld footage
-- [ ] **Scene detection** — Auto-detect scene changes using `select` filter, return timestamps
-- [ ] **Quality metrics** — PSNR, SSIM, VMAF calculation for comparing video quality
+- [x] **Audio effects** — Reverb (`aecho`), equalizer (`equalizer`), compressor (`acompressor`), pitch shift (`asetrate`+`aresample`), noise reduction (`afftdn`)
+- [x] **Video stabilization** — Deshake filter (`vidstab`) for shaky handheld footage (requires FFmpeg with vidstab)
+- [x] **Scene detection** — Auto-detect scene changes using `select` filter, return timestamps
+- [x] **Quality metrics** — PSNR, SSIM, VMAF calculation for comparing video quality
 
 ### Medium Impact
 - [ ] **HLS/DASH streaming** — Segment video for adaptive bitrate streaming
 - [ ] **Advanced codecs** — AV1 (`libaom-av1`), HEVC/H.265 (`libx265`), ProRes (`prores_ks`)
-- [ ] **Image sequences** — Create video from image sequences (`img2pipe`), export frames
-- [ ] **Metadata editing** — Read/write video metadata tags, chapter support
-- [ ] **Audio waveform extraction** — Text-based waveform for silence/loud section detection
-- [ ] **Subtitle generation** — Generate SRT from `[(start, end, text)]` tuples, burn in one step
+- [x] **Image sequences** — Create video from image sequences (`img2pipe`), export frames
+- [x] **Metadata editing** — Read/write video metadata tags, chapter support
+- [x] **Audio waveform extraction** — Text-based waveform for silence/loud section detection
+- [x] **Subtitle generation** — Generate SRT from `[(start, end, text)]` tuples, burn in one step
 
 ### Low Impact
-- [ ] **Ken Burns / zoom pan** — Animated zoom/pan effects via `zoompan` filter
+- [x] **Ken Burns / zoom pan** — Animated zoom/pan effects via `zoompan` filter
 - [ ] **Advanced masking** — Complex mask operations beyond chroma key
 - [ ] **Frame-accurate seeking** — Input seeking for speed, output seeking for accuracy
-- [ ] **Two-pass encoding** — More efficient compression for target file sizes
+- [x] **Two-pass encoding** — More efficient compression for target file sizes
