@@ -1323,3 +1323,827 @@ def remotion_to_mcpvideo(
         return _result(render_and_post(project_path, composition_id, post_process, output_path=output_path))
     except MCPVideoError as e:
         return _error_result(e)
+
+
+# ---------------------------------------------------------------------------
+# Audio Synthesis Tools (P1 Features)
+# ---------------------------------------------------------------------------
+
+@mcp.tool()
+def audio_synthesize(
+    output_path: str,
+    waveform: str = "sine",
+    frequency: float = 440.0,
+    duration: float = 1.0,
+    volume: float = 0.5,
+    effects: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Generate audio procedurally using synthesis.
+    
+    Creates WAV files from scratch using mathematical waveforms. No external audio
+    files needed. Supports envelopes, reverb, filtering, and fade effects.
+    
+    Args:
+        output_path: Absolute path for the output WAV file.
+        waveform: Waveform type (sine, square, sawtooth, triangle, noise). Default sine.
+        frequency: Base frequency in Hz. Default 440 (A4 note).
+        duration: Duration in seconds. Default 1.0.
+        volume: Amplitude 0-1. Default 0.5.
+        effects: Optional effects dict with keys:
+            - envelope: {"attack", "decay", "sustain", "release"} in seconds
+            - fade_in: Fade in duration in seconds
+            - fade_out: Fade out duration in seconds
+            - reverb: {"room_size", "damping", "wet_level"}
+            - lowpass: Cutoff frequency in Hz
+    
+    Returns:
+        Dict with success status and output_path.
+    """
+    try:
+        from .audio_engine import audio_synthesize as _synth
+        return _result(_synth(
+            output=output_path,
+            waveform=waveform,
+            frequency=frequency,
+            duration=duration,
+            volume=volume,
+            effects=effects,
+        ))
+    except MCPVideoError as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def audio_preset(
+    preset: str,
+    output_path: str,
+    pitch: str = "mid",
+    duration: float | None = None,
+    intensity: float = 0.5,
+) -> dict[str, Any]:
+    """Generate preset sound design elements.
+    
+    Pre-configured sound effects for common use cases. No external audio files needed.
+    
+    Available presets:
+    - UI: ui-blip, ui-click, ui-tap, ui-whoosh-up, ui-whoosh-down
+    - Ambient: drone-low, drone-mid, drone-tech
+    - Notifications: chime-success, chime-error, chime-notification
+    - Data: typing, scan, processing, data-flow
+    
+    Args:
+        preset: Preset name from the list above.
+        output_path: Absolute path for the output WAV file.
+        pitch: Pitch variation (low, mid, high). Default mid.
+        duration: Override default duration (seconds).
+        intensity: Effect intensity 0-1. Default 0.5.
+    
+    Returns:
+        Dict with success status and output_path.
+    """
+    try:
+        from .audio_engine import audio_preset as _preset
+        return _result(_preset(
+            preset=preset,
+            output=output_path,
+            pitch=pitch,
+            duration=duration,
+            intensity=intensity,
+        ))
+    except MCPVideoError as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def audio_sequence(
+    sequence: list[dict[str, Any]],
+    output_path: str,
+) -> dict[str, Any]:
+    """Compose multiple audio events into a timed sequence.
+    
+    Creates a layered audio track from multiple timed sound events.
+    
+    Args:
+        sequence: List of audio events, each with:
+            - type: "tone", "preset", or "whoosh"
+            - at: Start time in seconds
+            - duration: Event duration in seconds
+            - freq/frequency: For tones (Hz)
+            - name: For presets (preset name)
+            - volume: 0-1 amplitude
+            - waveform: For tones (sine, square, etc.)
+        output_path: Absolute path for the output WAV file.
+    
+    Returns:
+        Dict with success status and output_path.
+    """
+    try:
+        from .audio_engine import audio_sequence as _sequence
+        return _result(_sequence(sequence=sequence, output=output_path))
+    except MCPVideoError as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def audio_compose(
+    tracks: list[dict[str, Any]],
+    duration: float,
+    output_path: str,
+) -> dict[str, Any]:
+    """Layer multiple audio tracks with volume mixing.
+    
+    Mix multiple WAV files together with individual volume control.
+    
+    Args:
+        tracks: List of track configs with:
+            - file: Absolute path to WAV file
+            - volume: Volume multiplier 0-1
+            - start: Start time offset in seconds
+            - loop: Whether to loop the track (default false)
+        duration: Total output duration in seconds.
+        output_path: Absolute path for the output WAV file.
+    
+    Returns:
+        Dict with success status and output_path.
+    """
+    try:
+        from .audio_engine import audio_compose as _compose
+        return _result(_compose(tracks=tracks, duration=duration, output=output_path))
+    except MCPVideoError as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def audio_effects(
+    input_path: str,
+    output_path: str,
+    effects: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Apply audio effects chain to a WAV file.
+    
+    Process audio through a chain of effects like reverb, filtering, normalization.
+    
+    Args:
+        input_path: Absolute path to input WAV file.
+        output_path: Absolute path for output WAV file.
+        effects: List of effect configs with:
+            - type: "lowpass", "reverb", "normalize", "fade"
+            - Additional params per effect type
+    
+    Returns:
+        Dict with success status and output_path.
+    """
+    try:
+        from .audio_engine import audio_effects as _effects
+        return _result(_effects(input_path=input_path, output=output_path, effects=effects))
+    except MCPVideoError as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_add_generated_audio(
+    input_path: str,
+    audio_config: dict[str, Any],
+    output_path: str,
+) -> dict[str, Any]:
+    """Add procedurally generated audio to a video.
+    
+    One-shot convenience function to generate and add audio to video.
+    
+    Args:
+        input_path: Absolute path to input video.
+        audio_config: Configuration dict with:
+            - drone: {"frequency", "volume"} for background tone
+            - events: List of timed sound events
+        output_path: Absolute path for output video.
+    
+    Returns:
+        Dict with success status and output_path.
+    """
+    try:
+        from .audio_engine import add_generated_audio as _add_gen_audio
+        return _result(_add_gen_audio(video=input_path, audio_config=audio_config, output=output_path))
+    except MCPVideoError as e:
+        return _error_result(e)
+
+
+# ---------------------------------------------------------------------------
+# Visual Effects Tools (P1 Features)
+# ---------------------------------------------------------------------------
+
+@mcp.tool()
+def effect_vignette(
+    input_path: str,
+    output_path: str,
+    intensity: float = 0.5,
+    radius: float = 0.8,
+    smoothness: float = 0.5,
+) -> dict[str, Any]:
+    """Apply vignette effect - darkened edges.
+    
+    Creates a darkened border effect that draws attention to the center of the frame.
+    
+    Args:
+        input_path: Absolute path to input video.
+        output_path: Absolute path for output video.
+        intensity: Darkness amount 0-1. Default 0.5.
+        radius: Vignette radius 0-1 (1 = edge of frame). Default 0.8.
+        smoothness: Edge softness 0-1. Default 0.5.
+    
+    Returns:
+        Dict with success status and output_path.
+    """
+    try:
+        from .effects_engine import effect_vignette as _vignette
+        return _result(_vignette(input_path, output_path, intensity, radius, smoothness))
+    except MCPVideoError as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def effect_chromatic_aberration(
+    input_path: str,
+    output_path: str,
+    intensity: float = 2.0,
+    angle: float = 0,
+) -> dict[str, Any]:
+    """Apply chromatic aberration - RGB channel separation.
+    
+    Creates a trendy RGB split effect popular in tech/glitch aesthetics.
+    
+    Args:
+        input_path: Absolute path to input video.
+        output_path: Absolute path for output video.
+        intensity: Pixel offset amount. Default 2.0.
+        angle: Separation direction in degrees. Default 0 (horizontal).
+    
+    Returns:
+        Dict with success status and output_path.
+    """
+    try:
+        from .effects_engine import effect_chromatic_aberration as _chroma
+        return _result(_chroma(input_path, output_path, intensity, angle))
+    except MCPVideoError as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def effect_scanlines(
+    input_path: str,
+    output_path: str,
+    line_height: int = 2,
+    opacity: float = 0.3,
+    flicker: float = 0.1,
+) -> dict[str, Any]:
+    """Apply CRT-style scanlines overlay.
+    
+    Simulates old CRT monitor scanline effect with optional flicker.
+    
+    Args:
+        input_path: Absolute path to input video.
+        output_path: Absolute path for output video.
+        line_height: Pixels per scanline. Default 2.
+        opacity: Line opacity 0-1. Default 0.3.
+        flicker: Brightness variation 0-1. Default 0.1.
+    
+    Returns:
+        Dict with success status and output_path.
+    """
+    try:
+        from .effects_engine import effect_scanlines as _scanlines
+        return _result(_scanlines(input_path, output_path, line_height, opacity, flicker))
+    except MCPVideoError as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def effect_noise(
+    input_path: str,
+    output_path: str,
+    intensity: float = 0.05,
+    mode: str = "film",
+    animated: bool = True,
+) -> dict[str, Any]:
+    """Apply film grain or digital noise.
+    
+    Adds texture noise to video for vintage or lo-fi aesthetics.
+    
+    Args:
+        input_path: Absolute path to input video.
+        output_path: Absolute path for output video.
+        intensity: Noise amount 0-1. Default 0.05.
+        mode: Noise type (film, digital, color). Default film.
+        animated: Whether noise changes per frame. Default true.
+    
+    Returns:
+        Dict with success status and output_path.
+    """
+    try:
+        from .effects_engine import effect_noise as _noise
+        return _result(_noise(input_path, output_path, intensity, mode, animated))
+    except MCPVideoError as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def effect_glow(
+    input_path: str,
+    output_path: str,
+    intensity: float = 0.5,
+    radius: int = 10,
+    threshold: float = 0.7,
+) -> dict[str, Any]:
+    """Apply bloom/glow effect for highlights.
+    
+    Creates a soft glow around bright areas of the video.
+    
+    Args:
+        input_path: Absolute path to input video.
+        output_path: Absolute path for output video.
+        intensity: Glow strength 0-1. Default 0.5.
+        radius: Blur radius in pixels. Default 10.
+        threshold: Brightness threshold 0-1. Default 0.7.
+    
+    Returns:
+        Dict with success status and output_path.
+    """
+    try:
+        from .effects_engine import effect_glow as _glow
+        return _result(_glow(input_path, output_path, intensity, radius, threshold))
+    except MCPVideoError as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_layout_grid(
+    clips: list[str],
+    layout: str,
+    output_path: str,
+    gap: int = 10,
+    padding: int = 20,
+    background: str = "#141414",
+) -> dict[str, Any]:
+    """Create grid-based multi-video layout.
+    
+    Arranges multiple videos in a grid pattern (2x2, 3x1, etc.).
+    
+    Args:
+        clips: List of absolute paths to video files.
+        layout: Grid layout (2x2, 3x1, 1x3, 2x3).
+        output_path: Absolute path for output video.
+        gap: Pixels between clips. Default 10.
+        padding: Padding around grid. Default 20.
+        background: Background color hex. Default #141414.
+    
+    Returns:
+        Dict with success status and output_path.
+    """
+    try:
+        from .effects_engine import layout_grid as _grid
+        return _result(_grid(clips, layout, output_path, gap, padding, background))
+    except MCPVideoError as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_layout_pip(
+    main_path: str,
+    pip_path: str,
+    output_path: str,
+    position: str = "bottom-right",
+    size: float = 0.25,
+    margin: int = 20,
+    border: bool = True,
+    border_color: str = "#CCFF00",
+    border_width: int = 2,
+) -> dict[str, Any]:
+    """Picture-in-picture overlay.
+    
+    Overlay a smaller video on top of a main video.
+    
+    Args:
+        main_path: Absolute path to main video.
+        pip_path: Absolute path to picture-in-picture video.
+        output_path: Absolute path for output video.
+        position: Position (top-left, top-right, bottom-left, bottom-right). Default bottom-right.
+        size: PIP size as fraction of main. Default 0.25.
+        margin: Margin from edges in pixels. Default 20.
+        border: Add border around PIP. Default true.
+        border_color: Border color hex. Default #CCFF00.
+        border_width: Border width in pixels. Default 2.
+    
+    Returns:
+        Dict with success status and output_path.
+    """
+    try:
+        from .effects_engine import layout_pip as _pip
+        return _result(_pip(main_path, pip_path, output_path, position, size, margin, False, border, border_color, border_width))
+    except MCPVideoError as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_text_animated(
+    input_path: str,
+    text: str,
+    output_path: str,
+    animation: str = "fade",
+    font: str = "Arial",
+    size: int = 48,
+    color: str = "white",
+    position: str = "center",
+    start: float = 0,
+    duration: float = 3.0,
+) -> dict[str, Any]:
+    """Add animated text to video.
+    
+    Overlay text with animation effects (fade, slide, etc.).
+    
+    Args:
+        input_path: Absolute path to input video.
+        text: Text to display.
+        output_path: Absolute path for output video.
+        animation: Animation type (fade, slide-up, typewriter). Default fade.
+        font: Font family. Default Arial.
+        size: Font size. Default 48.
+        color: Text color. Default white.
+        position: Text position. Default center.
+        start: Start time in seconds. Default 0.
+        duration: Display duration. Default 3.0.
+    
+    Returns:
+        Dict with success status and output_path.
+    """
+    try:
+        from .effects_engine import text_animated as _text
+        return _result(_text(input_path, text, output_path, animation, font, size, color, position, start, duration))
+    except MCPVideoError as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_text_subtitles(
+    input_path: str,
+    subtitles_path: str,
+    output_path: str,
+    style: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Burn subtitles from SRT/VTT with styling.
+    
+    Embeds subtitle file into video with customizable appearance.
+    
+    Args:
+        input_path: Absolute path to input video.
+        subtitles_path: Absolute path to SRT or VTT file.
+        output_path: Absolute path for output video.
+        style: Optional style dict with font, size, color, outline, etc.
+    
+    Returns:
+        Dict with success status and output_path.
+    """
+    try:
+        from .effects_engine import text_subtitles as _subs
+        return _result(_subs(input_path, subtitles_path, output_path, style))
+    except MCPVideoError as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_mograph_count(
+    start: int,
+    end: int,
+    duration: float,
+    output_path: str,
+    style: dict[str, Any] | None = None,
+    fps: int = 30,
+) -> dict[str, Any]:
+    """Generate animated number counter video.
+    
+    Creates a standalone video of an animated counting number.
+    
+    Args:
+        start: Starting number.
+        end: Ending number.
+        duration: Animation duration in seconds.
+        output_path: Absolute path for output video.
+        style: Optional style dict with font, size, color, glow.
+        fps: Frame rate. Default 30.
+    
+    Returns:
+        Dict with success status and output_path.
+    """
+    try:
+        from .effects_engine import mograph_count as _count
+        return _result(_count(start, end, duration, output_path, style, fps))
+    except MCPVideoError as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_mograph_progress(
+    duration: float,
+    output_path: str,
+    style: str = "bar",
+    color: str = "#CCFF00",
+    track_color: str = "#333333",
+    fps: int = 30,
+) -> dict[str, Any]:
+    """Generate progress bar / loading animation.
+    
+    Creates a standalone progress animation video.
+    
+    Args:
+        duration: Animation duration in seconds.
+        output_path: Absolute path for output video.
+        style: Progress style (bar, circle, dots). Default bar.
+        color: Progress color hex. Default #CCFF00.
+        track_color: Background track color hex. Default #333333.
+        fps: Frame rate. Default 30.
+    
+    Returns:
+        Dict with success status and output_path.
+    """
+    try:
+        from .effects_engine import mograph_progress as _progress
+        return _result(_progress(duration, output_path, style, color, track_color, fps))
+    except MCPVideoError as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_info_detailed(
+    input_path: str,
+) -> dict[str, Any]:
+    """Get extended video metadata.
+    
+    Returns detailed video information including scene change detection
+    and dominant colors.
+    
+    Args:
+        input_path: Absolute path to input video.
+    
+    Returns:
+        Dict with duration, fps, resolution, bitrate, has_audio, scene_changes.
+    """
+    try:
+        from .effects_engine import video_info_detailed as _info
+        return _result(_info(input_path))
+    except MCPVideoError as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_auto_chapters(
+    input_path: str,
+    threshold: float = 0.3,
+) -> dict[str, Any]:
+    """Auto-detect scene changes and create chapters.
+    
+    Analyzes video for scene cuts and returns chapter timestamps.
+    
+    Args:
+        input_path: Absolute path to input video.
+        threshold: Scene detection threshold 0-1. Default 0.3.
+    
+    Returns:
+        List of (timestamp, description) chapter tuples.
+    """
+    try:
+        from .effects_engine import auto_chapters as _chapters
+        return _result(_chapters(input_path, threshold))
+    except MCPVideoError as e:
+        return _error_result(e)
+
+
+# ---------------------------------------------------------------------------
+# Transition Tools (Advanced Effects)
+# ---------------------------------------------------------------------------
+
+@mcp.tool()
+def transition_glitch(
+    clip1_path: str,
+    clip2_path: str,
+    output_path: str,
+    duration: float = 0.5,
+    intensity: float = 0.3,
+) -> dict[str, Any]:
+    """Apply glitch transition between two video clips.
+    
+    Args:
+        clip1_path: Absolute path to first video clip.
+        clip2_path: Absolute path to second video clip.
+        output_path: Absolute path for output video.
+        duration: Transition duration in seconds (default 0.5).
+        intensity: Glitch intensity 0-1 (default 0.3).
+    """
+    try:
+        from .transitions_engine import transition_glitch
+        return _result(transition_glitch(clip1_path, clip2_path, output_path, duration, intensity))
+    except Exception as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def transition_pixelate(
+    clip1_path: str,
+    clip2_path: str,
+    output_path: str,
+    duration: float = 0.4,
+    pixel_size: int = 50,
+) -> dict[str, Any]:
+    """Apply pixelate transition between two video clips."""
+    try:
+        from .transitions_engine import transition_pixelate
+        return _result(transition_pixelate(clip1_path, clip2_path, output_path, duration, pixel_size))
+    except Exception as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def transition_morph(
+    clip1_path: str,
+    clip2_path: str,
+    output_path: str,
+    duration: float = 0.6,
+    mesh_size: int = 10,
+) -> dict[str, Any]:
+    """Apply morph transition between two video clips."""
+    try:
+        from .transitions_engine import transition_morph
+        return _result(transition_morph(clip1_path, clip2_path, output_path, duration, mesh_size))
+    except Exception as e:
+        return _error_result(e)
+
+
+# ---------------------------------------------------------------------------
+# AI Feature Tools
+# ---------------------------------------------------------------------------
+
+@mcp.tool()
+def video_ai_remove_silence(
+    input_path: str,
+    output_path: str,
+    silence_threshold: float = -50,
+    min_silence_duration: float = 0.5,
+    keep_margin: float = 0.1,
+) -> dict[str, Any]:
+    """Remove silent sections from video."""
+    try:
+        from .ai_engine import ai_remove_silence
+        return _result(ai_remove_silence(input_path, output_path, silence_threshold, min_silence_duration, keep_margin))
+    except Exception as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_ai_transcribe(
+    input_path: str,
+    output_srt: str | None = None,
+    model: str = "base",
+    language: str | None = None,
+) -> dict[str, Any]:
+    """Transcribe speech to text using Whisper."""
+    try:
+        from .ai_engine import ai_transcribe
+        return _result(ai_transcribe(input_path, output_srt, model, language))
+    except Exception as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_ai_scene_detect(
+    input_path: str,
+    threshold: float = 0.3,
+    use_ai: bool = False,
+) -> dict[str, Any]:
+    """Detect scene changes in video."""
+    try:
+        from .ai_engine import ai_scene_detect
+        return _result(ai_scene_detect(input_path, threshold, use_ai))
+    except Exception as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_ai_stem_separation(
+    input_path: str,
+    output_dir: str,
+    stems: list[str] | None = None,
+    model: str = "htdemucs",
+) -> dict[str, Any]:
+    """Separate audio into stems using Demucs."""
+    try:
+        from .ai_engine import ai_stem_separation
+        return _result(ai_stem_separation(input_path, output_dir, stems, model))
+    except Exception as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_ai_upscale(
+    input_path: str,
+    output_path: str,
+    scale: int = 2,
+    model: str = "realesrgan",
+) -> dict[str, Any]:
+    """Upscale video using AI super-resolution."""
+    try:
+        from .ai_engine import ai_upscale
+        return _result(ai_upscale(input_path, output_path, scale, model))
+    except Exception as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_ai_color_grade(
+    input_path: str,
+    output_path: str,
+    reference_path: str | None = None,
+    style: str = "auto",
+) -> dict[str, Any]:
+    """Auto color grade video."""
+    try:
+        from .ai_engine import ai_color_grade
+        return _result(ai_color_grade(input_path, output_path, reference_path, style))
+    except Exception as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_audio_spatial(
+    input_path: str,
+    output_path: str,
+    positions: list[dict],
+    method: str = "hrtf",
+) -> dict[str, Any]:
+    """Apply 3D spatial audio positioning."""
+    try:
+        from .ai_engine import audio_spatial
+        return _result(audio_spatial(input_path, output_path, positions, method))
+    except Exception as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_quality_check(
+    input_path: str,
+    fail_on_warning: bool = False,
+) -> dict[str, Any]:
+    """Run visual quality checks on a video.
+
+    Analyzes brightness, contrast, saturation, audio levels,
+    and color balance. Returns quality scores and recommendations.
+
+    Args:
+        input_path: Absolute path to video file
+        fail_on_warning: If True, treat warnings as failures
+    """
+    try:
+        from .quality_guardrails import quality_check
+        return _result(quality_check(input_path, fail_on_warning))
+    except Exception as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_design_quality_check(
+    input_path: str,
+    auto_fix: bool = False,
+    strict: bool = False,
+) -> dict[str, Any]:
+    """Run comprehensive design quality analysis on a video.
+    
+    Checks layout, typography, color, motion, and composition quality.
+    Can automatically fix issues where possible.
+    
+    Args:
+        input_path: Absolute path to video file
+        auto_fix: If True, automatically apply fixes
+        strict: If True, treat warnings as errors
+    """
+    try:
+        from .design_quality import design_quality_check
+        return _result(design_quality_check(input_path, auto_fix=auto_fix, strict=strict))
+    except Exception as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_fix_design_issues(
+    input_path: str,
+    output_path: str | None = None,
+) -> dict[str, Any]:
+    """Auto-fix design issues in a video.
+    
+    Applies automatic fixes for brightness, contrast, saturation,
+    and audio level issues.
+    
+    Args:
+        input_path: Absolute path to input video
+        output_path: Absolute path for output (auto-generated if omitted)
+    """
+    try:
+        from .design_quality import fix_design_issues
+        return _result(fix_design_issues(input_path, output_path))
+    except Exception as e:
+        return _error_result(e)

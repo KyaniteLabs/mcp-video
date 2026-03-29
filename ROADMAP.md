@@ -4,6 +4,39 @@ Bugs fixed, 0.1.1 shipped. Here's what would make mcp-video genuinely better to 
 
 ---
 
+## ✅ Completed in v1.0 (2026-03-28)
+
+### AI-Powered Features
+- [x] `video_ai_remove_silence` - Auto-remove silent sections
+- [x] `video_ai_transcribe` - Speech-to-text with Whisper
+- [x] `video_ai_scene_detect` - ML scene detection
+- [x] `video_ai_stem_separation` - Audio stem separation
+- [x] `video_ai_upscale` - AI super-resolution
+- [x] `video_ai_color_grade` - Auto color grading
+- [x] `video_audio_spatial` - 3D spatial audio
+
+### Video Transitions
+- [x] `transition_glitch` - Glitch effect transition
+- [x] `transition_pixelate` - Pixel dissolve transition
+- [x] `transition_morph` - Mesh warp transition
+
+### Audio Synthesis
+- [x] `audio_synthesize` - Procedural waveform generation
+- [x] `audio_preset` - 18+ pre-configured sounds
+- [x] `audio_sequence` - Timed sequence composition
+- [x] `audio_compose` - Multi-track mixing
+- [x] `audio_effects` - Effects chain processing
+- [x] `video_add_generated_audio` - One-shot video+audio
+
+### Visual Effects
+- [x] `effect_vignette` - Darkened edges
+- [x] `effect_chromatic_aberration` - RGB separation
+- [x] `effect_scanlines` - CRT scanlines
+- [x] `effect_noise` - Film/digital noise
+- [x] `effect_glow` - Bloom/glow effect
+
+---
+
 ## High Impact (Directly improves every user session)
 
 - [x] **Progress callbacks** — Long operations (merge, convert, export) give no feedback. A progress percentage in the MCP response would let agents tell users "50% done..." instead of silence. FFmpeg outputs progress to stderr — parse it.

@@ -13,6 +13,7 @@ import {
   GRADIENT_PRIMARY,
   FONT_SIZE,
   FONT_DISPLAY,
+  FONT_MONO,
   TEXT,
   glowShadow,
 } from '../lib/theme';
@@ -28,10 +29,10 @@ export const S2Solution: React.FC = () => {
   const { fps } = useVideoConfig();
   const { breathe } = useAmbientMotion(frame);
 
-  // Counter: 0 → 43 over 120 frames
+  // Counter: 0 → 43 over 48 frames (2x speed for better pacing)
   const counterValue = Math.min(
     43,
-    Math.floor(interpolate(frame, [0, 120], [0, 43], {
+    Math.floor(interpolate(frame, [0, 48], [0, 43], {
       extrapolateRight: 'clamp',
     })),
   );
@@ -95,7 +96,9 @@ export const S2Solution: React.FC = () => {
           style={{
             marginTop: 16,
             fontSize: FONT_SIZE.SUBTITLE,
-            color: COLORS.NEON_CYAN,
+            fontFamily: FONT_MONO,
+            color: COLORS.LIME,
+            textShadow: `0 0 20px ${COLORS.LIME}40`,
             opacity: interpolate(subtitleSpring, [0, 0.3], [0, 1]),
             transform: `translateY(${interpolate(subtitleSpring, [0, 1], [12, 0])}px)`,
           }}
@@ -140,8 +143,8 @@ export const S2Solution: React.FC = () => {
                     width: 8,
                     height: 8,
                     borderRadius: '50%',
-                    background: COLORS.NEON_CYAN,
-                    boxShadow: glowShadow(COLORS.NEON_CYAN, glowStrength),
+                    background: COLORS.LIME,
+                    boxShadow: glowShadow(COLORS.LIME, glowStrength),
                   }}
                 />
                 <span

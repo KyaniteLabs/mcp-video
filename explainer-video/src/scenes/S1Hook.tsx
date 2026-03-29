@@ -82,7 +82,7 @@ export const S1Hook: React.FC = () => {
   return (
     <AbsoluteFill style={{ backgroundColor: COLORS.BG_DEEP }}>
       <div style={{ opacity: bgOpacity }}>
-        <GradientBackground glowColor={COLORS.NEON_CYAN} />
+        <GradientBackground glowColor={COLORS.LIME} />
       </div>
 
       <ParticleField count={30} />
@@ -101,10 +101,10 @@ export const S1Hook: React.FC = () => {
               style={{
                 ...TEXT.code,
                 fontSize: 32,
-                color: COLORS.NEON_CYAN,
+                color: COLORS.LIME,
               }}
             >
-              {cursorVisible ? '▊' : ' '}
+              {cursorVisible ? '█' : ' '}
             </span>
           </div>
         )}
@@ -121,8 +121,8 @@ export const S1Hook: React.FC = () => {
             style={{
               ...TEXT.codeBold,
               fontSize: 48,
-              color: COLORS.NEON_ORANGE,
-              textShadow: glowShadow(COLORS.NEON_ORANGE, 0.8),
+              color: '#E76F51',
+              textShadow: glowShadow('#E76F51', 0.8),
             }}
           >
             {HOOK_TEXT}
@@ -146,8 +146,8 @@ export const S1Hook: React.FC = () => {
               left: 0,
               width: `${bracketProgress * 30}px`,
               height: `${bracketProgress * 30}px`,
-              borderTop: `2px solid ${COLORS.NEON_CYAN}`,
-              borderLeft: `2px solid ${COLORS.NEON_CYAN}`,
+              borderTop: `2px solid ${COLORS.LIME}`,
+              borderLeft: `2px solid ${COLORS.LIME}`,
             }}
           />
           <div
@@ -179,8 +179,8 @@ export const S1Hook: React.FC = () => {
               right: 0,
               width: `${bracketProgress * 30}px`,
               height: `${bracketProgress * 30}px`,
-              borderBottom: `2px solid ${COLORS.NEON_MAGENTA}`,
-              borderRight: `2px solid ${COLORS.NEON_MAGENTA}`,
+              borderBottom: `2px solid ${COLORS.VIOLET_MID}`,
+              borderRight: `2px solid ${COLORS.VIOLET_MID}`,
             }}
           />
 
@@ -210,8 +210,8 @@ export const S1Hook: React.FC = () => {
                 width: `${underlineProgress * 100}%`,
                 maxWidth: 480,
                 height: 3,
-                background: `linear-gradient(90deg, ${COLORS.NEON_CYAN}, ${COLORS.NEON_MAGENTA})`,
-                boxShadow: glowShadow(COLORS.NEON_CYAN),
+                background: `linear-gradient(90deg, ${COLORS.LIME}, ${COLORS.VIOLET_MID})`,
+                boxShadow: glowShadow(COLORS.LIME),
                 borderRadius: 2,
               }}
             />

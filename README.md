@@ -1,10 +1,10 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.7.0-blue.svg" alt="Version">
+  <img src="https://img.shields.io/badge/version-1.0.0-blue.svg" alt="Version">
   <img src="https://img.shields.io/badge/tests-545%20passed-brightgreen.svg" alt="Tests">
   <a href="https://github.com/pastorsimon1798/mcp-video/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/pastorsimon1798/mcp-video/.github/workflows/ci.yml?branch=master&label=CI" alt="CI"></a>
   <a href="https://glama.ai/mcp/servers/pastorsimon1798/mcp-video"><img src="https://glama.ai/mcp/servers/pastorsimon1798/mcp-video/badges/score.svg" alt="Glama Score"></a>
   <img src="https://img.shields.io/badge/pypi-mcp--video-blue.svg" alt="PyPI">
-  <img src="https://img.shields.io/badge/tools-43%20MCP%20tools-orange.svg" alt="Tools">
+  <img src="https://img.shields.io/badge/tools-79%20MCP%20tools-orange.svg" alt="Tools">
   <img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="License">
   <img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python">
 </p>
@@ -13,7 +13,7 @@
 
 <p align="center">
   <strong>The video editing MCP server for AI agents and humans.</strong><br>
-  43 tools. 3 interfaces. Rich CLI. Purpose-built for AI agents.
+  79 tools. 3 interfaces. Rich CLI. Purpose-built for AI agents.
 </p>
 
 <p align="center">
@@ -51,6 +51,38 @@ mcp-video bridges this gap. It's a local, fast, free video editing layer that an
 | **MCP Server** | AI agents (Claude Code, Cursor) | *"Trim this video and add a title"* |
 | **Python Client** | Scripts, automation, pipelines | `editor.trim("v.mp4", start="0:30", duration="15")` |
 | **CLI** | Shell scripts, quick ops, humans | `mcp_video trim video.mp4 -s 0:30 -d 15` |
+
+---
+
+## What's New in v1.0
+
+### AI-Powered Features (7 tools)
+- **Silence Removal** — Automatically detect and remove silent portions from audio
+- **Transcription** — Convert speech to text with timestamp alignment
+- **Scene Detection** — AI-powered scene change detection with configurable sensitivity
+- **Stem Separation** — Isolate vocals, drums, bass, and other instruments
+- **Upscale** — AI-powered video upscaling for enhanced resolution
+- **Color Grade** — Intelligent color grading with cinematic presets
+- **Spatial Audio** — 3D spatial audio processing and positioning
+
+### Video Transitions (3 tools)
+- **Glitch** — Digital glitch transition effect
+- **Pixelate** — Pixelation transition between scenes
+- **Morph** — Smooth morphing transition effect
+
+### Audio Synthesis (6 tools)
+- **Waveform Generation** — Generate audio waveforms from video
+- **18+ Presets** — Extensive library of audio effect presets
+- **Sequencing** — Program audio sequences and patterns
+- **Composition** — Layer and compose multiple audio tracks
+- **Effects** — Apply audio effects chains
+
+### Visual Effects (5 tools)
+- **Vignette** — Darken edges for cinematic focus
+- **Chromatic Aberration** — RGB color separation effect
+- **Scanlines** — Retro CRT scanline effect
+- **Noise** — Film grain and digital noise effects
+- **Glow** — Bloom and glow effects for highlights
 
 ---
 
@@ -210,9 +242,11 @@ mcp_video template tiktok video.mp4 --caption "Check this out!"
 
 ## MCP Tools
 
-mcp-video exposes 43 tools for AI agents. All tools return structured JSON with `success`, `output_path`, and operation metadata. On failure, they return `{"success": false, "error": {...}}` with auto-fix suggestions.
+mcp-video exposes 79 tools for AI agents. All tools return structured JSON with `success`, `output_path`, and operation metadata. On failure, they return `{"success": false, "error": {...}}` with auto-fix suggestions.
 
 **New in v0.6.0:** Per-tool CRF/preset quality control, pixel/percentage positioning, image overlays in timeline DSL (single-pass compositing), `video_extract_frame` alias, and batch/preview documentation.
+
+**New in v1.0.0:** AI-powered video editing — silence removal, transcription, scene detection, stem separation, upscaling, color grading, spatial audio, plus glitch/pixelate/morph transitions and audio synthesis.
 
 **New in v0.7.0:** Image analysis tools — extract dominant colors, generate color harmony palettes, and analyze product images with optional AI descriptions.
 
@@ -311,6 +345,47 @@ mcp-video exposes 43 tools for AI agents. All tools return structured JSON with 
 | `image_extract_colors` | Extract dominant colors via K-means clustering | `image_path`, `n_colors` (1-20) |
 | `image_generate_palette` | Generate color harmony palette from image | `image_path`, `harmony`, `n_colors` |
 | `image_analyze_product` | Extract colors + optional AI product description | `image_path`, `use_ai`, `n_colors` |
+
+### AI Features
+
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `video_remove_silence` | Remove silent audio portions | `input_path`, `threshold`, `min_duration` |
+| `video_transcribe` | Speech-to-text with timestamps | `input_path`, `language`, `model` |
+| `video_detect_scenes_ai` | AI scene change detection | `input_path`, `sensitivity`, `min_scene_length` |
+| `video_separate_stems` | Isolate audio stems (vocals, drums, etc.) | `input_path`, `stems`, `output_dir` |
+| `video_upscale` | AI video upscaling | `input_path`, `scale_factor`, `model` |
+| `video_color_grade_ai` | Intelligent color grading | `input_path`, `preset`, `strength` |
+| `video_spatial_audio` | 3D spatial audio processing | `input_path`, `position`, `room_size` |
+
+### Transitions
+
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `video_transition_glitch` | Glitch transition effect | `input_path`, `duration`, `intensity` |
+| `video_transition_pixelate` | Pixelate transition | `input_path`, `duration`, `block_size` |
+| `video_transition_morph` | Morph transition effect | `input_path`, `duration`, `easing` |
+
+### Audio Synthesis
+
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `audio_generate_waveform` | Generate audio waveforms | `input_path`, `style`, `color` |
+| `audio_apply_preset` | Apply audio effect preset | `input_path`, `preset`, `intensity` |
+| `audio_sequence` | Program audio sequences | `patterns`, `bpm`, `output_path` |
+| `audio_compose` | Layer multiple audio tracks | `tracks`, `mix_mode`, `output_path` |
+| `audio_effects_chain` | Apply audio effects chain | `input_path`, `effects`, `output_path` |
+| `synthesize_tone` | Generate synthetic tones | `frequency`, `duration`, `waveform` |
+
+### Visual Effects
+
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `video_effect_vignette` | Darken edges for cinematic focus | `input_path`, `strength`, `radius` |
+| `video_effect_chromatic` | RGB chromatic aberration effect | `input_path`, `shift_amount`, `angle` |
+| `video_effect_scanlines` | Retro CRT scanline effect | `input_path`, `density`, `opacity` |
+| `video_effect_noise` | Film grain and digital noise | `input_path`, `type`, `amount` |
+| `video_effect_glow` | Bloom/glow for highlights | `input_path`, `radius`, `threshold` |
 
 ### Advanced
 

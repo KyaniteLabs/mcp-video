@@ -9,57 +9,47 @@ import {
 import GradientBackground from '../components/GradientBackground';
 import {
   COLORS,
-  FONT_SIZE,
   FONT_MONO,
   TEXT,
   glowShadow,
 } from '../lib/theme';
-import { SPRING_SMOOTH, stagger, useAmbientMotion } from '../lib/animations';
+import { SPRING_SMOOTH } from '../lib/animations';
 
-const EXTRACTED_COLORS = ['#FF6B35', '#00F0FF', '#8B5CF6', '#00FF88', '#FF00FF'];
-const HARMONY_LABELS = ['Complementary', 'Analogous', 'Triadic'];
+const EXTRACTED_COLORS = ['#CCFF00', '#7C3AED', '#5B2E91', '#00E5D4', '#8B5CF6'];
 
 const CODE_LINES = [
-  { text: 'from mcp_video import McpVideo', color: COLORS.NEON_MAGENTA },
+  { text: 'from mcp_video import McpVideo', color: COLORS.VIOLET_BRIGHT },
   { text: '', color: '' },
   { text: 'video = McpVideo("input.mp4")', color: '' },
   { text: 'colors = video.extract_colors(', color: '' },
-  { text: '    image="product.jpg",', color: COLORS.NEON_CYAN },
-  { text: '    n_colors=5', color: '#FF6B35' },
+  { text: '    image="product.jpg",', color: COLORS.LIME },
+  { text: '    n_colors=5', color: '#CCFF00' },
   { text: ')', color: '' },
   { text: '', color: '' },
-  { text: 'print(colors.dominant)', color: COLORS.NEON_GREEN },
-  { text: '# => [("#FF6B35", 35%), ...]', color: COLORS.TEXT_MUTED },
+  { text: 'print(colors.dominant)', color: COLORS.LIME },
+  { text: '# => ["#CCFF00", "#7C3AED", ...]', color: COLORS.TEXT_MUTED },
 ];
 
 export const S5ImageCode: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const { drift } = useAmbientMotion(frame);
 
   // Wheel rotation
-  const wheelAngle = frame * 2;
+  const wheelAngle = frame * 1.5;
 
-  // Swatch expansion
-  const swatchSpread = interpolate(frame, [0, 60], [0, 1], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
+  // Swatch entrance
+  const swatchSpring = spring({
+    frame: Math.max(0, frame - 30),
+    fps,
+    config: SPRING_SMOOTH,
   });
 
   // Terminal cursor blink
   const cursorVisible = Math.floor(frame / 15) % 2 === 0;
 
-  // Color swatch bob
-  const swatchBob = Math.sin(frame * 0.06) * 4;
-
-  // Gradient shift from magenta to cyan
-  const gradientMix = interpolate(frame, [0, 240], [0, 1], {
-    extrapolateRight: 'clamp',
-  });
-
   // Code line reveal
   const codeLineSpring = spring({
-    frame: Math.max(0, frame - 30),
+    frame: Math.max(0, frame - 60),
     fps,
     config: SPRING_SMOOTH,
   });
@@ -67,231 +57,275 @@ export const S5ImageCode: React.FC = () => {
   return (
     <AbsoluteFill style={{ backgroundColor: COLORS.BG_DEEP }}>
       <GradientBackground
-        glowColor={COLORS.NEON_MAGENTA}
+        glowColor={COLORS.VIOLET_MID}
         glowX={0.5}
         glowY={0.3}
-        accentTint={COLORS.NEON_CYAN}
+        accentTint={COLORS.LIME}
       />
 
       <AbsoluteFill
         style={{
-          padding: 80,
+          display: 'flex',
           flexDirection: 'column',
-          gap: 40,
+          padding: 60,
+          gap: 32,
         }}
       >
-        {/* Context header */}
-        <div style={{ textAlign: 'center', marginBottom: 8 }}>
+        {/* Header */}
+        <div style={{ textAlign: 'center' }}>
           <div style={{
-            ...TEXT.title, fontSize: 32, color: COLORS.NEON_MAGENTA,
-            marginBottom: 4,
+            ...TEXT.title,
+            fontSize: 36,
+            color: COLORS.VIOLET_BRIGHT,
+            marginBottom: 8,
           }}>
             AI-Powered Color Analysis
           </div>
           <div style={{
-            ...TEXT.subtitle, fontSize: 20, color: COLORS.TEXT_SECONDARY,
+            ...TEXT.subtitle,
+            fontSize: 18,
+            color: COLORS.TEXT_SECONDARY,
           }}>
             Extract brand colors from any image automatically
           </div>
         </div>
 
-        {/* Top: Product image placeholder with swatches */}
+        {/* Main content - centered single column */}
         <div
           style={{
+            display: 'flex',
             flexDirection: 'row',
+            justifyContent: 'center',
             alignItems: 'center',
-            gap: 40,
+            gap: 80,
+            flex: 1,
           }}
         >
-          {/* Image placeholder with gradient animation */}
-          <div
-            style={{
-              width: 300,
-              height: 200,
-              borderRadius: 12,
-              background: `linear-gradient(${135 + Math.sin(frame * 0.015) * 20}deg, #1a1a2e, #2d1b3d, #0f3460)`,
-              border: '1px solid rgba(255,255,255,0.08)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-              position: 'relative',
-              overflow: 'hidden',
-            }}
-          >
-            {/* Scan line effect */}
+          {/* Left: Analysis demo */}
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 24,
+          }}>
+            {/* Image placeholder */}
             <div
               style={{
-                position: 'absolute',
-                top: `${(frame * 2) % 200}px`,
-                left: 0,
-                right: 0,
-                height: 2,
-                background: `linear-gradient(90deg, transparent, ${COLORS.NEON_MAGENTA}40, transparent)`,
+                width: 280,
+                height: 180,
+                borderRadius: 12,
+                background: `linear-gradient(${135 + Math.sin(frame * 0.02) * 15}deg, #1a1a2e, #2d1b3d, #0f3460)`,
+                border: `2px solid ${COLORS.VIOLET_MID}40`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                position: 'relative',
+                overflow: 'hidden',
+                boxShadow: `0 0 40px ${COLORS.VIOLET_MID}20`,
               }}
-            />
-            {/* Crosshair */}
-            <div style={{
-              position: 'absolute',
-              width: 40,
-              height: 40,
-              border: `1px solid ${COLORS.NEON_MAGENTA}30`,
-              borderRadius: '50%',
-            }} />
-            <div style={{
-              position: 'absolute',
-              width: 1,
-              height: 200,
-              background: `${COLORS.NEON_MAGENTA}15`,
-            }} />
-            <div style={{
-              position: 'absolute',
-              height: 1,
-              width: 300,
-              background: `${COLORS.NEON_MAGENTA}15`,
-            }} />
-            <span style={{ ...TEXT.caption, color: COLORS.NEON_MAGENTA, fontSize: 14, opacity: 0.6 }}>
-              ANALYZING
-            </span>
-          </div>
-
-          {/* Swatch circles */}
-          <div style={{ flexDirection: 'column', gap: 12 }}>
-            <span style={{ ...TEXT.overline, color: COLORS.TEXT_MUTED, fontSize: 14, marginBottom: 8 }}>
-              EXTRACTED PALETTE
-            </span>
-            <div style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
-              {EXTRACTED_COLORS.map((color, i) => {
-                const offset = (i - 2) * swatchSpread * 50;
-                return (
-                  <div
-                    key={color}
-                    style={{
-                      width: 48,
-                      height: 48,
-                      borderRadius: '50%',
-                      background: color,
-                      transform: `translateX(${offset}px) translateY(${swatchBob}px)`,
-                      boxShadow: glowShadow(color, 0.4),
-                      border: '2px solid rgba(255,255,255,0.1)',
-                    }}
-                  />
-                );
-              })}
+            >
+              {/* Scan line */}
+              <div
+                style={{
+                  position: 'absolute',
+                  top: `${(frame * 1.5) % 180}px`,
+                  left: 0,
+                  right: 0,
+                  height: 2,
+                  background: `linear-gradient(90deg, transparent, ${COLORS.LIME}80, transparent)`,
+                  boxShadow: `0 0 10px ${COLORS.LIME}`,
+                }}
+              />
+              {/* Crosshair */}
+              <div style={{
+                position: 'absolute',
+                width: 50,
+                height: 50,
+                border: `2px solid ${COLORS.LIME}60`,
+                borderRadius: '50%',
+              }} />
+              <div style={{
+                position: 'absolute',
+                width: 1,
+                height: 180,
+                background: `${COLORS.VIOLET_MID}30`,
+              }} />
+              <div style={{
+                position: 'absolute',
+                height: 1,
+                width: 280,
+                background: `${COLORS.VIOLET_MID}30`,
+              }} />
+              <span style={{ 
+                ...TEXT.caption,
+                fontFamily: FONT_MONO,
+                color: COLORS.LIME,
+                fontSize: 14,
+                letterSpacing: '0.2em',
+              }}>
+                ANALYZING
+              </span>
             </div>
 
-            {/* Floating hex codes */}
-            <div style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
-              {EXTRACTED_COLORS.map((color, i) => {
-                const offset = (i - 2) * swatchSpread * 50;
-                const hexOpacity = interpolate(frame, [40, 80], [0, 1], { extrapolateRight: 'clamp' });
-                return (
-                  <span
-                    key={color}
-                    style={{
-                      ...TEXT.code,
-                      fontSize: 14,
-                      color: color,
-                      opacity: hexOpacity,
-                      transform: `translateX(${offset}px)`,
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {color}
-                  </span>
-                );
-              })}
+            {/* Swatches - centered, no offset */}
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 12,
+            }}>
+              <span style={{ 
+                ...TEXT.overline,
+                color: COLORS.TEXT_MUTED,
+                fontSize: 12,
+                letterSpacing: '0.15em',
+              }}>
+                EXTRACTED PALETTE
+              </span>
+              
+              {/* Color circles in a row */}
+              <div style={{
+                display: 'flex',
+                flexDirection: 'row',
+                gap: 16,
+                alignItems: 'center',
+              }}>
+                {EXTRACTED_COLORS.map((color, i) => {
+                  const delay = i * 8;
+                  const visible = frame > 30 + delay;
+                  return (
+                    <div
+                      key={color + i}
+                      style={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: '50%',
+                        background: color,
+                        opacity: visible ? 1 : 0,
+                        transform: visible 
+                          ? `scale(${interpolate(swatchSpring, [0, 1], [0.5, 1])})` 
+                          : 'scale(0)',
+                        boxShadow: `${glowShadow(color, 0.5)}, 0 4px 20px ${color}40`,
+                        border: '3px solid rgba(255,255,255,0.15)',
+                        transition: 'transform 0.3s ease',
+                      }}
+                    />
+                  );
+                })}
+              </div>
+
+              {/* Hex codes */}
+              <div style={{
+                display: 'flex',
+                flexDirection: 'row',
+                gap: 12,
+              }}>
+                {EXTRACTED_COLORS.map((color, i) => {
+                  const hexOpacity = interpolate(frame, [60 + i * 5, 80 + i * 5], [0, 1], { 
+                    extrapolateRight: 'clamp' 
+                  });
+                  return (
+                    <span
+                      key={color + i + 'hex'}
+                      style={{
+                        ...TEXT.code,
+                        fontSize: 11,
+                        color: color,
+                        opacity: hexOpacity,
+                        fontFamily: FONT_MONO,
+                      }}
+                    >
+                      {color}
+                    </span>
+                  );
+                })}
+              </div>
             </div>
           </div>
 
-          {/* Color wheel */}
+          {/* Right: Color wheel */}
           <div
             style={{
-              width: 180,
-              height: 180,
+              width: 200,
+              height: 200,
               borderRadius: '50%',
               background: `conic-gradient(
+                from ${wheelAngle}deg,
                 #ff0000, #ff8800, #ffff00, #00ff00,
                 #00ffff, #0000ff, #ff00ff, #ff0000
               )`,
-              transform: `rotate(${wheelAngle}deg)`,
-              opacity: 0.8,
-              flexShrink: 0,
+              opacity: interpolate(frame, [20, 50], [0, 1]),
+              boxShadow: `0 0 60px ${COLORS.VIOLET_MID}30`,
               position: 'relative',
             }}
           >
-            {/* Harmony labels around wheel */}
-            {HARMONY_LABELS.map((label, i) => {
-              const angle = (i * 120 + wheelAngle) * (Math.PI / 180);
-              const x = Math.cos(angle) * 110;
-              const y = Math.sin(angle) * 110;
-              return (
-                <span
-                  key={label}
-                  style={{
-                    ...TEXT.caption,
-                    fontSize: 12,
-                    color: COLORS.TEXT_SECONDARY,
-                    position: 'absolute',
-                    left: '50%',
-                    top: '50%',
-                    transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`,
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {label}
-                </span>
-              );
-            })}
+            {/* Center cutout */}
+            <div style={{
+              position: 'absolute',
+              width: 50,
+              height: 50,
+              borderRadius: '50%',
+              background: COLORS.BG_DEEP,
+              left: '50%',
+              top: '50%',
+              transform: 'translate(-50%, -50%)',
+            }} />
           </div>
         </div>
 
-        {/* Bottom: Terminal with syntax-highlighted code */}
+        {/* Bottom: Code terminal */}
         <div
           style={{
-            flex: 1,
+            alignSelf: 'center',
+            width: '100%',
+            maxWidth: 600,
             borderRadius: 12,
-            background: 'rgba(0,0,0,0.5)',
-            border: '1px solid rgba(255,255,255,0.06)',
-            padding: 24,
+            background: 'rgba(0,0,0,0.4)',
+            border: `1px solid ${COLORS.VIOLET_MID}30`,
+            padding: 20,
             opacity: interpolate(codeLineSpring, [0, 0.3], [0, 1]),
             transform: `translateY(${interpolate(codeLineSpring, [0, 1], [20, 0])}px)`,
           }}
         >
-          <div style={{ flexDirection: 'row', gap: 6, marginBottom: 16 }}>
-            <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#ff5f56' }} />
-            <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#ffbd2e' }} />
-            <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#27c93f' }} />
+          {/* Window controls */}
+          <div style={{ display: 'flex', flexDirection: 'row', gap: 6, marginBottom: 12 }}>
+            <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#ff5f56' }} />
+            <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#ffbd2e' }} />
+            <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#27c93f' }} />
           </div>
-          {CODE_LINES.map((line, i) => {
-            const lineDelay = Math.floor(i * 4);
-            const lineVisible = frame > 30 + lineDelay;
-            return (
-              <div
-                key={i}
-                style={{
-                  height: 24,
-                  opacity: lineVisible ? 1 : 0,
-                  fontFamily: FONT_MONO,
-                  fontSize: 17,
-                  color: line.color || COLORS.TEXT_PRIMARY,
-                  letterSpacing: '0',
-                }}
-              >
-                {line.text}
-              </div>
-            );
-          })}
-          <span
-            style={{
-              fontFamily: FONT_MONO,
-              fontSize: 15,
-              color: COLORS.NEON_CYAN,
-              opacity: cursorVisible ? 1 : 0,
-            }}
-          >
-            ▊
-          </span>
+          
+          {/* Code lines */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {CODE_LINES.map((line, i) => {
+              const lineDelay = Math.floor(i * 3);
+              const lineVisible = frame > 60 + lineDelay;
+              return (
+                <div
+                  key={i}
+                  style={{
+                    height: 22,
+                    opacity: lineVisible ? 1 : 0,
+                    fontFamily: FONT_MONO,
+                    fontSize: 15,
+                    color: line.color || COLORS.TEXT_PRIMARY,
+                    letterSpacing: '0',
+                  }}
+                >
+                  {line.text}
+                </div>
+              );
+            })}
+            <span
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 14,
+                color: COLORS.LIME,
+                opacity: cursorVisible ? 1 : 0,
+              }}
+            >
+              █
+            </span>
+          </div>
         </div>
       </AbsoluteFill>
     </AbsoluteFill>

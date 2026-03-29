@@ -65,10 +65,10 @@ export const S4ProFeatures: React.FC = () => {
             opacity: interpolate(nodeSpring, [0, 0.3], [0, 1]),
           }}
         >
-          <span style={{ color: COLORS.NEON_PURPLE }}>Pro</span> Features
+          <span style={{ color: COLORS.VIOLET_MID }}>Pro</span> Features
         </div>
 
-        {/* Center: Radial node graph */}
+        {/* Center: Radial node graph - centered */}
         <div
           style={{
             flex: 1,
@@ -76,25 +76,31 @@ export const S4ProFeatures: React.FC = () => {
             justifyContent: 'center',
             alignItems: 'center',
             position: 'relative',
+            width: '100%',
           }}
         >
-          {/* Hub */}
+          {/* Hub - enhanced glow */}
           <div
             style={{
               position: 'absolute',
-              width: 100,
-              height: 100,
+              width: 110,
+              height: 110,
               borderRadius: '50%',
-              background: `radial-gradient(circle, ${COLORS.NEON_PURPLE}30, ${COLORS.BG_CARD})`,
-              border: `2px solid ${COLORS.NEON_PURPLE}`,
+              background: `radial-gradient(circle, ${COLORS.VIOLET_MID}50, ${COLORS.BG_CARD})`,
+              border: `3px solid ${COLORS.VIOLET_MID}`,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: glowShadow(COLORS.NEON_PURPLE, 0.4),
+              boxShadow: `${glowShadow(COLORS.VIOLET_MID, 0.8)}, 0 0 60px ${COLORS.VIOLET_MID}40`,
               opacity: interpolate(nodeSpring, [0, 0.5], [0, 1]),
             }}
           >
-            <span style={{ ...TEXT.badge, color: COLORS.NEON_PURPLE, fontSize: 16 }}>
+            <span style={{ 
+              ...TEXT.badge, 
+              color: COLORS.LIME, 
+              fontSize: 18,
+              textShadow: `0 0 10px ${COLORS.LIME}80`,
+            }}>
               PRO
             </span>
           </div>
@@ -116,15 +122,15 @@ export const S4ProFeatures: React.FC = () => {
 
             return (
               <React.Fragment key={node.label}>
-                {/* Connecting line */}
+                {/* Connecting line - thicker and brighter */}
                 <div
                   style={{
                     position: 'absolute',
                     left: '50%',
                     top: '50%',
                     width: `${Math.sqrt(x * x + y * y)}px`,
-                    height: 1,
-                    background: `linear-gradient(90deg, ${COLORS.NEON_PURPLE}40, ${COLORS.NEON_PURPLE}15)`,
+                    height: 2,
+                    background: `linear-gradient(90deg, ${COLORS.VIOLET_MID}60, ${COLORS.VIOLET_MID}20)`,
                     transformOrigin: '0 0',
                     transform: `rotate(${angle + 90}deg)`,
                     opacity: interpolate(nodeDelay, [0, 0.5], [0, 1]),
@@ -143,10 +149,10 @@ export const S4ProFeatures: React.FC = () => {
                     padding: '10px 20px',
                     borderRadius: 999,
                     background: isPulsing
-                      ? `${COLORS.NEON_PURPLE}20`
+                      ? `${COLORS.VIOLET_MID}30`
                       : 'rgba(27,28,30,0.8)',
-                    border: `1px solid ${isPulsing ? COLORS.NEON_PURPLE : 'rgba(255,255,255,0.08)'}`,
-                    boxShadow: isPulsing ? glowShadow(COLORS.NEON_PURPLE, 0.5) : 'none',
+                    border: `2px solid ${isPulsing ? COLORS.VIOLET_MID : 'rgba(255,255,255,0.08)'}`,
+                    boxShadow: isPulsing ? `${glowShadow(COLORS.VIOLET_MID, 0.6)}, 0 0 30px ${COLORS.VIOLET_MID}30` : 'none',
                     opacity: interpolate(nodeDelay, [0, 0.3], [0, 1]),
                     transition: 'background 0.15s, border-color 0.15s',
                   }}
@@ -161,13 +167,15 @@ export const S4ProFeatures: React.FC = () => {
           })}
         </div>
 
-        {/* Bottom row: Micro-demos */}
+        {/* Bottom row: Micro-demos - centered */}
         <div
           style={{
             flexDirection: 'row',
+            justifyContent: 'center',
+            alignItems: 'center',
             gap: 24,
             height: 200,
-            alignItems: 'center',
+            width: '100%',
           }}
         >
           {/* Stabilize demo */}
@@ -194,7 +202,7 @@ export const S4ProFeatures: React.FC = () => {
           </div>
 
           {/* Arrow */}
-          <div style={{ fontSize: 28, color: COLORS.NEON_PURPLE }}>→</div>
+          <div style={{ fontSize: 28, color: COLORS.VIOLET_MID }}>→</div>
 
           {/* Stabilized result */}
           <div
@@ -203,7 +211,7 @@ export const S4ProFeatures: React.FC = () => {
               height: 200,
               borderRadius: 12,
               overflow: 'hidden',
-              border: `1px solid ${COLORS.NEON_PURPLE}30`,
+              border: `1px solid ${COLORS.VIOLET_MID}30`,
               position: 'relative',
             }}
           >
@@ -213,7 +221,7 @@ export const S4ProFeatures: React.FC = () => {
             }}>
               <span style={{
                 position: 'absolute', top: 12, left: 12,
-                ...TEXT.overline, color: COLORS.NEON_GREEN, fontSize: 11,
+                ...TEXT.overline, color: COLORS.LIME, fontSize: 11,
               }}>AFTER: Smooth</span>
             </div>
           </div>

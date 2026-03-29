@@ -17,11 +17,11 @@ import {
 import { SPRING_GLASS, stagger, useAmbientMotion } from '../lib/animations';
 
 const LAYERS = [
-  { label: 'AI Agent', desc: 'Claude / GPT / Copilot', color: COLORS.NEON_CYAN },
-  { label: 'MCP', desc: 'Protocol layer', color: COLORS.NEON_PURPLE },
-  { label: 'mcp-video', desc: 'Python / FFmpeg', color: COLORS.NEON_MAGENTA },
-  { label: 'FFmpeg', desc: 'Encoding engine', color: COLORS.NEON_GREEN },
-  { label: 'Output', desc: 'MP4 / WebM / GIF', color: COLORS.NEON_ORANGE },
+  { label: 'AI Agent', desc: 'Claude / GPT / Copilot', color: COLORS.LIME, scale: 1.2 },
+  { label: 'MCP', desc: 'Protocol layer', color: COLORS.VIOLET_MID, scale: 1.0 },
+  { label: 'mcp-video', desc: 'Python / FFmpeg', color: COLORS.VIOLET_BRIGHT, scale: 1.1 },
+  { label: 'FFmpeg', desc: 'Encoding engine', color: COLORS.LIME, scale: 1.0 },
+  { label: 'Output', desc: 'MP4 / WebM / GIF', color: '#E76F51', scale: 1.15 },
 ];
 
 export const S7Architecture: React.FC = () => {
@@ -35,10 +35,10 @@ export const S7Architecture: React.FC = () => {
   return (
     <AbsoluteFill style={{ backgroundColor: COLORS.BG_DEEP }}>
       <GradientBackground
-        glowColor={COLORS.NEON_CYAN}
+        glowColor={COLORS.LIME}
         glowX={0.3}
         glowY={0.4}
-        accentTint={COLORS.NEON_MAGENTA}
+        accentTint={COLORS.VIOLET_MID}
       />
 
       <AbsoluteFill
@@ -46,6 +46,8 @@ export const S7Architecture: React.FC = () => {
           padding: 60,
           flexDirection: 'column',
           gap: 30,
+          justifyContent: 'center',
+          alignItems: 'center',
         }}
       >
         {/* Title */}
@@ -55,18 +57,22 @@ export const S7Architecture: React.FC = () => {
             fontSize: FONT_SIZE.HEADLINE,
             color: COLORS.TEXT_PRIMARY,
             textAlign: 'center',
+            width: '100%',
           }}
         >
           Architecture
         </div>
 
-        {/* Horizontal data flow */}
+        {/* Horizontal data flow with arrows - centered */}
         <div
           style={{
             flex: 1,
+            flexDirection: 'row',
             justifyContent: 'center',
             alignItems: 'center',
-            gap: 20,
+            gap: 16,
+            width: '100%',
+            maxWidth: 1200,
           }}
         >
           {LAYERS.map((layer, i) => {
@@ -76,7 +82,7 @@ export const S7Architecture: React.FC = () => {
               config: SPRING_GLASS,
             });
             const isGlowing = glowIndex === i;
-            const packetProgress = (frame % 60) / 60;
+            const packetProgress = (frame % 45) / 45;
 
             return (
               <React.Fragment key={layer.label}>
@@ -90,11 +96,12 @@ export const S7Architecture: React.FC = () => {
                     accentColor={layer.color}
                     accentTop
                     style={{
-                      width: 200,
+                      width: 170,
                       padding: '16px 20px',
                       textAlign: 'center',
-                      boxShadow: isGlowing ? glowShadow(layer.color, 0.5) : 'none',
-                      borderColor: isGlowing ? `${layer.color}40` : undefined,
+                      boxShadow: isGlowing ? `${glowShadow(layer.color, 0.6)}, 0 0 40px ${layer.color}30` : 'none',
+                      borderColor: isGlowing ? `${layer.color}60` : undefined,
+                      borderWidth: isGlowing ? 2 : 1,
                     }}
                   >
                     <div
@@ -103,11 +110,12 @@ export const S7Architecture: React.FC = () => {
                         fontSize: 18,
                         color: layer.color,
                         marginBottom: 4,
+                        textShadow: isGlowing ? `0 0 10px ${layer.color}60` : 'none',
                       }}
                     >
                       {layer.label}
                     </div>
-                    <div style={{ ...TEXT.caption, fontSize: 13, color: COLORS.TEXT_MUTED }}>
+                    <div style={{ ...TEXT.caption, fontSize: 12, color: COLORS.TEXT_MUTED }}>
                       {layer.desc}
                     </div>
                   </GlassCard>
@@ -115,32 +123,35 @@ export const S7Architecture: React.FC = () => {
 
                 {i < LAYERS.length - 1 && (
                   <div style={{
-                    width: 60,
-                    height: 2,
-                    background: `${COLORS.TEXT_MUTED}15`,
+                    width: 50,
+                    height: 3,
+                    background: `linear-gradient(90deg, ${COLORS.TEXT_MUTED}20, ${COLORS.LIME}40, ${COLORS.TEXT_MUTED}20)`,
                     position: 'relative',
+                    borderRadius: 2,
                   }}>
+                    {/* Animated data packet */}
                     <div
                       style={{
                         position: 'absolute',
-                        top: -4,
-                        left: `${packetProgress * 100}%`,
-                        width: 10,
-                        height: 10,
+                        top: -5,
+                        left: `${packetProgress * 80 + 10}%`,
+                        width: 12,
+                        height: 12,
                         borderRadius: '50%',
-                        background: COLORS.NEON_CYAN,
-                        boxShadow: glowShadow(COLORS.NEON_CYAN, 0.5),
+                        background: COLORS.LIME,
+                        boxShadow: `${glowShadow(COLORS.LIME, 0.8)}, 0 0 20px ${COLORS.LIME}60`,
                       }}
                     />
+                    {/* Arrow head */}
                     <div style={{
                       position: 'absolute',
-                      right: -4,
-                      top: -3,
+                      right: -6,
+                      top: -4,
                       width: 0,
                       height: 0,
-                      borderLeft: `6px solid ${COLORS.TEXT_MUTED}25`,
-                      borderTop: '5px solid transparent',
-                      borderBottom: '5px solid transparent',
+                      borderLeft: `8px solid ${COLORS.LIME}60`,
+                      borderTop: '6px solid transparent',
+                      borderBottom: '6px solid transparent',
                     }} />
                   </div>
                 )}

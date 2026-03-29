@@ -41,19 +41,20 @@ export const S3CoreEditing: React.FC = () => {
       <AbsoluteFill
         style={{
           flexDirection: 'row',
-          padding: 80,
-          gap: 60,
+          padding: 60,
+          gap: 40,
+          justifyContent: 'center',
+          alignItems: 'center',
         }}
       >
-        {/* Left: Feature grid (3x2) */}
+        {/* Left: Feature grid (3x2) - centered */}
         <div
           style={{
-            flex: 1,
+            width: 480,
             display: 'grid',
-            gridTemplateColumns: '1fr 1fr 1fr',
-            gridTemplateRows: '1fr 1fr',
-            gap: 16,
-            alignContent: 'center',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gridTemplateRows: 'repeat(2, 1fr)',
+            gap: 12,
           }}
         >
           {FEATURES.map((feature, i) => {
@@ -75,10 +76,10 @@ export const S3CoreEditing: React.FC = () => {
                 }}
               >
                 <GlassCard
-                  accentColor={isActive ? COLORS.NEON_CYAN : COLORS.NEON_PURPLE}
+                  accentColor={isActive ? COLORS.LIME : COLORS.VIOLET_MID}
                   accentTop
                   shimmer
-                  style={{ padding: '20px 16px' }}
+                  style={{ padding: '16px 12px' }}
                 >
                   <div style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: 28, marginBottom: 8 }}>{feature.icon}</div>
@@ -108,10 +109,10 @@ export const S3CoreEditing: React.FC = () => {
           })}
         </div>
 
-        {/* Right: Cycling demo panel */}
+        {/* Right: Cycling demo panel - enlarged */}
         <div
           style={{
-            flex: 1,
+            width: 520,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -120,15 +121,15 @@ export const S3CoreEditing: React.FC = () => {
           <div
             style={{
               width: '100%',
-              maxWidth: 500,
               borderRadius: 12,
               overflow: 'hidden',
               border: '1px solid rgba(255,255,255,0.08)',
               background: 'rgba(0,0,0,0.3)',
-              padding: 24,
+              padding: 28,
+              boxShadow: `0 0 60px ${COLORS.MIDNIGHT_VIOLET}30`,
             }}
           >
-            <div style={{ ...TEXT.overline, color: COLORS.NEON_PURPLE, fontSize: 13, marginBottom: 20 }}>
+            <div style={{ ...TEXT.overline, color: COLORS.VIOLET_MID, fontSize: 13, marginBottom: 20 }}>
               DEMO
             </div>
 
@@ -156,8 +157,8 @@ export const S3CoreEditing: React.FC = () => {
                           position: 'absolute', top: 0,
                           left: `${interpolate(cycleFrame, [0, 70], [10, 60], { extrapolateRight: 'clamp' })}%`,
                           width: '30%', height: '100%',
-                          background: COLORS.NEON_PURPLE, borderRadius: 8,
-                          boxShadow: glowShadow(COLORS.NEON_PURPLE, 0.4),
+                          background: COLORS.VIOLET_MID, borderRadius: 8,
+                          boxShadow: glowShadow(COLORS.VIOLET_MID, 0.4),
                         }} />
                         <div style={{
                           position: 'absolute',

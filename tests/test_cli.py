@@ -29,7 +29,7 @@ def run_cli_json(*args: str, expect_fail: bool = False) -> subprocess.CompletedP
 class TestCLIVersion:
     def test_version_flag(self):
         result = run_cli("--version")
-        assert "0.8.0" in result.stdout
+        assert "0.10.0" in result.stdout
 
 
 class TestCLIInfo:

@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>mcp-video — Video Editing for AI Agents and Humans</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #0a0a0f;
+            --bg2: #12121a;
+            --bg3: #1a1a2e;
+            --text: #e4e4e7;
+            --text2: #a1a1aa;
+            --text3: #71717a;
+            --accent: #6366f1;
+            --accent2: #818cf8;
+            --green: #22c55e;
+            --orange: #f97316;
+            --border: #27272a;
+            --radius: 12px;
+            --mono: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ---- NAV ---- */
+        nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+            background: rgba(10,10,15,0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            padding: 0 2rem;
+            height: 60px;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        nav .logo { font-weight: 700; font-size: 1.1rem; letter-spacing: -0.02em; }
+        nav .logo span { color: var(--accent2); }
+        nav .links { display: flex; gap: 1.5rem; }
+        nav .links a {
+            color: var(--text2); text-decoration: none; font-size: 0.9rem;
+            transition: color 0.2s;
+        }
+        nav .links a:hover { color: var(--text); }
+
+        /* ---- HERO ---- */
+        .hero {
+            max-width: 900px; margin: 0 auto;
+            padding: 140px 2rem 80px;
+            text-align: center;
+        }
+        .hero h1 {
+            font-size: clamp(2.5rem, 6vw, 4rem);
+            font-weight: 800;
+            letter-spacing: -0.04em;
+            line-height: 1.1;
+            margin-bottom: 1.2rem;
+        }
+        .hero h1 .gradient {
+            background: linear-gradient(135deg, var(--accent2), var(--orange));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .hero .subtitle {
+            font-size: 1.2rem;
+            color: var(--text2);
+            max-width: 600px;
+            margin: 0 auto 2rem;
+        }
+        .hero .badges {
+            display: flex; gap: 0.75rem; justify-content: center;
+            flex-wrap: wrap; margin-bottom: 2.5rem;
+        }
+        .badge {
+            display: inline-flex; align-items: center; gap: 0.4rem;
+            background: var(--bg2); border: 1px solid var(--border);
+            border-radius: 999px; padding: 0.35rem 0.9rem;
+            font-size: 0.8rem; color: var(--text2);
+        }
+        .badge .dot { width: 6px; height: 6px; border-radius: 50%; }
+        .badge .dot.green { background: var(--green); }
+        .badge .dot.blue { background: var(--accent); }
+        .badge .dot.orange { background: var(--orange); }
+        .hero .cta-row { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+        .btn {
+            display: inline-flex; align-items: center; gap: 0.5rem;
+            padding: 0.75rem 1.5rem; border-radius: var(--radius);
+            font-size: 0.95rem; font-weight: 600; text-decoration: none;
+            transition: all 0.2s; border: none; cursor: pointer;
+        }
+        .btn-primary {
+            background: var(--accent); color: white;
+        }
+        .btn-primary:hover { background: var(--accent2); }
+        .btn-secondary {
+            background: var(--bg2); color: var(--text); border: 1px solid var(--border);
+        }
+        .btn-secondary:hover { border-color: var(--text3); }
+
+        /* ---- SECTIONS ---- */
+        section {
+            max-width: 1100px; margin: 0 auto;
+            padding: 80px 2rem;
+        }
+        .section-label {
+            font-size: 0.8rem; font-weight: 600; text-transform: uppercase;
+            letter-spacing: 0.1em; color: var(--accent2);
+            margin-bottom: 0.75rem;
+        }
+        .section-title {
+            font-size: clamp(1.8rem, 4vw, 2.5rem);
+            font-weight: 700; letter-spacing: -0.03em;
+            margin-bottom: 1rem; line-height: 1.2;
+        }
+        .section-desc {
+            color: var(--text2); font-size: 1.05rem;
+            max-width: 650px; margin-bottom: 3rem;
+        }
+
+        /* ---- GRID CARDS ---- */
+        .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; }
+        .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem; }
+
+        .card {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+        }
+        .card h3 {
+            font-size: 1.05rem; font-weight: 600; margin-bottom: 0.5rem;
+        }
+        .card p { color: var(--text2); font-size: 0.9rem; line-height: 1.5; }
+
+        /* ---- CODE ---- */
+        .code-block {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+        }
+        .code-block pre {
+            font-family: var(--mono);
+            font-size: 0.85rem;
+            line-height: 1.7;
+            color: var(--text2);
+            white-space: pre;
+        }
+        .code-block .comment { color: var(--text3); }
+        .code-block .keyword { color: var(--accent2); }
+        .code-block .string { color: var(--green); }
+        .code-block .func { color: #f0abfc; }
+        .code-block .param { color: #fbbf24; }
+
+        /* ---- TABLE ---- */
+        .table-wrap {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+        table {
+            width: 100%; border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+        thead { background: var(--bg3); }
+        th {
+            text-align: left; padding: 0.75rem 1rem;
+            font-weight: 600; font-size: 0.8rem;
+            text-transform: uppercase; letter-spacing: 0.05em;
+            color: var(--text2);
+        }
+        td {
+            padding: 0.6rem 1rem;
+            border-top: 1px solid var(--border);
+        }
+        td:first-child { font-family: var(--mono); font-size: 0.82rem; color: var(--accent2); }
+        td:last-child { color: var(--text2); }
+
+        /* ---- DIVIDER ---- */
+        hr {
+            border: none;
+            border-top: 1px solid var(--border);
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        /* ---- FEATURE CARDS ---- */
+        .feature-card {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 2rem;
+        }
+        .feature-card .icon {
+            width: 44px; height: 44px;
+            background: var(--bg3);
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+        }
+        .feature-card h3 { font-size: 1.05rem; font-weight: 600; margin-bottom: 0.5rem; }
+        .feature-card p { color: var(--text2); font-size: 0.9rem; }
+
+        /* ---- WORKFLOW ---- */
+        .workflow {
+            display: flex; align-items: center; gap: 0.5rem;
+            flex-wrap: wrap; margin: 2rem 0;
+        }
+        .workflow .step {
+            background: var(--bg3);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.6rem 1rem;
+            font-size: 0.85rem;
+            font-family: var(--mono);
+        }
+        .workflow .arrow { color: var(--text3); font-size: 1.2rem; }
+
+        /* ---- FOOTER ---- */
+        footer {
+            max-width: 1100px; margin: 0 auto;
+            padding: 3rem 2rem;
+            border-top: 1px solid var(--border);
+            display: flex; justify-content: space-between;
+            align-items: center; flex-wrap: wrap; gap: 1rem;
+            color: var(--text3); font-size: 0.85rem;
+        }
+        footer a { color: var(--text2); text-decoration: none; }
+        footer a:hover { color: var(--text); }
+
+        /* ---- RESPONSIVE ---- */
+        @media (max-width: 768px) {
+            nav .links { display: none; }
+            .hero { padding: 120px 1.5rem 60px; }
+            section { padding: 50px 1.5rem; }
+            .grid-2, .grid-3 { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+    <div class="logo">mcp<span>-video</span></div>
+    <div class="links">
+        <a href="#how-it-works">How It Works</a>
+        <a href="#why">Why mcp-video</a>
+        <a href="#tools">Tools</a>
+        <a href="#interfaces">Interfaces</a>
+        <a href="#testing">Testing</a>
+        <a href="https://github.com/pastorsimon1798/mcp-video">GitHub</a>
+    </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+    <h1>
+        Video editing<br>
+        <span class="gradient">for AI agents and humans.</span>
+    </h1>
+    <p class="subtitle">
+        29 MCP tools that give Claude Code, Cursor, and any AI agent the ability to trim, merge, overlay text, sync audio, apply filters, reverse video, remove green screens, and export video. Plus a rich CLI with templates for humans. Local, fast, free.
+    </p>
+    <div class="badges">
+        <div class="badge"><div class="dot green"></div> 396 tests passing</div>
+        <div class="badge"><div class="dot blue"></div> 29 MCP tools</div>
+        <div class="badge"><div class="dot orange"></div> 3 interfaces</div>
+    </div>
+    <div class="cta-row">
+        <a class="btn btn-primary" href="https://github.com/pastorsimon1798/mcp-video">View on GitHub</a>
+        <a class="btn btn-secondary" href="#quickstart">pip install mcp-video</a>
+    </div>
+</div>
+
+<hr>
+
+<!-- PROBLEM -->
+<section id="how-it-works">
+    <div class="section-label">The Problem</div>
+    <div class="section-title">AI agents can't edit video. Until now.</div>
+    <p class="section-desc">
+        AI agents can write code, analyze documents, browse the web, create images — but video editing?
+        Existing tools are either GUI-only (agents can't click buttons), raw FFmpeg wrappers (agents can't
+        memorize hundreds of flags), or cloud APIs (expensive, slow, vendor lock-in). mcp-video bridges this gap.
+    </p>
+    <div class="grid-3">
+        <div class="feature-card">
+            <div class="icon">&#9881;</div>
+            <h3>26 Video Editing Tools</h3>
+            <p>Trim, merge, add text, sync audio, resize, convert, speed change, watermarks, subtitles, storyboards, crop, rotate, fade, filters, color grading, audio normalization, PiP, split-screen, batch processing, and more.</p>
+        </div>
+        <div class="feature-card">
+            <div class="icon">&#9889;</div>
+            <h3>Progress Callbacks</h3>
+            <p>Real-time progress reporting on long operations. Agents can tell you "50% done..." instead of going silent during converts and merges.</p>
+        </div>
+        <div class="feature-card">
+            <div class="icon">&#128274;</div>
+            <h3>Local & Private</h3>
+            <p>Runs on your machine. No cloud uploads, no API keys, no per-minute billing. Your video never leaves your computer.</p>
+        </div>
+    </div>
+    <div class="grid-2" style="margin-top: 1.5rem;">
+        <div class="feature-card">
+            <div class="icon">&#128247;</div>
+            <h3>Visual Verification</h3>
+            <p>Returns a thumbnail of the output after every operation. Agents can confirm results look right without opening the file.</p>
+        </div>
+        <div class="feature-card">
+            <div class="icon">&#128295;</div>
+            <h3>Auto-Fix Error Handling</h3>
+            <p>Parses FFmpeg errors into structured responses with actionable suggestions. "Codec error: vp9" becomes "Auto-convert from vp9 to H.264/AAC."</p>
+        </div>
+    </div>
+    <div class="grid-3" style="margin-top: 1.5rem;">
+        <div class="feature-card">
+            <div class="icon">&#127912;</div>
+            <h3>Filters & Color Grading</h3>
+            <p>Blur, sharpen, brightness, contrast, saturation, grayscale, sepia, invert, vignette. Plus color presets: warm, cool, vintage, cinematic, noir.</p>
+        </div>
+        <div class="feature-card">
+            <div class="icon">&#127925;</div>
+            <h3>Audio Normalization</h3>
+            <p>Normalize loudness to LUFS targets: YouTube (-16), broadcast (-23), Spotify (-14). Correct true peak for broadcast compliance.</p>
+        </div>
+        <div class="feature-card">
+            <div class="icon">&#128246;</div>
+            <h3>PiP & Split-Screen</h3>
+            <p>Picture-in-picture overlay with positioning, opacity, and timing. Side-by-side or top/bottom split-screen with auto-resize.</p>
+        </div>
+    </div>
+    <div class="grid-2" style="margin-top: 1.5rem;">
+        <div class="feature-card">
+            <div class="icon">&#128230;</div>
+            <h3>Batch Processing</h3>
+            <p>Apply the same operation to multiple files in one call. Trim 10 videos, blur 5, or convert a whole directory at once.</p>
+        </div>
+        <div class="feature-card">
+            <div class="icon">&#9889;</div>
+            <h3>Validation Before Execution</h3>
+            <p>Filter types, color presets, and parameters are validated before hitting FFmpeg. Get clear error messages, not cryptic KeyError tracebacks.</p>
+        </div>
+    </div>
+</section>
+
+<hr>
+
+<!-- WHY MCP-VIDEO -->
+<section id="why">
+    <div class="section-label">Why mcp-video</div>
+    <div class="section-title">Not just another FFmpeg wrapper.</div>
+    <p class="section-desc">
+        "Can't I just have Claude Code run ffmpeg commands?" Sure &mdash; if you enjoy debugging 200-character filter graphs,
+        wrestling with flag order semantics, and paying dollars per short clip on cloud APIs. Here's why mcp-video is different.
+    </p>
+
+    <!-- Comparison Table -->
+    <div class="table-wrap" style="margin-bottom: 2.5rem;">
+        <table>
+            <thead>
+                <tr>
+                    <th></th>
+                    <th style="color: var(--accent2);">mcp-video</th>
+                    <th>Claude Code + FFmpeg</th>
+                    <th>Cloud APIs</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="color: var(--text); font-family: inherit;">Cost</td>
+                    <td style="color: var(--green);">Free, local</td>
+                    <td style="color: var(--text2);">Free, but your time isn't</td>
+                    <td style="color: var(--orange);">$0.28&ndash;$2.50 per 5s video</td>
+                </tr>
+                <tr>
+                    <td style="color: var(--text); font-family: inherit;">Privacy</td>
+                    <td style="color: var(--green);">100% local</td>
+                    <td style="color: var(--green);">100% local</td>
+                    <td style="color: var(--orange);">Uploads to cloud</td>
+                </tr>
+                <tr>
+                    <td style="color: var(--text); font-family: inherit;">Error messages</td>
+                    <td style="color: var(--green);">Structured + auto-fix</td>
+                    <td style="color: var(--orange);">FFmpeg stderr (cryptic)</td>
+                    <td style="color: var(--text2);">HTTP errors</td>
+                </tr>
+                <tr>
+                    <td style="color: var(--text); font-family: inherit;">Parameter validation</td>
+                    <td style="color: var(--green);">Before execution</td>
+                    <td style="color: var(--orange);">Only at runtime</td>
+                    <td style="color: var(--text2);">API schema check</td>
+                </tr>
+                <tr>
+                    <td style="color: var(--text); font-family: inherit;">Text overlay</td>
+                    <td style="color: var(--green);"><code>add_text(text="Hi")</code></td>
+                    <td style="color: var(--orange);"><code style="font-size: 0.75rem;">-vf "drawtext=text='Hi':fontfile=...:fontsize=24:x=(w-text_w)/2:y=h-50"</code></td>
+                    <td style="color: var(--text2);">Varies by API</td>
+                </tr>
+                <tr>
+                    <td style="color: var(--text); font-family: inherit;">Speed change</td>
+                    <td style="color: var(--green);">Handles audio-less videos</td>
+                    <td style="color: var(--orange);">Fails if no audio stream</td>
+                    <td style="color: var(--text2);">Usually handled</td>
+                </tr>
+                <tr>
+                    <td style="color: var(--text); font-family: inherit;">Discovery</td>
+                    <td style="color: var(--green);">26 self-documenting tools</td>
+                    <td style="color: var(--orange);">Must know hundreds of flags</td>
+                    <td style="color: var(--text2);">API docs</td>
+                </tr>
+                <tr>
+                    <td style="color: var(--text); font-family: inherit;">Testing</td>
+                    <td style="color: var(--green);">396 tests, CI-ready</td>
+                    <td style="color: var(--orange);">None (ad-hoc)</td>
+                    <td style="color: var(--text2);">Provider's tests</td>
+                </tr>
+                <tr>
+                    <td style="color: var(--text); font-family: inherit;">Progress reporting</td>
+                    <td style="color: var(--green);">Real-time %</td>
+                    <td style="color: var(--orange);">Silence until done</td>
+                    <td style="color: var(--text2);">Varies</td>
+                </tr>
+                <tr>
+                    <td style="color: var(--text); font-family: inherit;">Visual verification</td>
+                    <td style="color: var(--green);">Thumbnail after ops</td>
+                    <td style="color: var(--orange);">No</td>
+                    <td style="color: var(--text2);">Varies</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Deep dive cards -->
+    <div class="section-title" style="font-size: 1.3rem; margin-bottom: 1.5rem;">The real problems with raw FFmpeg</div>
+    <div class="grid-2" style="margin-bottom: 2.5rem;">
+        <div class="card">
+            <h3>Flag order changes behavior silently</h3>
+            <p>Put <code>-ss 10</code> before <code>-i input.mp4</code> and FFmpeg seeks instantly. Put it after, and it decodes every frame up to 10s first. Same flags, completely different performance. Claude Code can't know which you meant.</p>
+        </div>
+        <div class="card">
+            <h3>Cryptic error messages</h3>
+            <p>Try adding audio to a silent video and you get: <code style="font-size: 0.8rem;">"Stream specifier ':a' matches no streams."</code> No hint that the video has no audio. mcp-video checks before running and gives you a clear error.</p>
+        </div>
+        <div class="card">
+            <h3>Intermediate files = quality loss</h3>
+            <p>Every FFmpeg call re-encodes. Chain 5 operations and you've re-encoded 5 times. mcp-video's timeline DSL composes operations into a single FFmpeg command where possible.</p>
+        </div>
+        <div class="card">
+            <h3>Claude forgets between commands</h3>
+            <p>In a 10-step workflow, Claude must re-discover file paths, resolutions, and durations at every step. mcp-video returns structured results (path, duration, resolution) so the agent always has context.</p>
+        </div>
+    </div>
+
+    <div class="section-title" style="font-size: 1.3rem; margin-bottom: 1.5rem;">Why not cloud APIs?</div>
+    <div class="grid-2">
+        <div class="card">
+            <h3>Expensive at scale</h3>
+            <p>Replicate charges $0.28&ndash;$0.50 per second of generated video. A 60-second clip costs $17&ndash;$30. RunwayML's Pro plan gives you ~90 seconds of Gen-4.5 for $28/month. mcp-video: $0, forever.</p>
+        </div>
+        <div class="card">
+            <h3>Vendor lock-in</h3>
+            <p>Your workflow depends on their API staying up, their pricing not changing, and their model versions not breaking your prompts. With mcp-video, FFmpeg runs on your machine &mdash; no API deprecation risk.</p>
+        </div>
+    </div>
+
+    <div class="section-title" style="font-size: 1.3rem; margin-bottom: 1.5rem;">Saves tokens. Saves turns.</div>
+    <p style="color: var(--text2); font-size: 0.95rem; max-width: 650px; margin-bottom: 1.5rem;">
+        Every wasted turn costs money. With raw FFmpeg, Claude spends tokens parsing hundreds of lines of stderr, retrying failed commands, and re-probing files it already processed. mcp-video eliminates all of that.
+    </p>
+    <div class="table-wrap" style="margin-bottom: 0;">
+        <table>
+            <thead>
+                <tr>
+                    <th></th>
+                    <th style="color: var(--accent2);">mcp-video</th>
+                    <th>Claude Code + FFmpeg</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="color: var(--text); font-family: inherit;">Turns for 5 operations</td>
+                    <td style="color: var(--green);">4&ndash;5</td>
+                    <td style="color: var(--orange);">6&ndash;10</td>
+                </tr>
+                <tr>
+                    <td style="color: var(--text); font-family: inherit;">Output tokens per turn</td>
+                    <td style="color: var(--green);">50&ndash;80 (JSON)</td>
+                    <td style="color: var(--orange);">200&ndash;500 (stderr)</td>
+                </tr>
+                <tr>
+                    <td style="color: var(--text); font-family: inherit;">Error retries</td>
+                    <td style="color: var(--green);">0&ndash;1 (pre-validated)</td>
+                    <td style="color: var(--orange);">2&ndash;3 typical</td>
+                </tr>
+                <tr>
+                    <td style="color: var(--text); font-family: inherit;">Re-probing between steps</td>
+                    <td style="color: var(--green);">Never</td>
+                    <td style="color: var(--orange);">Every step</td>
+                </tr>
+                <tr>
+                    <td style="color: var(--text); font-family: inherit;">Token reduction</td>
+                    <td style="color: var(--green); font-weight: 600;">~40&ndash;50% fewer turns</td>
+                    <td style="color: var(--text3);">baseline</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<hr>
+
+<!-- TOOLS -->
+<section id="tools">
+    <div class="section-label">Capabilities</div>
+    <div class="section-title">26 tools. Every operation you need.</div>
+    <p class="section-desc">
+        Every tool returns structured JSON. On success, you get output paths, duration, resolution. On failure, you get error types with auto-fix suggestions.
+    </p>
+
+    <div class="table-wrap" style="margin-bottom: 1.5rem;">
+        <table>
+            <thead>
+                <tr><th>Tool</th><th>What It Does</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>video_info</td><td>Get metadata: duration, resolution, codec, fps, file size</td></tr>
+                <tr><td>video_trim</td><td>Trim clip by start time + duration or end time</td></tr>
+                <tr><td>video_merge</td><td>Concatenate multiple clips with optional transitions</td></tr>
+                <tr><td>video_add_text</td><td>Overlay text, titles, captions with custom positioning</td></tr>
+                <tr><td>video_add_audio</td><td>Add, replace, or mix audio tracks with fade effects</td></tr>
+                <tr><td>video_resize</td><td>Change resolution or apply preset aspect ratios</td></tr>
+                <tr><td>video_convert</td><td>Convert between mp4, webm, gif, mov</td></tr>
+                <tr><td>video_speed</td><td>Speed up or slow down (slow-mo, time-lapse)</td></tr>
+                <tr><td>video_thumbnail</td><td>Extract a single frame at any timestamp</td></tr>
+                <tr><td>video_preview</td><td>Generate fast low-res preview for quick review</td></tr>
+                <tr><td>video_storyboard</td><td>Extract key frames + create grid for review</td></tr>
+                <tr><td>video_subtitles</td><td>Burn SRT/VTT subtitles into the video</td></tr>
+                <tr><td>video_watermark</td><td>Add image watermark with opacity control</td></tr>
+                <tr><td>video_export</td><td>Render final video with quality presets</td></tr>
+                <tr><td>video_edit</td><td>Full timeline-based edit (JSON DSL for complex edits)</td></tr>
+                <tr><td>video_extract_audio</td><td>Extract audio as mp3, wav, aac, ogg, or flac</td></tr>
+                <tr><td>video_crop</td><td>Crop to rectangular region with custom offset</td></tr>
+                <tr><td>video_rotate</td><td>Rotate 90/180/270 degrees or flip horizontal/vertical</td></tr>
+                <tr><td>video_fade</td><td>Add fade in/out effects to video</td></tr>
+                <tr><td>video_filter</td><td>Apply visual filter (blur, sharpen, grayscale, sepia, invert, vignette)</td></tr>
+                <tr><td>video_blur</td><td>Blur video with custom radius and strength</td></tr>
+                <tr><td>video_color_grade</td><td>Apply color preset (warm, cool, vintage, cinematic, noir)</td></tr>
+                <tr><td>video_normalize_audio</td><td>Normalize loudness to LUFS target (YouTube, broadcast, Spotify)</td></tr>
+                <tr><td>video_overlay</td><td>Picture-in-picture overlay with positioning and opacity</td></tr>
+                <tr><td>video_split_screen</td><td>Side-by-side or top/bottom layout for two videos</td></tr>
+                <tr><td>video_batch</td><td>Apply same operation to multiple files at once</td></tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<hr>
+
+<!-- INTERFACES -->
+<section id="interfaces">
+    <div class="section-label">Three Interfaces</div>
+    <div class="section-title">However you want to use it.</div>
+    <p class="section-desc">
+        mcp-video works as an MCP server for AI agents, a Python library for scripts, and a rich CLI tool for the terminal with human-friendly output and templates.
+    </p>
+
+    <div class="grid-2">
+        <div>
+            <h3 style="margin-bottom: 0.75rem;">MCP Server (for AI agents)</h3>
+            <p style="color: var(--text2); font-size: 0.9rem; margin-bottom: 1rem;">
+                Add to your Claude Code or Cursor MCP config. Then just talk to your agent.
+            </p>
+            <div class="code-block"><pre>{
+  <span class="string">"mcpServers"</span>: {
+    <span class="string">"mcp-video"</span>: {
+      <span class="string">"command"</span>: <span class="string">"uvx"</span>,
+      <span class="string">"args"</span>: [<span class="string">"mcp-video"</span>]
+    }
+  }
+}</pre></div>
+            <p style="color: var(--text3); font-size: 0.85rem; margin-top: 0.5rem;">
+                Then: *"Trim this video from 0:30 to 1:00, add a title, and export for TikTok."*
+            </p>
+        </div>
+        <div>
+            <h3 style="margin-bottom: 0.75rem;">Python Client</h3>
+            <p style="color: var(--text2); font-size: 0.9rem; margin-bottom: 1rem;">
+                Clean API for automation, pipelines, and batch processing.
+            </p>
+            <div class="code-block"><pre><span class="keyword">from</span> mcp_video <span class="keyword">import</span> Client
+
+editor = <span class="func">Client</span>()
+clip = editor.<span class="func">trim</span>(<span class="string">"v.mp4"</span>, start=<span class="string">"0:30"</span>, duration=<span class="string">"15"</span>)
+final = editor.<span class="func">resize</span>(clip.output_path, aspect_ratio=<span class="string">"9:16"</span>)
+result = editor.<span class="func">export</span>(final.output_path)
+<span class="func">print</span>(result.resolution)  <span class="comment"># 1080x1920</span></pre></div>
+        </div>
+    </div>
+
+    <div style="margin-top: 2rem;">
+        <h3 style="margin-bottom: 0.75rem;">CLI Tool <span style="color: var(--accent); font-size: 0.8rem;">Rich output &middot; Spinners &middot; Templates</span></h3>
+        <p style="color: var(--text2); font-size: 0.9rem; margin-bottom: 1rem;">
+            Human-friendly terminal output by default. Add <code>--format json</code> for scripts and piping.
+        </p>
+        <div class="code-block"><pre><span class="comment"># Rich table output (default)</span>
+$ mcp-video info video.mp4
+<span class="comment"># ┌─────────────┬──────────────────┐</span>
+<span class="comment"># │ Property    │ Value            │</span>
+<span class="comment"># ├─────────────┼──────────────────┤</span>
+<span class="comment"># │ Duration    │ 45.23s           │</span>
+<span class="comment"># │ Resolution  │ 1920x1080        │</span>
+<span class="comment"># │ FPS         │ 30               │</span>
+<span class="comment"># └─────────────┴──────────────────┘</span>
+
+<span class="comment"># JSON output for scripts</span>
+$ mcp-video --format json info video.mp4
+
+<span class="comment"># Trim with progress spinner</span>
+$ mcp-video trim video.mp4 -s 0:30 -d 15
+
+<span class="comment"># Apply a TikTok template</span>
+$ mcp-video template tiktok video.mp4 --caption "Check this out!"
+
+<span class="comment"># List all templates</span>
+$ mcp-video templates</pre></div>
+    </div>
+</section>
+
+<hr>
+
+<!-- TIMELINE DSL -->
+<section id="timeline">
+    <div class="section-label">Timeline DSL</div>
+    <div class="section-title">Complex edits in a single JSON object.</div>
+    <p class="section-desc">
+        Describe multi-track edits with video clips, audio, text overlays, transitions, and export settings — all in one call.
+    </p>
+    <div class="code-block"><pre>editor.<span class="func">edit</span>({
+    <span class="string">"width"</span>: <span class="param">1080</span>, <span class="string">"height"</span>: <span class="param">1920</span>,
+    <span class="string">"tracks"</span>: [
+        {
+            <span class="string">"type"</span>: <span class="string">"video"</span>,
+            <span class="string">"clips"</span>: [
+                {<span class="string">"source"</span>: <span class="string">"intro.mp4"</span>, <span class="string">"duration"</span>: <span class="param">5</span>},
+                {<span class="string">"source"</span>: <span class="string">"main.mp4"</span>, <span class="string">"trim_start"</span>: <span class="param">10</span>, <span class="string">"duration"</span>: <span class="param">30</span>},
+            ],
+            <span class="string">"transitions"</span>: [{<span class="string">"after_clip"</span>: <span class="param">0</span>, <span class="string">"type"</span>: <span class="string">"fade"</span>, <span class="string">"duration"</span>: <span class="param">1.0</span>}],
+        },
+        {
+            <span class="string">"type"</span>: <span class="string">"audio"</span>,
+            <span class="string">"clips"</span>: [{<span class="string">"source"</span>: <span class="string">"music.mp3"</span>, <span class="string">"volume"</span>: <span class="param">0.7</span>}],
+        },
+        {
+            <span class="string">"type"</span>: <span class="string">"text"</span>,
+            <span class="string">"elements"</span>: [{<span class="string">"text"</span>: <span class="string">"EPISODE 42"</span>, <span class="string">"position"</span>: <span class="string">"top-center"</span>}],
+        },
+    ],
+    <span class="string">"export"</span>: {<span class="string">"format"</span>: <span class="string">"mp4"</span>, <span class="string">"quality"</span>: <span class="string">"high"</span>},
+})</pre></div>
+</section>
+
+<hr>
+
+<!-- TEMPLATES -->
+<section id="templates">
+    <div class="section-label">Templates</div>
+    <div class="section-title">One function per platform.</div>
+    <p class="section-desc">
+        Pre-built templates handle the correct dimensions, text positioning, and export settings for each social media platform.
+    </p>
+    <div class="grid-3">
+        <div class="card">
+            <h3>TikTok</h3>
+            <p>9:16, 1080x1920. Caption at bottom-center. Optional background music at volume 0.5.</p>
+        </div>
+        <div class="card">
+            <h3>YouTube Shorts</h3>
+            <p>9:16, title at top-center with size 42. Same format as TikTok but different text placement.</p>
+        </div>
+        <div class="card">
+            <h3>Instagram Reel</h3>
+            <p>9:16, caption at bottom-center. Clean, simple template.</p>
+        </div>
+        <div class="card">
+            <h3>YouTube Video</h3>
+            <p>16:9, 1920x1080. Supports title card (3s), outro clip, and background music.</p>
+        </div>
+        <div class="card">
+            <h3>Instagram Post</h3>
+            <p>1:1, 1080x1080. Square format with optional caption overlay.</p>
+        </div>
+        <div class="card">
+            <h3>Custom</h3>
+            <p>Build your own with the Timeline DSL. Any dimensions, any number of tracks.</p>
+        </div>
+    </div>
+</section>
+
+<hr>
+
+<!-- TESTING -->
+<section id="testing">
+    <div class="section-label">Quality</div>
+    <div class="section-title">396 tests. Full testing pyramid.</div>
+    <p class="section-desc">
+        Every model, error class, template, tool, and workflow is tested. Unit tests don't even need FFmpeg installed.
+    </p>
+    <div class="grid-3">
+        <div class="card" style="text-align: center;">
+            <div style="font-size: 2rem; font-weight: 800; color: var(--accent2);">118</div>
+            <div style="font-size: 0.85rem; color: var(--text2);">Unit tests (no FFmpeg)</div>
+            <div style="font-size: 0.75rem; color: var(--text3); margin-top: 0.5rem;">Models, errors, templates</div>
+        </div>
+        <div class="card" style="text-align: center;">
+            <div style="font-size: 2rem; font-weight: 800; color: var(--green);">237</div>
+            <div style="font-size: 0.85rem; color: var(--text2);">Integration tests</div>
+            <div style="font-size: 0.75rem; color: var(--text3); margin-top: 0.5rem;">Client, server, engine, CLI</div>
+        </div>
+        <div class="card" style="text-align: center;">
+            <div style="font-size: 2rem; font-weight: 800; color: var(--orange);">41</div>
+            <div style="font-size: 0.85rem; color: var(--text2);">E2E + Real Media tests</div>
+            <div style="font-size: 0.75rem; color: var(--text3); margin-top: 0.5rem;">Workflows + iPhone footage</div>
+        </div>
+    </div>
+</section>
+
+<hr>
+
+<!-- QUICK START -->
+<section id="quickstart">
+    <div class="section-label">Get Started</div>
+    <div class="section-title">Up and running in 60 seconds.</div>
+    <div class="workflow">
+        <div class="step">1. Install FFmpeg</div>
+        <div class="arrow">&rarr;</div>
+        <div class="step">2. pip install mcp-video</div>
+        <div class="arrow">&rarr;</div>
+        <div class="step">3. Add to MCP config</div>
+        <div class="arrow">&rarr;</div>
+        <div class="step">4. Start editing</div>
+    </div>
+    <div class="code-block"><pre><span class="comment"># 1. Install FFmpeg (if you don't have it)</span>
+brew install ffmpeg
+
+<span class="comment"># For full text overlay support (drawtext filter):</span>
+<span class="comment"># brew install freetype harfbuzz</span>
+<span class="comment"># brew reinstall --build-from-source ffmpeg</span>
+<span class="comment"># Verify: ffmpeg -filters | grep drawtext</span>
+
+<span class="comment"># 2. Install mcp-video</span>
+pip install mcp-video
+
+<span class="comment"># 3. Add to your Claude Code MCP config</span>
+<span class="comment"># (Settings > MCP Servers > Add > mcp-video)</span>
+
+<span class="comment"># 4. Start editing!</span>
+<span class="comment"># Just tell your agent what you want:</span>
+<span class="comment"># "Trim this video to 30 seconds and add a title"</span></pre></div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+    <div>mcp-video &mdash; Apache 2.0 License</div>
+    <div>
+        <a href="https://github.com/pastorsimon1798/mcp-video">GitHub</a> &bull;
+        <a href="https://github.com/pastorsimon1798/mcp-video/issues">Issues</a> &bull;
+        Built with FFmpeg + MCP
+    </div>
+</footer>
+
+</body>
+</html>

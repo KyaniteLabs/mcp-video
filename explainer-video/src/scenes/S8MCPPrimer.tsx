@@ -47,7 +47,7 @@ export const S8MCPPrimer: React.FC = () => {
   return (
     <AbsoluteFill style={{ backgroundColor: COLORS.BG_DEEP }}>
       <GradientBackground
-        glowColor={COLORS.NEON_CYAN}
+        glowColor={COLORS.LIME}
         glowX={0.5}
         glowY={0.4}
       />
@@ -101,7 +101,7 @@ export const S8MCPPrimer: React.FC = () => {
             style={{
               ...TEXT.subtitle,
               fontSize: 28,
-              color: COLORS.NEON_CYAN,
+              color: COLORS.LIME,
               textAlign: 'center',
               opacity: descOpacity,
             }}
@@ -137,7 +137,7 @@ export const S8MCPPrimer: React.FC = () => {
             width: 48,
             height: 48,
             borderRadius: 10,
-            border: `2px solid ${COLORS.NEON_CYAN}50`,
+            border: `2px solid ${COLORS.LIME}50`,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -147,18 +147,18 @@ export const S8MCPPrimer: React.FC = () => {
           <div style={{
             width: 3,
             height: 40,
-            background: `linear-gradient(180deg, ${COLORS.NEON_CYAN}60, ${COLORS.NEON_CYAN}20)`,
+            background: `linear-gradient(180deg, ${COLORS.LIME}60, ${COLORS.LIME}20)`,
             borderRadius: 2,
           }} />
           <div style={{
             width: 48,
             height: 48,
             borderRadius: 10,
-            border: `2px solid ${COLORS.NEON_GREEN}50`,
+            border: `2px solid ${COLORS.VIOLET_MID}50`,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: glowShadow(COLORS.NEON_GREEN, 0.3),
+            boxShadow: glowShadow(COLORS.VIOLET_MID, 0.3),
           }}>
             <span style={{ fontSize: 24 }}>💻</span>
           </div>
@@ -166,7 +166,7 @@ export const S8MCPPrimer: React.FC = () => {
             width: 48,
             height: 48,
             borderRadius: 10,
-            border: `2px solid ${COLORS.NEON_MAGENTA}50`,
+            border: `2px solid ${COLORS.VIOLET_BRIGHT}50`,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',

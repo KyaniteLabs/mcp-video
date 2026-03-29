@@ -24,10 +24,10 @@ const TOOLS = [
 ];
 
 const PIPELINE_STAGES = [
-  { label: 'Spec', color: COLORS.NEON_CYAN },
-  { label: 'Components', color: COLORS.NEON_PURPLE },
-  { label: 'Render', color: COLORS.NEON_MAGENTA },
-  { label: 'Export', color: COLORS.NEON_GREEN },
+  { label: 'Spec', color: COLORS.LIME },
+  { label: 'Components', color: COLORS.VIOLET_MID },
+  { label: 'Render', color: COLORS.VIOLET_BRIGHT },
+  { label: 'Export', color: COLORS.LIME },
 ];
 
 const TREE_LINES = [
@@ -70,7 +70,7 @@ export const S6Remotion: React.FC = () => {
   return (
     <AbsoluteFill style={{ backgroundColor: COLORS.BG_DEEP }}>
       <GradientBackground
-        glowColor={COLORS.NEON_PURPLE}
+        glowColor={COLORS.VIOLET_MID}
         glowX={0.5}
         glowY={0.4}
       />
@@ -105,7 +105,7 @@ export const S6Remotion: React.FC = () => {
             textAlign: 'center',
           }}
         >
-          <span style={{ color: COLORS.NEON_PURPLE }}>Remotion</span> Integration
+          <span style={{ color: COLORS.VIOLET_MID }}>Remotion</span> Integration
         </div>
         <div
           style={{
@@ -256,8 +256,8 @@ export const S6Remotion: React.FC = () => {
                     style={{
                       width: `${(frame % 120) / 120 * 100}%`,
                       height: '100%',
-                      background: COLORS.NEON_CYAN,
-                      boxShadow: glowShadow(COLORS.NEON_CYAN, 0.3),
+                      background: COLORS.LIME,
+                      boxShadow: glowShadow(COLORS.LIME, 0.3),
                     }}
                   />
                 </div>
@@ -321,8 +321,8 @@ export const S6Remotion: React.FC = () => {
                       width: 8,
                       height: 8,
                       borderRadius: '50%',
-                      background: COLORS.NEON_CYAN,
-                      boxShadow: glowShadow(COLORS.NEON_CYAN, 0.5),
+                      background: COLORS.LIME,
+                      boxShadow: glowShadow(COLORS.LIME, 0.5),
                     }}
                   />
                 </div>
@@ -348,8 +348,8 @@ export const S6Remotion: React.FC = () => {
               style={{
                 padding: '4px 12px',
                 borderRadius: 999,
-                background: `${COLORS.NEON_PURPLE}15`,
-                border: `1px solid ${COLORS.NEON_PURPLE}30`,
+                background: `${COLORS.VIOLET_MID}15`,
+                border: `1px solid ${COLORS.VIOLET_MID}30`,
                 fontFamily: FONT_MONO,
                 fontSize: 13,
                 color: COLORS.TEXT_SECONDARY,

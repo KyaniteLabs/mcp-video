@@ -1,0 +1,11 @@
+[    1291ms] Error: Minified React error #418; visit https://react.dev/errors/418?args[]=text&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings.
+    at Ii (https://static.glama.ai/client/react-sD3JNM_m.js:54:31198)
+    at Li (https://static.glama.ai/client/react-sD3JNM_m.js:54:32218)
+    at Rc (https://static.glama.ai/client/react-sD3JNM_m.js:54:85875)
+    at zu (https://static.glama.ai/client/react-sD3JNM_m.js:54:116782)
+    at Iu (https://static.glama.ai/client/react-sD3JNM_m.js:54:116042)
+    at Fu (https://static.glama.ai/client/react-sD3JNM_m.js:54:115953)
+    at Pu (https://static.glama.ai/client/react-sD3JNM_m.js:54:115810)
+    at Su (https://static.glama.ai/client/react-sD3JNM_m.js:54:111342)
+    at pd (https://static.glama.ai/client/react-sD3JNM_m.js:54:123342)
+    at MessagePort.D (https://static.glama.ai/client/react-sD3JNM_m.js:47:33967)

@@ -89,7 +89,7 @@ export const S10CTA: React.FC = () => {
   return (
     <AbsoluteFill style={{ backgroundColor: COLORS.BG_DEEP }}>
       <div style={{ opacity: 1 - fadeToBlack }}>
-        <GradientBackground glowColor={COLORS.NEON_CYAN} />
+        <GradientBackground glowColor={COLORS.LIME} />
       </div>
 
       <ParticleField count={25} />
@@ -153,15 +153,15 @@ export const S10CTA: React.FC = () => {
               color: COLORS.TEXT_PRIMARY,
             }}
           >
-            <span style={{ color: COLORS.NEON_GREEN }}>$</span>{' '}
+            <span style={{ color: COLORS.LIME }}>$</span>{' '}
             <span style={{ color: COLORS.TEXT_PRIMARY }}>
               {pipText.slice(0, charsTyped)}
             </span>
             <span style={{
-              color: COLORS.NEON_CYAN,
+              color: COLORS.LIME,
               opacity: charsTyped >= pipText.length ? (cursorVisible ? 1 : 0) : 1,
             }}>
-              {' '}▊
+              {' '}█
             </span>
           </div>
 
@@ -186,48 +186,61 @@ export const S10CTA: React.FC = () => {
           )}
         </div>
 
-        {/* Stat cards */}
+        {/* Stat cards - horizontal row with larger numbers */}
         <div
           style={{
             flexDirection: 'row',
-            gap: 24,
+            gap: 32,
             opacity: interpolate(statsSpring, [0, 0.3], [0, 1]),
             transform: `translateY(${interpolate(statsSpring, [0, 1], [16, 0])}px)`,
           }}
         >
-          {STATS.map((stat, i) => (
-            <GlassCard
-              key={stat.label}
-              accentColor={COLORS.NEON_CYAN}
-              accentTop
-              style={{ padding: '20px 48px' }}
-            >
-              <div style={{ textAlign: 'center' }}>
-                <div
-                  style={{
-                    ...TEXT.display,
-                    fontSize: stat.label === 'License' ? 28 : 48,
-                    background: GRADIENT_PRIMARY,
-                    backgroundClip: 'text',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    marginBottom: 4,
-                  }}
-                >
-                  {stat.label === 'Tools' ? statCounter : stat.value}
+          {STATS.map((stat, i) => {
+            // Animated counter for each stat
+            const animatedValue = stat.label === 'Tools' 
+              ? Math.min(43, Math.floor(interpolate(frame, [40 + i * 10, 70 + i * 10], [0, 43], { extrapolateRight: 'clamp' })))
+              : stat.label === 'Tests'
+              ? Math.min(545, Math.floor(interpolate(frame, [40 + i * 10, 70 + i * 10], [0, 545], { extrapolateRight: 'clamp' })))
+              : stat.value;
+            
+            return (
+              <GlassCard
+                key={stat.label}
+                accentColor={COLORS.LIME}
+                accentTop
+                style={{ 
+                  padding: '28px 56px',
+                  minWidth: 160,
+                }}
+              >
+                <div style={{ textAlign: 'center' }}>
+                  <div
+                    style={{
+                      ...TEXT.display,
+                      fontSize: stat.label === 'License' ? 32 : 56,
+                      background: GRADIENT_PRIMARY,
+                      backgroundClip: 'text',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                      marginBottom: 8,
+                    }}
+                  >
+                    {stat.label === 'License' ? stat.value : animatedValue + (stat.label === 'Tests' ? '+' : '')}
+                  </div>
+                  <div
+                    style={{
+                      ...TEXT.caption,
+                      fontSize: 14,
+                      color: COLORS.TEXT_MUTED,
+                      letterSpacing: '0.1em',
+                    }}
+                  >
+                    {stat.label}
+                  </div>
                 </div>
-                <div
-                  style={{
-                    ...TEXT.caption,
-                    fontSize: 14,
-                    color: COLORS.TEXT_MUTED,
-                  }}
-                >
-                  {stat.label}
-                </div>
-              </div>
-            </GlassCard>
-          ))}
+              </GlassCard>
+            );
+          })}
         </div>
 
         {/* GitHub URL pill with underline sweep */}
@@ -251,7 +264,7 @@ export const S10CTA: React.FC = () => {
               left: 0,
               height: 2,
               width: `${interpolate(frame, [70, 90], [0, 100], { extrapolateRight: 'clamp' })}%`,
-              background: COLORS.NEON_CYAN,
+              background: COLORS.LIME,
               borderRadius: 1,
             }}
           />
@@ -259,7 +272,7 @@ export const S10CTA: React.FC = () => {
             style={{
               fontFamily: FONT_MONO,
               fontSize: 16,
-              color: COLORS.NEON_CYAN,
+              color: COLORS.LIME,
               position: 'relative',
               zIndex: 1,
             }}

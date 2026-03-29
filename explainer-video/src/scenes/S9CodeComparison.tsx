@@ -65,7 +65,7 @@ export const S9CodeComparison: React.FC = () => {
   return (
     <AbsoluteFill style={{ backgroundColor: COLORS.BG_DEEP }}>
       <GradientBackground
-        glowColor={COLORS.NEON_CYAN}
+        glowColor={COLORS.LIME}
         glowX={0.5}
         glowY={0.4}
       />
@@ -77,10 +77,10 @@ export const S9CodeComparison: React.FC = () => {
           gap: 60,
         }}
       >
-        {/* Left: MoviePy (red tint) */}
+        {/* Left: MoviePy (red tint) - 40% width */}
         <div
           style={{
-            flex: 1,
+            width: '40%',
             opacity: interpolate(leftSpring, [0, 0.3], [0, 1]),
             transform: `translateX(${interpolate(leftSpring, [0, 1], [20, 0])}px)`,
           }}
@@ -125,14 +125,14 @@ export const S9CodeComparison: React.FC = () => {
           style={{
             width: 3,
             alignSelf: 'stretch',
-            background: `linear-gradient(180deg, transparent, ${COLORS.TEXT_MUTED}20, transparent)`,
+            background: `linear-gradient(180deg, transparent, ${COLORS.LIME}30, transparent)`,
           }}
         />
 
-        {/* Right: mcp-video (green tint) */}
+        {/* Right: mcp-video (winner) - 60% width with glow */}
         <div
           style={{
-            flex: 1,
+            width: '60%',
             opacity: interpolate(rightSpring, [0, 0.3], [0, 1]),
             transform: `translateX(${interpolate(rightSpring, [0, 1], [-20, 0])}px)`,
           }}
@@ -140,7 +140,7 @@ export const S9CodeComparison: React.FC = () => {
           <div
             style={{
               ...TEXT.overline,
-              color: COLORS.NEON_GREEN,
+              color: COLORS.LIME,
               fontSize: 14,
               marginBottom: 12,
             }}
@@ -149,34 +149,34 @@ export const S9CodeComparison: React.FC = () => {
           </div>
           <div
             style={{
-              background: 'rgba(0,255,136,0.05)',
-              border: `1px solid ${COLORS.NEON_GREEN}30`,
+              background: 'rgba(204,255,0,0.08)',
+              border: `2px solid ${COLORS.LIME}50`,
               borderRadius: 12,
-              padding: 20,
+              padding: 24,
               fontFamily: FONT_MONO,
-              fontSize: 16,
+              fontSize: 18,
               lineHeight: 1.8,
-              boxShadow: glowShadow(COLORS.NEON_GREEN, 0.2),
+              boxShadow: `${glowShadow(COLORS.LIME, 0.4)}, 0 0 60px ${COLORS.LIME}20`,
             }}
           >
-            <div style={{ color: COLORS.NEON_GREEN }}>
+            <div style={{ color: COLORS.LIME }}>
               {'>'}
             </div>
             <div style={{ color: COLORS.TEXT_PRIMARY }}>
               {MCPVIDEO_LINE.slice(0, charsVisible)}
             </div>
-            <div style={{ color: COLORS.NEON_GREEN }}>
+            <div style={{ color: COLORS.LIME }}>
               {charsVisible >= MCPVIDEO_LINE.length ? "')" : ''}
             </div>
             <span
               style={{
-                color: COLORS.NEON_CYAN,
+                color: COLORS.LIME,
                 opacity: charsVisible >= MCPVIDEO_LINE.length
                   ? Math.floor(frame / 15) % 2 === 0 ? 1 : 0
                   : 0,
               }}
             >
-              ▊
+              █
             </span>
           </div>
         </div>

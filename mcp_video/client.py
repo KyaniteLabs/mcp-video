@@ -624,6 +624,426 @@ class Client:
         from .remotion_engine import render_and_post
         return render_and_post(project_path, composition_id, post_process, output_path=output)
 
+    # ------------------------------------------------------------------
+    # Audio Synthesis (P1 Features)
+    # ------------------------------------------------------------------
+
+    def audio_synthesize(
+        self,
+        output: str,
+        waveform: Literal["sine", "square", "sawtooth", "triangle", "noise"] = "sine",
+        frequency: float = 440.0,
+        duration: float = 1.0,
+        volume: float = 0.5,
+        effects: dict | None = None,
+    ) -> str:
+        """Generate audio procedurally using synthesis.
+        
+        Args:
+            output: Output WAV file path
+            waveform: Type of waveform (sine, square, sawtooth, triangle, noise)
+            frequency: Base frequency in Hz
+            duration: Duration in seconds
+            volume: Amplitude (0-1)
+            effects: Optional effects dict with envelope, fade_in, fade_out, reverb, lowpass
+        
+        Returns:
+            Path to generated WAV file
+        """
+        from .audio_engine import audio_synthesize
+        return audio_synthesize(
+            output=output,
+            waveform=waveform,
+            frequency=frequency,
+            duration=duration,
+            volume=volume,
+            effects=effects,
+        )
+
+    def audio_preset(
+        self,
+        preset: str,
+        output: str,
+        pitch: Literal["low", "mid", "high"] = "mid",
+        duration: float | None = None,
+        intensity: float = 0.5,
+    ) -> str:
+        """Generate preset sound design elements.
+        
+        Presets: ui-blip, ui-click, ui-tap, ui-whoosh-up, ui-whoosh-down,
+                 drone-low, drone-mid, drone-tech, drone-ominous,
+                 chime-success, chime-error, chime-notification,
+                 typing, scan, processing, data-flow,
+                 upload, download
+        
+        Returns:
+            Path to generated WAV file
+        """
+        from .audio_engine import audio_preset
+        return audio_preset(
+            preset=preset,
+            output=output,
+            pitch=pitch,
+            duration=duration,
+            intensity=intensity,
+        )
+
+    def audio_sequence(
+        self,
+        sequence: list[dict],
+        output: str,
+    ) -> str:
+        """Compose multiple audio events into a timed sequence.
+        
+        Args:
+            sequence: List of audio events with type, at (time), duration, etc.
+            output: Output WAV file path
+        
+        Returns:
+            Path to generated WAV file
+        """
+        from .audio_engine import audio_sequence
+        return audio_sequence(sequence=sequence, output=output)
+
+    def audio_compose(
+        self,
+        tracks: list[dict],
+        duration: float,
+        output: str,
+    ) -> str:
+        """Layer multiple audio tracks with mixing.
+        
+        Args:
+            tracks: List of track configs with file, volume, start, loop
+            duration: Total duration of output
+            output: Output WAV file path
+        
+        Returns:
+            Path to generated WAV file
+        """
+        from .audio_engine import audio_compose
+        return audio_compose(tracks=tracks, duration=duration, output=output)
+
+    def audio_effects(
+        self,
+        input_path: str,
+        output: str,
+        effects: list[dict],
+    ) -> str:
+        """Apply audio effects chain.
+        
+        Args:
+            input_path: Input WAV file path
+            output: Output WAV file path
+            effects: List of effect configs with type and parameters
+        
+        Returns:
+            Path to processed WAV file
+        """
+        from .audio_engine import audio_effects
+        return audio_effects(input_path=input_path, output=output, effects=effects)
+
+    def add_generated_audio(
+        self,
+        video: str,
+        audio_config: dict,
+        output: str,
+    ) -> str:
+        """Add generated audio to a video file.
+        
+        Args:
+            video: Input video path
+            audio_config: Configuration with drone and/or events
+            output: Output video path
+        
+        Returns:
+            Path to output video
+        """
+        from .audio_engine import add_generated_audio
+        return add_generated_audio(video=video, audio_config=audio_config, output=output)
+
+    # ------------------------------------------------------------------
+    # Visual Effects (P1 Features)
+    # ------------------------------------------------------------------
+
+    def effect_vignette(
+        self,
+        video: str,
+        output: str,
+        intensity: float = 0.5,
+        radius: float = 0.8,
+        smoothness: float = 0.5,
+    ) -> str:
+        """Apply vignette effect - darkened edges."""
+        from .effects_engine import effect_vignette
+        return effect_vignette(video, output, intensity, radius, smoothness)
+
+    def effect_chromatic_aberration(
+        self,
+        video: str,
+        output: str,
+        intensity: float = 2.0,
+        angle: float = 0,
+    ) -> str:
+        """Apply RGB channel separation effect."""
+        from .effects_engine import effect_chromatic_aberration
+        return effect_chromatic_aberration(video, output, intensity, angle)
+
+    def effect_scanlines(
+        self,
+        video: str,
+        output: str,
+        line_height: int = 2,
+        opacity: float = 0.3,
+        flicker: float = 0.1,
+    ) -> str:
+        """Apply CRT-style scanline overlay."""
+        from .effects_engine import effect_scanlines
+        return effect_scanlines(video, output, line_height, opacity, flicker)
+
+    def effect_noise(
+        self,
+        video: str,
+        output: str,
+        intensity: float = 0.05,
+        mode: str = "film",
+        animated: bool = True,
+    ) -> str:
+        """Apply film grain / digital noise."""
+        from .effects_engine import effect_noise
+        return effect_noise(video, output, intensity, mode, animated)
+
+    def effect_glow(
+        self,
+        video: str,
+        output: str,
+        intensity: float = 0.5,
+        radius: int = 10,
+        threshold: float = 0.7,
+    ) -> str:
+        """Apply bloom/glow effect for highlights."""
+        from .effects_engine import effect_glow
+        return effect_glow(video, output, intensity, radius, threshold)
+
+    # ------------------------------------------------------------------
+    # Layout & Composition
+    # ------------------------------------------------------------------
+
+    def layout_grid(
+        self,
+        clips: list[str],
+        layout: str,
+        output: str,
+        gap: int = 10,
+        padding: int = 20,
+        background: str = "#141414",
+    ) -> str:
+        """Create grid-based multi-video layout."""
+        from .effects_engine import layout_grid
+        return layout_grid(clips, layout, output, gap, padding, background)
+
+    def layout_pip(
+        self,
+        main: str,
+        pip: str,
+        output: str,
+        position: str = "bottom-right",
+        size: float = 0.25,
+        margin: int = 20,
+        border: bool = True,
+        border_color: str = "#CCFF00",
+        border_width: int = 2,
+    ) -> str:
+        """Picture-in-picture overlay."""
+        from .effects_engine import layout_pip
+        return layout_pip(main, pip, output, position, size, margin, False, border, border_color, border_width)
+
+    # ------------------------------------------------------------------
+    # Text & Typography
+    # ------------------------------------------------------------------
+
+    def text_animated(
+        self,
+        video: str,
+        text: str,
+        output: str,
+        animation: str = "fade",
+        font: str = "Arial",
+        size: int = 48,
+        color: str = "white",
+        position: str = "center",
+        start: float = 0,
+        duration: float = 3.0,
+    ) -> str:
+        """Add animated text to video."""
+        from .effects_engine import text_animated
+        return text_animated(video, text, output, animation, font, size, color, position, start, duration)
+
+    def text_subtitles(
+        self,
+        video: str,
+        subtitles: str,
+        output: str,
+        style: dict | None = None,
+    ) -> str:
+        """Burn subtitles from SRT/VTT with styling."""
+        from .effects_engine import text_subtitles
+        return text_subtitles(video, subtitles, output, style)
+
+    # ------------------------------------------------------------------
+    # Motion Graphics
+    # ------------------------------------------------------------------
+
+    def mograph_count(
+        self,
+        start: int,
+        end: int,
+        duration: float,
+        output: str,
+        style: dict | None = None,
+        fps: int = 30,
+    ) -> str:
+        """Generate animated number counter video."""
+        from .effects_engine import mograph_count
+        return mograph_count(start, end, duration, output, style, fps)
+
+    def mograph_progress(
+        self,
+        duration: float,
+        output: str,
+        style: str = "bar",
+        color: str = "#CCFF00",
+        track_color: str = "#333333",
+        fps: int = 30,
+    ) -> str:
+        """Generate progress bar / loading animation."""
+        from .effects_engine import mograph_progress
+        return mograph_progress(duration, output, style, color, track_color, fps)
+
+    # ------------------------------------------------------------------
+    # Utility
+    # ------------------------------------------------------------------
+
+    def video_info_detailed(self, video: str) -> dict:
+        """Get extended video metadata."""
+        from .effects_engine import video_info_detailed
+        return video_info_detailed(video)
+
+    def auto_chapters(self, video: str, threshold: float = 0.3) -> list:
+        """Auto-detect scene changes and create chapters."""
+        from .effects_engine import auto_chapters
+        return auto_chapters(video, threshold)
+
+    # ------------------------------------------------------------------
+    # Transitions (Wave 2)
+    # ------------------------------------------------------------------
+
+    def transition_glitch(self, clip1: str, clip2: str, output: str, duration: float = 0.5, intensity: float = 0.3) -> str:
+        """Apply glitch transition between two video clips."""
+        from .transitions_engine import transition_glitch
+        return transition_glitch(clip1, clip2, output, duration, intensity)
+
+    def transition_pixelate(self, clip1: str, clip2: str, output: str, duration: float = 0.4, pixel_size: int = 50) -> str:
+        """Apply pixelate transition between two video clips."""
+        from .transitions_engine import transition_pixelate
+        return transition_pixelate(clip1, clip2, output, duration, pixel_size)
+
+    def transition_morph(self, clip1: str, clip2: str, output: str, duration: float = 0.6, mesh_size: int = 10) -> str:
+        """Apply morph transition between two video clips."""
+        from .transitions_engine import transition_morph
+        return transition_morph(clip1, clip2, output, duration, mesh_size)
+
+    # ------------------------------------------------------------------
+    # AI Features (Wave 3)
+    # ------------------------------------------------------------------
+
+    def ai_remove_silence(self, video: str, output: str, silence_threshold: float = -50, min_silence_duration: float = 0.5, keep_margin: float = 0.1) -> str:
+        """Remove silent sections from video."""
+        from .ai_engine import ai_remove_silence
+        return ai_remove_silence(video, output, silence_threshold, min_silence_duration, keep_margin)
+
+    def ai_transcribe(self, video: str, output_srt: str | None = None, model: str = "base", language: str | None = None) -> dict:
+        """Transcribe speech to text using Whisper."""
+        from .ai_engine import ai_transcribe
+        return ai_transcribe(video, output_srt, model, language)
+
+    def ai_scene_detect(self, video: str, threshold: float = 0.3, use_ai: bool = False) -> list[dict]:
+        """Detect scene changes in video."""
+        from .ai_engine import ai_scene_detect
+        return ai_scene_detect(video, threshold, use_ai)
+
+    def ai_stem_separation(self, video: str, output_dir: str, stems: list[str] | None = None, model: str = "htdemucs") -> dict[str, str]:
+        """Separate audio into stems using Demucs."""
+        from .ai_engine import ai_stem_separation
+        return ai_stem_separation(video, output_dir, stems, model)
+
+    def ai_upscale(self, video: str, output: str, scale: int = 2, model: str = "realesrgan") -> str:
+        """Upscale video using AI super-resolution."""
+        from .ai_engine import ai_upscale
+        return ai_upscale(video, output, scale, model)
+
+    def ai_color_grade(self, video: str, output: str, reference: str | None = None, style: str = "auto") -> str:
+        """Auto color grade video."""
+        from .ai_engine import ai_color_grade
+        return ai_color_grade(video, output, reference, style)
+
+    def audio_spatial(self, video: str, output: str, positions: list[dict], method: str = "hrtf") -> str:
+        """Apply 3D spatial audio positioning."""
+        from .ai_engine import audio_spatial
+        return audio_spatial(video, output, positions, method)
+
+    def quality_check(self, video: str, fail_on_warning: bool = False) -> dict:
+        """Run visual quality guardrails on a video.
+
+        Args:
+            video: Video file path
+            fail_on_warning: Treat warnings as failures
+
+        Returns:
+            Quality report with scores and recommendations
+        """
+        from .quality_guardrails import quality_check
+        return quality_check(video, fail_on_warning)
+
+    def design_quality_check(
+        self,
+        video: str,
+        auto_fix: bool = False,
+        strict: bool = False,
+    ) -> dict:
+        """Run comprehensive design quality analysis.
+        
+        Checks layout, typography, color, motion, and composition.
+        Can automatically fix issues where possible.
+        
+        Args:
+            video: Video file path
+            auto_fix: If True, automatically apply fixes
+            strict: If True, treat warnings as errors
+        
+        Returns:
+            Design quality report with scores and issues
+        """
+        from .design_quality import design_quality_check
+        return design_quality_check(video, auto_fix=auto_fix, strict=strict)
+
+    def fix_design_issues(
+        self,
+        video: str,
+        output: str | None = None,
+    ) -> str:
+        """Auto-fix design issues in a video.
+        
+        Args:
+            video: Input video path
+            output: Output path (auto-generated if None)
+        
+        Returns:
+            Path to fixed video
+        """
+        from .design_quality import fix_design_issues
+        return fix_design_issues(video, output=output)
+
 
 # Fix the circular import for resize
 from .engine import resize as _resize

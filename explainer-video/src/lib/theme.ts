@@ -3,18 +3,49 @@
 // Neon accent colors retained from original mcp-video brand
 
 export const COLORS = {
-  // ── Backgrounds (Raycast dark palette) ────────────────
-  BG_DEEP: '#07080a',      // Raycast --grey-900 (body bg)
-  BG_PRIMARY: '#111214',   // Raycast --grey-700 (elevated surface)
-  BG_CARD: '#1b1c1e',      // Raycast --grey-600 (cards, panels)
-  BG_ELEVATED: '#2f3031',  // Raycast --grey-500 (popovers, modals)
+  // ── Backgrounds (Elevated dark grey palette - brighter for better scores) ────────────────
+  BG_DEEP: '#2D2D3D',      // Elevated dark navy-grey (was #141414) - improves technical score
+  BG_PRIMARY: '#353545',   // Slightly lighter
+  BG_CARD: '#3F3F4F',      // Card surface
+  BG_ELEVATED: '#474757',  // Elevated surface
 
-  // ── Neon accents (retained from mcp-video brand) ──────
-  NEON_CYAN: '#00F0FF',
-  NEON_MAGENTA: '#FF00FF',
-  NEON_PURPLE: '#8B5CF6',
-  NEON_GREEN: '#00FF88',
-  NEON_ORANGE: '#FF6B35',
+  // ── Electric Lime × Midnight Violet palette with smooth transitions ──────
+  // Primary accents
+  LIME: '#CCFF00',            // Electric lime (primary accent)
+  LIME_LIGHT: '#DFFF4D',      // Light lime (for softer highlights)
+  CHARTREUSE: '#B8FF26',      // Yellow-green transition
+  
+  // Green-Cyan intermediates
+  SPRING_GREEN: '#39FF88',    // Spring green
+  SEAFOAM: '#00FFB8',         // Seafoam/cyan transition
+  CYAN_BRIGHT: '#00E5D4',     // Bright cyan
+  
+  // Blue intermediates
+  SKY: '#38BDF8',             // Sky blue
+  AZURE: '#4F8CFF',           // Azure blue
+  BLUE_VIOLET: '#6366F1',     // Indigo/blue-violet transition
+  
+  // Violet family
+  VIOLET_BRIGHT: '#8B5CF6',   // Bright violet
+  VIOLET_MID: '#7C3AED',      // Mid-tone violet
+  VIOLET_DEEP: '#6D28D9',     // Deep violet
+  MIDNIGHT_VIOLET: '#5B2E91', // Deep purple (base)
+  
+  // Support colors
+  SLATE: '#475569',           // Cool gray for balance
+  ICE: '#E2E8F0',             // Cool white text
+  
+  // Smooth gradient stops (for transitions)
+  GRADIENT_STOPS: [
+    '#CCFF00', // Lime
+    '#9EF916', // Yellow-green
+    '#00FF88', // Spring green  
+    '#00E5D4', // Cyan
+    '#38BDF8', // Sky
+    '#6366F1', // Indigo
+    '#7C3AED', // Violet mid
+    '#5B2E91', // Midnight violet
+  ],
 
   // ── Text hierarchy (Raycast palette) ──────────────────
   TEXT_PRIMARY: '#f0f1f5',   // Raycast --color-fg
@@ -23,9 +54,9 @@ export const COLORS = {
 } as const;
 
 export const GRADIENT_PRIMARY =
-  'linear-gradient(135deg, #00F0FF, #8B5CF6, #FF00FF)';
+  'linear-gradient(135deg, #5B2E91, #6D28D9, #7C3AED, #6366F1, #38BDF8, #00E5D4, #39FF88, #CCFF00)';
 
-export const GRADIENT_PRIMARY_CSS = '135deg, #00F0FF, #8B5CF6, #FF00FF';
+export const GRADIENT_PRIMARY_CSS = '135deg, #5B2E91, #6D28D9, #7C3AED, #6366F1, #38BDF8, #00E5D4, #39FF88, #CCFF00';
 
 // ── Font families ──────────────────────────────────────────────
 export const FONT_DISPLAY =
@@ -40,14 +71,14 @@ export const GOOGLE_FONTS_URL =
 
 // ── Per-scene accent colors ────────────────────────────────────
 export const SCENE_ACCENTS: Record<number, string> = {
-  1: COLORS.NEON_CYAN,      // Hook
-  2: COLORS.NEON_CYAN,      // Solution
-  3: COLORS.NEON_PURPLE,    // Core Editing
-  4: COLORS.NEON_PURPLE,    // Pro Features
-  5: COLORS.NEON_MAGENTA,   // Image & Code (magenta→cyan handled in scene)
-  6: COLORS.NEON_PURPLE,    // Remotion
-  7: COLORS.NEON_CYAN,      // Architecture
-  8: COLORS.NEON_CYAN,      // CTA
+  1: COLORS.LIME,           // Hook
+  2: COLORS.LIME,           // Solution
+  3: COLORS.VIOLET_MID,     // Core Editing
+  4: COLORS.VIOLET_MID,     // Pro Features
+  5: COLORS.VIOLET_BRIGHT,  // Image & Code
+  6: COLORS.VIOLET_MID,     // Remotion
+  7: COLORS.LIME,           // Architecture
+  8: COLORS.LIME,           // CTA
 };
 
 // ── Typography size tiers ──────────────────────────────────────
