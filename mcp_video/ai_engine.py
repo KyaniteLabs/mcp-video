@@ -1129,7 +1129,13 @@ def ai_upscale(
     
     # Fallback: Use OpenCV DNN Super Resolution
     if not has_realesrgan:
-        return _ai_upscale_opencv(str(video_path), str(output_path), scale)
+        try:
+            return _ai_upscale_opencv(str(video_path), str(output_path), scale)
+        except ImportError:
+            raise RuntimeError(
+                "AI upscaling requires either realesrgan or opencv-python (cv2). "
+                "Install with: pip install realesrgan or pip install opencv-python"
+            )
     
     # Validate scale parameter
     if scale not in (2, 4):

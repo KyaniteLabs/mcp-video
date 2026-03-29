@@ -136,9 +136,9 @@ class TestValidateProject:
         src_dir.mkdir()
         (src_dir / "Root.tsx").write_text("// root")
 
-        result = _validate_project(str(tmp_path))
-        assert result == tmp_path.resolve()
-        assert isinstance(result, Path)
+        project_dir, entry_point = _validate_project(str(tmp_path))
+        assert project_dir == tmp_path.resolve()
+        assert isinstance(project_dir, Path)
 
 
 # ---------------------------------------------------------------------------
