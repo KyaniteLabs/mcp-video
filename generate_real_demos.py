@@ -62,8 +62,8 @@ def generate_ai_upscale_demo():
             subprocess.run([
                 "ffmpeg", "-y",
                 "-i", str(low_res), "-i", str(upscaled),
-                "-filter_complex", "[0:v]scale=360:640[left];[1:v]scale=360:640[right];[left][right]hstack",
-                "-c:v", "libx264", "-preset", "fast",
+                "-filter_complex", "[0:v]scale=240:426[left];[1:v]scale=240:426[right];[left][right]hstack",
+                "-c:v", "libx264", "-preset", "fast", "-crf", "28",
                 "-t", "3", str(split)
             ], capture_output=True)
             print(f"  ✓ Created: {split.name}")
@@ -96,8 +96,8 @@ def generate_color_grade_demo():
     subprocess.run([
         "ffmpeg", "-y",
         "-i", str(source), "-i", str(warm), "-i", str(cine),
-        "-filter_complex", "[0:v][1:v][2:v]hstack=inputs=3",
-        "-c:v", "libx264", "-preset", "fast",
+        "-filter_complex", "[0:v][1:v][2:v]hstack=inputs=3,scale=480:-1",
+        "-c:v", "libx264", "-preset", "fast", "-crf", "28", "-t", "3",
         "-t", "3", str(demo)
     ], capture_output=True)
     
@@ -145,8 +145,8 @@ def generate_effects_demo():
         for _, path in effects[:2]:
             cmd.extend(["-i", str(path)])
         cmd.extend([
-            "-filter_complex", f"[0:v][1:v][2:v]hstack=inputs=3",
-            "-c:v", "libx264", "-preset", "fast",
+            "-filter_complex", f"[0:v][1:v][2:v]hstack=inputs=3,scale=480:-1",
+            "-c:v", "libx264", "-preset", "fast", "-crf", "28",
             "-t", "3", str(demo)
         ])
         subprocess.run(cmd, capture_output=True)
@@ -225,8 +225,8 @@ def generate_stabilization_demo():
             subprocess.run([
                 "ffmpeg", "-y",
                 "-i", str(source), "-i", str(stabilized),
-                "-filter_complex", "[0:v][1:v]hstack",
-                "-c:v", "libx264", "-preset", "fast",
+                "-filter_complex", "[0:v][1:v]hstack,scale=640:-1",
+                "-c:v", "libx264", "-preset", "fast", "-crf", "28",
                 "-t", "3", str(demo)
             ], capture_output=True)
             
