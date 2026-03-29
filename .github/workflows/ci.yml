@@ -18,6 +18,8 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
       - name: Install dependencies
         run: pip install -e ".[dev]"
+      - name: Lint
+        run: ruff check mcp_video/
       - name: Run tests
         run: pytest tests/ -q -m "not slow"
 

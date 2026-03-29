@@ -125,6 +125,60 @@ def _validate_input(path: str) -> None:
         raise InputFileError(path)
 
 
+_CSS_COLOR_NAMES = frozenset({
+    "white", "black", "red", "green", "blue", "yellow", "cyan", "magenta",
+    "orange", "purple", "pink", "brown", "gray", "grey", "silver", "gold",
+    "navy", "teal", "maroon", "olive", "lime", "aqua", "fuchsia", "indigo",
+    "violet", "coral", "salmon", "tomato", "khaki", "lavender", "turquoise",
+    "tan", "wheat", "ivory", "beige", "linen", "snow", "mintcream", "azure",
+    "aliceblue", "ghostwhite", "honeydew", "seashell", "whitesmoke",
+    "oldlace", "floralwhite", "cornsilk", "lemonchiffon", "lightyellow",
+    "lightcyan", "paleturquoise", "powderblue", "lightblue", "skyblue",
+    "lightskyblue", "steelblue", "dodgerblue", "deepskyblue",
+    "cornflowerblue", "royalblue", "mediumblue", "darkblue", "midnightblue",
+    "slateblue", "darkslateblue", "mediumpurple", "blueviolet", "darkviolet",
+    "darkorchid", "mediumorchid", "orchid", "plum", "mediumvioletred",
+    "palevioletred", "hotpink", "deeppink", "lightpink", "rosybrown",
+    "indianred", "firebrick", "darkred", "crimson", "orangered",
+    "lightsalmon", "darksalmon", "lightcoral", "peachpuff", "bisque",
+    "moccasin", "navajowhite", "sandybrown", "chocolate", "saddlebrown",
+    "sienna", "burlywood", "peru", "darkgoldenrod", "goldenrod",
+    "lightgoldenrod", "darkkhaki", "chartreuse", "greenyellow",
+    "springgreen", "mediumspringgreen", "lawngreen", "darkgreen",
+    "forestgreen", "seagreen", "darkseagreen", "lightgreen", "palegreen",
+    "limegreen", "greenyellow",
+})
+
+_HEX_COLOR_RE = re.compile(r"^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$")
+_FFMPEG_SPECIAL_CHARS = set(":=;'[]\\")
+
+
+def _validate_color(color: str) -> None:
+    """Validate a color value to prevent FFmpeg filter injection.
+
+    Accepts CSS named colors (whitelist) and hex colors (#RGB, #RRGGBB, #RRGGBBAA).
+    Rejects anything containing FFmpeg special characters.
+    """
+    if not isinstance(color, str):
+        raise MCPVideoError(
+            "invalid_color: value must be a string",
+            error_type="validation_error", code="invalid_color",
+        )
+    if any(c in _FFMPEG_SPECIAL_CHARS for c in color):
+        raise MCPVideoError(
+            "invalid_color: contains FFmpeg special characters",
+            error_type="validation_error", code="invalid_color",
+        )
+    if color.lower() in _CSS_COLOR_NAMES:
+        return
+    if _HEX_COLOR_RE.match(color):
+        return
+    raise MCPVideoError(
+        "invalid_color: not a recognized CSS name or hex color",
+        error_type="validation_error", code="invalid_color",
+    )
+
+
 def _auto_output(input_path: str, suffix: str = "edited", ext: str | None = None) -> str:
     base, original_ext = os.path.splitext(input_path)
     ext = ext or original_ext or ".mp4"
@@ -132,6 +186,28 @@ def _auto_output(input_path: str, suffix: str = "edited", ext: str | None = None
     # and are problematic on Windows
     safe_base = base.replace(":", "_")
     return f"{safe_base}_{suffix}{ext}"
+
+
+def _validate_path(path: str, must_exist: bool = True) -> str:
+    """Validate and resolve a file path. Rejects null bytes and resolves to absolute."""
+    if "\x00" in path:
+        raise InputFileError(path, "Path contains null bytes")
+    resolved = os.path.realpath(path)
+    if must_exist and not os.path.isfile(resolved):
+        raise InputFileError(resolved)
+    return resolved
+
+
+def _escape_ffmpeg_filter_value(value: str) -> str:
+    """Escape special characters for FFmpeg filter expressions (subtitles, drawtext, etc.)."""
+    return (
+        value.replace("\\", "/")
+        .replace("'", "'\\''")
+        .replace(":", "\\:")
+        .replace("[", "\\[")
+        .replace("]", "\\]")
+        .replace(",", "\\,")
+    )
 
 
 def _auto_output_dir(input_path: str, suffix: str = "output") -> str:
@@ -284,6 +360,32 @@ def _quality_args(
     return ["-preset", preset or default_preset, "-crf", str(crf if crf is not None else default_crf)]
 
 
+def _validate_position(position: Position) -> None:
+    """Validate position dict values to prevent FFmpeg filter injection.
+
+    Only validates when position is a dict; named strings are safe by design.
+    """
+    if not isinstance(position, dict):
+        return
+    if "x_pct" in position and "y_pct" in position:
+        for key in ("x_pct", "y_pct"):
+            val = position[key]
+            if not isinstance(val, (int, float)) or isinstance(val, bool):
+                raise InputFileError(path="", reason="Invalid position value")
+            if not (0.0 <= float(val) <= 1.0):
+                raise InputFileError(path="", reason="Invalid position value")
+    elif "x" in position and "y" in position:
+        for key in ("x", "y"):
+            val = position[key]
+            if not isinstance(val, (int, float)) or isinstance(val, bool):
+                raise InputFileError(path="", reason="Invalid position value")
+    else:
+        raise MCPVideoError(
+            "Position dict must have 'x'+'y' (pixels) or 'x_pct'+'y_pct' (percentage)",
+            code="invalid_position_dict",
+        )
+
+
 def _position_coords(position: Position, width: int = 0, height: int = 0) -> str:
     """Return drawtext x,y expression for a named position or dict coords.
 
@@ -292,6 +394,7 @@ def _position_coords(position: Position, width: int = 0, height: int = 0) -> str
     - Pixel coordinates: {"x": 100, "y": 50}
     - Percentage: {"x_pct": 0.5, "y_pct": 0.5}
     """
+    _validate_position(position)
     if isinstance(position, dict):
         if "x_pct" in position and "y_pct" in position:
             x_pct = position["x_pct"]
@@ -329,6 +432,7 @@ def _resolve_position(
 
     Used by watermark, overlay_video, and similar overlay-based operations.
     """
+    _validate_position(position)
     if isinstance(position, dict):
         if "x_pct" in position and "y_pct" in position:
             x_pct = position["x_pct"]
@@ -701,6 +805,7 @@ def add_text(
     """Overlay text on a video."""
     _validate_input(input_path)
     _require_filter("drawtext", "Text overlay")
+    _validate_color(color)
     output = output_path or _auto_output(input_path, "titled")
 
     coords = _position_coords(position)
@@ -1291,8 +1396,7 @@ def subtitles(
     output = output_path or _auto_output(input_path, "subtitled")
 
     # Escape special characters for FFmpeg subtitle filter path
-    # subtitles filter uses ':' as key=value separator and '\' for escaping
-    escaped_sub_path = subtitle_path.replace("\\", "/").replace("'", "'\\''").replace(":", "\\:").replace("[", "\\[").replace("]", "\\]")
+    escaped_sub_path = _escape_ffmpeg_filter_value(subtitle_path)
     escaped_style = style.replace("'", "\\'").replace(":", "\\:")
 
     _run_ffmpeg([
@@ -1746,9 +1850,10 @@ def _apply_composite_overlays(
         fontfile = elem.style.get("font") or _default_font()
         size = elem.style.get("size", 48)
         color = elem.style.get("color", "white")
+        _validate_color(color)
+        coords = _position_coords(elem.position, info.width, info.height)
 
         escaped_text = elem.text.replace("\\", "\\\\").replace("'", "'\\''").replace(":", "\\:")
-        coords = _position_coords(elem.position, info.width, info.height)
 
         drawtext_parts = [
             f"drawtext=text='{escaped_text}'",
@@ -2347,7 +2452,7 @@ def generate_subtitles(
     if burn:
         _require_filter("subtitles", "Subtitle burn-in")
         video_out = os.path.join(srt_dir, "subtitled.mp4")
-        escaped_srt = shlex.quote(srt_file.replace("\\", "/"))
+        escaped_srt = _escape_ffmpeg_filter_value(srt_file)
         _run_ffmpeg([
             "-i", input_path,
             "-vf", f"subtitles={escaped_srt}",

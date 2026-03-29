@@ -292,7 +292,7 @@ def audio_synthesize(
     effects: dict[str, Any] | None = None,
 ) -> str:
     """Generate audio procedurally using synthesis.
-    
+
     Args:
         output: Output WAV file path
         waveform: Type of waveform to generate
@@ -306,10 +306,20 @@ def audio_synthesize(
             - fade_out: seconds
             - reverb: {"room_size", "damping", "wet_level"}
             - lowpass: cutoff frequency
-    
+
     Returns:
         Path to generated WAV file
     """
+    from .limits import MAX_AUDIO_DURATION, MIN_FREQUENCY, MAX_FREQUENCY, MIN_SAMPLE_RATE, MAX_SAMPLE_RATE
+
+    if not (MIN_FREQUENCY <= frequency <= MAX_FREQUENCY):
+        raise ValueError(f"Frequency must be between {MIN_FREQUENCY} and {MAX_FREQUENCY} Hz, got {frequency}")
+    if not (0.01 <= duration <= MAX_AUDIO_DURATION):
+        raise ValueError(f"Duration must be between 0.01 and {MAX_AUDIO_DURATION} seconds, got {duration}")
+    if not (0.0 <= volume <= 1.0):
+        raise ValueError(f"Volume must be between 0.0 and 1.0, got {volume}")
+    if not (MIN_SAMPLE_RATE <= sample_rate <= MAX_SAMPLE_RATE):
+        raise ValueError(f"Sample rate must be between {MIN_SAMPLE_RATE} and {MAX_SAMPLE_RATE}, got {sample_rate}")
     # Generate base waveform
     if waveform == "sine":
         pcm_data = generate_sine(frequency, duration, sample_rate, volume)

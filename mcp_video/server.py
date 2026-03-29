@@ -64,8 +64,10 @@ mcp = FastMCP(
 )
 
 
-def _error_result(err: MCPVideoError) -> dict[str, Any]:
-    return {"success": False, "error": err.to_dict()}
+def _error_result(err: MCPVideoError | Exception) -> dict[str, Any]:
+    if isinstance(err, MCPVideoError):
+        return {"success": False, "error": err.to_dict()}
+    return {"success": False, "error": {"type": "internal_error", "code": "unexpected_error", "message": str(err)}}
 
 
 def _result(result: Any) -> dict[str, Any]:
@@ -601,9 +603,7 @@ def video_edit(
     try:
         return _result(edit_timeline(timeline, output_path=output_path))
     except Exception as e:
-        if isinstance(e, MCPVideoError):
-            return _error_result(e)
-        return _error_result(MCPVideoError(str(e), error_type="validation_error", code="invalid_timeline"))
+        return _error_result(e)
 
 
 @mcp.tool()

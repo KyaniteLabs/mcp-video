@@ -233,3 +233,10 @@ def parse_ffmpeg_error(stderr: str) -> MCPVideoError:
 
 # Backwards compatibility alias
 AgentCutError = MCPVideoError
+
+
+def wrap_error(exc: Exception) -> MCPVideoError:
+    """Convert any exception to MCPVideoError. Returns as-is if already MCPVideoError."""
+    if isinstance(exc, MCPVideoError):
+        return exc
+    return ProcessingError(str(exc), 1, getattr(exc, "stderr", ""))

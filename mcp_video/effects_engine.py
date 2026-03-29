@@ -12,6 +12,24 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+from .errors import ProcessingError
+
+
+# ---------------------------------------------------------------------------
+# Helper
+# ---------------------------------------------------------------------------
+
+def _run_ffmpeg(cmd: list[str], timeout: int = 600) -> subprocess.CompletedProcess[str]:
+    """Run an FFmpeg/FFprobe command with timeout and error handling."""
+    cmd_str = " ".join(cmd)
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        raise ProcessingError(cmd_str, -1, f"FFmpeg command timed out after {timeout}s")
+    if result.returncode != 0:
+        raise ProcessingError(cmd_str, result.returncode, result.stderr)
+    return result
+
 
 # ---------------------------------------------------------------------------
 # FFmpeg-based Effects
@@ -64,10 +82,8 @@ def effect_vignette(
         output,
     ]
     
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    if result.returncode != 0:
-        raise RuntimeError(f"FFmpeg vignette error: {result.stderr}")
-    
+    _run_ffmpeg(cmd)
+
     return output
 
 
@@ -128,20 +144,23 @@ def effect_chromatic_aberration(
         output,
     ]
     
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    
+    # Run first attempt, capture error for fallback check
+    cmd_str = " ".join(cmd)
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+    except subprocess.TimeoutExpired:
+        raise ProcessingError(cmd_str, -1, f"FFmpeg command timed out after 600s")
+
     # Fallback if chromashift not available
     if result.returncode != 0 and "chromashift" in result.stderr:
-        # Manual RGB separation using colorbalance
         filters = (
             f"colorbalance=rs={intensity/100}:bs=-{intensity/100}"
         )
         cmd[4] = filters
-        result = subprocess.run(cmd, capture_output=True, text=True)
-    
-    if result.returncode != 0:
-        raise RuntimeError(f"FFmpeg chromatic aberration error: {result.stderr}")
-    
+        _run_ffmpeg(cmd)
+    elif result.returncode != 0:
+        raise ProcessingError(cmd_str, result.returncode, result.stderr)
+
     return output
 
 
@@ -186,10 +205,8 @@ def effect_scanlines(
         output,
     ]
     
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    if result.returncode != 0:
-        raise RuntimeError(f"FFmpeg scanlines error: {result.stderr}")
-    
+    _run_ffmpeg(cmd)
+
     return output
 
 
@@ -235,10 +252,8 @@ def effect_noise(
         output,
     ]
     
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    if result.returncode != 0:
-        raise RuntimeError(f"FFmpeg noise error: {result.stderr}")
-    
+    _run_ffmpeg(cmd)
+
     return output
 
 
@@ -282,8 +297,13 @@ def effect_glow(
         output,
     ]
     
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    
+    # Run first attempt, capture error for fallback check
+    cmd_str = " ".join(cmd)
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+    except subprocess.TimeoutExpired:
+        raise ProcessingError(cmd_str, -1, f"FFmpeg command timed out after 600s")
+
     # Fallback if gblur not available
     if result.returncode != 0 and "gblur" in result.stderr:
         filters = (
@@ -293,11 +313,10 @@ def effect_glow(
             f"[original][glow]blend=all_mode='addition':all_opacity={intensity}"
         )
         cmd[4] = filters
-        result = subprocess.run(cmd, capture_output=True, text=True)
-    
-    if result.returncode != 0:
-        raise RuntimeError(f"FFmpeg glow error: {result.stderr}")
-    
+        _run_ffmpeg(cmd)
+    elif result.returncode != 0:
+        raise ProcessingError(cmd_str, result.returncode, result.stderr)
+
     return output
 
 
@@ -392,10 +411,8 @@ def layout_grid(
         output,
     ]
     
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    if result.returncode != 0:
-        raise RuntimeError(f"FFmpeg grid error: {result.stderr}")
-    
+    _run_ffmpeg(cmd)
+
     return output
 
 
@@ -429,12 +446,13 @@ def layout_pip(
         Path to output video
     """
     # Get main video dimensions
-    probe = subprocess.run(
-        ["ffprobe", "-v", "error", "-select_streams", "v:0",
-         "-show_entries", "stream=width,height", "-of", "csv=s=x:p=0", main],
-        capture_output=True, text=True
-    )
+    probe_cmd = [
+        "ffprobe", "-v", "error", "-select_streams", "v:0",
+        "-show_entries", "stream=width,height", "-of", "csv=s=x:p=0", main,
+    ]
+    probe = _run_ffmpeg(probe_cmd)
     main_w, main_h = map(int, probe.stdout.strip().split('x'))
+
     
     # Calculate PIP dimensions
     pip_w = int(main_w * size)
@@ -478,10 +496,8 @@ def layout_pip(
         output,
     ]
     
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    if result.returncode != 0:
-        raise RuntimeError(f"FFmpeg PIP error: {result.stderr}")
-    
+    _run_ffmpeg(cmd)
+
     return output
 
 
@@ -574,10 +590,8 @@ def text_animated(
         output,
     ]
     
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    if result.returncode != 0:
-        raise RuntimeError(f"FFmpeg text error: {result.stderr}")
-    
+    _run_ffmpeg(cmd)
+
     return output
 
 
@@ -635,10 +649,8 @@ def text_subtitles(
         output,
     ]
     
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    if result.returncode != 0:
-        raise RuntimeError(f"FFmpeg subtitles error: {result.stderr}")
-    
+    _run_ffmpeg(cmd)
+
     return output
 
 
@@ -699,9 +711,9 @@ def mograph_count(
                 "-vframes", "1",
                 str(frame_file),
             ]
-            
-            subprocess.run(cmd, capture_output=True)
-        
+
+            _run_ffmpeg(cmd)
+
         # Combine frames into video
         cmd = [
             "ffmpeg", "-y",
@@ -712,10 +724,8 @@ def mograph_count(
             "-crf", "23",
             output,
         ]
-        
-        result = subprocess.run(cmd, capture_output=True, text=True)
-        if result.returncode != 0:
-            raise RuntimeError(f"FFmpeg count error: {result.stderr}")
+
+        _run_ffmpeg(cmd)
     
     return output
 
@@ -781,9 +791,9 @@ def mograph_progress(
                 "-vframes", "1",
                 str(frame_file),
             ]
-            
-            subprocess.run(cmd, capture_output=True)
-        
+
+            _run_ffmpeg(cmd)
+
         # Combine frames
         cmd = [
             "ffmpeg", "-y",
@@ -794,10 +804,8 @@ def mograph_progress(
             "-crf", "23",
             output,
         ]
-        
-        result = subprocess.run(cmd, capture_output=True, text=True)
-        if result.returncode != 0:
-            raise RuntimeError(f"FFmpeg progress error: {result.stderr}")
+
+        _run_ffmpeg(cmd)
     
     return output
 
@@ -826,8 +834,8 @@ def video_info_detailed(video: str) -> dict[str, Any]:
         "-print_format", "json",
         video,
     ]
-    
-    result = subprocess.run(cmd, capture_output=True, text=True)
+
+    result = _run_ffmpeg(cmd)
     data = json.loads(result.stdout)
     
     # Extract video stream info
@@ -911,8 +919,8 @@ def auto_chapters(
         "-filter:v", f"select='gt(scene,{threshold})',showinfo",
         "-f", "null", "-",
     ]
-    
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+
+    result = _run_ffmpeg(cmd, timeout=60)
     
     chapter_num = 1
     for line in result.stderr.split("\n"):

@@ -6,10 +6,23 @@ Automated quality checks similar to code linting, but for video/visual output.
 from __future__ import annotations
 
 import json
+import logging
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
+
+
+def _escape_lavfi_path(path: str) -> str:
+    """Escape special characters in a file path for FFmpeg lavfi movie= filter.
+
+    Characters that must be escaped: \\ ' : [ ] ,
+    """
+    for char, escaped in [("\\", "\\\\"), ("'", "\\'"), (":", "\\:"), ("[", "\\["), ("]", "\\]"), (",", "\\,")]:
+        path = path.replace(char, escaped)
+    return path
 
 
 @dataclass
@@ -49,7 +62,7 @@ class VisualQualityGuardrails:
             "ffprobe",
             "-v", "error",
             "-f", "lavfi",
-            "-i", f"movie={video},signalstats",
+            "-i", f"movie={_escape_lavfi_path(video)},signalstats",
             "-show_entries", f"frame_tags={filter_name}",
             "-of", "json",
         ]
@@ -75,7 +88,14 @@ class VisualQualityGuardrails:
             if not values:
                 return {}
             return {"mean": sum(values) / len(values), "values": values}
-        except (subprocess.TimeoutExpired, json.JSONDecodeError, Exception):
+        except subprocess.TimeoutExpired:
+            logger.warning("ffprobe signalstats timed out for %s (filter=%s)", video, filter_name)
+            return {}
+        except json.JSONDecodeError:
+            logger.warning("ffprobe signalstats returned invalid JSON for %s (filter=%s)", video, filter_name)
+            return {}
+        except Exception as exc:
+            logger.warning("ffprobe signalstats failed for %s (filter=%s): %s: %s", video, filter_name, type(exc).__name__, exc)
             return {}
 
     def _run_ffmpeg_signalstats(self, video: str) -> dict[str, Any]:
@@ -114,8 +134,10 @@ class VisualQualityGuardrails:
                                 continue
             return stats
         except subprocess.TimeoutExpired:
+            logger.warning("ffmpeg signalstats timed out for %s", video)
             return {}
-        except Exception:
+        except Exception as exc:
+            logger.warning("ffmpeg signalstats failed for %s: %s: %s", video, type(exc).__name__, exc)
             return {}
 
     def _analyze_loudnorm(self, video: str) -> dict[str, Any]:
@@ -143,10 +165,13 @@ class VisualQualityGuardrails:
                 return json.loads(json_str)
             return {}
         except subprocess.TimeoutExpired:
+            logger.warning("ffmpeg loudnorm timed out for %s", video)
             return {}
         except json.JSONDecodeError:
+            logger.warning("ffmpeg loudnorm returned invalid JSON for %s", video)
             return {}
-        except Exception:
+        except Exception as exc:
+            logger.warning("ffmpeg loudnorm failed for %s: %s: %s", video, type(exc).__name__, exc)
             return {}
 
     def _get_rgb_means(self, video: str) -> dict[str, float] | None:
@@ -199,7 +224,14 @@ class VisualQualityGuardrails:
                 "g": sum(g_vals) / len(g_vals),
                 "b": sum(b_vals) / len(b_vals),
             }
-        except (subprocess.TimeoutExpired, json.JSONDecodeError, Exception):
+        except subprocess.TimeoutExpired:
+            logger.warning("ffprobe RGB means timed out for %s", video)
+            return None
+        except json.JSONDecodeError:
+            logger.warning("ffprobe RGB means returned invalid JSON for %s", video)
+            return None
+        except Exception as exc:
+            logger.warning("ffprobe RGB means failed for %s: %s: %s", video, type(exc).__name__, exc)
             return None
 
     def check_brightness(self, video: str) -> QualityReport:
@@ -357,8 +389,8 @@ class VisualQualityGuardrails:
                         message="No audio stream detected in video",
                         details={"has_audio": False},
                     )
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("ffprobe audio stream check failed for %s: %s: %s", video, type(exc).__name__, exc)
 
             return QualityReport(
                 check_name="audio_levels",

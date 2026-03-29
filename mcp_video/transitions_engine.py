@@ -4,6 +4,25 @@ import subprocess
 import tempfile
 from pathlib import Path
 
+from .errors import ProcessingError
+
+
+# ---------------------------------------------------------------------------
+# Helper
+# ---------------------------------------------------------------------------
+
+
+def _run_ffmpeg(cmd: list[str], timeout: int = 600) -> subprocess.CompletedProcess[str]:
+    """Run an FFmpeg/FFprobe command with timeout and error handling."""
+    cmd_str = " ".join(cmd)
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        raise ProcessingError(cmd_str, -1, f"FFmpeg command timed out after {timeout}s")
+    if result.returncode != 0:
+        raise ProcessingError(cmd_str, result.returncode, result.stderr)
+    return result
+
 
 def _get_video_duration(video_path: str) -> float:
     """Get video duration using ffprobe."""
@@ -13,7 +32,7 @@ def _get_video_duration(video_path: str) -> float:
         "-of", "default=noprint_wrappers=1:nokey=1",
         video_path
     ]
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    result = _run_ffmpeg(cmd)
     return float(result.stdout.strip())
 
 
@@ -69,7 +88,7 @@ def transition_glitch(
         output
     ]
     
-    subprocess.run(cmd, capture_output=True, check=True)
+    _run_ffmpeg(cmd)
     
     return output
 
@@ -141,10 +160,8 @@ def transition_pixelate(
         output
     ]
     
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    if result.returncode != 0:
-        raise RuntimeError(f"FFmpeg pixelate transition error: {result.stderr}")
-    
+    _run_ffmpeg(cmd)
+
     return output
 
 
@@ -196,8 +213,6 @@ def transition_morph(
         output
     ]
     
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    if result.returncode != 0:
-        raise RuntimeError(f"FFmpeg morph transition error: {result.stderr}")
-    
+    _run_ffmpeg(cmd)
+
     return output
