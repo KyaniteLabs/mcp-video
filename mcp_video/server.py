@@ -45,6 +45,14 @@ from .engine import (
     write_metadata,
 )
 from .errors import MCPVideoError
+from .limits import (
+    MAX_BATCH_SIZE,
+    MAX_EXPORT_FRAMES_FPS,
+    MAX_RESOLUTION,
+    MAX_SPEED_FACTOR,
+    MAX_STORYBOARD_FRAMES,
+    MIN_SPEED_FACTOR,
+)
 from .models import (
     ExportFormat,
     FilterType,
@@ -309,6 +317,18 @@ def video_resize(
         quality: Quality preset (low, medium, high, ultra).
         output_path: Where to save the output. Auto-generated if omitted.
     """
+    if width is not None and width > MAX_RESOLUTION:
+        return _error_result(MCPVideoError(
+            f"Width {width} exceeds maximum resolution of {MAX_RESOLUTION}",
+            error_type="validation_error",
+            code="resolution_too_high",
+        ))
+    if height is not None and height > MAX_RESOLUTION:
+        return _error_result(MCPVideoError(
+            f"Height {height} exceeds maximum resolution of {MAX_RESOLUTION}",
+            error_type="validation_error",
+            code="resolution_too_high",
+        ))
     try:
         return _result(resize(
             input_path, width=width, height=height,
@@ -356,6 +376,12 @@ def video_speed(
         factor: Speed multiplier. 2.0 = 2x faster (time-lapse), 0.5 = half speed (slow-mo).
         output_path: Where to save the output. Auto-generated if omitted.
     """
+    if not (MIN_SPEED_FACTOR <= factor <= MAX_SPEED_FACTOR):
+        return _error_result(MCPVideoError(
+            f"Speed factor {factor} out of range [{MIN_SPEED_FACTOR}, {MAX_SPEED_FACTOR}]",
+            error_type="validation_error",
+            code="speed_out_of_range",
+        ))
     try:
         return _result(speed(input_path, factor=factor, output_path=output_path))
     except MCPVideoError as e:
@@ -896,6 +922,12 @@ def video_export_frames(
         fps: Frames per second to extract (1.0 = 1 frame per second, default 1.0).
         format: Output image format (jpg or png, default jpg).
     """
+    if fps > MAX_EXPORT_FRAMES_FPS:
+        return _error_result(MCPVideoError(
+            f"FPS {fps} exceeds maximum of {MAX_EXPORT_FRAMES_FPS}",
+            error_type="validation_error",
+            code="fps_too_high",
+        ))
     try:
         return _result(export_frames(input_path, output_dir=output_dir, fps=fps, format=format))
     except MCPVideoError as e:
@@ -1051,6 +1083,12 @@ def video_batch(
         params: Parameters for the operation.
         output_dir: Directory for output files. Auto-generated if omitted.
     """
+    if len(inputs) > MAX_BATCH_SIZE:
+        return _error_result(MCPVideoError(
+            f"Batch size {len(inputs)} exceeds maximum of {MAX_BATCH_SIZE}",
+            error_type="validation_error",
+            code="batch_too_large",
+        ))
     return _video_batch(inputs, operation, params, output_dir)
 
 

@@ -50,7 +50,6 @@ line-length = 120
 [tool.ruff.lint]
 select = ["E", "F", "W", "S", "UP", "B", "SIM", "RUF"]
 ignore = ["E501"]
-all = ["pillow>=10.0", "rich>=13.0", "scikit-learn>=1.3", "webcolors>=1.13", "anthropic>=0.30"]
 
 [project.scripts]
 mcp-video = "mcp_video.__main__:main"

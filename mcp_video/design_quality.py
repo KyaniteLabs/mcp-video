@@ -808,22 +808,22 @@ class DesignQualityGuardrails:
         """
         import tempfile
         import os
-        
-        # Extract frame
-        frame_path = tempfile.mktemp(suffix='.png')
-        cmd = [
-            'ffmpeg', '-y', '-i', video_path,
-            '-ss', str(time_sec),
-            '-vframes', '1',
-            frame_path
-        ]
-        
+
+        # Extract frame securely
+        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp_file:
+            frame_path = tmp_file.name
         try:
+            cmd = [
+                'ffmpeg', '-y', '-i', video_path,
+                '-ss', str(time_sec),
+                '-vframes', '1',
+                frame_path
+            ]
             subprocess.run(cmd, capture_output=True, timeout=30)
-            
+
             if not os.path.exists(frame_path):
                 return []
-            
+
             # Analyze frame for text regions using ffmpeg's signature filter
             # This gives us an estimate of complexity which correlates with text amount
             cmd = [
@@ -832,10 +832,7 @@ class DesignQualityGuardrails:
                 '-f', 'null', '-'
             ]
             result = subprocess.run(cmd, capture_output=True, text=True)
-            
-            # Clean up
-            os.unlink(frame_path)
-            
+
             # Return estimated text elements based on common video patterns
             # In explainer videos, we typically see:
             # - Large headlines (48-64px)
@@ -846,11 +843,12 @@ class DesignQualityGuardrails:
                 {'size': 28, 'type': 'subheading'},
                 {'size': 18, 'type': 'body'},
             ]
-            
+
         except Exception:
+            return []
+        finally:
             if os.path.exists(frame_path):
                 os.unlink(frame_path)
-            return []
     
     def _calculate_motion_score(self, video_path: str) -> float:
         """Calculate motion/animation quality score."""

@@ -543,6 +543,32 @@ def scaffold_template(
     slug: str,
 ) -> ScaffoldResult:
     """Generate a generic composition from a spec."""
+    # Sanitize slug — only alphanumeric, dashes, underscores
+    import re
+    if not re.fullmatch(r"[a-zA-Z0-9_-]+", slug):
+        raise RemotionProjectError(
+            project_path,
+            f"Invalid slug '{slug}': must contain only alphanumeric characters, dashes, and underscores",
+        )
+
+    # Validate color values (hex format only)
+    for color_key in ("primary_color", "secondary_color", "background_color"):
+        color_val = spec.get(color_key, "")
+        if color_val and not re.fullmatch(r"#[0-9a-fA-F]{3,8}", str(color_val)):
+            raise RemotionProjectError(
+                project_path,
+                f"Invalid {color_key} '{color_val}': must be a hex color (e.g. #1a1a2e)",
+            )
+
+    # Sanitize font names — alphanumeric + spaces only
+    for font_key in ("heading_font", "body_font"):
+        font_val = spec.get(font_key, "")
+        if font_val and not re.fullmatch(r"[a-zA-Z0-9\s+-]+", str(font_val)):
+            raise RemotionProjectError(
+                project_path,
+                f"Invalid {font_key} '{font_val}': must contain only alphanumeric characters and spaces",
+            )
+
     _require_remotion_deps()
     project = Path(project_path).resolve()
 

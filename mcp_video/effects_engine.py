@@ -12,7 +12,29 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from .errors import ProcessingError
+from .errors import ProcessingError, InputFileError
+
+
+def _escape_ffmpeg_filter_value(value: str) -> str:
+    """Escape special characters for FFmpeg filter expressions (subtitles, drawtext, etc.)."""
+    return (
+        value.replace("\\", "/")
+        .replace("'", "'\\''")
+        .replace(":", "\\:")
+        .replace("[", "\\[")
+        .replace("]", "\\]")
+        .replace(",", "\\,")
+    )
+
+
+def _validate_input_path(path: str) -> str:
+    """Validate and resolve a file path. Rejects null bytes and symlinks."""
+    if "\x00" in path:
+        raise InputFileError(path, "Path contains null bytes")
+    resolved = os.path.realpath(path)
+    if not os.path.isfile(resolved):
+        raise InputFileError(resolved)
+    return resolved
 
 
 # ---------------------------------------------------------------------------
@@ -569,8 +591,8 @@ def text_animated(
     else:
         alpha_expr = "1"
     
-    # Escape text for FFmpeg
-    safe_text = text.replace("'", "'\\''")
+    # Escape text for FFmpeg — handle all filter-special characters
+    safe_text = _escape_ffmpeg_filter_value(text)
     
     filter_complex = (
         f"drawtext=text='{safe_text}':font={font}:fontsize={size}:fontcolor={color}:"
@@ -628,8 +650,11 @@ def text_subtitles(
     if outline_color.startswith("#"):
         outline_color = f"0x{outline_color[1:]}"
     
+    # Escape subtitle path for FFmpeg filter syntax
+    safe_subtitles = _escape_ffmpeg_filter_value(subtitles)
+
     filter_complex = (
-        f"subtitles={subtitles}:force_style='"
+        f"subtitles={safe_subtitles}:force_style='"
         f"FontName={font},"
         f"FontSize={size},"
         f"PrimaryColour={color},"

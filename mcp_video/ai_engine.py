@@ -8,6 +8,7 @@ Optional dependencies:
 
 from __future__ import annotations
 
+import hashlib
 import os
 import re
 import subprocess
@@ -980,6 +981,41 @@ def _match_reference_colors(video: str, reference: str) -> dict:
         return {"contrast": 1.0, "saturation": 1.0, "gamma": 1.0, "red": 1.0, "green": 1.0, "blue": 1.0}
 
 
+# ---------------------------------------------------------------------------
+# Model Download Integrity Verification
+# ---------------------------------------------------------------------------
+
+# Expected SHA256 hashes for downloaded model files.
+_MODEL_HASHES: dict[str, str] = {
+    "FSRCNN_x2.pb": "366b33f0084c7b3f2bf6724f0a2c77bca94fcec9d7b6d72389d330073b380d5c",
+    "FSRCNN_x4.pb": "5c68d18db561aed8ead4ffedf1b897ea615baaf60ebf6c35f8e641f8fa4a21bf",
+}
+
+
+def _verify_model_hash(path: Path, expected_hash: str) -> None:
+    """Verify SHA256 hash of a downloaded model file.
+
+    Args:
+        path: Path to the model file on disk.
+        expected_hash: Expected lowercase hex SHA256 digest.
+
+    Raises:
+        MCPVideoError: If the computed hash does not match the expected value.
+    """
+    from mcp_video.errors import MCPVideoError
+
+    sha256 = hashlib.sha256(path.read_bytes()).hexdigest()
+    if sha256 != expected_hash:
+        path.unlink(missing_ok=True)
+        raise MCPVideoError(
+            f"SHA256 integrity check failed for {path.name}: "
+            f"expected {expected_hash}, got {sha256}. "
+            "The downloaded file has been removed. Try again to re-download.",
+            error_type="integrity_error",
+            code="model_hash_mismatch",
+        )
+
+
 def _ai_upscale_opencv(video_path: str, output_path: str, scale: int) -> str:
     """AI upscaling fallback using OpenCV DNN Super Resolution.
     
@@ -1005,12 +1041,20 @@ def _ai_upscale_opencv(video_path: str, output_path: str, scale: int) -> str:
     model_path = cache_dir / f"FSRCNN_x{scale}.pb"
     
     # Download model if not exists (FSRCNN is ~57KB vs EDSR's 38MB!)
+    model_filename = f"FSRCNN_x{scale}.pb"
+    if model_filename not in _MODEL_HASHES:
+        raise ValueError(f"No known hash for model {model_filename}")
+    expected_hash = _MODEL_HASHES[model_filename]
+
     if not model_path.exists():
         import urllib.request
         url = model_urls[scale]
         print(f"Downloading FSRCNN x{scale} model...")
         urllib.request.urlretrieve(url, model_path)
         print(f"Model saved to {model_path}")
+
+    # Verify integrity of the model file (catches corrupted downloads or tampering)
+    _verify_model_hash(model_path, expected_hash)
     
     # Initialize DNN Super Resolution with FSRCNN (fast for CPU)
     sr = cv2.dnn_superres.DnnSuperResImpl_create()
