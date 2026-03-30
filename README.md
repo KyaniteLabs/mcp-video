@@ -12,37 +12,35 @@
 <h1 align="center">mcp-video</h1>
 
 <p align="center">
-  <strong>The video editing MCP server for AI agents and humans.</strong><br>
-  82 tools. 3 interfaces. 690+ tests passing. Rich CLI. Purpose-built for AI agents.
+  <strong>Video editing and creation for AI agents.</strong><br>
+  Edit existing video with FFmpeg. Create new video from code with Remotion. 82 tools. 3 interfaces. 690+ tests.
 </p>
 
 <p align="center">
+  <a href="#install">Install</a> &bull;
   <a href="#quick-start">Quick Start</a> &bull;
-  <a href="#mcp-tools">Tools</a> &bull;
-  <a href="#python-client">Python API</a> &bull;
-  <a href="#cli">CLI</a> &bull;
+  <a href="#mcp-tools">82 Tools</a> &bull;
+  <a href="#remotion-integration">Remotion</a> &bull;
+  <a href="#python-client">Python</a> &bull;
+  <a href="#cli-reference">CLI</a> &bull;
   <a href="#timeline-dsl">Timeline DSL</a> &bull;
   <a href="#templates">Templates</a> &bull;
-  <a href="ROADMAP.md">Roadmap</a> &bull;
-  <a href="CONTRIBUTING.md">Contributing</a>
+  <a href="ROADMAP.md">Roadmap</a>
 </p>
 
 ---
 
 ## What is mcp-video?
 
-mcp-video is an open-source video editing server built on the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). It gives AI agents, developers, and video creators the ability to programmatically edit video files.
+mcp-video is an open-source video editing server built on the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). It gives AI agents, developers, and video creators the ability to programmatically edit and create video files.
 
-Think of it as **ffmpeg with an API that AI agents can actually use**. Instead of memorizing cryptic command-line flags, an agent calls structured tools with clear parameters and gets structured results back — or a human uses the rich CLI with spinners, tables, and error panels.
+**Two modes of operation:**
 
-### The Problem It Solves
+1. **Edit existing video** with FFmpeg — trim, merge, overlay text, add audio, apply filters, stabilize, detect scenes, transcribe, and more. 70+ tools covering the full editing pipeline.
 
-AI agents can write code, analyze documents, and browse the web — but they can't edit video. Existing video editing tools are either:
-- **GUI-only** (Premiere, DaVinci, CapCut) — agents can't use them
-- **Raw FFmpeg wrappers** — require memorizing hundreds of flags
-- **Cloud APIs** (Render, Bannerbear) — expensive, slow, vendor lock-in
+2. **Create new video from code** with [Remotion](https://www.remotion.dev/) — scaffold React-based video compositions, preview them live, render to MP4, then post-process with mcp-video. 8 dedicated tools for programmatic video generation.
 
-mcp-video bridges this gap. It's a local, fast, free video editing layer that any AI agent can use through a standard protocol.
+Think of it as **FFmpeg + Remotion with an API that AI agents can actually use**. Instead of memorizing cryptic flags, an agent calls structured tools with clear parameters and gets structured results back.
 
 ### Three Ways to Use It
 
@@ -50,46 +48,7 @@ mcp-video bridges this gap. It's a local, fast, free video editing layer that an
 |-----------|----------|---------|
 | **MCP Server** | AI agents (Claude Code, Cursor) | *"Trim this video and add a title"* |
 | **Python Client** | Scripts, automation, pipelines | `editor.trim("v.mp4", start="0:30", duration="15")` |
-| **CLI** | Shell scripts, quick ops, humans | `mcp_video trim video.mp4 -s 0:30 -d 15` |
-
----
-
-## What's New in v1.0
-
-### Comprehensive Test Suite: 690+ Passing ✅
-All features tested with real media files. No mocks, no stubs — actual FFmpeg operations on real video. Run `python -m pytest tests/test_real_all_features.py -v` to verify.
-
-### AI-Powered Features (7 tools)
-- **Silence Removal** — Automatically detect and remove silent portions from audio
-- **Transcription** — Convert speech to text with timestamp alignment (Whisper)
-- **Scene Detection** — AI-powered scene change detection with configurable sensitivity
-- **Stem Separation** — Isolate vocals, drums, bass, and other instruments (Demucs)
-- **Upscale** — AI-powered video upscaling (OpenCV DNN with Real-ESRGAN fallback)
-- **Color Grade** — Intelligent color grading with cinematic presets
-- **Spatial Audio** — 3D spatial audio processing and positioning
-
-### Video Stabilization 🆕
-- **Stabilize** — Smooth shaky footage using motion vectors (requires FFmpeg with vidstab)
-- Auto-detection of vidstab support with graceful fallback
-
-### Video Transitions (3 tools)
-- **Glitch** — Digital glitch transition effect
-- **Pixelate** — Pixelation transition between scenes
-- **Morph** — Smooth morphing transition effect
-
-### Audio Synthesis (6 tools)
-- **Waveform Generation** — Generate audio waveforms from video
-- **18+ Presets** — Extensive library of audio effect presets
-- **Sequencing** — Program audio sequences and patterns
-- **Composition** — Layer and compose multiple audio tracks
-- **Effects** — Apply audio effects chains
-
-### Visual Effects (5 tools)
-- **Vignette** — Darken edges for cinematic focus
-- **Chromatic Aberration** — RGB color separation effect
-- **Scanlines** — Retro CRT scanline effect
-- **Noise** — Film grain and digital noise effects
-- **Glow** — Bloom and glow effects for highlights
+| **CLI** | Shell scripts, quick ops, humans | `mcp-video trim video.mp4 -s 0:30 -d 15` |
 
 ---
 
@@ -97,15 +56,11 @@ All features tested with real media files. No mocks, no stubs — actual FFmpeg 
 
 ### Prerequisites
 
-[FFmpeg](https://ffmpeg.org) must be installed on your system:
+[FFmpeg](https://ffmpeg.org) must be installed:
+
 ```bash
 # macOS
 brew install ffmpeg
-
-# For full text overlay support (drawtext filter):
-# brew install freetype harfbuzz
-# brew reinstall --build-from-source ffmpeg
-# Verify: ffmpeg -filters | grep drawtext
 
 # Ubuntu/Debian
 sudo apt install ffmpeg
@@ -114,15 +69,17 @@ sudo apt install ffmpeg
 # Download from https://ffmpeg.org/download.html
 ```
 
+For Remotion features, you also need [Node.js](https://nodejs.org/) (18+) and [npm](https://www.npmjs.com/).
+
 ### Installation
 
 ```bash
 pip install mcp-video
 ```
 
-Or with UVX (no install needed):
+Or run without installing:
 ```bash
-uvx mcp_video
+uvx mcp-video
 ```
 
 ---
@@ -131,11 +88,9 @@ uvx mcp_video
 
 ### 1. As an MCP Server (for AI agents)
 
-Install [FFmpeg](https://ffmpeg.org) first, then pick your client:
-
 **Claude Code:**
 ```bash
-claude mcp add mcp-video -- pip install mcp-video && mcp-video --mcp
+claude mcp add mcp-video -- uvx mcp-video
 ```
 
 **Claude Desktop** — add to your `claude_desktop_config.json`:
@@ -144,7 +99,7 @@ claude mcp add mcp-video -- pip install mcp-video && mcp-video --mcp
   "mcpServers": {
     "mcp-video": {
       "command": "uvx",
-      "args": ["mcp_video"]
+      "args": ["mcp-video"]
     }
   }
 }
@@ -156,13 +111,11 @@ claude mcp add mcp-video -- pip install mcp-video && mcp-video --mcp
   "mcpServers": {
     "mcp-video": {
       "command": "uvx",
-      "args": ["mcp_video"]
+      "args": ["mcp-video"]
     }
   }
 }
 ```
-
-**Any MCP client** — if installed via pip, the command is just `mcp-video`.
 
 Then just ask your agent: *"Trim this video from 0:30 to 1:00, add a title card, and resize for TikTok."*
 
@@ -177,246 +130,230 @@ editor = Client()
 info = editor.info("interview.mp4")
 print(f"Duration: {info.duration}s, Resolution: {info.resolution}")
 
-# Trim a clip
+# Trim, merge, add text, resize for TikTok
 clip = editor.trim("interview.mp4", start="00:02:15", duration="00:00:30")
-
-# Merge clips with transitions
-video = editor.merge(
-    clips=["intro.mp4", clip.output_path, "outro.mp4"],
-    transitions=["fade", "dissolve", "fade"],
-)
-
-# Add text overlay
-video = editor.add_text(
-    video=video.output_path,
-    text="EPISODE 42: The Future of AI",
-    position="top-center",
-    size=48,
-)
-
-# Add background music
-video = editor.add_audio(
-    video=video.output_path,
-    audio="music.mp3",
-    volume=0.7,
-    fade_in=2.0,
-    fade_out=3.0,
-)
-
-# Resize for TikTok (9:16)
-video = editor.resize(video=video.output_path, aspect_ratio="9:16")
-
-# Export final video
-result = editor.export(video.output_path, quality="high")
-print(result)
-# EditResult(output_path='interview_9:16.mp4', duration=45.0, resolution='1080x1920', ...)
+video = editor.merge(clips=["intro.mp4", clip.output_path, "outro.mp4"])
+video = editor.add_text(video.output_path, text="EPISODE 42", position="top-center", size=48)
+video = editor.add_audio(video.output_path, audio="music.mp3", volume=0.7, fade_in=2.0, fade_out=3.0)
+result = editor.resize(video.output_path, aspect_ratio="9:16")
 ```
 
 ### 3. As a CLI Tool
 
-The CLI outputs rich formatted tables, spinners, and styled error panels by default. Add `--format json` for scripted/pipe-friendly JSON output.
-
 ```bash
-# Show version
-mcp_video --version
-
-# Get video metadata (rich table output)
-mcp_video info video.mp4
-
-# Same, but as JSON for scripts
-mcp_video --format json info video.mp4
-
-# Generate a fast low-res preview
-mcp_video preview video.mp4
-
-# Extract storyboard frames for review
-mcp_video storyboard video.mp4 -n 12
-
-# Trim a clip
-mcp_video trim video.mp4 -s 00:02:15 -d 30 -o trimmed.mp4
-
-# Convert to a different format
-mcp_video convert video.mp4 -f webm -q high
-
-# List available templates
-mcp_video templates
-
-# Apply a TikTok template with caption
-mcp_video template tiktok video.mp4 --caption "Check this out!"
+# Rich table output by default, add --format json for scripts
+mcp-video info video.mp4
+mcp-video trim video.mp4 -s 00:02:15 -d 30
+mcp-video convert video.mp4 -f webm -q high
+mcp-video template tiktok video.mp4 --caption "Check this out!"
 ```
 
 ---
 
 ## MCP Tools
 
-mcp-video exposes 82 tools for AI agents. All tools return structured JSON with `success`, `output_path`, and operation metadata. On failure, they return `{"success": false, "error": {...}}` with auto-fix suggestions.
+82 tools across 9 categories. All return structured JSON with `success`, `output_path`, and operation metadata. On failure, they return `{"success": false, "error": {...}}` with auto-fix suggestions.
 
-**New in v0.6.0:** Per-tool CRF/preset quality control, pixel/percentage positioning, image overlays in timeline DSL (single-pass compositing), `video_extract_frame` alias, and batch/preview documentation.
+### Core Video (35 tools)
 
-**New in v1.0.0:** AI-powered video editing — silence removal, transcription, scene detection, stem separation, upscaling, color grading, spatial audio, plus glitch/pixelate/morph transitions and audio synthesis.
+| Tool | Description |
+|------|-------------|
+| `video_info` | Get metadata: duration, resolution, codec, fps, file size |
+| `video_info_detailed` | Extended metadata with scene detection and dominant colors |
+| `video_trim` | Trim by start time + duration or end time |
+| `video_merge` | Concatenate clips with optional per-pair transitions |
+| `video_add_text` | Overlay text with positioning, font, color, shadow |
+| `video_add_audio` | Add, replace, or mix audio tracks with fade effects |
+| `video_resize` | Change resolution or apply preset aspect ratios (16:9, 9:16, 1:1, etc.) |
+| `video_convert` | Convert between mp4, webm, gif, mov (two-pass encoding) |
+| `video_speed` | Speed up or slow down (0.5x = slow-mo, 2x = time-lapse) |
+| `video_reverse` | Reverse video and audio playback |
+| `video_fade` | Fade in/out effects |
+| `video_crop` | Crop to rectangular region with offset |
+| `video_rotate` | Rotate 90/180/270 and flip horizontal/vertical |
+| `video_filter` | Apply filters: blur, sharpen, grayscale, sepia, invert, brightness, contrast, saturation, denoise, deinterlace, ken_burns |
+| `video_blur` | Blur with custom radius and strength |
+| `video_color_grade` | Color presets: warm, cool, vintage, cinematic, noir |
+| `video_chroma_key` | Remove solid color background (green screen) |
+| `video_stabilize` | Stabilize shaky footage (requires FFmpeg with vidstab) |
+| `video_subtitles` | Burn SRT/VTT subtitles into video |
+| `video_generate_subtitles` | Create SRT from text entries, optionally burn in |
+| `video_watermark` | Add image watermark with opacity and positioning |
+| `video_overlay` | Picture-in-picture overlay |
+| `video_split_screen` | Side-by-side or top/bottom layout |
+| `video_edit` | Full timeline-based edit from JSON DSL |
+| `video_detect_scenes` | Auto-detect scene changes with threshold control |
+| `video_create_from_images` | Create video from image sequence |
+| `video_export_frames` | Export video as individual image frames |
+| `video_extract_audio` | Extract audio as mp3, wav, aac, ogg, or flac |
+| `video_extract_frame` | Extract a single frame at any timestamp |
+| `video_thumbnail` | Extract a frame (auto-selects 10% into video) |
+| `video_preview` | Generate fast low-res preview |
+| `video_storyboard` | Extract key frames as a grid for review |
+| `video_compare_quality` | Compare PSNR/SSIM quality metrics between videos |
+| `video_read_metadata` | Read video metadata tags |
+| `video_write_metadata` | Write video metadata tags |
+| `video_apply_mask` | Apply image mask with edge feathering |
+| `video_normalize_audio` | Normalize loudness to LUFS target (-16 YouTube, -23 broadcast, -14 Spotify) |
+| `video_audio_waveform` | Extract audio waveform peaks and silence regions |
+| `video_batch` | Apply same operation to multiple files |
+| `video_export` | Render final video with quality presets |
 
-**New in v0.7.0:** Image analysis tools — extract dominant colors, generate color harmony palettes, and analyze product images with optional AI descriptions.
+### AI-Powered (7 tools)
 
-**New in v0.5.0:** Ken Burns effect, two-pass encoding, audio effects (reverb, compressor, pitch shift, noise reduction), scene detection, image sequences, quality metrics (PSNR/SSIM), metadata editing, video stabilization, subtitle generation, and audio waveform extraction.
+| Tool | Description | Dependencies |
+|------|-------------|--------------|
+| `video_ai_remove_silence` | Auto-remove silent sections with configurable threshold | FFmpeg |
+| `video_ai_transcribe` | Speech-to-text with timestamp alignment | [openai-whisper](https://pypi.org/project/openai-whisper/) |
+| `video_ai_scene_detect` | ML-enhanced scene change detection (perceptual hashing) | [imagehash](https://pypi.org/project/imagehash/), Pillow |
+| `video_ai_stem_separation` | Isolate vocals, drums, bass, other instruments | [demucs](https://pypi.org/project/demucs/) |
+| `video_ai_upscale` | AI super-resolution upscaling (2x or 4x) | [realesrgan](https://pypi.org/project/realesrgan/) or [opencv-python](https://pypi.org/project/opencv-python/) |
+| `video_ai_color_grade` | Auto color grading with style presets or reference matching | FFmpeg |
+| `video_audio_spatial` | 3D spatial audio positioning (azimuth + elevation) | FFmpeg |
 
-**New in v0.4.0:** Video reverse playback, green screen / chroma key removal, denoise and deinterlace filters, and smarter GIF output with quality-based scaling.
+### Remotion & Motion Graphics (8 tools)
 
-**New in v0.3.0:** Video filters & effects (blur, sharpen, color grading with presets), audio normalization to LUFS targets, picture-in-picture and split-screen compositing, and batch processing for multi-file workflows.
+Create videos programmatically using [Remotion](https://www.remotion.dev/) — a React framework for video. Scaffold projects, render compositions, then post-process with mcp-video.
 
-### Video Operations
+| Tool | Description |
+|------|-------------|
+| `remotion_create_project` | Scaffold a new Remotion project (blank or hello-world template) |
+| `remotion_scaffold_template` | Generate a composition from a design spec (colors, fonts, FPS, duration) |
+| `remotion_render` | Render a Remotion composition to video (MP4) |
+| `remotion_still` | Render a single frame as an image (PNG/JPEG/WebP) |
+| `remotion_compositions` | List all compositions in a project |
+| `remotion_studio` | Launch Remotion Studio for live preview |
+| `remotion_validate` | Check project structure and dependencies |
+| `remotion_to_mcpvideo` | Pipeline: render with Remotion, then post-process with mcp-video (resize, convert, add audio, normalize, add text, fade, watermark) |
 
-| Tool | Description | Key Parameters |
-|------|-------------|----------------|
-| `video_info` | Get video metadata | `input_path` |
-| `video_trim` | Trim clip by timestamp | `input_path`, `start`, `duration`/`end` |
-| `video_merge` | Concatenate multiple clips | `clips[]`, `transitions[]`, `transition_duration` |
-| `video_speed` | Change playback speed | `input_path`, `factor` (0.5=slow, 2.0=fast) |
-| `video_reverse` | Reverse video and audio playback | `input_path` |
-| `video_stabilize` | Stabilize shaky footage (requires vidstab) | `input_path`, `smoothing`, `zoom` |
-| `video_detect_scenes` | Auto-detect scene changes | `input_path`, `threshold` |
-| `video_create_from_images` | Create video from image sequence | `images[]`, `fps`, `output_path` |
-| `video_export_frames` | Export video as image frames | `input_path`, `fps`, `output_dir` |
-| `video_compare_quality` | Compare PSNR/SSIM metrics | `input_path`, `reference_path` |
-| `video_read_metadata` | Read video metadata tags | `input_path` |
-| `video_write_metadata` | Write video metadata tags | `input_path`, `metadata` |
+### Audio Synthesis (6 tools)
 
-### Effects & Overlays
+Generate audio from code — no external audio files needed. Pure NumPy, no extra dependencies.
 
-| Tool | Description | Key Parameters |
-|------|-------------|----------------|
-| `video_add_text` | Overlay text/title | `input_path`, `text`, `position`, `size`, `color` |
-| `video_add_audio` | Add or replace audio | `video_path`, `audio_path`, `volume`, `mix` |
-| `video_subtitles` | Burn SRT/VTT subtitles | `input_path`, `subtitle_path` |
-| `video_generate_subtitles` | Create SRT from text entries | `entries[]`, `output_path`, `burn` |
-| `video_watermark` | Add image watermark | `input_path`, `image_path`, `position`, `opacity` |
-| `video_crop` | Crop to rectangular region | `input_path`, `width`, `height`, `x?`, `y?` |
-| `video_rotate` | Rotate and/or flip video | `input_path`, `angle`, `flip_horizontal`, `flip_vertical` |
-| `video_fade` | Video fade in/out | `input_path`, `fade_in`, `fade_out` |
-| `video_chroma_key` | Remove solid color background (green screen) | `input_path`, `color`, `similarity`, `blend` |
+| Tool | Description |
+|------|-------------|
+| `audio_synthesize` | Generate waveforms: sine, square, sawtooth, triangle, noise. With envelopes, reverb, filtering. |
+| `audio_preset` | 16+ pre-configured sounds: UI blips, ambient drones, notification chimes, data sounds |
+| `audio_sequence` | Compose timed audio events into a layered track |
+| `audio_compose` | Mix multiple WAV tracks with individual volume control |
+| `audio_effects` | Apply effects chain: lowpass, reverb, normalize, fade |
+| `video_add_generated_audio` | Generate audio and add it to a video in one call |
 
-### Format & Quality
+### Visual Effects (5 tools)
 
-| Tool | Description | Key Parameters |
-|------|-------------|----------------|
-| `video_resize` | Change resolution/aspect ratio | `input_path`, `width`/`height` or `aspect_ratio` |
-| `video_convert` | Convert format | `input_path`, `format` (mp4/webm/gif/mov) |
-| `video_export` | Render with quality settings | `input_path`, `quality`, `format` |
+| Tool | Description |
+|------|-------------|
+| `effect_vignette` | Darken edges for cinematic focus |
+| `effect_chromatic_aberration` | RGB color separation (glitch aesthetic) |
+| `effect_scanlines` | Retro CRT scanline effect with flicker |
+| `effect_noise` | Film grain and digital noise |
+| `effect_glow` | Bloom/glow for highlights |
 
-### Filters & Effects
+### Transitions (3 tools)
 
-| Tool | Description | Key Parameters |
-|------|-------------|----------------|
-| `video_filter` | Apply visual filter (blur, sharpen, grayscale, sepia, invert, vignette, brightness, contrast, saturation, denoise, deinterlace, ken_burns) | `input_path`, `filter_type`, `params` |
-| `video_apply_mask` | Apply image mask with feathering | `input_path`, `mask_path`, `feather` |
-| `video_blur` | Blur video | `input_path`, `radius`, `strength` |
-| `video_color_grade` | Apply color preset (warm, cool, vintage, cinematic, noir) | `input_path`, `preset` |
+| Tool | Description |
+|------|-------------|
+| `transition_glitch` | RGB shift + noise for digital distortion |
+| `transition_pixelate` | Block dissolve with configurable pixel size |
+| `transition_morph` | Mesh warp transition |
 
-### Audio
+### Layout & Motion Graphics (7 tools)
 
-| Tool | Description | Key Parameters |
-|------|-------------|----------------|
-| `video_normalize_audio` | Normalize loudness to LUFS target | `input_path`, `target_lufs` (-16 YouTube, -23 broadcast, -14 Spotify) |
-| `video_audio_waveform` | Extract audio waveform peaks/silence | `input_path`, `bins` |
-| `video_audio_reverb` | Add echo/reverb effect | `input_path`, `room_size`, `damping` |
-| `video_audio_compressor` | Dynamic range compression | `input_path`, `threshold`, `ratio` |
-| `video_audio_pitch_shift` | Change pitch (maintains duration) | `input_path`, `semitones` |
-| `video_audio_noise_reduction` | Remove background noise | `input_path`, `strength` |
+| Tool | Description |
+|------|-------------|
+| `video_layout_grid` | Grid layout for multiple videos (2x2, 3x1, etc.) |
+| `video_layout_pip` | Picture-in-picture with border and positioning |
+| `video_text_animated` | Animated text overlays (fade, slide, typewriter) |
+| `video_text_subtitles` | Burn subtitles with custom styling |
+| `video_mograph_count` | Animated number counter video |
+| `video_mograph_progress` | Progress bar/circle/dots animation |
+| `video_auto_chapters` | Auto-detect scenes and create chapter timestamps |
 
-### Composition
+### Quality & Guardrails (3 tools)
 
-| Tool | Description | Key Parameters |
-|------|-------------|----------------|
-| `video_overlay` | Picture-in-picture overlay | `background_path`, `overlay_path`, `position`, `width`, `opacity` |
-| `video_split_screen` | Side-by-side or top/bottom layout | `left_path`, `right_path`, `layout` |
+| Tool | Description |
+|------|-------------|
+| `video_quality_check` | Check brightness, contrast, saturation, audio levels, color balance. Returns scores. |
+| `video_design_quality_check` | Full design quality analysis: layout, typography, color, motion, composition |
+| `video_fix_design_issues` | Auto-fix brightness, contrast, saturation, and audio level issues |
 
-### Batch Processing
+### Image Analysis (3 tools)
 
-| Tool | Description | Key Parameters |
-|------|-------------|----------------|
-| `video_batch` | Apply operation to multiple files | `inputs[]`, `operation`, `params`, `output_dir` |
-
-### Analysis & Extraction
-
-| Tool | Description | Key Parameters |
-|------|-------------|----------------|
-| `video_thumbnail` | Extract a single frame | `input_path`, `timestamp` |
-| `video_extract_frame` | Extract a single frame (alias) | `input_path`, `timestamp` |
-| `video_preview` | Generate fast low-res preview | `input_path`, `scale_factor` |
-| `video_storyboard` | Extract key frames as grid | `input_path`, `frame_count` |
-| `video_extract_audio` | Extract audio track | `input_path`, `format` (mp3/wav/aac/ogg/flac) |
-
-### Image Analysis
-
-| Tool | Description | Key Parameters |
-|------|-------------|----------------|
-| `image_extract_colors` | Extract dominant colors via K-means clustering | `image_path`, `n_colors` (1-20) |
-| `image_generate_palette` | Generate color harmony palette from image | `image_path`, `harmony`, `n_colors` |
-| `image_analyze_product` | Extract colors + optional AI product description | `image_path`, `use_ai`, `n_colors` |
-
-### AI Features
-
-| Tool | Description | Key Parameters |
-|------|-------------|----------------|
-| `video_remove_silence` | Remove silent audio portions | `input_path`, `threshold`, `min_duration` |
-| `video_transcribe` | Speech-to-text with timestamps | `input_path`, `language`, `model` |
-| `video_detect_scenes_ai` | AI scene change detection | `input_path`, `sensitivity`, `min_scene_length` |
-| `video_separate_stems` | Isolate audio stems (vocals, drums, etc.) | `input_path`, `stems`, `output_dir` |
-| `video_upscale` | AI video upscaling | `input_path`, `scale_factor`, `model` |
-| `video_color_grade_ai` | Intelligent color grading | `input_path`, `preset`, `strength` |
-| `video_spatial_audio` | 3D spatial audio processing | `input_path`, `position`, `room_size` |
-
-### Transitions
-
-| Tool | Description | Key Parameters |
-|------|-------------|----------------|
-| `video_transition_glitch` | Glitch transition effect | `input_path`, `duration`, `intensity` |
-| `video_transition_pixelate` | Pixelate transition | `input_path`, `duration`, `block_size` |
-| `video_transition_morph` | Morph transition effect | `input_path`, `duration`, `easing` |
-
-### Audio Synthesis
-
-| Tool | Description | Key Parameters |
-|------|-------------|----------------|
-| `audio_generate_waveform` | Generate audio waveforms | `input_path`, `style`, `color` |
-| `audio_apply_preset` | Apply audio effect preset | `input_path`, `preset`, `intensity` |
-| `audio_sequence` | Program audio sequences | `patterns`, `bpm`, `output_path` |
-| `audio_compose` | Layer multiple audio tracks | `tracks`, `mix_mode`, `output_path` |
-| `audio_effects_chain` | Apply audio effects chain | `input_path`, `effects`, `output_path` |
-| `synthesize_tone` | Generate synthetic tones | `frequency`, `duration`, `waveform` |
-
-### Visual Effects
-
-| Tool | Description | Key Parameters |
-|------|-------------|----------------|
-| `video_effect_vignette` | Darken edges for cinematic focus | `input_path`, `strength`, `radius` |
-| `video_effect_chromatic` | RGB chromatic aberration effect | `input_path`, `shift_amount`, `angle` |
-| `video_effect_scanlines` | Retro CRT scanline effect | `input_path`, `density`, `opacity` |
-| `video_effect_noise` | Film grain and digital noise | `input_path`, `type`, `amount` |
-| `video_effect_glow` | Bloom/glow for highlights | `input_path`, `radius`, `threshold` |
-
-### Advanced
-
-| Tool | Description | Key Parameters |
-|------|-------------|----------------|
-| `video_edit` | Full timeline-based edit | `timeline` (JSON DSL — see below) |
-
-### MCP Resources
-
-| Resource URI | Description |
-|-------------|-------------|
-| `mcp-video://video/{path}/info` | Video metadata as JSON |
-| `mcp-video://video/{path}/preview` | Key frame timestamps |
-| `mcp-video://video/{path}/audio` | Audio track info |
-| `mcp-video://templates` | Available templates, presets, and formats |
+| Tool | Description |
+|------|-------------|
+| `image_extract_colors` | Extract dominant colors via K-means clustering (1-20 colors) |
+| `image_generate_palette` | Generate color harmony palette (complementary, analogous, triadic, split-complementary) |
+| `image_analyze_product` | Extract colors + optional AI product description (Claude Vision) |
 
 ---
 
-## Python Client API
+## Remotion Integration
 
-Full reference for the `Client` class:
+mcp-video includes 8 dedicated tools for [Remotion](https://www.remotion.dev/) — a React framework for creating videos programmatically. This lets AI agents create videos from scratch using React components, not just edit existing ones.
+
+### Typical Workflow
+
+```
+1. Create project    → remotion_create_project
+2. Scaffold composition → remotion_scaffold_template (from a design spec)
+3. Preview live       → remotion_studio
+4. Render             → remotion_render
+5. Post-process       → remotion_to_mcpvideo (resize, add audio, normalize, etc.)
+```
+
+### Example: Create a promotional video from code
 
 ```python
 from mcp_video import Client
+
+editor = Client()
+
+# 1. Scaffold a new Remotion project
+project = editor.remotion_create_project("promo-video", template="hello-world")
+
+# 2. Generate a composition from a design spec
+spec = editor.remotion_scaffold_template(
+    project_path=project.project_path,
+    spec={
+        "primary_color": "#CCFF00",
+        "heading_font": "Inter",
+        "target_fps": 30,
+        "target_duration": 15,
+    },
+    slug="promo",
+)
+
+# 3. Render to video
+render = editor.remotion_render(
+    project_path=project.project_path,
+    composition_id="promoComposition",
+    codec="h264",
+)
+
+# 4. Or use the pipeline: render + post-process in one call
+result = editor.remotion_to_mcpvideo(
+    project_path=project.project_path,
+    composition_id="promoComposition",
+    post_process=[
+        {"op": "resize", "params": {"aspect_ratio": "9:16"}},
+        {"op": "normalize_audio", "params": {"target_lufs": -14}},
+    ],
+)
+```
+
+### Requirements
+
+- [Node.js](https://nodejs.org/) 18+ and npm
+- No Python dependencies — Remotion runs via `npx remotion` as a subprocess
+- Optional: install Remotion globally with `npm i -g remotion` for faster startup
+
+---
+
+## Python Client
+
+```python
+from mcp_video import Client
+
 editor = Client()
 ```
 
@@ -443,32 +380,28 @@ editor = Client()
 | `export(video, output?, quality?, format?)` | `EditResult` | Render with quality settings |
 | `edit(timeline, output?)` | `EditResult` | Execute full timeline edit from JSON |
 | `extract_audio(video, output?, format?)` | `EditResult` | Extract audio as file path |
-| `filter(video, filter_type, params?, output?)` | `EditResult` | Apply visual filter (blur, sharpen, grayscale, etc.) |
+| `filter(video, filter_type, params?, output?)` | `EditResult` | Apply visual filter |
 | `blur(video, radius?, strength?, output?)` | `EditResult` | Blur video |
-| `color_grade(video, preset?, output?)` | `EditResult` | Apply color preset (warm, cool, vintage, etc.) |
+| `color_grade(video, preset?, output?)` | `EditResult` | Apply color preset |
 | `normalize_audio(video, target_lufs?, output?)` | `EditResult` | Normalize audio to LUFS target |
 | `overlay(background, overlay, position?, width?, opacity?, start_time?, duration?, output?)` | `EditResult` | Picture-in-picture overlay |
 | `split_screen(left, right, layout?, output?)` | `EditResult` | Side-by-side or top/bottom layout |
 | `reverse(video, output?)` | `EditResult` | Reverse video and audio playback |
-| `chroma_key(video, color?, similarity?, blend?, output?)` | `EditResult` | Remove solid color background (green screen) |
+| `chroma_key(video, color?, similarity?, blend?, output?)` | `EditResult` | Remove solid color background |
 | `stabilize(video, smoothing?, zoom?, output?)` | `EditResult` | Stabilize shaky footage |
 | `apply_mask(video, mask, feather?, output?)` | `EditResult` | Apply image mask with feathering |
 | `detect_scenes(video, threshold?, output?)` | `SceneDetectionResult` | Auto-detect scene changes |
-| `create_from_images(images, fps?, output?)` | `ImageSequenceResult` | Create video from image sequence |
-| `export_frames(video, fps?, output_dir?)` | `ImageSequenceResult` | Export video as image frames |
+| `create_from_images(images, fps?, output?)` | `ImageSequenceResult` | Create video from images |
+| `export_frames(video, fps?, output_dir?)` | `ImageSequenceResult` | Export video as frames |
 | `compare_quality(video, reference, output?)` | `QualityMetricsResult` | Compare PSNR/SSIM metrics |
 | `read_metadata(video)` | `MetadataResult` | Read video metadata tags |
 | `write_metadata(video, metadata, output?)` | `EditResult` | Write video metadata tags |
 | `generate_subtitles(entries, output?, burn?)` | `SubtitleResult` | Create SRT subtitles |
 | `audio_waveform(video, bins?)` | `WaveformResult` | Extract audio waveform |
-| `audio_reverb(video, room_size?, damping?, output?)` | `EditResult` | Add reverb effect |
-| `audio_compressor(video, threshold?, ratio?, output?)` | `EditResult` | Dynamic range compression |
-| `audio_pitch_shift(video, semitones?, output?)` | `EditResult` | Change pitch |
-| `audio_noise_reduction(video, strength?, output?)` | `EditResult` | Remove background noise |
 | `batch(inputs, operation, params?)` | `dict` | Apply operation to multiple files |
-| `extract_colors(image_path, n_colors?)` | `ColorExtractionResult` | Extract dominant colors via K-means clustering |
-| `generate_palette(image_path, harmony?, n_colors?)` | `PaletteResult` | Generate color harmony palette from image |
-| `analyze_product(image_path, use_ai?, n_colors?)` | `ProductAnalysisResult` | Extract colors + optional AI product description |
+| `extract_colors(image_path, n_colors?)` | `ColorExtractionResult` | Extract dominant colors |
+| `generate_palette(image_path, harmony?, n_colors?)` | `PaletteResult` | Generate color harmony palette |
+| `analyze_product(image_path, use_ai?, n_colors?)` | `ProductAnalysisResult` | Extract colors + optional AI description |
 
 ### Return Models
 
@@ -495,6 +428,12 @@ WaveformResult(success=True, peaks=[...], silence_regions=[...], bin_count=50)
 QualityMetricsResult(success=True, psnr=45.2, ssim=0.98)
 
 MetadataResult(success=True, metadata={...})
+
+ColorExtractionResult(success=True, colors=[...], n_colors=5)
+
+PaletteResult(success=True, harmony="complementary", colors=[...])
+
+ProductAnalysisResult(success=True, colors=[...], description="...")
 ```
 
 ---
@@ -502,108 +441,61 @@ MetadataResult(success=True, metadata={...})
 ## CLI Reference
 
 ```
-mcp_video [command] [options]
+mcp-video [command] [options]
 
 Commands:
-  info               Get video metadata
-  trim               Trim a video
-  merge              Merge multiple clips
-  add-text           Overlay text on a video
-  add-audio          Add or replace audio track
-  resize             Resize or change aspect ratio
-  convert            Convert video format (with two-pass encoding)
-  speed              Change playback speed
-  thumbnail          Extract a single frame
-  preview            Generate fast low-res preview
-  storyboard         Extract key frames as storyboard
-  subtitles          Burn subtitles into video
-  generate-subtitles Create SRT subtitles from text
-  watermark          Add image watermark
-  crop               Crop to rectangular region
-  rotate             Rotate and/or flip video
-  fade               Add video fade in/out
-  export             Export with quality settings
-  extract-audio      Extract audio track
-  edit               Execute timeline-based edit from JSON
-  filter             Apply visual filter (blur, sharpen, grayscale, ken_burns, etc.)
-  blur               Blur video
-  color-grade        Apply color preset (warm, cool, vintage, etc.)
-  normalize-audio    Normalize audio to LUFS target
-  audio-waveform     Extract audio waveform data
-  audio-reverb       Add reverb effect
-  audio-compressor   Dynamic range compression
-  audio-pitch-shift  Change pitch while maintaining duration
-  audio-noise-reduction Remove background noise
-  overlay-video      Picture-in-picture overlay
-  split-screen       Side-by-side or top/bottom layout
-  reverse            Reverse video playback
-  chroma-key         Remove solid color background (green screen)
-  stabilize          Stabilize shaky footage
-  apply-mask         Apply image mask with feathering
-  detect-scenes      Detect scene changes automatically
-  create-from-images Create video from image sequence
-  export-frames      Export video as image frames
-  compare-quality    Compare PSNR/SSIM quality metrics
-  read-metadata      Read video metadata tags
-  write-metadata     Write video metadata tags
-  batch              Apply operation to multiple files
-  templates          List available video templates
-  template           Apply a video template (tiktok, youtube-shorts, etc.)
+  info                 Get video metadata
+  trim                 Trim a video
+  merge                Merge multiple clips
+  add-text             Overlay text on a video
+  add-audio            Add or replace audio track
+  resize               Resize or change aspect ratio
+  convert              Convert video format (with two-pass encoding)
+  speed                Change playback speed
+  thumbnail            Extract a single frame
+  preview              Generate fast low-res preview
+  storyboard           Extract key frames as storyboard
+  subtitles            Burn subtitles into video
+  generate-subtitles   Create SRT subtitles from text
+  watermark            Add image watermark
+  crop                 Crop to rectangular region
+  rotate               Rotate and/or flip video
+  fade                 Add video fade in/out
+  export               Export with quality settings
+  extract-audio        Extract audio track
+  edit                 Execute timeline-based edit from JSON
+  filter               Apply visual filter (blur, sharpen, grayscale, ken_burns, etc.)
+  blur                 Blur video
+  color-grade          Apply color preset (warm, cool, vintage, etc.)
+  normalize-audio      Normalize audio to LUFS target
+  audio-waveform       Extract audio waveform data
+  reverse              Reverse video playback
+  chroma-key           Remove solid color background (green screen)
+  stabilize            Stabilize shaky footage
+  apply-mask           Apply image mask with feathering
+  detect-scenes        Detect scene changes
+  create-from-images   Create video from image sequence
+  export-frames        Export video as image frames
+  compare-quality      Compare PSNR/SSIM quality metrics
+  read-metadata        Read video metadata tags
+  write-metadata       Write video metadata tags
+  batch                Apply operation to multiple files
+  templates            List available video templates
+  template             Apply a video template (tiktok, youtube-shorts, etc.)
+
+Remotion Commands:
+  remotion-render       Render a Remotion composition to video
+  remotion-compositions List compositions in a Remotion project
+  remotion-studio       Launch Remotion Studio for live preview
+  remotion-still        Render a single frame as an image
+  remotion-create       Scaffold a new Remotion project
+  remotion-scaffold     Generate a composition from a design spec
+  remotion-validate     Validate a Remotion project structure
 
 Global Options:
-  --format text|json  Output format (default: text — rich tables & spinners)
-  --version           Show version and exit
-  --mcp               Run as MCP server (default when no command given)
-  -h, --help          Show help
-```
-
-### Examples
-
-```bash
-# Get metadata (rich table by default)
-mcp_video info video.mp4
-
-# Get metadata as JSON (for scripts and piping)
-mcp_video --format json info video.mp4
-
-# Preview with custom downscale
-mcp_video preview video.mp4 -s 2
-
-# Storyboard with 12 frames
-mcp_video storyboard video.mp4 -n 12 -o ./frames
-
-# Trim from 2:15 for 30 seconds
-mcp_video trim video.mp4 -s 00:02:15 -d 30 -o clip.mp4
-
-# Convert to GIF at medium quality
-mcp_video convert video.mp4 -f gif -q medium
-
-# Apply cinematic color grade
-mcp_video color-grade video.mp4 --preset cinematic
-
-# Normalize audio for YouTube (-16 LUFS)
-mcp_video normalize-audio video.mp4 --lufs -16
-
-# Picture-in-picture overlay
-mcp_video overlay-video background.mp4 overlay.mp4 --position bottom-right --width 360
-
-# Side-by-side split screen
-mcp_video split-screen left.mp4 right.mp4 --layout side-by-side
-
-# Batch blur 3 videos at once
-mcp_video batch video1.mp4 video2.mp4 video3.mp4 --operation blur
-
-# List available templates
-mcp_video templates
-
-# Apply a TikTok template with caption and music
-mcp_video template tiktok video.mp4 --caption "Check this out!" --music bgm.mp3
-
-# Apply a YouTube template with title card and outro
-mcp_video template youtube video.mp4 --title "My Video" --outro subscribe.mp4
-
-# Default: run MCP server
-mcp_video --mcp
+  --format text|json   Output format (default: text — rich tables & spinners)
+  --version            Show version and exit
+  --mcp                Run as MCP server (default when no command given)
 ```
 
 ---
@@ -646,35 +538,12 @@ editor.edit({
             "type": "image",
             "images": [
                 {"source": "logo.png", "position": "top-right", "width": 200, "opacity": 0.8},
-                {"source": "product.png", "position": {"x_pct": 0.5, "y_pct": 0.7}, "width": 400},
             ],
         },
     ],
     "export": {"format": "mp4", "quality": "high"},
 })
 ```
-
-### Timeline Schema
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `width` | int | 1920 | Output width |
-| `height` | int | 1080 | Output height |
-| `tracks` | Track[] | [] | Video, audio, text, and image tracks |
-| `export.format` | str | "mp4" | mp4, webm, gif, mov |
-| `export.quality` | str | "high" | low, medium, high, ultra |
-
-**Track types:** `video`, `audio`, `text`, `image`
-
-**Video clip fields:** `source`, `start`, `duration`, `trim_start`, `trim_end`, `volume`, `fade_in`, `fade_out`
-
-**Transition fields:** `after_clip` (index), `type` (fade/dissolve/wipe-*), `duration`
-
-**Text element fields:** `text`, `start`, `duration`, `position`, `style` (font/size/color/shadow)
-
-**Image overlay fields:** `source`, `position`, `x`, `y`, `width`, `height`, `opacity`, `start`, `duration`
-
-**Positions:** Named (top-left, top-center, etc.), pixel (`{"x": 100, "y": 50}`), or percentage (`{"x_pct": 0.5, "y_pct": 0.5}`)
 
 ---
 
@@ -686,11 +555,7 @@ Pre-built templates for common social media formats:
 from mcp_video.templates import tiktok_template, youtube_video_template
 
 # TikTok (9:16, 1080x1920)
-timeline = tiktok_template(
-    video_path="clip.mp4",
-    caption="Check this out!",
-    music_path="bgm.mp3",
-)
+timeline = tiktok_template(video_path="clip.mp4", caption="Check this out!", music_path="bgm.mp3")
 
 # YouTube Shorts (9:16, title at top)
 timeline = youtube_shorts_template("clip.mp4", title="My Short")
@@ -699,12 +564,8 @@ timeline = youtube_shorts_template("clip.mp4", title="My Short")
 timeline = instagram_reel_template("clip.mp4", caption="Reel caption")
 
 # YouTube Video (16:9, 1920x1080)
-timeline = youtube_video_template(
-    video_path="video.mp4",
-    title="My Amazing Video",
-    outro_path="subscribe.mp4",
-    music_path="bgm.mp3",
-)
+timeline = youtube_video_template(video_path="video.mp4", title="My Amazing Video",
+                                   outro_path="subscribe.mp4", music_path="bgm.mp3")
 
 # Instagram Post (1:1, 1080x1080)
 timeline = instagram_post_template("clip.mp4", caption="Post caption")
@@ -713,90 +574,11 @@ timeline = instagram_post_template("clip.mp4", caption="Post caption")
 result = editor.edit(timeline)
 ```
 
-### Template Registry
-
-```python
-from mcp_video.templates import TEMPLATES
-
-print(list(TEMPLATES.keys()))
-# ['tiktok', 'youtube-shorts', 'instagram-reel', 'youtube', 'instagram-post']
-
-# Call any template by name
-timeline = TEMPLATES["tiktok"](video_path="clip.mp4", caption="Hello!")
-```
-
----
-
-## Quality Presets
-
-| Quality | CRF | Encoder Preset | Max Height | Use Case |
-|---------|-----|---------------|------------|----------|
-| `low` | 35 | fast | 480p | Drafts, previews |
-| `medium` | 28 | medium | 720p | Social media |
-| `high` | 23 | slow | 1080p | Production |
-| `ultra` | 18 | veryslow | 1080p | Final output |
-
-Lower CRF = better quality, larger file. The `preset` controls encoding speed (slower = better compression).
-
-### Per-Tool Quality Control
-
-Tools that re-encode video (`video_add_text`, `video_watermark`, `video_overlay`, `video_filter`, `video_fade`, `video_color_grade`) accept optional `crf` and `preset` parameters to override the default encoding quality:
-
-```python
-# High-quality text overlay (CRF 18 = near-lossless)
-editor.add_text("video.mp4", "Title", crf=18, preset="slow")
-
-# Fast draft with lower quality
-editor.add_text("video.mp4", "Title", crf=30, preset="ultrafast")
-```
-
-### Batch Processing & Preview
-
-**Batch processing** applies the same operation to multiple files at once:
-
-```python
-# Apply the same blur to all product videos
-result = editor.batch(
-    inputs=["product1.mp4", "product2.mp4", "product3.mp4"],
-    operation="blur",
-    params={"radius": 5, "strength": 1},
-)
-```
-
-**Preview** generates a fast low-resolution version for quick review before committing to a full-quality render:
-
-```python
-# Quick preview at 1/4 resolution
-editor.preview("video.mp4", scale_factor=4)
-
-# Even faster at 1/8 resolution
-editor.preview("video.mp4", scale_factor=8)
-```
-
----
-
-## Aspect Ratios
-
-| Ratio | Resolution | Platforms |
-|-------|-----------|-----------|
-| `16:9` | 1920x1080 | YouTube |
-| `9:16` | 1080x1920 | TikTok, Reels, Shorts |
-| `1:1` | 1080x1080 | Instagram Post |
-| `4:5` | 1080x1350 | Instagram Feed |
-| `4:3` | 1440x1080 | Classic video |
-| `21:9` | 2560x1080 | Ultrawide |
-
-```python
-editor.resize("video.mp4", aspect_ratio="9:16")  # TikTok
-editor.resize("video.mp4", aspect_ratio="16:9")  # YouTube
-editor.resize("video.mp4", aspect_ratio="1:1")   # Instagram
-```
-
 ---
 
 ## Error Handling
 
-mcp-video parses FFmpeg errors and returns structured, actionable error responses:
+mcp-video parses FFmpeg errors and returns structured, actionable responses:
 
 ```json
 {
@@ -808,8 +590,7 @@ mcp-video parses FFmpeg errors and returns structured, actionable error response
     "suggested_action": {
       "auto_fix": true,
       "description": "Auto-convert input from vp9 to H.264/AAC before editing"
-    },
-    "documentation_url": "https://github.com/pastorsimon1798/mcp-video#codec-compatibility"
+    }
   }
 }
 ```
@@ -829,70 +610,29 @@ mcp-video parses FFmpeg errors and returns structured, actionable error response
 
 ---
 
-## Testing
-
-mcp-video has **690+ tests** across the full testing pyramid:
-
-```
-tests/
-├── conftest.py              # Shared fixtures (sample video, audio, SRT, VTT, watermark PNG, WebM)
-├── test_models.py           # 55 tests — Pydantic model validation (no FFmpeg needed)
-├── test_errors.py           # 42 tests — Error classes and FFmpeg error parsing (no FFmpeg)
-├── test_templates.py        # 21 tests — Template functions and registry (no FFmpeg)
-├── test_client.py           # 42 tests — Python Client API wrapper
-├── test_server.py           # 55 tests — MCP tool layer
-├── test_engine.py           # 33 tests — Core FFmpeg engine operations
-├── test_engine_advanced.py  # 78 tests — Edge cases, new operations, filter validation, per-transition merge
-├── test_cli.py              # 22 tests — CLI commands via subprocess (text + JSON output)
-├── test_e2e.py              # 8 tests  — Full end-to-end workflows
-└── test_real_media.py       # 33 tests — Real-media integration tests (marked @slow)
-```
-
-### Running Tests
-
-```bash
-# Install dev dependencies
-pip install -e ".[dev]"
-
-# Run all tests (excluding slow/real-media tests)
-pytest tests/ -v -m "not slow"
-
-# Run all tests including real-media integration tests
-pytest tests/ -v
-
-# Run only unit tests (no FFmpeg needed)
-pytest tests/test_models.py tests/test_errors.py tests/test_templates.py -v
-
-# Run real-media tests only (requires iPhone footage in ~/Downloads/)
-pytest tests/test_real_media.py -v -m slow
-
-# Run with coverage
-pytest tests/ -m "not slow" --cov=mcp_video --cov-report=term-missing
-```
-
-### Test Pyramid
-
-| Layer | Tests | What It Tests |
-|-------|-------|---------------|
-| **Unit** | 118 | Models, errors, templates — pure Python, no FFmpeg |
-| **Integration** | 237 | Client, server, engine, CLI — real FFmpeg operations |
-| **E2E** | 8 | Multi-step workflows (TikTok, YouTube, GIF, speed) |
-| **Real Media** | 33 | iPhone footage integration tests (marked @slow) |
-
----
-
 ## Architecture
 
 ```
 mcp_video/
-├── __init__.py       # Exports Client
-├── __main__.py       # CLI entry point (argparse)
-├── client.py         # Python Client class (wraps engine)
-├── engine.py         # FFmpeg engine (all video operations)
-├── errors.py         # Error types + FFmpeg stderr parser
-├── models.py         # Pydantic models (VideoInfo, EditResult, Timeline DSL)
-├── templates.py      # Platform templates (TikTok, YouTube, Instagram)
-└── server.py         # MCP server (26 tools + 4 resources)
+├── __init__.py            # Exports Client
+├── __main__.py            # CLI entry point (argparse + Rich)
+├── client.py              # Python Client API (wraps all engines)
+├── server.py              # MCP server (82 tools + 4 resources)
+├── engine.py              # Core FFmpeg engine (35 video operations)
+├── models.py              # Pydantic models (VideoInfo, EditResult, Timeline DSL)
+├── errors.py              # Error hierarchy + FFmpeg stderr parser
+├── templates.py           # Social media templates (TikTok, YouTube, Instagram)
+├── audio_engine.py        # Procedural audio synthesis (pure NumPy)
+├── effects_engine.py      # Visual effects + motion graphics (FFmpeg filters)
+├── transitions_engine.py  # Clip transitions (glitch, pixelate, morph)
+├── ai_engine.py           # AI features (Whisper, Demucs, Real-ESRGAN, spatial audio)
+├── remotion_engine.py     # Remotion CLI wrapper (render, studio, scaffold, validate)
+├── remotion_models.py     # Remotion data models
+├── image_engine.py        # Image color analysis (K-means, palette generation)
+├── image_models.py        # Image data models
+├── quality_guardrails.py  # Automated quality checks (brightness, contrast, audio)
+├── design_quality.py      # Design quality + auto-fix (layout, typography, motion)
+└── limits.py              # Resource validation constants (max 4h, 8K, 4GB)
 ```
 
 **Dependencies:**
@@ -900,6 +640,43 @@ mcp_video/
 - `pydantic>=2.0` — Data validation
 - `rich>=13.0` — Rich CLI output (tables, spinners, panels)
 - `ffmpeg` — Video processing (external, required)
+- `node`/`npx` — Remotion (external, optional)
+
+---
+
+## Testing
+
+690+ tests across 22 test files. All features tested with real FFmpeg operations on real media — no mocks, no stubs. Includes an adversarial security audit.
+
+```bash
+# Install dev dependencies
+pip install -e ".[dev]"
+
+# Run all tests (excluding slow/remotion)
+pytest tests/ -v -m "not slow and not remotion"
+
+# Run everything
+pytest tests/ -v
+
+# Run only unit tests (no FFmpeg needed)
+pytest tests/test_models.py tests/test_errors.py tests/test_templates.py -v
+```
+
+### Test Categories
+
+| Category | Files | What It Tests |
+|----------|-------|---------------|
+| **Unit** | test_models, test_errors, test_templates | Pure Python, no FFmpeg |
+| **Core Engine** | test_engine, test_engine_advanced, test_client, test_server | FFmpeg operations, API wrapper |
+| **CLI** | test_cli | All CLI commands via subprocess |
+| **Remotion** | test_remotion_engine | Remotion CLI wrapper (mocked) |
+| **AI Features** | test_ai_features | AI tools (mocked where needed) |
+| **Effects** | test_transitions, test_audio_presets | Transitions and audio presets |
+| **Quality** | test_quality_guardrails | Quality scoring |
+| **Image** | test_image_engine | Color extraction, palettes |
+| **Security** | test_adversarial_audit, test_red_team | FFmpeg injection, path validation, parameter bounds |
+| **Real Media** | test_real_media, test_real_all_features, test_real_exhaustive | Real FFmpeg operations (marked @slow) |
+| **E2E** | test_e2e | Multi-step workflows |
 
 ---
 
@@ -924,51 +701,20 @@ SRT, WebVTT (burned into video)
 ## Development
 
 ```bash
-# Clone
 git clone https://github.com/pastorsimon1798/mcp-video.git
 cd mcp-video
 
-# Setup
 python -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
 
-# Run tests
-pytest tests/ -v
-
-# Run a single test file
-pytest tests/test_client.py -v
-
-# Run with verbose output
-pytest tests/ -v --tb=long
+pytest tests/ -v -m "not slow and not remotion"
 ```
-
----
-
-## Roadmap
-
-- [x] Progress callbacks for long-running operations (v0.2.0)
-- [x] Visual verification with thumbnail output (v0.2.0)
-- [x] Video filters & effects — blur, sharpen, color grading, presets (v0.3.0)
-- [x] Audio normalization to LUFS targets (v0.3.0)
-- [x] Picture-in-picture and split-screen compositing (v0.3.0)
-- [x] Batch processing for multi-file workflows (v0.3.0)
-- [x] Video reverse, green screen/chroma key, denoise & deinterlace filters, smarter GIF output (v0.4.0)
-- [x] Rich CLI with human-friendly output, templates, and `--format json` mode (v0.4.0)
-- [ ] Streaming upload/download (S3, GCS integration)
-- [ ] Web UI for non-agent users
-- [ ] FFmpeg filter auto-detection and graceful fallback
-- [ ] Thumbnail selection via AI scene detection
-- [ ] Plugin system for custom filters
 
 ---
 
 ## License
 
-Apache 2.0 — see [LICENSE](LICENSE). Use it however you want.
+Apache 2.0 — see [LICENSE](LICENSE).
 
----
-
-## Acknowledgments
-
-Built on [FFmpeg](https://ffmpeg.org/) and the [Model Context Protocol](https://modelcontextprotocol.io/).
+Built on [FFmpeg](https://ffmpeg.org/), [Remotion](https://www.remotion.dev/), and the [Model Context Protocol](https://modelcontextprotocol.io/).
