@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "mcp-video": {
-      "command": "uvx",
-      "args": ["mcp-video"]
-    }
-  }
-}

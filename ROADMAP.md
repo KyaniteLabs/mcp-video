@@ -1,10 +1,10 @@
 # Improvement Roadmap
 
-Bugs fixed, 0.1.1 shipped. Here's what would make mcp-video genuinely better to use.
+v1.0.0 shipped. 82 MCP tools, 690+ tests, security audited. Here's what's next.
 
 ---
 
-## ✅ Completed in v1.0 (2026-03-28)
+## ✅ Completed in v1.0.0 (2026-03-29)
 
 ### AI-Powered Features
 - [x] `video_ai_remove_silence` - Auto-remove silent sections
@@ -42,7 +42,7 @@ Bugs fixed, 0.1.1 shipped. Here's what would make mcp-video genuinely better to 
 - [x] **Progress callbacks** — Long operations (merge, convert, export) give no feedback. A progress percentage in the MCP response would let agents tell users "50% done..." instead of silence. FFmpeg outputs progress to stderr — parse it.
 - [ ] **Output file cleanup** — Every operation creates a new file. Multi-step workflows leave 3-4 intermediate files. Add a `cleanup` parameter or a `video_cleanup` tool that removes intermediates, keeping only the final output.
 - [ ] **Smarter GIF output** — 3-second GIF at "low" quality = 28MB. The two-pass palette approach is good but `scale=480:-1` is too large for "low". Scale by quality preset: low=320, medium=480, high=640.
-- [x] **Visual verification** — After an operation, return a thumbnail of the first frame of the output. Lets agents (and users) confirm the result looks correct without opening the file. Could be base64-encoded or a file path.
+- [x] **Visual verification** — After an operation, return a thumbnail of the first frame of the output. *(Shipped in v1.0.0)*
 
 ## Medium Impact (Makes the API less frustrating)
 
@@ -66,7 +66,7 @@ Bugs fixed, 0.1.1 shipped. Here's what would make mcp-video genuinely better to 
 - [ ] **Custom font upload** — Currently only uses system fonts or a provided path. Allow passing a Google Fonts name and downloading it automatically.
 - [ ] **Video concatenation with transitions per-clip** — Already supported in `merge` via `transitions` parameter, but add a `video_edit` shortcut for simple "clip A -> fade -> clip B -> dissolve -> clip C" patterns.
 - [ ] **Audio waveform extraction** — Return a text-based waveform representation so agents can "see" the audio without playing it. Useful for finding silence or loud sections.
-- [ ] **Subtitle generation from text** — Given a list of `[(start, end, text)]` tuples, generate an SRT file and burn it in one step. Currently requires creating the SRT manually.
+- [x] **Subtitle generation from text** — Given a list of `[(start, end, text)]` tuples, generate an SRT file and burn it in one step. *(Shipped as `video_generate_subtitles`)*
 - [ ] **Frame-accurate seeking** — Use `-ss` before `-i` (input seeking) for speed, but fall back to output seeking for frame accuracy when the user specifies exact timestamps.
 - [x] **Output directory option** — Currently outputs go next to the input file. Add a global `output_dir` option so all intermediates go to a temp folder. *(Shipped in v0.3.0 as `video_batch --output-dir` / `output_dir` param)*
 
@@ -97,7 +97,7 @@ Features that FFmpeg supports but mcp-video doesn't expose yet. Ordered by impac
 - [x] **Image sequences** — Create video from image sequences (`img2pipe`), export frames
 - [x] **Metadata editing** — Read/write video metadata tags, chapter support
 - [x] **Audio waveform extraction** — Text-based waveform for silence/loud section detection
-- [x] **Subtitle generation** — Generate SRT from `[(start, end, text)]` tuples, burn in one step
+- [x] **Subtitle generation** — Generate SRT from `[(start, end, text)]` tuples, burn in one step *(Shipped as `video_generate_subtitles`)*
 
 ### Low Impact
 - [x] **Ken Burns / zoom pan** — Animated zoom/pan effects via `zoompan` filter
