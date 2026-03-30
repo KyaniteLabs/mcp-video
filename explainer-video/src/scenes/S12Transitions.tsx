@@ -1,7 +1,6 @@
 import React from 'react';
 import { AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate, Easing } from 'remotion';
 import GlassCard from '../components/GlassCard';
-import { BurnedCaption } from '../components/BurnedCaption';
 import { COLORS, TEXT, FONT_SIZE, glowShadow } from '../lib/theme';
 
 // Transitions Scene for v1.0
@@ -199,7 +198,6 @@ export const S12Transitions: React.FC = () => {
         })}
       </div>
       
-      <BurnedCaption text="Glitch, pixelate, and morph transitions between scenes" />
     </AbsoluteFill>
   );
 };

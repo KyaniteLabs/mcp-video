@@ -22,8 +22,8 @@ import {
 import { SPRING_SMOOTH, SPRING_BOUNCE, useAmbientMotion } from '../lib/animations';
 
 const STATS = [
-  { value: '43', label: 'Tools' },
-  { value: '545+', label: 'Tests' },
+  { value: '82', label: 'Tools' },
+  { value: '690+', label: 'Tests' },
   { value: 'Apache 2.0', label: 'License' },
 ];
 
@@ -65,8 +65,8 @@ export const S10CTA: React.FC = () => {
 
   // Counter micro-tick on stat values
   const statCounter = Math.min(
-    43,
-    Math.floor(interpolate(frame, [40, 80], [0, 43], {
+    82,
+    Math.floor(interpolate(frame, [40, 80], [0, 82], {
       extrapolateRight: 'clamp',
     })),
   );
@@ -197,10 +197,10 @@ export const S10CTA: React.FC = () => {
         >
           {STATS.map((stat, i) => {
             // Animated counter for each stat
-            const animatedValue = stat.label === 'Tools' 
-              ? Math.min(43, Math.floor(interpolate(frame, [40 + i * 10, 70 + i * 10], [0, 43], { extrapolateRight: 'clamp' })))
+            const animatedValue = stat.label === 'Tools'
+              ? Math.min(82, Math.floor(interpolate(frame, [40 + i * 10, 70 + i * 10], [0, 82], { extrapolateRight: 'clamp' })))
               : stat.label === 'Tests'
-              ? Math.min(545, Math.floor(interpolate(frame, [40 + i * 10, 70 + i * 10], [0, 545], { extrapolateRight: 'clamp' })))
+              ? Math.min(690, Math.floor(interpolate(frame, [40 + i * 10, 70 + i * 10], [0, 690], { extrapolateRight: 'clamp' })))
               : stat.value;
             
             return (

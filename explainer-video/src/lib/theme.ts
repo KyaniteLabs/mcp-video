@@ -51,6 +51,12 @@ export const COLORS = {
   TEXT_PRIMARY: '#f0f1f5',   // Raycast --color-fg
   TEXT_SECONDARY: '#c2c7ca', // Raycast --color-fg-200
   TEXT_MUTED: '#78787c',     // Raycast --color-fg-300
+
+  // ── Neon aliases (referenced by scenes and components) ────────────
+  NEON_CYAN: '#00E5D4',       // alias for CYAN_BRIGHT
+  NEON_PURPLE: '#8B5CF6',     // alias for VIOLET_BRIGHT
+  NEON_MAGENTA: '#D946EF',    // vivid magenta
+  NEON_GREEN: '#39FF88',       // alias for SPRING_GREEN
 } as const;
 
 export const GRADIENT_PRIMARY =
@@ -79,6 +85,13 @@ export const SCENE_ACCENTS: Record<number, string> = {
   6: COLORS.VIOLET_MID,     // Remotion
   7: COLORS.LIME,           // Architecture
   8: COLORS.LIME,           // CTA
+  9: COLORS.CYAN_BRIGHT,    // Code comparison
+  10: COLORS.LIME,          // CTA
+  11: COLORS.VIOLET_BRIGHT, // AI features
+  12: COLORS.SPRING_GREEN,  // Transitions
+  13: COLORS.SKY,           // Audio
+  14: COLORS.AZURE,         // VFX
+  15: COLORS.LIME_LIGHT,    // Quality
 };
 
 // ── Typography size tiers ──────────────────────────────────────

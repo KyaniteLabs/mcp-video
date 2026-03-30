@@ -1,7 +1,6 @@
 import React from 'react';
 import { AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate, Easing, Video, staticFile } from 'remotion';
 import GlassCard from '../components/GlassCard';
-import { BurnedCaption } from '../components/BurnedCaption';
 import { COLORS, TEXT, FONT_SIZE, glowShadow } from '../lib/theme';
 
 // Visual Effects Scene for v1.0 - Now with REAL demo videos
@@ -203,7 +202,6 @@ export const S14VisualEffects: React.FC = () => {
         ))}
       </div>
       
-      <BurnedCaption text="Vignette, chromatic aberration, scanlines, noise, and glow" />
     </AbsoluteFill>
   );
 };

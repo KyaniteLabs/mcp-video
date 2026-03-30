@@ -1,7 +1,6 @@
 import React from 'react';
 import { AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate, Easing } from 'remotion';
 import GlassCard from '../components/GlassCard';
-import { BurnedCaption } from '../components/BurnedCaption';
 import { COLORS, TEXT, FONT_SIZE, glowShadow } from '../lib/theme';
 
 // Real quality data from design_quality_check
@@ -390,7 +389,6 @@ export const S15QualityGuardrails: React.FC = () => {
         </div>
       </div>
       
-      <BurnedCaption text="Automated quality checks: brightness, contrast, saturation, audio, color balance" />
     </AbsoluteFill>
   );
 };

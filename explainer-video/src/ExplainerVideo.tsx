@@ -60,7 +60,7 @@ export const ExplainerVideo: React.FC = () => {
         {/* S2: Solution — 6s / 180 frames */}
         <TransitionSeries.Sequence durationInFrames={180}>
           <S2Solution />
-          <BurnedCaption text="43 powerful video editing tools" />
+          <BurnedCaption text="82 powerful video editing tools" />
           <SceneSoundDesign sceneNumber={2} />
         </TransitionSeries.Sequence>
 

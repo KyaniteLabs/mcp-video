@@ -1,7 +1,6 @@
 import React from 'react';
 import { AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate, Easing, Video, staticFile } from 'remotion';
 import GlassCard from '../components/GlassCard';
-import { BurnedCaption } from '../components/BurnedCaption';
 import { COLORS, TEXT, FONT_SIZE, glowShadow } from '../lib/theme';
 
 // REAL demo video from mcp-video operation on pottery footage
@@ -267,7 +266,6 @@ export const S11AIFeatures: React.FC = () => {
         </div>
       </div>
       
-      <BurnedCaption text="7 AI-powered features for intelligent video editing" />
     </AbsoluteFill>
   );
 };

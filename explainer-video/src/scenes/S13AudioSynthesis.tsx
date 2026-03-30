@@ -1,7 +1,6 @@
 import React from 'react';
 import { AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate, Easing } from 'remotion';
 import GlassCard from '../components/GlassCard';
-import { BurnedCaption } from '../components/BurnedCaption';
 import { COLORS, TEXT, FONT_SIZE, glowShadow } from '../lib/theme';
 
 // Audio Synthesis Scene for v1.0
@@ -261,7 +260,6 @@ export const S13AudioSynthesis: React.FC = () => {
         </div>
       </div>
       
-      <BurnedCaption text="Generate audio procedurally — no external files needed" />
     </AbsoluteFill>
   );
 };
