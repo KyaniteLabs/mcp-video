@@ -424,7 +424,7 @@ class Client:
     ) -> EditResult:
         """Picture-in-picture: overlay a video on top of another."""
         return _overlay_video(
-            background, overlay_path=overlay, position=position,
+            background_path=background, overlay_path=overlay, position=position,
             width=width, height=height, opacity=opacity,
             start_time=start_time, duration=duration,
             output_path=output, crf=crf, preset=preset,
@@ -438,7 +438,7 @@ class Client:
         output: str | None = None,
     ) -> EditResult:
         """Place two videos side by side or top/bottom."""
-        return _split_screen(left, right_path=right, layout=layout, output_path=output)
+        return _split_screen(left_path=left, right_path=right, layout=layout, output_path=output)
 
     def detect_scenes(
         self,
@@ -538,7 +538,7 @@ class Client:
     ) -> dict:
         """Apply the same operation to multiple video files."""
         from .engine import video_batch
-        return video_batch(inputs, operation=operation, params=params)
+        return video_batch(inputs, operation=operation, params=params, output_dir=None)
 
     # ------------------------------------------------------------------
     # Image Analysis
@@ -826,7 +826,7 @@ class Client:
             Path to output video
         """
         from .audio_engine import add_generated_audio
-        return add_generated_audio(video=video, audio_config=audio_config, output=output)
+        return add_generated_audio(input_path=video, audio_config=audio_config, output_path=output)
 
     # ------------------------------------------------------------------
     # Visual Effects (P1 Features)
@@ -842,7 +842,7 @@ class Client:
     ) -> str:
         """Apply vignette effect - darkened edges."""
         from .effects_engine import effect_vignette
-        return effect_vignette(video, output, intensity, radius, smoothness)
+        return effect_vignette(input_path=video, output=output, intensity=intensity, radius=radius, smoothness=smoothness)
 
     def effect_chromatic_aberration(
         self,
@@ -853,7 +853,7 @@ class Client:
     ) -> str:
         """Apply RGB channel separation effect."""
         from .effects_engine import effect_chromatic_aberration
-        return effect_chromatic_aberration(video, output, intensity, angle)
+        return effect_chromatic_aberration(input_path=video, output=output, intensity=intensity, angle=angle)
 
     def effect_scanlines(
         self,
@@ -865,7 +865,7 @@ class Client:
     ) -> str:
         """Apply CRT-style scanline overlay."""
         from .effects_engine import effect_scanlines
-        return effect_scanlines(video, output, line_height, opacity, flicker)
+        return effect_scanlines(input_path=video, output=output, line_height=line_height, opacity=opacity, flicker=flicker)
 
     def effect_noise(
         self,
@@ -877,7 +877,7 @@ class Client:
     ) -> str:
         """Apply film grain / digital noise."""
         from .effects_engine import effect_noise
-        return effect_noise(video, output, intensity, mode, animated)
+        return effect_noise(input_path=video, output=output, intensity=intensity, mode=mode, animated=animated)
 
     def effect_glow(
         self,
@@ -889,7 +889,7 @@ class Client:
     ) -> str:
         """Apply bloom/glow effect for highlights."""
         from .effects_engine import effect_glow
-        return effect_glow(video, output, intensity, radius, threshold)
+        return effect_glow(input_path=video, output=output, intensity=intensity, radius=radius, threshold=threshold)
 
     # ------------------------------------------------------------------
     # Layout & Composition
@@ -990,7 +990,7 @@ class Client:
     ) -> str:
         """Burn subtitles from SRT/VTT with styling."""
         from .effects_engine import text_subtitles
-        return text_subtitles(video, subtitles, output, style)
+        return text_subtitles(video=video, subtitles=subtitles, output=output, style=style)
 
     # ------------------------------------------------------------------
     # Motion Graphics

@@ -284,6 +284,18 @@ def video_add_audio(
         output_path: Where to save the output. Auto-generated if omitted.
     """
     try:
+        if fade_in is not None and fade_in < 0:
+            return _error_result(MCPVideoError(
+                f"fade_in must be non-negative, got {fade_in}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            ))
+        if fade_out is not None and fade_out < 0:
+            return _error_result(MCPVideoError(
+                f"fade_out must be non-negative, got {fade_out}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            ))
         return _result(add_audio(
             video_path, audio_path=audio_path, volume=volume,
             fade_in=fade_in, fade_out=fade_out, mix=mix,
@@ -291,6 +303,7 @@ def video_add_audio(
         ))
     except MCPVideoError as e:
         return _error_result(e)
+
 
 
 @mcp.tool()
@@ -416,11 +429,18 @@ def video_preview(
         scale_factor: Downscale factor (4 = 1/4 resolution).
     """
     try:
-        if scale_factor < 1:
+        MAX_SCALE_FACTOR = 16
+        if scale_factor < 2:
             return _error_result(MCPVideoError(
-                "scale_factor must be at least 1",
+                f"scale_factor must be at least 2, got {scale_factor}",
                 error_type="validation_error",
-                code="invalid_scale_factor",
+                code="invalid_parameter",
+            ))
+        if scale_factor > MAX_SCALE_FACTOR:
+            return _error_result(MCPVideoError(
+                f"scale_factor must be at most {MAX_SCALE_FACTOR}, got {scale_factor}",
+                error_type="validation_error",
+                code="invalid_parameter",
             ))
         return _result(preview(input_path, output_path=output_path, scale_factor=scale_factor))
     except MCPVideoError as e:
@@ -441,11 +461,12 @@ def video_storyboard(
         frame_count: Number of key frames to extract.
     """
     try:
-        if frame_count < 1:
+        MAX_FRAME_COUNT = 100
+        if frame_count is not None and (frame_count < 1 or frame_count > MAX_FRAME_COUNT):
             return _error_result(MCPVideoError(
-                "frame_count must be at least 1",
+                f"frame_count must be between 1 and {MAX_FRAME_COUNT}, got {frame_count}",
                 error_type="validation_error",
-                code="invalid_frame_count",
+                code="invalid_parameter",
             ))
         return _result(storyboard(input_path, output_dir=output_dir, frame_count=frame_count))
     except MCPVideoError as e:
@@ -494,6 +515,12 @@ def video_watermark(
         crf: Override CRF value (0-51, lower = better quality). Default 23.
         preset: Override FFmpeg encoding preset (ultrafast, fast, medium, slow, veryslow).
     """
+    if not 0 <= opacity <= 1:
+        return _error_result(MCPVideoError(
+            f"opacity must be between 0 and 1, got {opacity}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        ))
     try:
         return _result(watermark(
             input_path, image_path=image_path, position=position,
@@ -623,8 +650,10 @@ def video_edit(
     """
     try:
         return _result(edit_timeline(timeline, output_path=output_path))
-    except Exception as e:
+    except MCPVideoError as e:
         return _error_result(e)
+    except Exception as e:
+        return {"success": False, "error": {"type": "internal_error", "code": "unexpected_error", "message": str(e)}}
 
 
 @mcp.tool()
@@ -833,6 +862,12 @@ def video_overlay(
         preset: Override FFmpeg encoding preset (ultrafast, fast, medium, slow, veryslow).
     """
     try:
+        if not 0 <= opacity <= 1:
+            return _error_result(MCPVideoError(
+                f"opacity must be between 0 and 1, got {opacity}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            ))
         return _result(overlay_video(
             background_path, overlay_path=overlay_path, position=position,
             width=width, height=height, opacity=opacity,
@@ -917,6 +952,12 @@ def video_export_frames(
         fps: Frames per second to extract (1.0 = 1 frame per second, default 1.0).
         format: Output image format (jpg or png, default jpg).
     """
+    if fps <= 0:
+        return _error_result(MCPVideoError(
+            f"fps must be positive, got {fps}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        ))
     if fps > MAX_EXPORT_FRAMES_FPS:
         return _error_result(MCPVideoError(
             f"FPS {fps} exceeds maximum of {MAX_EXPORT_FRAMES_FPS}",
@@ -1078,6 +1119,16 @@ def video_batch(
         params: Parameters for the operation.
         output_dir: Directory for output files. Auto-generated if omitted.
     """
+    VALID_BATCH_OPERATIONS = {
+        "trim", "resize", "convert", "filter", "blur", "color_grade",
+        "watermark", "speed", "fade", "normalize_audio",
+    }
+    if operation not in VALID_BATCH_OPERATIONS:
+        return _error_result(MCPVideoError(
+            f"Unknown operation '{operation}'. Valid operations: {sorted(VALID_BATCH_OPERATIONS)}",
+            error_type="validation_error",
+            code="invalid_operation",
+        ))
     if len(inputs) > MAX_BATCH_SIZE:
         return _error_result(MCPVideoError(
             f"Batch size {len(inputs)} exceeds maximum of {MAX_BATCH_SIZE}",
@@ -1749,6 +1800,7 @@ def video_layout_pip(
     border: bool = True,
     border_color: str = "#CCFF00",
     border_width: int = 2,
+    rounded_corners: bool = True,
 ) -> dict[str, Any]:
     """Picture-in-picture overlay.
 
@@ -1764,13 +1816,14 @@ def video_layout_pip(
         border: Add border around PIP. Default true.
         border_color: Border color hex. Default #CCFF00.
         border_width: Border width in pixels. Default 2.
+        rounded_corners: Apply rounded corners to PIP. Default true.
 
     Returns:
         Dict with success status and output_path.
     """
     try:
         from .effects_engine import layout_pip as _pip
-        return _result(_pip(main_path, pip_path, output_path, position, size, margin, False, border, border_color, border_width))
+        return _result(_pip(main_path, pip_path, output_path, position=position, size=size, margin=margin, rounded_corners=rounded_corners, border=border, border_color=border_color, border_width=border_width))
     except MCPVideoError as e:
         return _error_result(e)
 
@@ -1972,8 +2025,10 @@ def transition_glitch(
     try:
         from .transitions_engine import transition_glitch
         return _result(transition_glitch(clip1_path, clip2_path, output_path, duration, intensity))
-    except Exception as e:
+    except MCPVideoError as e:
         return _error_result(e)
+    except Exception as e:
+        return {"success": False, "error": {"type": "internal_error", "code": "unexpected_error", "message": str(e)}}
 
 
 @mcp.tool()
@@ -1988,8 +2043,10 @@ def transition_pixelate(
     try:
         from .transitions_engine import transition_pixelate
         return _result(transition_pixelate(clip1_path, clip2_path, output_path, duration, pixel_size))
-    except Exception as e:
+    except MCPVideoError as e:
         return _error_result(e)
+    except Exception as e:
+        return {"success": False, "error": {"type": "internal_error", "code": "unexpected_error", "message": str(e)}}
 
 
 @mcp.tool()
@@ -2004,8 +2061,10 @@ def transition_morph(
     try:
         from .transitions_engine import transition_morph
         return _result(transition_morph(clip1_path, clip2_path, output_path, duration, mesh_size))
-    except Exception as e:
+    except MCPVideoError as e:
         return _error_result(e)
+    except Exception as e:
+        return {"success": False, "error": {"type": "internal_error", "code": "unexpected_error", "message": str(e)}}
 
 
 # ---------------------------------------------------------------------------
@@ -2024,8 +2083,10 @@ def video_ai_remove_silence(
     try:
         from .ai_engine import ai_remove_silence
         return _result(ai_remove_silence(input_path, output_path, silence_threshold, min_silence_duration, keep_margin))
-    except Exception as e:
+    except MCPVideoError as e:
         return _error_result(e)
+    except Exception as e:
+        return {"success": False, "error": {"type": "internal_error", "code": "unexpected_error", "message": str(e)}}
 
 
 @mcp.tool()
@@ -2039,8 +2100,10 @@ def video_ai_transcribe(
     try:
         from .ai_engine import ai_transcribe
         return _result(ai_transcribe(input_path, output_srt, model, language))
-    except Exception as e:
+    except MCPVideoError as e:
         return _error_result(e)
+    except Exception as e:
+        return {"success": False, "error": {"type": "internal_error", "code": "unexpected_error", "message": str(e)}}
 
 
 @mcp.tool()
@@ -2053,8 +2116,10 @@ def video_ai_scene_detect(
     try:
         from .ai_engine import ai_scene_detect
         return _result(ai_scene_detect(input_path, threshold, use_ai))
-    except Exception as e:
+    except MCPVideoError as e:
         return _error_result(e)
+    except Exception as e:
+        return {"success": False, "error": {"type": "internal_error", "code": "unexpected_error", "message": str(e)}}
 
 
 @mcp.tool()
@@ -2068,8 +2133,10 @@ def video_ai_stem_separation(
     try:
         from .ai_engine import ai_stem_separation
         return _result(ai_stem_separation(input_path, output_dir, stems, model))
-    except Exception as e:
+    except MCPVideoError as e:
         return _error_result(e)
+    except Exception as e:
+        return {"success": False, "error": {"type": "internal_error", "code": "unexpected_error", "message": str(e)}}
 
 
 @mcp.tool()
@@ -2083,8 +2150,10 @@ def video_ai_upscale(
     try:
         from .ai_engine import ai_upscale
         return _result(ai_upscale(input_path, output_path, scale, model))
-    except Exception as e:
+    except MCPVideoError as e:
         return _error_result(e)
+    except Exception as e:
+        return {"success": False, "error": {"type": "internal_error", "code": "unexpected_error", "message": str(e)}}
 
 
 @mcp.tool()
@@ -2098,8 +2167,10 @@ def video_ai_color_grade(
     try:
         from .ai_engine import ai_color_grade
         return _result(ai_color_grade(input_path, output_path, reference_path, style))
-    except Exception as e:
+    except MCPVideoError as e:
         return _error_result(e)
+    except Exception as e:
+        return {"success": False, "error": {"type": "internal_error", "code": "unexpected_error", "message": str(e)}}
 
 
 @mcp.tool()
@@ -2113,8 +2184,10 @@ def video_audio_spatial(
     try:
         from .ai_engine import audio_spatial
         return _result(audio_spatial(input_path, output_path, positions, method))
-    except Exception as e:
+    except MCPVideoError as e:
         return _error_result(e)
+    except Exception as e:
+        return {"success": False, "error": {"type": "internal_error", "code": "unexpected_error", "message": str(e)}}
 
 
 @mcp.tool()
@@ -2134,8 +2207,10 @@ def video_quality_check(
     try:
         from .quality_guardrails import quality_check
         return _result(quality_check(input_path, fail_on_warning))
-    except Exception as e:
+    except MCPVideoError as e:
         return _error_result(e)
+    except Exception as e:
+        return {"success": False, "error": {"type": "internal_error", "code": "unexpected_error", "message": str(e)}}
 
 
 @mcp.tool()
@@ -2157,8 +2232,10 @@ def video_design_quality_check(
     try:
         from .design_quality import design_quality_check
         return _result(design_quality_check(input_path, auto_fix=auto_fix, strict=strict))
-    except Exception as e:
+    except MCPVideoError as e:
         return _error_result(e)
+    except Exception as e:
+        return {"success": False, "error": {"type": "internal_error", "code": "unexpected_error", "message": str(e)}}
 
 
 @mcp.tool()
@@ -2178,5 +2255,7 @@ def video_fix_design_issues(
     try:
         from .design_quality import fix_design_issues
         return _result(fix_design_issues(input_path, output_path))
-    except Exception as e:
+    except MCPVideoError as e:
         return _error_result(e)
+    except Exception as e:
+        return {"success": False, "error": {"type": "internal_error", "code": "unexpected_error", "message": str(e)}}

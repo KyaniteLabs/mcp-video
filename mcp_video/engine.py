@@ -2600,9 +2600,11 @@ def export_frames(
         format: Output image format (jpg, png).
     """
     _validate_input(input_path)
+    if format == "mjpeg":
+        format = "jpg"
     if format not in ("jpg", "png"):
         raise MCPVideoError(
-            f"Invalid format '{format}': must be 'jpg' or 'png'",
+            f"Invalid format '{format}': must be 'jpg', 'mjpeg' or 'png'",
             error_type="validation_error",
             code="invalid_format",
         )

@@ -1086,7 +1086,8 @@ def main() -> None:
 
         elif args.command == "export-frames":
             from .engine import export_frames
-            result = _with_spinner("Exporting frames...", export_frames, args.input, output_dir=args.output_dir, fps=args.fps, format=args.format)
+            fmt = "mjpeg" if args.format == "jpg" else args.format
+            result = _with_spinner("Exporting frames...", export_frames, args.input, output_dir=args.output_dir, fps=args.fps, format=fmt)
             if use_json:
                 output_json(result)
             else:
@@ -1141,7 +1142,11 @@ def main() -> None:
 
         elif args.command == "write-metadata":
             from .engine import write_metadata
-            tags = json.loads(args.tags)
+            try:
+                tags = json.loads(args.tags)
+            except json.JSONDecodeError as e:
+                console.print(f"[bold red]Invalid JSON in --tags: {e}[/bold red]")
+                raise SystemExit(1) from None
             result = _with_spinner("Writing metadata...", write_metadata, args.input, metadata=tags, output_path=args.output)
             if use_json:
                 output_json(result)
@@ -1166,7 +1171,10 @@ def main() -> None:
 
         elif args.command == "audio-waveform":
             from .engine import audio_waveform
-            result = _with_spinner("Extracting waveform...", audio_waveform, args.input, bins=args.bins)
+            waveform_kwargs: dict = {"bins": args.bins}
+            if args.output:
+                waveform_kwargs["output_path"] = args.output
+            result = _with_spinner("Extracting waveform...", audio_waveform, args.input, **waveform_kwargs)
             if use_json:
                 output_json(result)
             else:
@@ -1746,13 +1754,18 @@ def main() -> None:
             from .effects_engine import auto_chapters
             result = _with_spinner("Detecting chapters...", auto_chapters, args.input, threshold=args.threshold)
             if use_json:
-                output_json({"chapters": [{"timestamp": t, "description": d} for t, d in result]})
+                output_json({"chapters": [{"timestamp": (c[0] if isinstance(c, (list, tuple)) else c.get("timestamp", "")), "description": (c[1] if isinstance(c, (list, tuple)) else c.get("description", ""))} for c in result]})
             else:
                 table = Table(title="Auto Chapters")
                 table.add_column("#", style="bold", justify="right")
                 table.add_column("Timestamp", style="cyan")
                 table.add_column("Description")
-                for i, (ts, desc) in enumerate(result, 1):
+                for i, chapter in enumerate(result, 1):
+                    if isinstance(chapter, (list, tuple)):
+                        ts, desc = chapter
+                    else:
+                        ts = chapter.get("timestamp", "")
+                        desc = chapter.get("description", "")
                     table.add_row(str(i), f"{ts:.2f}s", desc)
                 console.print(table)
                 console.print(f"[bold]{len(result)} chapters detected[/bold]")

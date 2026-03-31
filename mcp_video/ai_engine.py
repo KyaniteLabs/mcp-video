@@ -1023,6 +1023,8 @@ def _ai_upscale_opencv(video_path: str, output_path: str, scale: int) -> str:
     """
     import cv2
 
+    from mcp_video.errors import MCPVideoError
+
     # FSRCNN is much faster than EDSR for CPU inference
     model_urls = {
         2: "https://github.com/Saafke/FSRCNN_Tensorflow/raw/master/models/FSRCNN_x2.pb",
@@ -1054,6 +1056,12 @@ def _ai_upscale_opencv(video_path: str, output_path: str, scale: int) -> str:
     _verify_model_hash(model_path, expected_hash)
 
     # Initialize DNN Super Resolution with FSRCNN (fast for CPU)
+    if not hasattr(cv2, "dnn_superres"):
+        raise MCPVideoError(
+            "OpenCV was built without dnn_superres module. Install opencv-contrib-python for full AI support.",
+            error_type="dependency_error",
+            code="missing_opencv_contrib",
+        )
     sr = cv2.dnn_superres.DnnSuperResImpl_create()
     sr.readModel(str(model_path))
     sr.setModel("fsrcnn", scale)

@@ -449,7 +449,7 @@ class TestVideoBatchTool:
     def test_batch_unknown_operation(self, sample_video):
         result = video_batch([sample_video], operation="nonexistent")
         assert result["success"] is False
-        assert result["failed"] == 1
+        assert "error" in result
 
     def test_batch_partial_failure(self, sample_video):
         result = video_batch(
