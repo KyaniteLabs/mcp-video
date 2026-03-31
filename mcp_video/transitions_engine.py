@@ -1,5 +1,6 @@
 """Video transition effects using FFmpeg."""
 
+import os
 import subprocess
 import tempfile
 from pathlib import Path
@@ -14,6 +15,13 @@ from .errors import ProcessingError
 
 def _run_ffmpeg(cmd: list[str], timeout: int = 600) -> subprocess.CompletedProcess[str]:
     """Run an FFmpeg/FFprobe command with timeout and error handling."""
+    # Ensure output directory exists
+    for arg in reversed(cmd):
+        if not arg.startswith("-") and not arg.startswith("ffmpeg") and not arg.startswith("ffprobe"):
+            out_dir = os.path.dirname(arg)
+            if out_dir:
+                os.makedirs(out_dir, exist_ok=True)
+            break
     cmd_str = " ".join(cmd)
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)

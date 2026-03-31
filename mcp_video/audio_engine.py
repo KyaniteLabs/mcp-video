@@ -836,6 +836,9 @@ def add_generated_audio(
         audio_sequence(events, audio_path)
         
         # Mix with video using FFmpeg
+        out_dir = os.path.dirname(output)
+        if out_dir:
+            os.makedirs(out_dir, exist_ok=True)
         cmd = [
             "ffmpeg", "-y",
             "-i", video,

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.0.0-blue.svg" alt="Version">
+  <img src="https://img.shields.io/badge/version-1.1.0-blue.svg" alt="Version">
   <img src="https://img.shields.io/badge/tests-690%2B%20passed-brightgreen.svg" alt="Tests">
   <a href="https://github.com/pastorsimon1798/mcp-video/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/pastorsimon1798/mcp-video/.github/workflows/ci.yml?branch=master&label=CI" alt="CI"></a>
   <a href="https://glama.ai/mcp/servers/pastorsimon1798/mcp-video"><img src="https://glama.ai/mcp/servers/pastorsimon1798/mcp-video/badges/score.svg" alt="Glama Score"></a>
@@ -36,7 +36,7 @@ mcp-video is an open-source video editing server built on the [Model Context Pro
 
 **Two modes of operation:**
 
-1. **Edit existing video** with FFmpeg — trim, merge, overlay text, add audio, apply filters, stabilize, detect scenes, transcribe, and more. 70+ tools covering the full editing pipeline.
+1. **Edit existing video** with FFmpeg — trim, merge, overlay text, add audio, apply filters, stabilize, detect scenes, transcribe, and more. 82 tools covering the full editing pipeline.
 
 2. **Create new video from code** with [Remotion](https://www.remotion.dev/) — scaffold React-based video compositions, preview them live, render to MP4, then post-process with mcp-video. 8 dedicated tools for programmatic video generation.
 
@@ -443,7 +443,7 @@ ProductAnalysisResult(success=True, colors=[...], description="...")
 ```
 mcp-video [command] [options]
 
-Commands:
+Core Editing:
   info                 Get video metadata
   trim                 Trim a video
   merge                Merge multiple clips
@@ -480,8 +480,63 @@ Commands:
   read-metadata        Read video metadata tags
   write-metadata       Write video metadata tags
   batch                Apply operation to multiple files
+  overlay-video        Picture-in-picture overlay
+  split-screen         Place two videos side by side or top/bottom
   templates            List available video templates
   template             Apply a video template (tiktok, youtube-shorts, etc.)
+
+Visual Effects:
+  effect-vignette             Apply vignette (darkened edges)
+  effect-glow                 Apply bloom/glow to highlights
+  effect-noise                Apply film grain or digital noise
+  effect-scanlines            Apply CRT-style scanlines overlay
+  effect-chromatic-aberration Apply RGB channel separation
+
+Transitions:
+  transition-glitch     Glitch transition between two clips
+  transition-morph      Mesh warp morph transition
+  transition-pixelate   Pixel dissolve transition
+
+AI Tools:
+  video-ai-transcribe    Speech-to-text with Whisper
+  video-ai-upscale      AI super-resolution upscaling
+  video-ai-stem-separation  Separate audio stems with Demucs
+  video-ai-scene-detect  Scene detection with perceptual hashing
+  video-ai-color-grade   Auto color grading
+  video-ai-remove-silence  Remove silent sections
+
+Audio Synthesis:
+  audio-synthesize      Generate audio from waveform synthesis
+  audio-compose         Layer multiple audio tracks with mixing
+  audio-preset          Generate preset sound effects
+  audio-sequence        Compose timed audio event sequence
+  audio-effects         Apply audio effects chain (reverb, lowpass, etc.)
+
+Motion Graphics:
+  video-text-animated   Add animated text (fade, slide-up, typewriter)
+  video-mograph-count   Generate animated number counter
+  video-mograph-progress  Generate progress bar / loading animation
+
+Layout:
+  video-layout-grid     Arrange multiple videos in a grid
+  video-layout-pip      Picture-in-picture with border
+
+Audio-Video:
+  video-add-generated-audio  Add procedurally generated audio
+  video-audio-spatial   3D spatial audio positioning
+
+Quality & Analysis:
+  video-auto-chapters    Auto-detect scene changes as chapters
+  video-extract-frame   Extract a single frame (thumbnail alias)
+  video-info-detailed    Extended metadata with scene detection
+  video-quality-check    Visual quality checks (brightness, contrast, audio)
+  video-design-quality-check  Design quality analysis
+  video-fix-design-issues  Auto-fix design issues
+
+Image Analysis:
+  image-extract-colors  Extract dominant colors from an image
+  image-generate-palette  Generate color harmony palette
+  image-analyze-product  Analyze product image (colors + AI description)
 
 Remotion Commands:
   remotion-render       Render a Remotion composition to video
@@ -491,6 +546,7 @@ Remotion Commands:
   remotion-create       Scaffold a new Remotion project
   remotion-scaffold     Generate a composition from a design spec
   remotion-validate     Validate a Remotion project structure
+  remotion-pipeline     Render + post-process in one step
 
 Global Options:
   --format text|json   Output format (default: text — rich tables & spinners)

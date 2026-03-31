@@ -87,6 +87,9 @@ def _result(result: Any) -> dict[str, Any]:
         if not data.get("thumbnail_base64"):
             data.pop("thumbnail_base64", None)
         return data
+    if isinstance(result, dict):
+        result.setdefault("success", True)
+        return result
     return {"success": True, "output_path": str(result)}
 
 
