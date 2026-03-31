@@ -59,7 +59,6 @@ __all__ = [
     "VisualQualityGuardrails",
     "add_generated_audio",
     "ai_color_grade",
-    # NEW: AI Features
     "ai_remove_silence",
     "ai_scene_detect",
     "ai_stem_separation",
@@ -70,33 +69,24 @@ __all__ = [
     "audio_preset",
     "audio_sequence",
     "audio_spatial",
-    # Audio synthesis
     "audio_synthesize",
     "auto_chapters",
-    # NEW: Design Quality
     "design_quality_check",
     "effect_chromatic_aberration",
     "effect_glow",
     "effect_noise",
     "effect_scanlines",
-    # Visual effects
     "effect_vignette",
     "fix_design_issues",
-    # Layout
     "layout_grid",
     "layout_pip",
-    # Motion graphics
     "mograph_count",
     "mograph_progress",
-    # NEW: Quality Guardrails
     "quality_check",
-    # Text
     "text_animated",
     "text_subtitles",
-    # NEW: Transitions
     "transition_glitch",
     "transition_morph",
     "transition_pixelate",
-    # Utility
     "video_info_detailed",
 ]

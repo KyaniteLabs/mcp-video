@@ -7,7 +7,7 @@ Thanks for your interest in improving mcp-video. This is a focused project — e
 ```bash
 # Clone and install dev dependencies
 git clone https://github.com/pastorsimon1798/mcp-video.git
-cd mcp_video
+cd mcp-video
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
@@ -23,25 +23,47 @@ pytest tests/test_engine.py -v
 
 ```
 mcp_video/
-├── engine.py       # All FFmpeg operations (the core)
-├── server.py       # MCP tool definitions
-├── client.py       # Python Client wrapper
-├── models.py       # Pydantic models
-├── errors.py       # Error types + FFmpeg error parsing
-├── templates.py    # Video templates (TikTok, YouTube, etc.)
-├── __main__.py     # CLI entry point
+├── __init__.py            # Exports Client + public API
+├── __main__.py            # CLI entry point (argparse + Rich)
+├── client.py              # Python Client API (wraps all engines)
+├── server.py              # MCP server (82 tools + 4 resources)
+├── engine.py              # Core FFmpeg engine (40 video operations)
+├── models.py              # Pydantic models (VideoInfo, EditResult, Timeline DSL)
+├── errors.py              # Error hierarchy + FFmpeg stderr parser
+├── templates.py           # Social media templates (TikTok, YouTube, Instagram)
+├── audio_engine.py        # Procedural audio synthesis (pure NumPy)
+├── effects_engine.py      # Visual effects + motion graphics (FFmpeg filters)
+├── transitions_engine.py  # Clip transitions (glitch, pixelate, morph)
+├── ai_engine.py           # AI features (Whisper, Demucs, Real-ESRGAN, spatial audio)
+├── remotion_engine.py     # Remotion CLI wrapper (render, studio, scaffold, validate)
+├── remotion_models.py     # Remotion data models
+├── image_engine.py        # Image color analysis (K-means, palette generation)
+├── image_models.py        # Image data models
+├── quality_guardrails.py  # Automated quality checks (brightness, contrast, audio)
+├── design_quality.py      # Design quality + auto-fix (layout, typography, motion)
+└── limits.py              # Resource validation constants (max 4h, 8K, 4GB)
 tests/
-├── conftest.py     # Shared fixtures (sample video, audio, etc.)
-├── test_models.py      # Model validation (no FFmpeg)
-├── test_errors.py      # Error parsing (no FFmpeg)
-├── test_templates.py   # Template functions (no FFmpeg)
-├── test_client.py      # Client API wrapper
-├── test_server.py      # MCP tool layer
-├── test_engine.py      # Core FFmpeg operations
-├── test_engine_advanced.py  # Edge cases, crop, rotate, fade, filters, validation
-├── test_cli.py         # CLI commands
-├── test_e2e.py         # Multi-step workflows
-└── test_real_media.py  # Real-media integration tests (iPhone footage)
+├── conftest.py                  # Shared fixtures (sample video, audio, etc.)
+├── test_models.py               # Model validation (no FFmpeg)
+├── test_errors.py               # Error parsing (no FFmpeg)
+├── test_templates.py            # Template functions (no FFmpeg)
+├── test_client.py               # Client API wrapper
+├── test_server.py               # MCP tool layer
+├── test_engine.py               # Core FFmpeg operations
+├── test_engine_advanced.py      # Edge cases, crop, rotate, fade, filters, validation
+├── test_cli.py                  # CLI commands
+├── test_e2e.py                  # Multi-step workflows
+├── test_ai_features.py          # AI tools (mocked where needed)
+├── test_audio_presets.py        # Audio preset validation
+├── test_transitions.py          # Transition effects
+├── test_quality_guardrails.py   # Quality scoring
+├── test_image_engine.py         # Color extraction, palettes
+├── test_adversarial_audit.py    # Security audit (injection, validation, bounds)
+├── test_red_team.py             # Red team tests
+├── test_remotion_engine.py      # Remotion CLI wrapper (mocked)
+├── test_real_media.py           # Real-media integration tests (marked @slow)
+├── test_real_all_features.py    # Real-media all-features sweep (marked @slow)
+└── test_real_exhaustive.py      # Exhaustive real-media tests (marked @slow)
 ```
 
 ## Making Changes
@@ -55,11 +77,12 @@ tests/
    - Return an `EditResult` with `duration`, `resolution`, `size_mb`
 2. **Model if needed** — Add any new Pydantic models to `models.py`
 3. **Error if needed** — Add error types to `errors.py` if the failure mode is distinct
-4. **Server** — Add the `@mcp.tool()` wrapper in `server.py`
+4. **Server** — Add the `@mcp.tool()` wrapper in `server.py` with parameter validation
 5. **Tests** — Add tests in the appropriate file:
    - `test_engine_advanced.py` for new operations
    - `test_server.py` for the MCP tool wrapper
    - `test_e2e.py` if it's a workflow-type operation
+   - `test_adversarial_audit.py` for any new validation/injection tests
 6. **Update counts** — README test counts and tool count
 
 ### Fixing a bug
@@ -72,8 +95,10 @@ tests/
 ## Code Conventions
 
 - **Error types matter** — Use `input_error` for validation failures, `processing_error` for FFmpeg failures, `dependency_error` for missing tools. Don't default to `unknown_error`.
+- **Validate in the server** — Parameter validation belongs in `server.py` (before calling the engine), not just in the engine. Use `_error_result(MCPVideoError(...))` for validation failures.
 - **Probe after processing** — Every operation that produces a video file should call `probe(output)` and return duration/resolution in the `EditResult`.
-- **Escape FFmpeg special chars** — Colons, backslashes, and single quotes must be escaped in filter strings (see `add_text` for the pattern).
+- **Escape FFmpeg special chars** — Colons, backslashes, brackets, semicolons, and single quotes must be escaped in filter strings (see `add_text` for the pattern).
+- **Validate paths** — Use `_validate_input()` (engine) or `_validate_input_path()` (effects/transitions) to reject null bytes and verify file existence.
 - **Sanitize output paths** — `_auto_output` replaces colons with underscores to prevent FFmpeg filter breakage.
 - **No shell=True** — All subprocess calls use list args, never shell strings.
 - **Keep it simple** — One function per operation. No classes for engines. No abstractions for one-time use.
@@ -83,9 +108,10 @@ tests/
 - Unit tests (models, errors, templates) must not need FFmpeg installed
 - Integration tests need FFmpeg and produce real video files
 - Every new tool needs at least: success case, error case (bad input), and one edge case
+- Add adversarial tests in `test_adversarial_audit.py` for any new validation
 - E2E tests chain multiple operations together
-- Run the full suite before pushing: `pytest tests/ -v --tb=short`
-- Target: 380+ tests, 0 failures
+- Run the full suite before pushing: `pytest tests/ -v -m "not slow" --tb=short`
+- Target: 825 tests, 0 failures
 
 ## Commit Messages
 
@@ -93,7 +119,7 @@ Keep them short and descriptive:
 ```
 Add crop operation for rectangular region extraction
 Fix colon escaping in drawtext filter strings
-Bump version to 0.1.1
+Bump version to 1.1.3
 ```
 
 ## Pull Request Process
@@ -101,7 +127,7 @@ Bump version to 0.1.1
 1. Fork the repo
 2. Create a feature branch (`git checkout -b feature/my-feature`)
 3. Make your changes with tests
-4. Run `pytest tests/ -v` — all must pass
+4. Run `pytest tests/ -v -m "not slow"` — all must pass
 5. Open a PR with a clear description of what changed and why
 
 ## Reporting Issues

@@ -1,6 +1,6 @@
 <p align="center">
   <img src="https://img.shields.io/badge/version-1.1.3-blue.svg" alt="Version">
-  <img src="https://img.shields.io/badge/tests-690%2B%20passed-brightgreen.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/tests-825%20passed-brightgreen.svg" alt="Tests">
   <a href="https://github.com/pastorsimon1798/mcp-video/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/pastorsimon1798/mcp-video/.github/workflows/ci.yml?branch=master&label=CI" alt="CI"></a>
   <a href="https://glama.ai/mcp/servers/pastorsimon1798/mcp-video"><img src="https://glama.ai/mcp/servers/pastorsimon1798/mcp-video/badges/score.svg" alt="Glama Score"></a>
   <img src="https://img.shields.io/badge/pypi-mcp--video-blue.svg" alt="PyPI">
@@ -13,7 +13,7 @@
 
 <p align="center">
   <strong>Video editing and creation for AI agents.</strong><br>
-  Edit existing video with FFmpeg. Create new video from code with Remotion. 82 tools. 3 interfaces. 690+ tests.
+  Edit existing video with FFmpeg. Create new video from code with Remotion. 82 tools. 3 interfaces. 825 tests.
 </p>
 
 <p align="center">
@@ -154,7 +154,7 @@ mcp-video template tiktok video.mp4 --caption "Check this out!"
 
 82 tools across 9 categories. All return structured JSON with `success`, `output_path`, and operation metadata. On failure, they return `{"success": false, "error": {...}}` with auto-fix suggestions.
 
-### Core Video (35 tools)
+### Core Video (40 tools)
 
 | Tool | Description |
 |------|-------------|
@@ -233,7 +233,7 @@ Generate audio from code — no external audio files needed. Pure NumPy, no extr
 | Tool | Description |
 |------|-------------|
 | `audio_synthesize` | Generate waveforms: sine, square, sawtooth, triangle, noise. With envelopes, reverb, filtering. |
-| `audio_preset` | 16+ pre-configured sounds: UI blips, ambient drones, notification chimes, data sounds |
+| `audio_preset` | 18 pre-configured sounds: UI blips, ambient drones, notification chimes, data sounds |
 | `audio_sequence` | Compose timed audio events into a layered track |
 | `audio_compose` | Mix multiple WAV tracks with individual volume control |
 | `audio_effects` | Apply effects chain: lowpass, reverb, normalize, fade |
@@ -384,7 +384,7 @@ editor = Client()
 | `blur(video, radius?, strength?, output?)` | `EditResult` | Blur video |
 | `color_grade(video, preset?, output?)` | `EditResult` | Apply color preset |
 | `normalize_audio(video, target_lufs?, output?)` | `EditResult` | Normalize audio to LUFS target |
-| `overlay(background, overlay, position?, width?, opacity?, start_time?, duration?, output?)` | `EditResult` | Picture-in-picture overlay |
+| `overlay_video(background, overlay, position?, width?, opacity?, start_time?, duration?, output?)` | `EditResult` | Picture-in-picture overlay |
 | `split_screen(left, right, layout?, output?)` | `EditResult` | Side-by-side or top/bottom layout |
 | `reverse(video, output?)` | `EditResult` | Reverse video and audio playback |
 | `chroma_key(video, color?, similarity?, blend?, output?)` | `EditResult` | Remove solid color background |
@@ -674,7 +674,7 @@ mcp_video/
 ├── __main__.py            # CLI entry point (argparse + Rich)
 ├── client.py              # Python Client API (wraps all engines)
 ├── server.py              # MCP server (82 tools + 4 resources)
-├── engine.py              # Core FFmpeg engine (35 video operations)
+├── engine.py              # Core FFmpeg engine (40 video operations)
 ├── models.py              # Pydantic models (VideoInfo, EditResult, Timeline DSL)
 ├── errors.py              # Error hierarchy + FFmpeg stderr parser
 ├── templates.py           # Social media templates (TikTok, YouTube, Instagram)
@@ -702,7 +702,7 @@ mcp_video/
 
 ## Testing
 
-690+ tests across 22 test files. All features tested with real FFmpeg operations on real media — no mocks, no stubs. Includes an adversarial security audit.
+825 tests across 22 test files. All features tested with real FFmpeg operations on real media — no mocks, no stubs. Includes an adversarial security audit.
 
 ```bash
 # Install dev dependencies

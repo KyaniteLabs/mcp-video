@@ -1,6 +1,6 @@
 # Improvement Roadmap
 
-v1.0.0 shipped. 82 MCP tools, 690+ tests, security audited. Here's what's next.
+v1.1.3 shipped. 82 MCP tools, 825 tests, security audited. Here's what's next.
 
 ---
 
