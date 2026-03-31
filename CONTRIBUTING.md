@@ -30,6 +30,8 @@ mcp_video/
 ├── engine.py              # Core FFmpeg engine (40 video operations)
 ├── models.py              # Pydantic models (VideoInfo, EditResult, Timeline DSL)
 ├── errors.py              # Error hierarchy + FFmpeg stderr parser
+├── validation.py          # Centralized validation helpers & constants (v1.2.0)
+├── ffmpeg_helpers.py      # Shared FFmpeg utilities (escape, validate, run) (v1.2.0)
 ├── templates.py           # Social media templates (TikTok, YouTube, Instagram)
 ├── audio_engine.py        # Procedural audio synthesis (pure NumPy)
 ├── effects_engine.py      # Visual effects + motion graphics (FFmpeg filters)
@@ -97,8 +99,8 @@ tests/
 - **Error types matter** — Use `input_error` for validation failures, `processing_error` for FFmpeg failures, `dependency_error` for missing tools. Don't default to `unknown_error`.
 - **Validate in the server** — Parameter validation belongs in `server.py` (before calling the engine), not just in the engine. Use `_error_result(MCPVideoError(...))` for validation failures.
 - **Probe after processing** — Every operation that produces a video file should call `probe(output)` and return duration/resolution in the `EditResult`.
-- **Escape FFmpeg special chars** — Colons, backslashes, brackets, semicolons, and single quotes must be escaped in filter strings (see `add_text` for the pattern).
-- **Validate paths** — Use `_validate_input()` (engine) or `_validate_input_path()` (effects/transitions) to reject null bytes and verify file existence.
+- **Escape FFmpeg special chars** — Use `_escape_ffmpeg_filter_value()` from `ffmpeg_helpers.py` for paths/values going into FFmpeg filter strings.
+- **Validate paths** — Use `_validate_input()` (engine) or `_validate_input_path()` (effects/transitions) to reject null bytes and verify file existence. Use helpers from `validation.py` for parameter validation.
 - **Sanitize output paths** — `_auto_output` replaces colons with underscores to prevent FFmpeg filter breakage.
 - **No shell=True** — All subprocess calls use list args, never shell strings.
 - **Keep it simple** — One function per operation. No classes for engines. No abstractions for one-time use.
@@ -111,7 +113,7 @@ tests/
 - Add adversarial tests in `test_adversarial_audit.py` for any new validation
 - E2E tests chain multiple operations together
 - Run the full suite before pushing: `pytest tests/ -v -m "not slow" --tb=short`
-- Target: 825 tests, 0 failures
+- Target: 832 tests, 0 failures (707 fast, 116 slow/remotion)
 
 ## Commit Messages
 
@@ -119,7 +121,7 @@ Keep them short and descriptive:
 ```
 Add crop operation for rectangular region extraction
 Fix colon escaping in drawtext filter strings
-Bump version to 1.1.5
+Bump version to 1.2.0
 ```
 
 ## Pull Request Process

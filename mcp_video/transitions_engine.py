@@ -1,55 +1,7 @@
 """Video transition effects using FFmpeg."""
 
-import os
-import subprocess
-
-from .errors import ProcessingError, InputFileError
-
-
-def _validate_input_path(path: str) -> str:
-    """Validate and resolve a file path. Rejects null bytes and symlinks."""
-    if "\x00" in path:
-        raise InputFileError(path, "Path contains null bytes")
-    resolved = os.path.realpath(path)
-    if not os.path.isfile(resolved):
-        raise InputFileError(resolved)
-    return resolved
-
-
-# ---------------------------------------------------------------------------
-# Helper
-# ---------------------------------------------------------------------------
-
-
-def _run_ffmpeg(cmd: list[str], timeout: int = 600) -> subprocess.CompletedProcess[str]:
-    """Run an FFmpeg/FFprobe command with timeout and error handling."""
-    # Ensure output directory exists
-    for arg in reversed(cmd):
-        if not arg.startswith("-") and not arg.startswith("ffmpeg") and not arg.startswith("ffprobe"):
-            out_dir = os.path.dirname(arg)
-            if out_dir:
-                os.makedirs(out_dir, exist_ok=True)
-            break
-    cmd_str = " ".join(cmd)
-    try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
-    except subprocess.TimeoutExpired:
-        raise ProcessingError(cmd_str, -1, f"FFmpeg command timed out after {timeout}s") from None
-    if result.returncode != 0:
-        raise ProcessingError(cmd_str, result.returncode, result.stderr)
-    return result
-
-
-def _get_video_duration(video_path: str) -> float:
-    """Get video duration using ffprobe."""
-    cmd = [
-        "ffprobe", "-v", "error",
-        "-show_entries", "format=duration",
-        "-of", "default=noprint_wrappers=1:nokey=1",
-        video_path
-    ]
-    result = _run_ffmpeg(cmd)
-    return float(result.stdout.strip())
+from .ffmpeg_helpers import _validate_input_path, _run_ffmpeg, _get_video_duration
+from .errors import MCPVideoError
 
 
 def transition_glitch(
@@ -73,6 +25,12 @@ def transition_glitch(
     """
     clip1 = _validate_input_path(clip1)
     clip2 = _validate_input_path(clip2)
+
+    if duration <= 0:
+        raise MCPVideoError("duration must be positive", error_type="validation_error", code="invalid_parameter")
+    if not (0.0 <= intensity <= 1.0):
+        raise MCPVideoError("intensity must be 0-1", error_type="validation_error", code="invalid_parameter")
+
     # Get duration of first clip to calculate offset
     clip1_duration = _get_video_duration(clip1)
     offset = clip1_duration - duration
@@ -84,7 +42,7 @@ def transition_glitch(
     # Calculate intensity-based parameters
     # Intensity 0-1 maps to RGB shift of 0-20 pixels
     rgb_shift = int(intensity * 20)
-    noise_amount = intensity * 0.1
+    noise_amount = int(intensity * 10)
 
     # Use rgbashift filter for RGB channel shifting
     # More reliable than geq which has complex escaping requirements
@@ -135,6 +93,12 @@ def transition_pixelate(
     """
     clip1 = _validate_input_path(clip1)
     clip2 = _validate_input_path(clip2)
+
+    if pixel_size < 2:
+        raise MCPVideoError("pixel_size must be at least 2", error_type="validation_error", code="invalid_parameter")
+    if duration <= 0:
+        raise MCPVideoError("duration must be positive", error_type="validation_error", code="invalid_parameter")
+
     # Get duration of first clip to calculate offset
     clip1_duration = _get_video_duration(clip1)
     offset = clip1_duration - duration
@@ -209,6 +173,12 @@ def transition_morph(
     """
     clip1 = _validate_input_path(clip1)
     clip2 = _validate_input_path(clip2)
+
+    if duration <= 0:
+        raise MCPVideoError("duration must be positive", error_type="validation_error", code="invalid_parameter")
+    if mesh_size < 2:
+        raise MCPVideoError("mesh_size must be at least 2", error_type="validation_error", code="invalid_parameter")
+
     # Get duration of first clip to calculate offset
     clip1_duration = _get_video_duration(clip1)
     offset = clip1_duration - duration

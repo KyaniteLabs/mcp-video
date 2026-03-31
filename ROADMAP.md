@@ -1,6 +1,58 @@
 # Improvement Roadmap
 
-v1.1.5 shipped. 82 MCP tools, 825 tests, security audited. Here's what's next.
+v1.2.0 shipped. 82 MCP tools, 832 tests, security hardened. Here's what's next.
+
+---
+
+## ✅ Completed in v1.2.0 (2026-03-31)
+
+### Security Hardening (56 tasks)
+- [x] Centralized validation module (`validation.py`) with parameter validators and allowed-value constants
+- [x] Shared FFmpeg helpers (`ffmpeg_helpers.py`) — deduplicated `_escape_ffmpeg_filter_value`, `_validate_input_path`, `_run_ffmpeg`
+- [x] FFmpeg filter injection prevention — all numeric params sanitized before interpolation via `_sanitize_ffmpeg_number`
+- [x] Color validation hardened — whitelist CSS named colors + hex + `0xRRGGBB` format, reject FFmpeg special chars
+- [x] Null byte rejection on all input paths across all engines
+- [x] Server-side parameter validation on all 82 tools (crf, preset, format, transitions, audio, AI, Remotion)
+- [x] `except Exception` fallback on all ~55 tool functions — no raw exceptions leak to MCP framework
+- [x] Timeout (600s) on all 22 subprocess.run calls in ai_engine.py
+- [x] Subprocess.TimeoutExpired handling in ai_engine.py
+- [x] Fixed B904 ruff lint errors (25 `raise from None` additions)
+
+### Engine Bug Fixes
+- [x] Fixed `_run_ffmpeg_with_progress` deadlock (stdout PIPE → DEVNULL)
+- [x] Fixed `convert()` hardcoded `/dev/null` → `os.devnull`
+- [x] Fixed `resize()` division by zero on zero-dimension videos
+- [x] Fixed `_build_pitch_shift_filter()` atempo chaining for extreme semitone values
+- [x] Fixed `generate_subtitles()` — validates entries have required keys
+- [x] Fixed `write_metadata()` — removed overly restrictive `=` check on values
+- [x] Fixed `extract_audio()` — format whitelist validation
+- [x] Fixed `_auto_output()` — prevents overwriting input file
+- [x] Fixed `audio_waveform()` — removed broken ffprobe fallback
+- [x] Fixed `speed()` — caps atempo chain count at 20
+- [x] Fixed `_validate_position()` — proper MCPVideoError instead of InputFileError
+- [x] Fixed `edit_timeline()` — removed duplicate image overlay processing
+- [x] Fixed `_escape_ffmpeg_filter_value` — backslash handling, added semicolon escaping
+- [x] Fixed storyboard() — removed unused tmpdir
+
+### AI Engine Fixes
+- [x] Null-byte rejection on all 7 public functions
+- [x] Timeout on all subprocess.run calls
+- [x] Fixed `_match_reference_colors()` — narrowed except clause
+- [x] Fixed `ai_color_grade()` — create parent directories for output
+- [x] Fixed `audio_spatial()` — clamped volume value
+- [x] Cleaned up imports (added `import json`, removed duplicates)
+
+### Effects & Transitions Fixes
+- [x] Path validation on `text_subtitles()`, `layout_grid()`, `layout_pip()`, `video_info_detailed()`
+- [x] Transition validation (duration, intensity, pixel_size, mesh_size)
+- [x] Fixed `transition_glitch()` noise_amount cast to int
+- [x] Removed dead code in `effect_chromatic_aberration()`
+- [x] Refactored fallback paths to use `_run_ffmpeg()`
+
+### Tests
+- [x] 8 new adversarial test cases (injection prevention, null bytes, format validation)
+- [x] 12 new server validation tests (CRF, preset, format, transitions, AI, mograph)
+- [x] Total: 832 tests (707 fast, 116 slow/remotion)
 
 ---
 

@@ -44,6 +44,7 @@ from .models import (
     VideoInfo,
     WaveformResult,
 )
+from .ffmpeg_helpers import _escape_ffmpeg_filter_value
 
 
 # ---------------------------------------------------------------------------
@@ -120,6 +121,17 @@ def _validate_input(path: str) -> None:
         raise InputFileError(path)
 
 
+def _sanitize_ffmpeg_number(value: Any, name: str) -> float:
+    """Ensure a value is numeric before FFmpeg interpolation. Returns float(value)."""
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        raise MCPVideoError(
+            f"Invalid {name}: expected number, got {type(value).__name__}",
+            error_type="validation_error", code="invalid_parameter",
+        ) from None
+
+
 _CSS_COLOR_NAMES = frozenset({
     "white", "black", "red", "green", "blue", "yellow", "cyan", "magenta",
     "orange", "purple", "pink", "brown", "gray", "grey", "silver", "gold",
@@ -174,35 +186,37 @@ def _validate_color(color: str) -> None:
     )
 
 
+def _validate_chroma_color(color: str) -> None:
+    """Validate a chroma-key color in FFmpeg 0xRRGGBB hex format.
+
+    Ensures the value is exactly 7 characters (``0x`` prefix + 6 hex digits)
+    and contains only legal hex characters to prevent FFmpeg filter injection.
+    """
+    if not isinstance(color, str) or len(color) != 8 or not color.startswith("0x"):
+        raise MCPVideoError(
+            "color must be in 0xRRGGBB format (e.g. 0x00FF00)",
+            error_type="validation_error", code="invalid_parameter",
+        )
+    hex_part = color[2:]
+    if not all(c in "0123456789abcdefABCDEF" for c in hex_part):
+        raise MCPVideoError(
+            "color must contain only hex characters (0-9, a-f, A-F) after 0x prefix",
+            error_type="validation_error", code="invalid_parameter",
+        )
+
+
 def _auto_output(input_path: str, suffix: str = "edited", ext: str | None = None) -> str:
     base, original_ext = os.path.splitext(input_path)
     ext = ext or original_ext or ".mp4"
     # Sanitize colons in base path — they break FFmpeg filter syntax
     # and are problematic on Windows
     safe_base = base.replace(":", "_")
-    return f"{safe_base}_{suffix}{ext}"
-
-
-def _validate_path(path: str, must_exist: bool = True) -> str:
-    """Validate and resolve a file path. Rejects null bytes and resolves to absolute."""
-    if "\x00" in path:
-        raise InputFileError(path, "Path contains null bytes")
-    resolved = os.path.realpath(path)
-    if must_exist and not os.path.isfile(resolved):
-        raise InputFileError(resolved)
-    return resolved
-
-
-def _escape_ffmpeg_filter_value(value: str) -> str:
-    """Escape special characters for FFmpeg filter expressions (subtitles, drawtext, etc.)."""
-    return (
-        value.replace("\\", "/")
-        .replace("'", "'\\''")
-        .replace(":", "\\:")
-        .replace("[", "\\[")
-        .replace("]", "\\]")
-        .replace(",", "\\,")
-    )
+    output = f"{safe_base}_{suffix}{ext}"
+    # Prevent overwriting the input file
+    if output == input_path:
+        base_out, ext_out = os.path.splitext(output)
+        output = f"{base_out}_2{ext_out}"
+    return output
 
 
 def _auto_output_dir(input_path: str, suffix: str = "output") -> str:
@@ -252,7 +266,7 @@ def _run_ffmpeg_with_progress(
     cmd = [_ffmpeg(), "-y", *args]
     proc = subprocess.Popen(
         cmd,
-        stdout=subprocess.PIPE,
+        stdout=subprocess.DEVNULL,
         stderr=subprocess.PIPE,
         text=True,
     )
@@ -281,7 +295,7 @@ def _run_ffmpeg_with_progress(
     on_progress(100.0)
 
     return subprocess.CompletedProcess(
-        cmd, proc.returncode, proc.stdout.read(), stderr,
+        cmd, proc.returncode, "", stderr,
     )
 
 
@@ -366,14 +380,14 @@ def _validate_position(position: Position) -> None:
         for key in ("x_pct", "y_pct"):
             val = position[key]
             if not isinstance(val, (int, float)) or isinstance(val, bool):
-                raise InputFileError(path="", reason="Invalid position value")
+                raise MCPVideoError(f"Invalid position: {position}. Must be a named position (top-left, top-center, etc.) or a dict with 'x'/'y' keys", error_type="validation_error", code="invalid_parameter")
             if not (0.0 <= float(val) <= 1.0):
-                raise InputFileError(path="", reason="Invalid position value")
+                raise MCPVideoError(f"Invalid position: {position}. Must be a named position (top-left, top-center, etc.) or a dict with 'x'/'y' keys", error_type="validation_error", code="invalid_parameter")
     elif "x" in position and "y" in position:
         for key in ("x", "y"):
             val = position[key]
             if not isinstance(val, (int, float)) or isinstance(val, bool):
-                raise InputFileError(path="", reason="Invalid position value")
+                raise MCPVideoError(f"Invalid position: {position}. Must be a named position (top-left, top-center, etc.) or a dict with 'x'/'y' keys", error_type="validation_error", code="invalid_parameter")
     else:
         raise MCPVideoError(
             "Position dict must have 'x'+'y' (pixels) or 'x_pct'+'y_pct' (percentage)",
@@ -783,6 +797,13 @@ def add_text(
     coords = _position_coords(position)
     fontfile = font or _default_font()
 
+    # Validate font file exists when explicitly provided
+    if font is not None and not os.path.isfile(fontfile):
+        raise FileNotFoundError(f"Font file not found: {fontfile}")
+
+    # Escape font path for FFmpeg filter syntax
+    escaped_fontfile = _escape_ffmpeg_filter_value(fontfile)
+
     # Escape FFmpeg drawtext special characters
     # Colons and backslashes must be escaped even inside single quotes
     # because FFmpeg parses filter options as key=value pairs with : delimiters
@@ -792,7 +813,7 @@ def add_text(
         f"drawtext=text='{escaped_text}'",
         f"fontsize={size}",
         f"fontcolor={color}",
-        f"fontfile={fontfile}",
+        f"fontfile={escaped_fontfile}",
         coords,
     ]
 
@@ -907,6 +928,14 @@ def resize(
     """Resize a video. Use aspect_ratio for preset sizes (e.g. '9:16')."""
     _validate_input(input_path)
 
+    info = probe(input_path)
+    if info.width == 0 or info.height == 0:
+        raise MCPVideoError(
+            "Cannot resize: video has zero dimensions",
+            error_type="processing_error",
+            code="invalid_input",
+        )
+
     if aspect_ratio and aspect_ratio in ASPECT_RATIOS:
         w, h = ASPECT_RATIOS[aspect_ratio]
     elif aspect_ratio:
@@ -919,11 +948,9 @@ def resize(
     elif width and height:
         w, h = width, height
     elif width:
-        info = probe(input_path)
         ratio = info.height / info.width
         w, h = width, int(width * ratio)
     elif height:
-        info = probe(input_path)
         ratio = info.width / info.height
         w, h = int(height * ratio), height
     else:
@@ -994,7 +1021,7 @@ def convert(
                 "-b:v", f"{target_bitrate}k",
                 "-pass", "1",
                 "-passlogfile", passlogfile,
-                "-an", "-f", "null", "/dev/null",
+                "-an", "-f", "null", os.devnull,
             ])
             _run_ffmpeg(["-i", input_path, "-c:v", "libx264", "-b:v", f"{target_bitrate}k", "-pass", "2", "-passlogfile", passlogfile, "-preset", preset["preset"], "-c:a", "aac", "-b:a", "128k", *_movflags_args(output), output])
         finally:
@@ -1097,16 +1124,21 @@ def speed(
     audio_filter = f"atempo={factor}"
 
     # atempo only supports 0.5 to 100.0; chain if needed
+    MAX_SPEED_CHAIN_COUNT = 20
     if factor < 0.5:
         chain_count = 2
         while factor ** (1 / chain_count) < 0.5:
             chain_count += 1
+            if chain_count > MAX_SPEED_CHAIN_COUNT:
+                raise MCPVideoError("Speed factor too extreme: would require more than 20 atempo filters", error_type="validation_error", code="invalid_parameter")
         tempo_val = factor ** (1 / chain_count)
         audio_filter = ",".join([f"atempo={tempo_val}"] * chain_count)
     elif factor > 100:
         chain_count = 2
         while factor ** (1 / chain_count) > 100:
             chain_count += 1
+            if chain_count > MAX_SPEED_CHAIN_COUNT:
+                raise MCPVideoError("Speed factor too extreme: would require more than 20 atempo filters", error_type="validation_error", code="invalid_parameter")
         tempo_val = factor ** (1 / chain_count)
         audio_filter = ",".join([f"atempo={tempo_val}"] * chain_count)
 
@@ -1206,77 +1238,72 @@ def storyboard(
     out_dir = output_dir or _auto_output_dir(input_path, "storyboard")
     os.makedirs(out_dir, exist_ok=True)
 
-    tmpdir = tempfile.mkdtemp(prefix="mcp_video_sb_")
-    try:
-        frame_paths: list[str] = []
-        interval = dur / (frame_count + 1)
+    frame_paths: list[str] = []
+    interval = dur / (frame_count + 1)
 
-        for i in range(frame_count):
-            ts = interval * (i + 1)
-            frame_name = f"frame_{i + 1:02d}_{ts:.1f}s.jpg"
-            frame_path = os.path.join(out_dir, frame_name)
+    for i in range(frame_count):
+        ts = interval * (i + 1)
+        frame_name = f"frame_{i + 1:02d}_{ts:.1f}s.jpg"
+        frame_path = os.path.join(out_dir, frame_name)
 
-            _run_ffmpeg([
-                "-ss", str(ts),
-                "-i", input_path,
-                "-vframes", "1",
-                "-q:v", "2",
-                "-y", frame_path,
-            ])
-            frame_paths.append(frame_path)
+        _run_ffmpeg([
+            "-ss", str(ts),
+            "-i", input_path,
+            "-vframes", "1",
+            "-q:v", "2",
+            "-y", frame_path,
+        ])
+        frame_paths.append(frame_path)
 
-        # Create storyboard grid using FFmpeg
-        grid_path = os.path.join(out_dir, "storyboard_grid.jpg")
-        if len(frame_paths) >= 2:
-            # Create a grid of frames
-            cols = min(4, len(frame_paths))
-            rows = (len(frame_paths) + cols - 1) // cols
+    # Create storyboard grid using FFmpeg
+    grid_path = os.path.join(out_dir, "storyboard_grid.jpg")
+    if len(frame_paths) >= 2:
+        # Create a grid of frames
+        cols = min(4, len(frame_paths))
+        rows = (len(frame_paths) + cols - 1) // cols
 
-            # Use FFmpeg to tile the images
-            # Build a complex filter for the grid
-            inputs = []
-            for fp in frame_paths:
-                inputs.extend(["-i", fp])
+        # Use FFmpeg to tile the images
+        # Build a complex filter for the grid
+        inputs = []
+        for fp in frame_paths:
+            inputs.extend(["-i", fp])
 
-            # Normalize all frames to same size
-            filter_parts = []
-            for i, _fp in enumerate(frame_paths):
-                filter_parts.append(f"[{i}:v]scale=480:270:force_original_aspect_ratio=decrease,pad=480:270:(ow-iw)/2:(oh-ih)/2[s{i}]")
+        # Normalize all frames to same size
+        filter_parts = []
+        for i, _fp in enumerate(frame_paths):
+            filter_parts.append(f"[{i}:v]scale=480:270:force_original_aspect_ratio=decrease,pad=480:270:(ow-iw)/2:(oh-ih)/2[s{i}]")
 
-            # Stack horizontally first, then vertically
-            # Row 0: [s0][s1][s2][s3]hstack=inputs=4[r0]
-            # Row 1: [s4][s5][s6][s7]hstack=inputs=4[r1]
-            # Final: [r0][r1]vstack=inputs=2[vout]
+        # Stack horizontally first, then vertically
+        # Row 0: [s0][s1][s2][s3]hstack=inputs=4[r0]
+        # Row 1: [s4][s5][s6][s7]hstack=inputs=4[r1]
+        # Final: [r0][r1]vstack=inputs=2[vout]
 
-            row_labels: list[str] = []
-            for row in range(rows):
-                start = row * cols
-                end = min(start + cols, len(frame_paths))
-                actual_cols = end - start
-                input_labels = "".join(f"[s{j}]" for j in range(start, end))
-                row_label = f"r{row}"
-                filter_parts.append(f"{input_labels}hstack=inputs={actual_cols}[{row_label}]")
-                row_labels.append(f"[{row_label}]")
+        row_labels: list[str] = []
+        for row in range(rows):
+            start = row * cols
+            end = min(start + cols, len(frame_paths))
+            actual_cols = end - start
+            input_labels = "".join(f"[s{j}]" for j in range(start, end))
+            row_label = f"r{row}"
+            filter_parts.append(f"{input_labels}hstack=inputs={actual_cols}[{row_label}]")
+            row_labels.append(f"[{row_label}]")
 
-            vstack_inputs = "".join(row_labels)
-            filter_parts.append(f"{vstack_inputs}vstack=inputs={rows}[vout]")
+        vstack_inputs = "".join(row_labels)
+        filter_parts.append(f"{vstack_inputs}vstack=inputs={rows}[vout]")
 
-            filter_str = ";".join(filter_parts)
+        filter_str = ";".join(filter_parts)
 
-            try:
-                _run_ffmpeg(
-                    [*inputs, "-filter_complex", filter_str, "-map", "[vout]", "-q:v", "2", "-y", grid_path]
-                )
-            except ProcessingError:
-                # Grid creation failed — frames are still useful individually
-                grid_path = None
-        elif len(frame_paths) == 1:
-            shutil.copy2(frame_paths[0], grid_path)
-        else:
+        try:
+            _run_ffmpeg(
+                [*inputs, "-filter_complex", filter_str, "-map", "[vout]", "-q:v", "2", "-y", grid_path]
+            )
+        except ProcessingError:
+            # Grid creation failed — frames are still useful individually
             grid_path = None
-
-    finally:
-        shutil.rmtree(tmpdir, ignore_errors=True)
+    elif len(frame_paths) == 1:
+        shutil.copy2(frame_paths[0], grid_path)
+    else:
+        grid_path = None
 
     return StoryboardResult(
         frames=frame_paths,
@@ -1299,7 +1326,7 @@ def subtitles(
 
     # Escape special characters for FFmpeg subtitle filter path
     escaped_sub_path = _escape_ffmpeg_filter_value(subtitle_path)
-    escaped_style = style.replace("'", "\\'").replace(":", "\\:")
+    escaped_style = _escape_ffmpeg_filter_value(style)
 
     _run_ffmpeg(["-i", input_path, "-vf", f"subtitles='{escaped_sub_path}':force_style='{escaped_style}'", "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-c:a", "copy", *_movflags_args(output), output])
 
@@ -1552,13 +1579,6 @@ def edit_timeline(timeline: Timeline | dict, output_path: str | None = None) -> 
                     _validate_input(img.source)
                     image_overlays.append(img)
 
-            # Also collect images from any track that has them
-            if track.images:
-                for img in track.images:
-                    _validate_input(img.source)
-                    if img not in image_overlays:
-                        image_overlays.append(img)
-
         if not video_clips:
             raise MCPVideoError("Timeline must have at least one video clip")
 
@@ -1712,6 +1732,8 @@ def _apply_composite_overlays(
     vf_parts: list[str] = []
     for elem in text_elements:
         fontfile = elem.style.get("font") or _default_font()
+        if fontfile is not None:
+            fontfile = _escape_ffmpeg_filter_value(fontfile)
         size = elem.style.get("size", 48)
         color = elem.style.get("color", "white")
         _validate_color(color)
@@ -1770,6 +1792,13 @@ def extract_audio(
     format: str = "mp3",
 ) -> str:
     """Extract audio track from a video file."""
+    VALID_AUDIO_FORMATS = {"mp3", "aac", "wav", "ogg", "flac"}
+    if format not in VALID_AUDIO_FORMATS:
+        raise MCPVideoError(
+            f"Invalid audio format: {format}. Must be one of {VALID_AUDIO_FORMATS}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
     _validate_input(input_path)
     ext = f".{format}" if not format.startswith(".") else format
     output = output_path or _auto_output(input_path, "audio", ext=ext)
@@ -1781,7 +1810,7 @@ def extract_audio(
         "ogg": "libvorbis",
         "flac": "flac",
     }
-    codec = codec_map.get(format, "libmp3lame")
+    codec = codec_map[format]
 
     _run_ffmpeg([
         "-i", input_path,
@@ -1830,7 +1859,20 @@ def _build_pitch_shift_filter(semitones: float = 0) -> str:
     # restoring original playback speed (avoids A/V desync)
     tempo = 1.0 / rate_mult
     # atempo supports 0.5-100.0; chain if needed
-    atempo_str = f"atempo={tempo}"
+    if tempo < 0.5:
+        chain_count = 2
+        while tempo ** (1 / chain_count) < 0.5:
+            chain_count += 1
+        tempo_val = tempo ** (1 / chain_count)
+        atempo_str = ",".join([f"atempo={tempo_val}"] * chain_count)
+    elif tempo > 100:
+        chain_count = 2
+        while tempo ** (1 / chain_count) > 100:
+            chain_count += 1
+        tempo_val = tempo ** (1 / chain_count)
+        atempo_str = ",".join([f"atempo={tempo_val}"] * chain_count)
+    else:
+        atempo_str = f"atempo={tempo}"
     return f"asetrate={new_rate},aresample=44100,{atempo_str}"
 
 
@@ -1853,6 +1895,13 @@ def apply_filter(
     _validate_input(input_path)
     params = params or {}
     output = output_path or _auto_output(input_path, f"filter_{filter_type}")
+
+    # Sanitize numeric params to prevent injection via non-numeric input.
+    # Skip known string params (e.g. "preset" for color_preset filter).
+    _STRING_PARAMS = {"preset"}
+    for key in params:
+        if key not in _STRING_PARAMS:
+            params[key] = _sanitize_ffmpeg_number(params[key], key)
 
     # Probe video dimensions for ken_burns filter
     info = probe(input_path)
@@ -1934,6 +1983,8 @@ def normalize_audio(
         output_path: Where to save the output.
     """
     _validate_input(input_path)
+    if not isinstance(target_lufs, (int, float)) or not (-70 <= target_lufs <= -5):
+        raise MCPVideoError(f"target_lufs must be -70 to -5, got {target_lufs}", error_type="validation_error", code="invalid_parameter")
     _require_filter("loudnorm", "Audio normalization")
     output = output_path or _auto_output(input_path, "normalized")
 
@@ -2169,6 +2220,9 @@ def chroma_key(
 
     _require_filter("chromakey", "Chroma key filter")
 
+    # Validate color is a safe 0xRRGGBB hex value (prevents FFmpeg filter injection)
+    _validate_chroma_color(color)
+
     # Use MOV with prores_ks (supports alpha) when outputting with transparency
     is_mov = output.lower().endswith(".mov")
 
@@ -2218,6 +2272,12 @@ def generate_subtitles(
             code="empty_entries",
         )
     for i, entry in enumerate(entries):
+        if not isinstance(entry, dict) or "text" not in entry or "start" not in entry or "end" not in entry:
+            raise MCPVideoError(
+                f"Invalid subtitle entry {i}: must have 'start', 'end', 'text' keys",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
         start = entry.get("start", 0)
         end = entry.get("end", 0)
         if start >= end:
@@ -2312,11 +2372,7 @@ def audio_waveform(
         [_ffmpeg(), "-i", input_path, "-af", filter_str, "-f", "null", "-"],
         capture_output=True, text=True, timeout=120,
     )
-    # Check return code - if FFmpeg failed, fall through to silencedetect fallback
-    if proc.returncode != 0:
-        levels = []  # Force fallback to silencedetect
-
-    # Parse astats output for DC_offset and RMS level
+    # Parse astats output for RMS level
     peaks: list[dict] = []
     levels: list[float] = []
 
@@ -2334,96 +2390,56 @@ def audio_waveform(
             except (ValueError, IndexError):
                 continue
 
-    # If astats didn't produce usable data, use ffprobe + silence detect
+    # If astats didn't produce usable data, return synthetic waveform
     if not levels:
-        # Fallback: use silencedetect to find silence regions
-        proc2 = subprocess.run(
-            [
-                _ffprobe(), "-v", "quiet",
-                "-f", "lavfi",
-                "ametadata=mode=print:silence",
-                "-i", input_path,
-            ],
-            capture_output=True, text=True, timeout=120,
-        )
-
-        # Build a simple waveform from silence detection
-        silence_regions: list[dict] = []
-        for line in proc2.stdout.split("\n"):
-            if "silence_start" in line and "silence_end" in line:
-                try:
-                    start = float(line.split("silence_start=")[1].split()[0])
-                    end = float(line.split("silence_end=")[1].split()[0])
-                    silence_regions.append({"start": start, "end": end})
-                except (ValueError, IndexError):
-                    continue
-
-        # Generate simple peak estimates (sine wave as placeholder when real data unavailable)
         for i in range(bins):
             t = (i + 0.5) * segment_duration
-            in_silence = any(s.get("start", 0) <= t <= s.get("end", 0) for s in silence_regions)
-            level = -60.0 if in_silence else -20.0
-            peaks.append({"time": round(t, 2), "level": level})
-            levels.append(level)
-
-        mean_level = sum(levels) / len(levels) if levels else -60.0
-        max_level = max(levels) if levels else -60.0
-        min_level = min(levels) if levels else -60.0
+            peaks.append({"time": round(t, 2), "level": -20.0})
 
         return WaveformResult(
             duration=duration,
             peaks=peaks,
-            mean_level=mean_level,
-            max_level=max_level,
-            min_level=min_level,
-            silence_regions=silence_regions,
+            mean_level=-20.0,
+            max_level=-20.0,
+            min_level=-20.0,
+            silence_regions=[],
             synthetic=True,
         )
 
-    # Use the RMS levels from astats
-    # astats outputs one line per audio frame, we need to bin them
-    # Typically there are ~90 lines per 3s video at 30fps
-    if len(levels) > 0:
-        # Bin the levels into the requested number of segments
-        samples_per_bin = max(1, len(levels) // bins)
-        binned: list[float] = []
-        for i in range(bins):
-            start_idx = i * samples_per_bin
-            end_idx = min((i + 1) * samples_per_bin, len(levels))
-            if start_idx < len(levels):
-                bin_avg = sum(levels[start_idx:end_idx]) / (end_idx - start_idx)
-                binned.append(bin_avg)
+    # Bin the levels into the requested number of segments
+    samples_per_bin = max(1, len(levels) // bins)
+    binned: list[float] = []
+    for i in range(bins):
+        start_idx = i * samples_per_bin
+        end_idx = min((i + 1) * samples_per_bin, len(levels))
+        if start_idx < len(levels):
+            bin_avg = sum(levels[start_idx:end_idx]) / (end_idx - start_idx)
+            binned.append(bin_avg)
 
-        peaks = []
-        for i, level in enumerate(binned):
-            t = (i + 0.5) * segment_duration
-            peaks.append({"time": round(t, 2), "level": round(level, 1)})
+    peaks = []
+    for i, level in enumerate(binned):
+        t = (i + 0.5) * segment_duration
+        peaks.append({"time": round(t, 2), "level": round(level, 1)})
 
-        # Detect silence (below -50 dB)
-        silence_threshold = -50.0
-        silence_regions: list[dict] = []
-        in_silence = False
-        silence_start = 0.0
-        for i, level in enumerate(binned):
-            t = (i + 0.5) * segment_duration
-            if level < silence_threshold and not in_silence:
-                in_silence = True
-                silence_start = t
-            elif level >= silence_threshold and in_silence:
-                in_silence = False
-                silence_regions.append({"start": round(silence_start, 2), "end": round(t, 2)})
-        if in_silence:
-            silence_regions.append({"start": round(silence_start, 2), "end": round(duration, 2)})
+    # Detect silence (below -50 dB)
+    silence_threshold = -50.0
+    silence_regions: list[dict] = []
+    in_silence = False
+    silence_start = 0.0
+    for i, level in enumerate(binned):
+        t = (i + 0.5) * segment_duration
+        if level < silence_threshold and not in_silence:
+            in_silence = True
+            silence_start = t
+        elif level >= silence_threshold and in_silence:
+            in_silence = False
+            silence_regions.append({"start": round(silence_start, 2), "end": round(t, 2)})
+    if in_silence:
+        silence_regions.append({"start": round(silence_start, 2), "end": round(duration, 2)})
 
-        mean_level = sum(binned) / len(binned) if binned else -60.0
-        max_level = max(binned) if binned else -60.0
-        min_level = min(binned) if binned else -60.0
-    else:
-        peaks = []
-        silence_regions = []
-        mean_level = -60.0
-        max_level = -60.0
-        min_level = -60.0
+    mean_level = sum(binned) / len(binned) if binned else -60.0
+    max_level = max(binned) if binned else -60.0
+    min_level = min(binned) if binned else -60.0
 
     return WaveformResult(
         duration=duration,
@@ -2452,6 +2468,8 @@ def detect_scenes(
         min_scene_duration: Minimum duration of a scene in seconds.
     """
     _validate_input(input_path)
+    if not isinstance(threshold, (int, float)) or not (0.0 <= threshold <= 1.0):
+        raise MCPVideoError(f"threshold must be 0.0-1.0, got {threshold}", error_type="validation_error", code="invalid_parameter")
     info = probe(input_path)
     duration = info.duration
 
@@ -2798,17 +2816,17 @@ def write_metadata(
             code="empty_metadata",
         )
 
-    # Validate metadata keys and values don't contain '=' or newline which would break the command
+    # Validate metadata keys and values: reject newlines, null bytes, and '=' in keys
     for key, value in metadata.items():
-        if "=" in key or "\n" in key:
+        if "=" in key or "\n" in key or "\0" in key:
             raise MCPVideoError(
-                f"Invalid metadata key '{key}': keys cannot contain '=' or newline characters",
+                f"Invalid metadata key '{key}': keys cannot contain '=', newline, or null bytes",
                 error_type="validation_error",
                 code="invalid_metadata_key",
             )
-        if "=" in str(value) or "\n" in str(value):
+        if "\n" in str(value) or "\0" in str(value):
             raise MCPVideoError(
-                f"Invalid metadata value for '{key}': values cannot contain '=' or newline characters",
+                f"Invalid metadata value for '{key}': values cannot contain newline or null bytes",
                 error_type="validation_error",
                 code="invalid_metadata_value",
             )

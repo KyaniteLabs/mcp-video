@@ -29,3 +29,31 @@ MIN_SPEED_FACTOR = 0.01
 MAX_SPEED_FACTOR = 100.0
 MIN_FADE_DURATION = 0.0
 MAX_FADE_DURATION = 3600.0
+
+# Encoding parameter bounds
+MAX_CRF = 51
+MIN_CRF = 0
+
+# Network / concurrency bounds
+MAX_PORT = 65535
+MIN_PORT = 1
+MAX_CONCURRENCY = 16
+
+# Audio loudness bounds (LUFS)
+MAX_LUFS = -5
+MIN_LUFS = -70
+
+# Normalized 0-1 parameter bounds
+MAX_INTENSITY = 1.0
+MIN_INTENSITY = 0.0
+MAX_OPACITY = 1.0
+MIN_OPACITY = 0.0
+MAX_SIMILARITY = 1.0
+MIN_SIMILARITY = 0.0
+MAX_BLEND = 1.0
+MIN_BLEND = 0.0
+
+# Pixel / processing bounds
+MIN_PIXEL_SIZE = 2
+MAX_SPEED_CHAIN_COUNT = 20
+MAX_SCENES_PER_SECOND = 30  # max reasonable scene changes

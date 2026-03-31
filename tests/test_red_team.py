@@ -337,7 +337,7 @@ class TestBoundaryValues:
             result = chroma_key(sample_video, color="invalid_color_name")
             # May succeed with default or fail gracefully
             assert os.path.exists(_get_output_path(result))
-        except (ProcessingError, ValueError):
+        except (ProcessingError, ValueError, MCPVideoError):
             # Acceptable - invalid color should be rejected
             pass
 

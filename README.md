@@ -1,9 +1,7 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.1.5-blue.svg" alt="Version">
-  <img src="https://img.shields.io/badge/tests-825%20passed-brightgreen.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/version-1.2.0-blue.svg" alt="Version">
+  <img src="https://img.shields.io/badge/tests-832-brightgreen.svg" alt="Tests">
   <a href="https://github.com/pastorsimon1798/mcp-video/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/pastorsimon1798/mcp-video/.github/workflows/ci.yml?branch=master&label=CI" alt="CI"></a>
-  <a href="https://glama.ai/mcp/servers/pastorsimon1798/mcp-video"><img src="https://glama.ai/mcp/servers/pastorsimon1798/mcp-video/badges/score.svg" alt="Glama Score"></a>
-  <img src="https://img.shields.io/badge/pypi-mcp--video-blue.svg" alt="PyPI">
   <img src="https://img.shields.io/badge/tools-82%20MCP%20tools-orange.svg" alt="Tools">
   <img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="License">
   <img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python">
@@ -13,18 +11,19 @@
 
 <p align="center">
   <strong>Video editing and creation for AI agents.</strong><br>
-  Edit existing video with FFmpeg. Create new video from code with Remotion. 82 tools. 3 interfaces. 825 tests.
+  Edit existing video with FFmpeg. Create new video from code with Remotion.<br>
+  82 tools. 3 interfaces. 832 tests (707 fast, 116 slow/remotion).
 </p>
 
 <p align="center">
-  <a href="#install">Install</a> &bull;
+  <a href="#installation">Install</a> &bull;
   <a href="#quick-start">Quick Start</a> &bull;
-  <a href="#mcp-tools">82 Tools</a> &bull;
+  <a href="#mcp-tools">Tools</a> &bull;
   <a href="#remotion-integration">Remotion</a> &bull;
   <a href="#python-client">Python</a> &bull;
   <a href="#cli-reference">CLI</a> &bull;
-  <a href="#timeline-dsl">Timeline DSL</a> &bull;
   <a href="#templates">Templates</a> &bull;
+  <a href="CONTRIBUTING.md">Contributing</a> &bull;
   <a href="ROADMAP.md">Roadmap</a>
 </p>
 
@@ -52,7 +51,34 @@ Think of it as **FFmpeg + Remotion with an API that AI agents can actually use**
 
 ---
 
-## Install
+## Table of Contents
+
+- [What is mcp-video?](#what-is-mcp-video)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [MCP Tools](#mcp-tools)
+  - [Core Video](#core-video-40-tools)
+  - [AI-Powered](#ai-powered-7-tools)
+  - [Remotion & Motion Graphics](#remotion--motion-graphics-8-tools)
+  - [Audio Synthesis](#audio-synthesis-6-tools)
+  - [Visual Effects](#visual-effects-5-tools)
+  - [Transitions](#transitions-3-tools)
+  - [Layout & Motion Graphics](#layout--motion-graphics-7-tools)
+  - [Quality & Guardrails](#quality--guardrails-3-tools)
+  - [Image Analysis](#image-analysis-3-tools)
+- [Remotion Integration](#remotion-integration)
+- [Python Client](#python-client)
+- [CLI Reference](#cli-reference)
+- [Timeline DSL](#timeline-dsl)
+- [Templates](#templates)
+- [Error Handling](#error-handling)
+- [Architecture](#architecture)
+- [Testing](#testing)
+- [License](#license)
+
+---
+
+## Installation
 
 ### Prerequisites
 
@@ -71,13 +97,14 @@ sudo apt install ffmpeg
 
 For Remotion features, you also need [Node.js](https://nodejs.org/) (18+) and [npm](https://www.npmjs.com/).
 
-### Installation
+### Install
 
 ```bash
 pip install mcp-video
 ```
 
 Or run without installing:
+
 ```bash
 uvx mcp-video
 ```
@@ -141,7 +168,6 @@ result = editor.resize(video.output_path, aspect_ratio="9:16")
 ### 3. As a CLI Tool
 
 ```bash
-# Rich table output by default, add --format json for scripts
 mcp-video info video.mp4
 mcp-video trim video.mp4 -s 00:02:15 -d 30
 mcp-video convert video.mp4 -f webm -q high
@@ -233,7 +259,7 @@ Generate audio from code — no external audio files needed. Pure NumPy, no extr
 | Tool | Description |
 |------|-------------|
 | `audio_synthesize` | Generate waveforms: sine, square, sawtooth, triangle, noise. With envelopes, reverb, filtering. |
-| `audio_preset` | 18 pre-configured sounds: UI blips, ambient drones, notification chimes, data sounds |
+| `audio_preset` | 15 pre-configured sounds: UI blips, ambient drones, notification chimes, data sounds |
 | `audio_sequence` | Compose timed audio events into a layered track |
 | `audio_compose` | Mix multiple WAV tracks with individual volume control |
 | `audio_effects` | Apply effects chain: lowpass, reverb, normalize, fade |
@@ -294,11 +320,11 @@ mcp-video includes 8 dedicated tools for [Remotion](https://www.remotion.dev/) �
 ### Typical Workflow
 
 ```
-1. Create project    → remotion_create_project
-2. Scaffold composition → remotion_scaffold_template (from a design spec)
-3. Preview live       → remotion_studio
-4. Render             → remotion_render
-5. Post-process       → remotion_to_mcpvideo (resize, add audio, normalize, etc.)
+1. Create project    -> remotion_create_project
+2. Scaffold composition -> remotion_scaffold_template (from a design spec)
+3. Preview live       -> remotion_studio
+4. Render             -> remotion_render
+5. Post-process       -> remotion_to_mcpvideo (resize, add audio, normalize, etc.)
 ```
 
 ### Example: Create a promotional video from code
@@ -663,6 +689,7 @@ mcp-video parses FFmpeg errors and returns structured, actionable responses:
 | `ProcessingError` | processing_error | No | FFmpeg processing failed |
 | `ExportError` | export_error | No | Export/rendering failed |
 | `ResourceError` | resource_error | No | Insufficient disk space or memory |
+| `MCPVideoError` | validation_error | No | Invalid parameter (v1.2.0+) |
 
 ---
 
@@ -670,25 +697,27 @@ mcp-video parses FFmpeg errors and returns structured, actionable responses:
 
 ```
 mcp_video/
-├── __init__.py            # Exports Client
-├── __main__.py            # CLI entry point (argparse + Rich)
-├── client.py              # Python Client API (wraps all engines)
-├── server.py              # MCP server (82 tools + 4 resources)
-├── engine.py              # Core FFmpeg engine (40 video operations)
-├── models.py              # Pydantic models (VideoInfo, EditResult, Timeline DSL)
-├── errors.py              # Error hierarchy + FFmpeg stderr parser
-├── templates.py           # Social media templates (TikTok, YouTube, Instagram)
-├── audio_engine.py        # Procedural audio synthesis (pure NumPy)
-├── effects_engine.py      # Visual effects + motion graphics (FFmpeg filters)
-├── transitions_engine.py  # Clip transitions (glitch, pixelate, morph)
-├── ai_engine.py           # AI features (Whisper, Demucs, Real-ESRGAN, spatial audio)
-├── remotion_engine.py     # Remotion CLI wrapper (render, studio, scaffold, validate)
-├── remotion_models.py     # Remotion data models
-├── image_engine.py        # Image color analysis (K-means, palette generation)
-├── image_models.py        # Image data models
-├── quality_guardrails.py  # Automated quality checks (brightness, contrast, audio)
-├── design_quality.py      # Design quality + auto-fix (layout, typography, motion)
-└── limits.py              # Resource validation constants (max 4h, 8K, 4GB)
+  __init__.py            # Exports Client
+  __main__.py            # CLI entry point (argparse + Rich)
+  client.py              # Python Client API (wraps all engines)
+  server.py              # MCP server (82 tools + 4 resources)
+  engine.py              # Core FFmpeg engine (40 video operations)
+  models.py              # Pydantic models (VideoInfo, EditResult, Timeline DSL)
+  errors.py              # Error hierarchy + FFmpeg stderr parser
+  validation.py          # Centralized validation constants & helpers (v1.2.0)
+  templates.py           # Social media templates (TikTok, YouTube, Instagram)
+  audio_engine.py        # Procedural audio synthesis (pure NumPy)
+  effects_engine.py      # Visual effects + motion graphics (FFmpeg filters)
+  ffmpeg_helpers.py      # Shared FFmpeg utilities (v1.2.0)
+  transitions_engine.py  # Clip transitions (glitch, pixelate, morph)
+  ai_engine.py           # AI features (Whisper, Demucs, Real-ESRGAN, spatial audio)
+  remotion_engine.py     # Remotion CLI wrapper (render, studio, scaffold, validate)
+  remotion_models.py     # Remotion data models
+  image_engine.py        # Image color analysis (K-means, palette generation)
+  image_models.py        # Image data models
+  quality_guardrails.py  # Automated quality checks (brightness, contrast, audio)
+  design_quality.py      # Design quality + auto-fix (layout, typography, motion)
+  limits.py              # Resource validation constants (max 4h, 8K, 4GB)
 ```
 
 **Dependencies:**
@@ -702,7 +731,7 @@ mcp_video/
 
 ## Testing
 
-825 tests across 22 test files. All features tested with real FFmpeg operations on real media — no mocks, no stubs. Includes an adversarial security audit.
+832 tests across 22 test files. 707 run by default (fast unit + integration tests). 116 marked `@slow` (real media) or `@remotion` (Node.js) — run with `pytest tests/ -v`. Includes an adversarial security audit.
 
 ```bash
 # Install dev dependencies

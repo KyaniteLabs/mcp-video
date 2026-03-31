@@ -12,7 +12,6 @@ import pytest
 
 from mcp_video.engine import (
     _validate_input,
-    _validate_path,
     _validate_color,
     _validate_position,
     _escape_ffmpeg_filter_value,
@@ -68,7 +67,7 @@ class TestErrorHandlingRobustness:
         result = _error_result(err)
         assert result["success"] is False
         assert "error" in result
-        assert result["error"]["code"] == "unexpected_error"
+        assert result["error"]["code"] == "invalid_parameter"
         assert "unexpected failure" in result["error"]["message"]
 
 
@@ -198,16 +197,17 @@ class TestTimeoutProtection:
     def test_effects_engine_has_timeout(self) -> None:
         """effects_engine subprocess.run calls include timeout parameter."""
         import inspect
-        from mcp_video import effects_engine
-        source = inspect.getsource(effects_engine)
-        # Every subprocess.run call should have timeout= parameter
+        from mcp_video import effects_engine, ffmpeg_helpers
+        # Timeout lives in the shared ffmpeg_helpers module used by effects_engine
+        source = inspect.getsource(ffmpeg_helpers)
         assert "timeout=" in source or "timeout =" in source
 
     def test_transitions_engine_has_timeout(self) -> None:
         """transitions_engine subprocess.run calls include timeout parameter."""
         import inspect
-        from mcp_video import transitions_engine
-        source = inspect.getsource(transitions_engine)
+        from mcp_video import transitions_engine, ffmpeg_helpers
+        # Timeout lives in the shared ffmpeg_helpers module used by transitions_engine
+        source = inspect.getsource(ffmpeg_helpers)
         assert "timeout=" in source or "timeout =" in source
 
 
@@ -219,54 +219,15 @@ class TestTimeoutProtection:
 class TestPathValidation:
     """Paths are validated and resolved."""
 
-    def test_null_byte_rejected(self) -> None:
-        """Paths with null bytes are rejected."""
+    def test_validate_input_null_byte_rejected(self) -> None:
+        """Paths with null bytes are rejected by _validate_input."""
         with pytest.raises(InputFileError):
-            _validate_path("/tmp/test\x00.mp4")
+            _validate_input("/tmp/test\x00.mp4")
 
-    def test_nonexistent_file_rejected(self) -> None:
-        """Non-existent files are rejected when must_exist=True."""
+    def test_validate_input_nonexistent_file_rejected(self) -> None:
+        """Non-existent files are rejected by _validate_input."""
         with pytest.raises(InputFileError):
-            _validate_path("/nonexistent/file.mp4", must_exist=True)
-
-    def test_must_exist_false_skips_check(self) -> None:
-        """must_exist=False allows non-existent paths."""
-        result = _validate_path("/tmp/nonexistent_output.mp4", must_exist=False)
-        assert os.path.isabs(result)
-
-    def test_existing_file_passes(self, tmp_path) -> None:
-        """Existing files pass validation."""
-        test_file = tmp_path / "test.mp4"
-        test_file.write_text("fake video")
-        result = _validate_path(str(test_file))
-        assert os.path.isabs(result)
-
-    def test_relative_path_resolved_to_absolute(self, tmp_path) -> None:
-        """Relative paths are resolved to absolute."""
-        test_file = tmp_path / "test.mp4"
-        test_file.write_text("fake video")
-        result = _validate_path(str(test_file))
-        assert os.path.isabs(result)
-
-    def test_symlink_resolved(self, tmp_path) -> None:
-        """Symlinks are resolved to real path."""
-        real = tmp_path / "real.mp4"
-        real.write_text("fake video")
-        link = tmp_path / "link.mp4"
-        link.symlink_to(real)
-        result = _validate_path(str(link))
-        assert result == str(real.resolve())
-
-    def test_dotdot_in_path_resolved(self, tmp_path) -> None:
-        """Paths with .. are resolved to canonical form."""
-        subdir = tmp_path / "sub"
-        subdir.mkdir()
-        test_file = subdir / "test.mp4"
-        test_file.write_text("fake video")
-        # Path with .. should resolve to the canonical path
-        dotted = os.path.join(str(tmp_path), "sub", "..", "sub", "test.mp4")
-        result = _validate_path(dotted)
-        assert ".." not in result
+            _validate_input("/nonexistent/file.mp4")
 
     def test_original_validate_input_still_works(self, tmp_path) -> None:
         """Original _validate_input function still works."""
@@ -387,9 +348,10 @@ class TestEscapingConsistency:
     """Escaping is consistent across functions."""
 
     def test_escape_filter_value_escapes_backslash(self) -> None:
-        """Backslashes are escaped."""
+        """Backslashes are escaped for FFmpeg filter safety."""
         result = _escape_ffmpeg_filter_value("C:\\Users\\test")
-        assert "\\\\" not in result  # Should be / not \\\\
+        # Backslashes must be escaped so FFmpeg doesn't interpret them as escapes
+        assert "\\\\" in result  # \ becomes \\
 
     def test_escape_filter_value_escapes_colon(self) -> None:
         """Colons are escaped."""

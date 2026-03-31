@@ -12,52 +12,8 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from .errors import ProcessingError, InputFileError
-
-
-def _escape_ffmpeg_filter_value(value: str) -> str:
-    """Escape special characters for FFmpeg filter expressions (subtitles, drawtext, etc.)."""
-    return (
-        value.replace("\\", "/")
-        .replace("'", "'\\''")
-        .replace(":", "\\:")
-        .replace("[", "\\[")
-        .replace("]", "\\]")
-        .replace(",", "\\,")
-    )
-
-
-def _validate_input_path(path: str) -> str:
-    """Validate and resolve a file path. Rejects null bytes and symlinks."""
-    if "\x00" in path:
-        raise InputFileError(path, "Path contains null bytes")
-    resolved = os.path.realpath(path)
-    if not os.path.isfile(resolved):
-        raise InputFileError(resolved)
-    return resolved
-
-
-# ---------------------------------------------------------------------------
-# Helper
-# ---------------------------------------------------------------------------
-
-def _run_ffmpeg(cmd: list[str], timeout: int = 600) -> subprocess.CompletedProcess[str]:
-    """Run an FFmpeg/FFprobe command with timeout and error handling."""
-    # Ensure output directory exists — find the last non-flag argument (the output file)
-    for arg in reversed(cmd):
-        if not arg.startswith("-") and not arg.startswith("ffmpeg") and not arg.startswith("ffprobe"):
-            out_dir = os.path.dirname(arg)
-            if out_dir:
-                os.makedirs(out_dir, exist_ok=True)
-            break
-    cmd_str = " ".join(cmd)
-    try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
-    except subprocess.TimeoutExpired:
-        raise ProcessingError(cmd_str, -1, f"FFmpeg command timed out after {timeout}s") from None
-    if result.returncode != 0:
-        raise ProcessingError(cmd_str, result.returncode, result.stderr)
-    return result
+from .errors import MCPVideoError, ProcessingError, InputFileError
+from .ffmpeg_helpers import _validate_input_path, _run_ffmpeg, _escape_ffmpeg_filter_value
 
 
 # ---------------------------------------------------------------------------
@@ -142,20 +98,7 @@ def effect_chromatic_aberration(
     offset_x = intensity * math.cos(angle_rad)
     offset_y = intensity * math.sin(angle_rad)
 
-    # Build filter: shift R channel right, B channel left
-    # Using colorchannelmixer to extract and shift channels
-    filters = (
-        f"split[main][copy];"
-        f"[copy]crop=iw:ih:x={offset_x}:y={offset_y},format=rgb24,"
-        f"colorchannelmixer=rr=1:gg=0:bb=0[r];"
-        f"[main]format=rgb24,colorchannelmixer=rr=0:gg=1:bb=0[g];"
-        f"[main]crop=iw:ih:x=-{offset_x}:y=-{offset_y},format=rgb24,"
-        f"colorchannelmixer=rr=0:gg=0:bb=1[b];"
-        f"[r][g][b]mergeplanes=0x0+0x1+0x2:rgb"
-    )
-
-    # Simpler approach using chromashift if available
-    # chromashift filter directly does what we want
+    # Use chromashift filter directly
     shift_x = int(offset_x)
     shift_y = int(offset_y)
 
@@ -176,11 +119,7 @@ def effect_chromatic_aberration(
     ]
 
     # Run first attempt, capture error for fallback check
-    cmd_str = " ".join(cmd)
-    try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
-    except subprocess.TimeoutExpired:
-        raise ProcessingError(cmd_str, -1, "FFmpeg command timed out after 600s") from None
+    result = _run_ffmpeg(cmd)
 
     # Fallback if chromashift not available
     if result.returncode != 0 and "chromashift" in result.stderr:
@@ -190,6 +129,7 @@ def effect_chromatic_aberration(
         cmd[4] = filters
         _run_ffmpeg(cmd)
     elif result.returncode != 0:
+        cmd_str = " ".join(cmd)
         raise ProcessingError(cmd_str, result.returncode, result.stderr)
 
     return output
@@ -332,11 +272,7 @@ def effect_glow(
     ]
 
     # Run first attempt, capture error for fallback check
-    cmd_str = " ".join(cmd)
-    try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
-    except subprocess.TimeoutExpired:
-        raise ProcessingError(cmd_str, -1, "FFmpeg command timed out after 600s") from None
+    result = _run_ffmpeg(cmd)
 
     # Fallback if gblur not available
     if result.returncode != 0 and "gblur" in result.stderr:
@@ -349,6 +285,7 @@ def effect_glow(
         cmd[4] = filters
         _run_ffmpeg(cmd)
     elif result.returncode != 0:
+        cmd_str = " ".join(cmd)
         raise ProcessingError(cmd_str, result.returncode, result.stderr)
 
     return output
@@ -382,6 +319,11 @@ def layout_grid(
     """
     if len(clips) == 0:
         raise ValueError("At least one clip required")
+
+    if gap < 0 or padding < 0:
+        raise MCPVideoError("gap and padding must be non-negative", error_type="validation_error", code="invalid_parameter")
+
+    clips = [_validate_input_path(clip) for clip in clips]
 
     # Parse layout
     cols, rows = map(int, layout.split('x'))
@@ -479,6 +421,9 @@ def layout_pip(
     Returns:
         Path to output video
     """
+    main = _validate_input_path(main)
+    pip = _validate_input_path(pip)
+
     # Get main video dimensions
     probe_cmd = [
         "ffprobe", "-v", "error", "-select_streams", "v:0",
@@ -605,9 +550,11 @@ def text_animated(
 
     # Escape text for FFmpeg — handle all filter-special characters
     safe_text = _escape_ffmpeg_filter_value(text)
+    safe_font = _escape_ffmpeg_filter_value(font) if font is not None else font
+    safe_color = _escape_ffmpeg_filter_value(color) if color is not None else color
 
     filter_complex = (
-        f"drawtext=text='{safe_text}':font={font}:fontsize={size}:fontcolor={color}:"
+        f"drawtext=text='{safe_text}':font={safe_font}:fontsize={size}:fontcolor={safe_color}:"
         f"x={pos.split(':')[0]}:y={pos.split(':')[1]}:"
         f"enable='between(t\\,{start}\\,{start + duration})':"
         f"alpha='{alpha_expr}'"
@@ -647,6 +594,11 @@ def text_subtitles(
     Returns:
         Path to output video
     """
+    video = _validate_input_path(video)
+
+    if not os.path.isfile(subtitles):
+        raise InputFileError(f"Subtitles file not found: {subtitles}")
+
     style = style or {}
 
     # Build subtitle filter options
@@ -864,6 +816,8 @@ def video_info_detailed(video: str) -> dict[str, Any]:
     """
     import json
 
+    video = _validate_input_path(video)
+
     # Get basic info
     cmd = [
         "ffprobe", "-v", "error",
@@ -948,7 +902,17 @@ def auto_chapters(
 
     Returns:
         List of (timestamp, description) tuples
+
+    Raises:
+        MCPVideoError: If *threshold* is not a number in [0.0, 1.0].
     """
+    _validate_input_path(video)
+
+    if not isinstance(threshold, (int, float)) or not (0.0 <= threshold <= 1.0):
+        raise MCPVideoError(
+            f"threshold must be a number between 0.0 and 1.0, got {threshold!r}"
+        )
+
     chapters = []
 
     cmd = [

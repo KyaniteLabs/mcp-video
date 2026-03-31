@@ -11,8 +11,13 @@ from mcp_video.server import (
     _result,
     mcp,
     templates_resource,
+    transition_glitch,
+    transition_pixelate,
     video_add_audio,
     video_add_text,
+    video_ai_scene_detect,
+    video_ai_transcribe,
+    video_ai_upscale,
     video_apply_mask,
     video_batch,
     video_blur,
@@ -31,6 +36,7 @@ from mcp_video.server import (
     video_filter,
     video_info,
     video_merge,
+    video_mograph_progress,
     video_normalize_audio,
     video_overlay,
     video_preview,
@@ -583,3 +589,74 @@ class TestVideoApplyMaskTool:
         result = video_apply_mask(sample_video, mask_path="/nonexistent/mask.png")
         assert result["success"] is False
         assert "error" in result
+
+
+# ---------------------------------------------------------------------------
+# Server parameter validation tests
+# ---------------------------------------------------------------------------
+
+
+class TestServerValidationCRF:
+    def test_add_text_rejects_bad_crf(self, sample_video):
+        result = video_add_text(sample_video, "test", crf=100)
+        assert result["success"] is False
+        assert "crf" in result["error"]["message"].lower()
+
+    def test_watermark_rejects_bad_crf(self, sample_video, sample_watermark_png):
+        result = video_watermark(sample_video, sample_watermark_png, crf=-5)
+        assert result["success"] is False
+        assert "crf" in result["error"]["message"].lower()
+
+
+class TestServerValidationPreset:
+    def test_filter_rejects_bad_preset(self, sample_video):
+        result = video_filter(sample_video, filter_type="blur", preset="invalid")
+        assert result["success"] is False
+        assert "preset" in result["error"]["message"].lower()
+
+
+class TestServerValidationFormat:
+    def test_convert_rejects_bad_format(self, sample_video):
+        result = video_convert(sample_video, format="exe")
+        assert result["success"] is False
+        assert "format" in result["error"]["message"].lower()
+
+    def test_extract_audio_rejects_bad_format(self, sample_video):
+        result = video_extract_audio(sample_video, format="exe")
+        assert result["success"] is False
+
+
+class TestServerValidationTransitions:
+    def test_glitch_rejects_negative_duration(self):
+        result = transition_glitch("/tmp/a.mp4", "/tmp/b.mp4", "/tmp/out.mp4", duration=-1)
+        assert result["success"] is False
+
+    def test_pixelate_rejects_small_pixel_size(self):
+        result = transition_pixelate("/tmp/a.mp4", "/tmp/b.mp4", "/tmp/out.mp4", pixel_size=1)
+        assert result["success"] is False
+
+
+class TestServerValidationAI:
+    def test_transcribe_rejects_bad_model(self, sample_video):
+        result = video_ai_transcribe(sample_video, model="nonexistent")
+        assert result["success"] is False
+
+    def test_upscale_rejects_bad_scale(self, sample_video):
+        result = video_ai_upscale(sample_video, "/tmp/out.mp4", scale=3)
+        assert result["success"] is False
+
+    def test_scene_detect_rejects_bad_threshold(self, sample_video):
+        result = video_ai_scene_detect(sample_video, threshold=5.0)
+        assert result["success"] is False
+
+
+class TestServerValidationSplitScreen:
+    def test_rejects_bad_layout(self, sample_video):
+        result = video_split_screen(sample_video, sample_video, layout="diagonal")
+        assert result["success"] is False
+
+
+class TestServerValidationMograph:
+    def test_progress_rejects_bad_style(self):
+        result = video_mograph_progress(duration=2, output_path="/tmp/out.mp4", style="invalid")
+        assert result["success"] is False

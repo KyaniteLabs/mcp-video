@@ -9,11 +9,14 @@ Optional dependencies:
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 import subprocess
 import tempfile
 from pathlib import Path
 from typing import Any
+
+from .errors import ProcessingError
 
 
 def ai_transcribe(
@@ -37,6 +40,9 @@ def ai_transcribe(
         RuntimeError: If whisper is not installed
         FileNotFoundError: If video file doesn't exist
     """
+    if "\x00" in video:
+        raise FileNotFoundError("Invalid path: contains null bytes")
+
     # Check for whisper availability
     try:
         import whisper
@@ -65,7 +71,10 @@ def ai_transcribe(
             "-ac", "1",  # Mono
             audio_path,
         ]
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+        except subprocess.TimeoutExpired:
+            raise ProcessingError("Operation timed out after 600 seconds") from None
         if result.returncode != 0:
             raise RuntimeError(f"FFmpeg audio extraction failed: {result.stderr}")
 
@@ -149,20 +158,33 @@ def _run_ffprobe(video: str) -> dict[str, Any]:
         "-of", "json",
         video,
     ]
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+    except subprocess.TimeoutExpired:
+        raise ProcessingError("Operation timed out after 600 seconds") from None
     if result.returncode != 0:
         raise RuntimeError(f"ffprobe error: {result.stderr}")
-    return __import__("json").loads(result.stdout)
+    return json.loads(result.stdout)
 
 
 def _standard_scene_detect(video: str, threshold: float) -> list[dict]:
     """Standard FFmpeg scene detection."""
+    if "\x00" in video:
+        raise FileNotFoundError("Invalid path: contains null bytes")
+    video_path = Path(video)
+    if not video_path.exists():
+        raise FileNotFoundError(f"Video file not found: {video}")
+    if not isinstance(threshold, (int, float)) or not (0.0 <= threshold <= 1.0):
+        raise ValueError(f"threshold must be between 0.0 and 1.0, got {threshold}")
     cmd = [
         "ffmpeg", "-i", video,
         "-filter:v", f"select='gt(scene,{threshold})',showinfo",
         "-f", "null", "-"
     ]
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+    except subprocess.TimeoutExpired:
+        raise ProcessingError("Operation timed out after 600 seconds") from None
 
     scenes = []
     for line in result.stderr.split("\n"):
@@ -199,6 +221,9 @@ def audio_spatial(
         FileNotFoundError: If input video doesn't exist
         RuntimeError: If FFmpeg processing fails
     """
+    if "\x00" in video:
+        raise FileNotFoundError("Invalid path: contains null bytes")
+
     # Validate input file
     video_path = Path(video)
     if not video_path.exists():
@@ -254,7 +279,7 @@ def _elevation_to_volume(elevation: float) -> float:
     """
     # Higher elevation = slightly quieter (distance effect)
     # 0 (level) -> 1.0, 90 (above) -> 0.7
-    return 1.0 - (elevation / 90.0) * 0.3
+    return max(0.0, min(2.0, 1.0 - (elevation / 90.0) * 0.3))
 
 
 def _apply_simple_spatial(
@@ -282,9 +307,6 @@ def _apply_simple_spatial(
     Returns:
         Path to output video
     """
-    from pathlib import Path
-    import tempfile
-
     # Sort positions by time
     sorted_positions = sorted(positions, key=lambda p: p.get("time", 0))
 
@@ -348,7 +370,10 @@ def _apply_simple_spatial(
                 str(segment_file),
             ]
 
-            result = subprocess.run(cmd, capture_output=True, text=True)
+            try:
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+            except subprocess.TimeoutExpired:
+                raise ProcessingError("Operation timed out after 600 seconds") from None
             if result.returncode != 0:
                 raise RuntimeError(f"FFmpeg segment processing failed: {result.stderr}")
 
@@ -356,7 +381,10 @@ def _apply_simple_spatial(
         if len(segment_files) == 1:
             # Single segment - just copy
             cmd = ["cp", str(segment_files[0]), output]
-            result = subprocess.run(cmd, capture_output=True, text=True)
+            try:
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+            except subprocess.TimeoutExpired:
+                raise ProcessingError("Operation timed out after 600 seconds") from None
             if result.returncode != 0:
                 raise RuntimeError(f"Failed to copy output: {result.stderr}")
         else:
@@ -377,7 +405,10 @@ def _apply_simple_spatial(
                 output,
             ]
 
-            result = subprocess.run(cmd, capture_output=True, text=True)
+            try:
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+            except subprocess.TimeoutExpired:
+                raise ProcessingError("Operation timed out after 600 seconds") from None
             if result.returncode != 0:
                 raise RuntimeError(f"FFmpeg concat failed: {result.stderr}")
 
@@ -392,7 +423,10 @@ def _get_video_duration(video_path: str) -> float | None:
         "-of", "default=noprint_wrappers=1:nokey=1",
         video_path,
     ]
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+    except subprocess.TimeoutExpired:
+        raise ProcessingError("Operation timed out after 600 seconds") from None
     if result.returncode == 0:
         try:
             return float(result.stdout.strip())
@@ -449,7 +483,10 @@ def ai_scene_detect(
             "-q:v", "2",
             str(frame_pattern).replace("%04d", "%04d")
         ]
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+        except subprocess.TimeoutExpired:
+            raise ProcessingError("Operation timed out after 600 seconds") from None
         if result.returncode != 0:
             # Fall back to standard detection on error
             return _standard_scene_detect(video, threshold)
@@ -520,7 +557,10 @@ def _detect_silence_regions(
         "-f", "null", "-",
     ]
 
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+    except subprocess.TimeoutExpired:
+        raise ProcessingError("Operation timed out after 600 seconds") from None
 
     # Parse silence_start and silence_end from stderr
     silence_regions = []
@@ -610,7 +650,10 @@ def _concat_segments(
             "-c", "copy",
             output,
         ]
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+        except subprocess.TimeoutExpired:
+            raise ProcessingError("Operation timed out after 600 seconds") from None
         if result.returncode != 0:
             raise RuntimeError(f"FFmpeg trim error: {result.stderr}")
         return output
@@ -631,7 +674,10 @@ def _concat_segments(
                 "-c", "copy",
                 str(segment_file),
             ]
-            result = subprocess.run(cmd, capture_output=True, text=True)
+            try:
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+            except subprocess.TimeoutExpired:
+                raise ProcessingError("Operation timed out after 600 seconds") from None
             if result.returncode != 0:
                 raise RuntimeError(f"FFmpeg segment extraction error: {result.stderr}")
 
@@ -654,7 +700,10 @@ def _concat_segments(
             "-c", "copy",
             output,
         ]
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+        except subprocess.TimeoutExpired:
+            raise ProcessingError("Operation timed out after 600 seconds") from None
         if result.returncode != 0:
             raise RuntimeError(f"FFmpeg concat error: {result.stderr}")
 
@@ -683,6 +732,9 @@ def ai_remove_silence(
     Returns:
         Path to output video
     """
+    if "\x00" in video:
+        raise FileNotFoundError("Invalid path: contains null bytes")
+
     # Validate input file
     video_path = Path(video)
     if not video_path.exists():
@@ -739,6 +791,9 @@ def ai_stem_separation(
         RuntimeError: If demucs is not installed
         FileNotFoundError: If video file doesn't exist
     """
+    if "\x00" in video:
+        raise FileNotFoundError("Invalid path: contains null bytes")
+
     # Check for demucs availability
     try:
         import demucs.separate
@@ -774,7 +829,10 @@ def ai_stem_separation(
             "-ac", "2",  # Stereo (Demucs expects stereo)
             audio_path,
         ]
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+        except subprocess.TimeoutExpired:
+            raise ProcessingError("Operation timed out after 600 seconds") from None
         if result.returncode != 0:
             raise RuntimeError(f"FFmpeg audio extraction failed: {result.stderr}")
 
@@ -832,7 +890,8 @@ def ai_color_grade(
         FileNotFoundError: If video file doesn't exist
         RuntimeError: If FFmpeg processing fails
     """
-    from pathlib import Path
+    if "\x00" in video:
+        raise FileNotFoundError("Invalid path: contains null bytes")
 
     # Validate input file
     video_path = Path(video)
@@ -893,7 +952,11 @@ def ai_color_grade(
     ]
 
     # Execute FFmpeg
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    Path(output).parent.mkdir(parents=True, exist_ok=True)
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+    except subprocess.TimeoutExpired:
+        raise ProcessingError("Operation timed out after 600 seconds") from None
     if result.returncode != 0:
         raise RuntimeError(f"FFmpeg color grading failed: {result.stderr}")
 
@@ -913,9 +976,6 @@ def _match_reference_colors(video: str, reference: str) -> dict:
     Returns:
         Dict with color adjustment parameters
     """
-    import subprocess
-    import re
-
     def extract_mean_color(video_path: str) -> dict:
         """Extract mean RGB values from video using signalstats filter."""
         cmd = [
@@ -923,7 +983,10 @@ def _match_reference_colors(video: str, reference: str) -> dict:
             "-vf", "signalstats=out=JSON:stat=tout+vrep+brng",
             "-f", "null", "-"
         ]
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+        except subprocess.TimeoutExpired:
+            raise ProcessingError("Operation timed out after 600 seconds") from None
 
         # Default values if extraction fails
         mean_rgb = {"r": 128, "g": 128, "b": 128}
@@ -980,7 +1043,7 @@ def _match_reference_colors(video: str, reference: str) -> dict:
             "green": green_adj,
             "blue": blue_adj,
         }
-    except Exception:
+    except (subprocess.SubprocessError, ValueError, OSError):
         # Fall back to neutral params if analysis fails
         return {"contrast": 1.0, "saturation": 1.0, "gamma": 1.0, "red": 1.0, "green": 1.0, "blue": 1.0}
 
@@ -1093,7 +1156,10 @@ def _ai_upscale_opencv(video_path: str, output_path: str, scale: int) -> str:
             "-vsync", "0",
             str(frame_pattern)
         ]
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+        except subprocess.TimeoutExpired:
+            raise ProcessingError("Operation timed out after 600 seconds") from None
         if result.returncode != 0:
             raise RuntimeError(f"Failed to extract frames: {result.stderr}")
 
@@ -1134,7 +1200,10 @@ def _ai_upscale_opencv(video_path: str, output_path: str, scale: int) -> str:
             str(output_file)
         ])
 
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+        except subprocess.TimeoutExpired:
+            raise ProcessingError("Operation timed out after 600 seconds") from None
         if result.returncode != 0:
             raise RuntimeError(f"Failed to create upscaled video: {result.stderr}")
 
@@ -1162,6 +1231,9 @@ def ai_upscale(
         RuntimeError: If Real-ESRGAN is not installed or processing fails
         FileNotFoundError: If input video doesn't exist
     """
+    if "\x00" in video:
+        raise FileNotFoundError("Invalid path: contains null bytes")
+
     # Validate input file
     video_path = Path(video)
     if not video_path.exists():
@@ -1226,7 +1298,10 @@ def ai_upscale(
             "-vsync", "0",
             str(frame_pattern)
         ]
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+        except subprocess.TimeoutExpired:
+            raise ProcessingError("Operation timed out after 600 seconds") from None
         if result.returncode != 0:
             raise RuntimeError(f"Failed to extract frames: {result.stderr}")
 
@@ -1286,7 +1361,10 @@ def ai_upscale(
                 "-c:a", "copy",
                 str(audio_path)
             ]
-            result = subprocess.run(cmd, capture_output=True, text=True)
+            try:
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+            except subprocess.TimeoutExpired:
+                raise ProcessingError("Operation timed out after 600 seconds") from None
             if result.returncode != 0:
                 audio_path = None  # Continue without audio
 
@@ -1320,7 +1398,10 @@ def ai_upscale(
                 str(output_path)
             ]
 
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+        except subprocess.TimeoutExpired:
+            raise ProcessingError("Operation timed out after 600 seconds") from None
         if result.returncode != 0:
             raise RuntimeError(f"Failed to reconstruct video: {result.stderr}")
 
@@ -1336,7 +1417,10 @@ def _get_video_fps(video_path: str) -> float | None:
         "-of", "default=noprint_wrappers=1:nokey=1",
         video_path
     ]
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+    except subprocess.TimeoutExpired:
+        raise ProcessingError("Operation timed out after 600 seconds") from None
     if result.returncode != 0:
         return None
 
@@ -1364,5 +1448,8 @@ def _has_audio_stream(video_path: str) -> bool:
         "-of", "default=noprint_wrappers=1:nokey=1",
         video_path
     ]
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+    except subprocess.TimeoutExpired:
+        raise ProcessingError("Operation timed out after 600 seconds") from None
     return result.returncode == 0 and "audio" in result.stdout.lower()
