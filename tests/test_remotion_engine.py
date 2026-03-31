@@ -134,7 +134,9 @@ class TestValidateProject:
         (tmp_path / "package.json").write_text("{}")
         src_dir = tmp_path / "src"
         src_dir.mkdir()
-        (src_dir / "Root.tsx").write_text("// root")
+        (src_dir / "Root.tsx").write_text(
+            'import { registerRoot } from "remotion";\nregisterRoot();'
+        )
 
         project_dir, entry_point = _validate_project(str(tmp_path))
         assert project_dir == tmp_path.resolve()

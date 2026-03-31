@@ -4,6 +4,8 @@ import tempfile
 import os
 import subprocess
 
+import pytest
+
 
 def create_test_video(output_path, duration=2, color="red"):
     """Helper to create test video using FFmpeg."""
@@ -54,6 +56,7 @@ def test_morph_transition():
         print(f"✓ Morph transition created: {os.path.getsize(result)} bytes")
 
 
+@pytest.mark.slow
 def test_pixelate_transition():
     """Test pixelate transition creates output file."""
     from mcp_video.transitions_engine import transition_pixelate
