@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.1.4-blue.svg" alt="Version">
+  <img src="https://img.shields.io/badge/version-1.1.5-blue.svg" alt="Version">
   <img src="https://img.shields.io/badge/tests-825%20passed-brightgreen.svg" alt="Tests">
   <a href="https://github.com/pastorsimon1798/mcp-video/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/pastorsimon1798/mcp-video/.github/workflows/ci.yml?branch=master&label=CI" alt="CI"></a>
   <a href="https://glama.ai/mcp/servers/pastorsimon1798/mcp-video"><img src="https://glama.ai/mcp/servers/pastorsimon1798/mcp-video/badges/score.svg" alt="Glama Score"></a>
@@ -453,6 +453,7 @@ Core Editing:
   convert              Convert video format (with two-pass encoding)
   speed                Change playback speed
   thumbnail            Extract a single frame
+  extract-frame        Extract a single frame (with --time flag)
   preview              Generate fast low-res preview
   storyboard           Extract key frames as storyboard
   subtitles            Burn subtitles into video
@@ -463,7 +464,7 @@ Core Editing:
   fade                 Add video fade in/out
   export               Export with quality settings
   extract-audio        Extract audio track
-  edit                 Execute timeline-based edit from JSON
+  edit                 Execute timeline-based edit from JSON (file path or inline)
   filter               Apply visual filter (blur, sharpen, grayscale, ken_burns, etc.)
   blur                 Blur video
   color-grade          Apply color preset (warm, cool, vintage, etc.)
@@ -475,7 +476,7 @@ Core Editing:
   apply-mask           Apply image mask with feathering
   detect-scenes        Detect scene changes
   create-from-images   Create video from image sequence
-  export-frames        Export video as image frames
+  export-frames        Export video as image frames (--image-format for format)
   compare-quality      Compare PSNR/SSIM quality metrics
   read-metadata        Read video metadata tags
   write-metadata       Write video metadata tags
@@ -527,7 +528,6 @@ Audio-Video:
 
 Quality & Analysis:
   video-auto-chapters    Auto-detect scene changes as chapters
-  video-extract-frame   Extract a single frame (thumbnail alias)
   video-info-detailed    Extended metadata with scene detection
   video-quality-check    Visual quality checks (brightness, contrast, audio)
   video-design-quality-check  Design quality analysis

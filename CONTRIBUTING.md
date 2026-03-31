@@ -119,7 +119,7 @@ Keep them short and descriptive:
 ```
 Add crop operation for rectangular region extraction
 Fix colon escaping in drawtext filter strings
-Bump version to 1.1.3
+Bump version to 1.1.5
 ```
 
 ## Pull Request Process

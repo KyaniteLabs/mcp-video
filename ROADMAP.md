@@ -1,6 +1,41 @@
 # Improvement Roadmap
 
-v1.1.3 shipped. 82 MCP tools, 825 tests, security audited. Here's what's next.
+v1.1.5 shipped. 82 MCP tools, 825 tests, security audited. Here's what's next.
+
+---
+
+## ✅ Completed in v1.1.5 (2026-03-31)
+
+### CLI Improvements
+- [x] `extract-frame` CLI command with `--time` flag
+- [x] `edit` command supports inline JSON (no need for separate file)
+- [x] `export-frames` renamed `--format` to `--image-format` to avoid shadowing global `--format`
+- [x] All effect-* commands auto-generate output when `--output` omitted
+- [x] Structured JSON error output on invalid JSON arguments (`--format json`)
+
+### Server Validation
+- [x] Parameter validation on 12 MCP tools (intensity ranges, font sizes, fps bounds, etc.)
+- [x] Exception handling for `video_info_detailed` and `video_auto_chapters`
+
+### Client API
+- [x] Context manager support (`with Client() as c:`)
+- [x] `output_dir` parameter on `batch()`
+- [x] `output` parameter on `generate_subtitles()`
+- [x] Return type annotations on 11 methods
+
+### Bug Fixes
+- [x] `info`/`templates` CLI now include `"success": true` in JSON output
+- [x] `thumbnail`/`extract-frame` CLI shows actual frame path instead of N/A
+- [x] JSON parse errors in CLI return structured JSON when `--format json`
+
+---
+
+## ✅ Completed in v1.1.4 (2026-03-30)
+
+### Security Hardening
+- [x] Path validation with null byte rejection across all engines
+- [x] FFmpeg filter string escaping for special characters
+- [x] Adversarial security audit with 40+ test cases
 
 ---
 

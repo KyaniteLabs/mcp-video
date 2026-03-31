@@ -64,6 +64,12 @@ class Client:
         print(result.output_path)
     """
 
+    def __enter__(self) -> Client:
+        return self
+
+    def __exit__(self, *args: Any) -> None:
+        pass
+
     def info(self, input_path: str) -> VideoInfo:
         """Get metadata about a video file."""
         return _probe(input_path)
@@ -475,9 +481,10 @@ class Client:
         video: str,
         entries: list[dict],
         burn: bool = False,
+        output: str | None = None,
     ) -> SubtitleResult:
         """Generate SRT subtitles from text entries and optionally burn into video."""
-        return _generate_subtitles(entries, video, burn=burn)
+        return _generate_subtitles(entries, video, burn=burn, output_path=output)
 
     def audio_waveform(
         self,
@@ -537,10 +544,11 @@ class Client:
         inputs: list[str],
         operation: str,
         params: dict | None = None,
+        output_dir: str | None = None,
     ) -> dict:
         """Apply the same operation to multiple video files."""
         from .engine import video_batch
-        return video_batch(inputs, operation=operation, params=params, output_dir=None)
+        return video_batch(inputs, operation=operation, params=params, output_dir=output_dir)
 
     # ------------------------------------------------------------------
     # Image Analysis
@@ -550,7 +558,7 @@ class Client:
         self,
         image_path: str,
         n_colors: int = 5,
-    ):
+    ) -> dict:
         """Extract dominant colors from an image using K-means clustering."""
         from .image_engine import extract_colors
         return extract_colors(image_path, n_colors=n_colors)
@@ -560,7 +568,7 @@ class Client:
         image_path: str,
         harmony: str = "complementary",
         n_colors: int = 5,
-    ):
+    ) -> dict:
         """Generate a color harmony palette from an image's dominant color."""
         from .image_engine import generate_palette
         return generate_palette(image_path, harmony=harmony, n_colors=n_colors)
@@ -570,7 +578,7 @@ class Client:
         image_path: str,
         use_ai: bool = False,
         n_colors: int = 5,
-    ):
+    ) -> dict:
         """Analyze a product image — extract colors and optionally generate AI description."""
         from .image_engine import analyze_product
         return analyze_product(image_path, use_ai=use_ai, n_colors=n_colors)
@@ -598,12 +606,12 @@ class Client:
         from .remotion_engine import render
         return render(project_path, composition_id, output_path=output, codec=codec, crf=crf, width=width, height=height, fps=fps, concurrency=concurrency, frames=frames, props=props, scale=scale)
 
-    def remotion_compositions(self, project_path: str):
+    def remotion_compositions(self, project_path: str) -> list[dict]:
         """List compositions in a Remotion project."""
         from .remotion_engine import compositions
         return compositions(project_path)
 
-    def remotion_studio(self, project_path: str, port: int = 3000):
+    def remotion_studio(self, project_path: str, port: int = 3000) -> dict:
         """Launch Remotion Studio for live preview."""
         from .remotion_engine import studio
         return studio(project_path, port=port)
@@ -615,7 +623,7 @@ class Client:
         output: str | None = None,
         frame: int = 0,
         image_format: str = "png",
-    ):
+    ) -> dict:
         """Render a single frame as image."""
         from .remotion_engine import still
         return still(project_path, composition_id, output_path=output, frame=frame, image_format=image_format)
@@ -625,7 +633,7 @@ class Client:
         name: str,
         output_dir: str | None = None,
         template: str = "blank",
-    ) -> dict:
+    ) -> dict:  # already has dict, keeping
         """Scaffold a new Remotion project.
 
         Args:
@@ -644,12 +652,12 @@ class Client:
         project_path: str,
         spec: dict,
         slug: str,
-    ):
+    ) -> None:
         """Generate composition from spec."""
         from .remotion_engine import scaffold_template
         return scaffold_template(project_path, spec, slug)
 
-    def remotion_validate(self, project_path: str, composition_id: str | None = None):
+    def remotion_validate(self, project_path: str, composition_id: str | None = None) -> dict:
         """Validate project for rendering readiness.
 
         Args:
@@ -669,7 +677,7 @@ class Client:
         composition_id: str,
         post_process: list[dict],
         output: str | None = None,
-    ):
+    ) -> dict:
         """Render a Remotion composition then post-process with mcp-video tools.
 
         Args:
@@ -1046,7 +1054,7 @@ class Client:
         from .effects_engine import video_info_detailed
         return video_info_detailed(video)
 
-    def auto_chapters(self, video: str, threshold: float = 0.3) -> list:
+    def auto_chapters(self, video: str, threshold: float = 0.3) -> list[tuple[float, str]]:
         """Auto-detect scene changes and create chapters."""
         from .effects_engine import auto_chapters
         return auto_chapters(video, threshold)
@@ -1191,7 +1199,7 @@ class Client:
         video: str,
         auto_fix: bool = False,
         strict: bool = False,
-    ):
+    ) -> Any:  # DesignQualityReport
         """Run comprehensive design quality analysis.
 
         Checks layout, typography, color, motion, and composition.

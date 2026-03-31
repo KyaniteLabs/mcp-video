@@ -29,16 +29,18 @@ def run_cli_json(*args: str, expect_fail: bool = False) -> subprocess.CompletedP
 class TestCLIVersion:
     def test_version_flag(self):
         result = run_cli("--version")
-        assert "1.1.3" in result.stdout
+        assert "1.1.5" in result.stdout
 
 
 class TestCLIInfo:
     def test_info_outputs_json(self, sample_video):
         result = run_cli_json("info", sample_video)
         data = json.loads(result.stdout)
-        assert data["width"] == 640
-        assert data["height"] == 480
-        assert data["duration"] > 0
+        assert data["success"] is True
+        info = data["data"]
+        assert info["width"] == 640
+        assert info["height"] == 480
+        assert info["duration"] > 0
 
     def test_info_outputs_text(self, sample_video):
         result = run_cli("info", sample_video)

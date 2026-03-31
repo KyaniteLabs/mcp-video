@@ -1707,8 +1707,10 @@ def video_add_generated_audio(
         Dict with success status and output_path.
     """
     try:
+        if not isinstance(audio_config, dict) or not audio_config:
+            return _error_result(ValueError("audio_config must be a non-empty dict"))
         from .audio_engine import add_generated_audio as _add_gen_audio
-        return _result(_add_gen_audio(video=input_path, audio_config=audio_config, output=output_path))
+        return _result(_add_gen_audio(input_path, audio_config, output_path))
     except MCPVideoError as e:
         return _error_result(e)
 
@@ -1740,6 +1742,12 @@ def effect_vignette(
         Dict with success status and output_path.
     """
     try:
+        if not (0.0 <= intensity <= 1.0):
+            return _error_result(ValueError(f"intensity must be between 0.0 and 1.0, got {intensity}"))
+        if not (0.0 <= radius <= 1.0):
+            return _error_result(ValueError(f"radius must be between 0.0 and 1.0, got {radius}"))
+        if not (0.0 <= smoothness <= 1.0):
+            return _error_result(ValueError(f"smoothness must be between 0.0 and 1.0, got {smoothness}"))
         from .effects_engine import effect_vignette as _vignette
         return _result(_vignette(input_path, output_path, intensity, radius, smoothness))
     except MCPVideoError as e:
@@ -1767,6 +1775,8 @@ def effect_chromatic_aberration(
         Dict with success status and output_path.
     """
     try:
+        if intensity < 0:
+            return _error_result(ValueError(f"intensity must be non-negative, got {intensity}"))
         from .effects_engine import effect_chromatic_aberration as _chroma
         return _result(_chroma(input_path, output_path, intensity, angle))
     except MCPVideoError as e:
@@ -1796,6 +1806,12 @@ def effect_scanlines(
         Dict with success status and output_path.
     """
     try:
+        if line_height < 1:
+            return _error_result(ValueError(f"line_height must be at least 1, got {line_height}"))
+        if not (0.0 <= opacity <= 1.0):
+            return _error_result(ValueError(f"opacity must be between 0.0 and 1.0, got {opacity}"))
+        if not (0.0 <= flicker <= 1.0):
+            return _error_result(ValueError(f"flicker must be between 0.0 and 1.0, got {flicker}"))
         from .effects_engine import effect_scanlines as _scanlines
         return _result(_scanlines(input_path, output_path, line_height, opacity, flicker))
     except MCPVideoError as e:
@@ -1825,6 +1841,10 @@ def effect_noise(
         Dict with success status and output_path.
     """
     try:
+        if not (0.0 <= intensity <= 1.0):
+            return _error_result(ValueError(f"intensity must be between 0.0 and 1.0, got {intensity}"))
+        if mode not in ("film", "digital", "color"):
+            return _error_result(ValueError(f"mode must be film, digital, or color, got {mode}"))
         from .effects_engine import effect_noise as _noise
         return _result(_noise(input_path, output_path, intensity, mode, animated))
     except MCPVideoError as e:
@@ -1854,6 +1874,12 @@ def effect_glow(
         Dict with success status and output_path.
     """
     try:
+        if not (0.0 <= intensity <= 1.0):
+            return _error_result(ValueError(f"intensity must be between 0.0 and 1.0, got {intensity}"))
+        if radius < 0:
+            return _error_result(ValueError(f"radius must be non-negative, got {radius}"))
+        if not (0.0 <= threshold <= 1.0):
+            return _error_result(ValueError(f"threshold must be between 0.0 and 1.0, got {threshold}"))
         from .effects_engine import effect_glow as _glow
         return _result(_glow(input_path, output_path, intensity, radius, threshold))
     except MCPVideoError as e:
@@ -1885,6 +1911,10 @@ def video_layout_grid(
         Dict with success status and output_path.
     """
     try:
+        if gap < 0:
+            return _error_result(ValueError(f"gap must be non-negative, got {gap}"))
+        if padding < 0:
+            return _error_result(ValueError(f"padding must be non-negative, got {padding}"))
         from .effects_engine import layout_grid as _grid
         return _result(_grid(clips, layout, output_path, gap, padding, background))
     except MCPVideoError as e:
@@ -1924,6 +1954,10 @@ def video_layout_pip(
         Dict with success status and output_path.
     """
     try:
+        if not (0.0 < size <= 1.0):
+            return _error_result(ValueError(f"size must be between 0.0 and 1.0, got {size}"))
+        if border_width < 0:
+            return _error_result(ValueError(f"border_width must be non-negative, got {border_width}"))
         from .effects_engine import layout_pip as _pip
         return _result(_pip(main_path, pip_path, output_path, position=position, size=size, margin=margin, rounded_corners=rounded_corners, border=border, border_color=border_color, border_width=border_width))
     except MCPVideoError as e:
@@ -1963,6 +1997,12 @@ def video_text_animated(
         Dict with success status and output_path.
     """
     try:
+        if not (8 <= size <= 500):
+            return _error_result(ValueError(f"size must be between 8 and 500, got {size}"))
+        if duration <= 0:
+            return _error_result(ValueError(f"duration must be positive, got {duration}"))
+        if start < 0:
+            return _error_result(ValueError(f"start must be non-negative, got {start}"))
         from .effects_engine import text_animated as _text
         return _result(_text(input_path, text, output_path, animation, font, size, color, position, start, duration))
     except MCPVideoError as e:
@@ -2021,8 +2061,12 @@ def video_mograph_count(
         Dict with success status and output_path.
     """
     try:
+        if not (1 <= fps <= 120):
+            return _error_result(ValueError(f"fps must be between 1 and 120, got {fps}"))
+        if duration <= 0:
+            return _error_result(ValueError(f"duration must be positive, got {duration}"))
         from .effects_engine import mograph_count as _count
-        return _result(_count(start, end, duration, output_path, style, fps))
+        return _result(_count(start, end, duration, output_path, style=style, fps=fps))
     except MCPVideoError as e:
         return _error_result(e)
 
@@ -2052,8 +2096,12 @@ def video_mograph_progress(
         Dict with success status and output_path.
     """
     try:
+        if not (1 <= fps <= 120):
+            return _error_result(ValueError(f"fps must be between 1 and 120, got {fps}"))
+        if duration <= 0:
+            return _error_result(ValueError(f"duration must be positive, got {duration}"))
         from .effects_engine import mograph_progress as _progress
-        return _result(_progress(duration, output_path, style, color, track_color, fps))
+        return _result(_progress(duration, output_path, style=style, color=color, track_color=track_color, fps=fps))
     except MCPVideoError as e:
         return _error_result(e)
 
@@ -2078,6 +2126,8 @@ def video_info_detailed(
         return _result(_info(input_path))
     except MCPVideoError as e:
         return _error_result(e)
+    except Exception as e:
+        return _error_result(e)
 
 
 @mcp.tool()
@@ -2100,6 +2150,8 @@ def video_auto_chapters(
         from .effects_engine import auto_chapters as _chapters
         return _result(_chapters(input_path, threshold))
     except MCPVideoError as e:
+        return _error_result(e)
+    except Exception as e:
         return _error_result(e)
 
 
