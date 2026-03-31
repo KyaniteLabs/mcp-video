@@ -3,7 +3,17 @@
 import os
 import subprocess
 
-from .errors import ProcessingError
+from .errors import ProcessingError, InputFileError
+
+
+def _validate_input_path(path: str) -> str:
+    """Validate and resolve a file path. Rejects null bytes and symlinks."""
+    if "\x00" in path:
+        raise InputFileError(path, "Path contains null bytes")
+    resolved = os.path.realpath(path)
+    if not os.path.isfile(resolved):
+        raise InputFileError(resolved)
+    return resolved
 
 
 # ---------------------------------------------------------------------------
@@ -61,6 +71,8 @@ def transition_glitch(
     Returns:
         Path to output video
     """
+    clip1 = _validate_input_path(clip1)
+    clip2 = _validate_input_path(clip2)
     # Get duration of first clip to calculate offset
     clip1_duration = _get_video_duration(clip1)
     offset = clip1_duration - duration
@@ -121,6 +133,8 @@ def transition_pixelate(
     Returns:
         Path to output video
     """
+    clip1 = _validate_input_path(clip1)
+    clip2 = _validate_input_path(clip2)
     # Get duration of first clip to calculate offset
     clip1_duration = _get_video_duration(clip1)
     offset = clip1_duration - duration
@@ -193,6 +207,8 @@ def transition_morph(
     Returns:
         Path to output video
     """
+    clip1 = _validate_input_path(clip1)
+    clip2 = _validate_input_path(clip2)
     # Get duration of first clip to calculate offset
     clip1_duration = _get_video_duration(clip1)
     offset = clip1_duration - duration

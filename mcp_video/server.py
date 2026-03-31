@@ -250,6 +250,12 @@ def video_add_text(
         preset: Override FFmpeg encoding preset (ultrafast, fast, medium, slow, veryslow).
     """
     try:
+        if size < 8 or size > 500:
+            return _error_result(MCPVideoError(
+                f"Font size must be between 8 and 500, got {size}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            ))
         return _result(add_text(
             input_path, text=text, position=position, font=font,
             size=size, color=color, shadow=shadow,
@@ -284,6 +290,12 @@ def video_add_audio(
         output_path: Where to save the output. Auto-generated if omitted.
     """
     try:
+        if not 0 <= volume <= 2.0:
+            return _error_result(MCPVideoError(
+                f"volume must be between 0.0 and 2.0, got {volume}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            ))
         if fade_in is not None and fade_in < 0:
             return _error_result(MCPVideoError(
                 f"fade_in must be non-negative, got {fade_in}",
@@ -331,11 +343,23 @@ def video_resize(
             error_type="validation_error",
             code="resolution_too_high",
         ))
+    if width is not None and width <= 0:
+        return _error_result(MCPVideoError(
+            f"Width must be positive, got {width}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        ))
     if height is not None and height > MAX_RESOLUTION:
         return _error_result(MCPVideoError(
             f"Height {height} exceeds maximum resolution of {MAX_RESOLUTION}",
             error_type="validation_error",
             code="resolution_too_high",
+        ))
+    if height is not None and height <= 0:
+        return _error_result(MCPVideoError(
+            f"Height must be positive, got {height}",
+            error_type="validation_error",
+            code="invalid_parameter",
         ))
     try:
         return _result(resize(
@@ -623,6 +647,18 @@ def video_fade(
         preset: Override FFmpeg encoding preset (ultrafast, fast, medium, slow, veryslow).
     """
     try:
+        if fade_in < 0:
+            return _error_result(MCPVideoError(
+                f"fade_in must be non-negative, got {fade_in}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            ))
+        if fade_out < 0:
+            return _error_result(MCPVideoError(
+                f"fade_out must be non-negative, got {fade_out}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            ))
         return _result(fade(
             input_path, fade_in=fade_in, fade_out=fade_out,
             output_path=output_path, crf=crf, preset=preset,
@@ -757,6 +793,25 @@ def video_chroma_key(
         blend: How much to blend the keyed color (default 0.0).
         output_path: Where to save the output. Auto-generated if omitted.
     """
+    # Validate color doesn't contain FFmpeg filter injection characters
+    if any(c in color for c in (":", "]", "[", ";", "\x00")):
+        return _error_result(MCPVideoError(
+            f"Invalid color value containing forbidden characters: {color}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        ))
+    if not 0 <= similarity <= 1:
+        return _error_result(MCPVideoError(
+            f"similarity must be between 0 and 1, got {similarity}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        ))
+    if not 0 <= blend <= 1:
+        return _error_result(MCPVideoError(
+            f"blend must be between 0 and 1, got {blend}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        ))
     try:
         return _result(chroma_key(input_path, color=color, similarity=similarity, blend=blend, output_path=output_path))
     except MCPVideoError as e:
@@ -827,6 +882,12 @@ def video_normalize_audio(
         output_path: Where to save the output. Auto-generated if omitted.
     """
     try:
+        if not -70 <= target_lufs <= -5:
+            return _error_result(MCPVideoError(
+                f"target_lufs must be between -70 and -5, got {target_lufs}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            ))
         return _result(normalize_audio(input_path, target_lufs=target_lufs, output_path=output_path))
     except MCPVideoError as e:
         return _error_result(e)
@@ -913,6 +974,12 @@ def video_detect_scenes(
         min_scene_duration: Minimum scene duration in seconds (default 1.0).
     """
     try:
+        if not 0 <= threshold <= 1:
+            return _error_result(MCPVideoError(
+                f"threshold must be between 0 and 1, got {threshold}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            ))
         return _result(detect_scenes(input_path, threshold=threshold, min_scene_duration=min_scene_duration))
     except MCPVideoError as e:
         return _error_result(e)
@@ -932,6 +999,12 @@ def video_create_from_images(
         fps: Frames per second for the output video (default 30.0).
     """
     try:
+        if fps <= 0 or fps > MAX_EXPORT_FRAMES_FPS:
+            return _error_result(MCPVideoError(
+                f"fps must be between 0 and {MAX_EXPORT_FRAMES_FPS}, got {fps}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            ))
         return _result(create_from_images(images, output_path=output_path, fps=fps))
     except MCPVideoError as e:
         return _error_result(e)
@@ -1058,6 +1131,18 @@ def video_stabilize(
         output_path: Where to save the output. Auto-generated if omitted.
     """
     try:
+        if smoothing < 0:
+            return _error_result(MCPVideoError(
+                f"smoothing must be non-negative, got {smoothing}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            ))
+        if zooming < 0:
+            return _error_result(MCPVideoError(
+                f"zooming must be non-negative, got {zooming}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            ))
         return _result(stabilize(input_path, smoothing=smoothing, zooming=zooming, output_path=output_path))
     except MCPVideoError as e:
         return _error_result(e)
@@ -1079,6 +1164,12 @@ def video_apply_mask(
         output_path: Where to save the output. Auto-generated if omitted.
     """
     try:
+        if feather < 0:
+            return _error_result(MCPVideoError(
+                f"feather must be non-negative, got {feather}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            ))
         return _result(apply_mask(input_path, mask_path=mask_path, feather=feather, output_path=output_path))
     except MCPVideoError as e:
         return _error_result(e)
@@ -1096,6 +1187,12 @@ def video_audio_waveform(
         bins: Number of time segments to analyze (default 50).
     """
     try:
+        if bins < 1 or bins > 1000:
+            return _error_result(MCPVideoError(
+                f"bins must be between 1 and 1000, got {bins}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            ))
         return _result(audio_waveform(input_path, bins=bins))
     except MCPVideoError as e:
         return _error_result(e)
@@ -1135,7 +1232,12 @@ def video_batch(
             error_type="validation_error",
             code="batch_too_large",
         ))
-    return _video_batch(inputs, operation, params, output_dir)
+    try:
+        return _result(_video_batch(inputs, operation, params, output_dir))
+    except MCPVideoError as e:
+        return _error_result(e)
+    except Exception as e:
+        return {"success": False, "error": {"type": "internal_error", "code": "unexpected_error", "message": str(e)}}
 
 
 @mcp.tool()

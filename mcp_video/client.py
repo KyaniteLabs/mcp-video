@@ -316,6 +316,8 @@ class Client:
         """
         if quality not in self._VALID_QUALITIES:
             raise ValueError(f"quality must be one of {sorted(self._VALID_QUALITIES)}, got {quality}")
+        if format not in self._VALID_FORMATS:
+            raise ValueError(f"format must be one of {sorted(self._VALID_FORMATS)}, got {format}")
         return _export_video(video, output_path=output, quality=quality, format=format)
 
     def edit(self, timeline: dict[str, Any], output: str | None = None) -> EditResult:

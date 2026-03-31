@@ -114,6 +114,8 @@ def _require_filter(name: str, feature: str) -> None:
 # ---------------------------------------------------------------------------
 
 def _validate_input(path: str) -> None:
+    if "\x00" in path:
+        raise InputFileError(path, "Path contains null bytes")
     if not os.path.isfile(path):
         raise InputFileError(path)
 
@@ -227,7 +229,8 @@ def _parse_ffmpeg_time(time_str: str) -> float:
     m = re.match(r"(\d+):(\d+):(\d+)\.(\d+)", time_str)
     if not m:
         return 0.0
-    return int(m.group(1)) * 3600 + int(m.group(2)) * 60 + int(m.group(3)) + int(m.group(4)) / 100
+    frac = m.group(4)
+    return int(m.group(1)) * 3600 + int(m.group(2)) * 60 + int(m.group(3)) + int(frac) / (10 ** len(frac))
 
 
 _TIME_RE = re.compile(r"time=(\d+:\d+:\d+\.\d+)")
@@ -783,7 +786,7 @@ def add_text(
     # Escape FFmpeg drawtext special characters
     # Colons and backslashes must be escaped even inside single quotes
     # because FFmpeg parses filter options as key=value pairs with : delimiters
-    escaped_text = text.replace("\\", "\\\\").replace("'", "'\\''").replace(":", "\\:")
+    escaped_text = text.replace("\\", "\\\\").replace("'", "'\\''").replace(":", "\\:").replace("[", "\\[").replace("]", "\\]").replace(";", "\\;")
 
     filter_parts = [
         f"drawtext=text='{escaped_text}'",
@@ -1570,7 +1573,7 @@ def edit_timeline(timeline: Timeline | dict, output_path: str | None = None) -> 
                 if track.type == "video" and track.transitions:
                     # Sort by after_clip to get correct order
                     sorted_trans = sorted(track.transitions, key=lambda t: t.after_clip)
-                    transition_list = [t.type.value for t in sorted_trans]
+                    transition_list = [t.type for t in sorted_trans]
                     trans_duration = sorted_trans[0].duration
                     break
             merge(video_clips, output_path=merged, transitions=transition_list, transition_duration=trans_duration)

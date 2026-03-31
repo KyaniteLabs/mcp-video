@@ -51,6 +51,18 @@ def _format_edit_text(result: Any) -> None:
     console.print(Panel("\n".join(lines), border_style="green", title="Done"))
 
 
+def _format_thumbnail_text(result: Any) -> None:
+    """Display thumbnail/extract-frame result."""
+    data = result.model_dump() if hasattr(result, "model_dump") else result
+    frame_path = data.get("frame_path", "N/A")
+    timestamp = data.get("timestamp", 0.0)
+    console.print(Panel(
+        f"[bold green]Frame extracted:[/bold green] {frame_path}\n[bold green]Timestamp:[/bold green] {timestamp:.2f}s",
+        border_style="green",
+        title="Done",
+    ))
+
+
 def _format_storyboard_text(result: Any) -> None:
     """Display storyboard result."""
     data = result.model_dump() if hasattr(result, "model_dump") else result
@@ -68,6 +80,11 @@ def _format_storyboard_text(result: Any) -> None:
 
 def _format_batch_text(result: dict) -> None:
     """Display batch result as a table."""
+    if result.get("success") is False:
+        error_msg = result.get("error", {})
+        msg = error_msg.get("message", str(error_msg)) if isinstance(error_msg, dict) else str(error_msg)
+        console.print(f"[bold red]Batch failed: {msg}[/bold red]")
+        return
     table = Table(title="Batch Results")
     table.add_column("File", style="cyan")
     table.add_column("Status")
@@ -103,6 +120,15 @@ def _format_error(e: Exception) -> None:
         err_console.print(Panel("\n".join(lines), border_style="red", title="Error"))
     else:
         err_console.print(Panel(f"[bold red]{e}[/bold red]", border_style="red", title="Error"))
+
+
+def _parse_json_arg(value: str, arg_name: str = "argument") -> Any:
+    """Parse a JSON string argument, showing a friendly error on failure."""
+    try:
+        return json.loads(value)
+    except json.JSONDecodeError as e:
+        console.print(f"[bold red]Invalid JSON in --{arg_name}: {e}[/bold red]")
+        raise SystemExit(1) from None
 
 
 def _with_spinner(label: str, fn, *args, **kwargs):
@@ -701,6 +727,8 @@ def main() -> None:
     lpip_p.add_argument("--no-border", dest="border", action="store_false", help="Disable border around PIP")
     lpip_p.add_argument("--border-color", default="#CCFF00", help="Border color hex (default: #CCFF00)")
     lpip_p.add_argument("--border-width", type=int, default=2, help="Border width in pixels (default: 2)")
+    lpip_p.add_argument("--rounded-corners", action="store_true", default=True, help="Apply rounded corners to PIP (default: True)")
+    lpip_p.add_argument("--no-rounded-corners", dest="rounded_corners", action="store_false", help="Disable rounded corners")
 
     # ------------------------------------------------------------------
     # Audio-Video commands
@@ -982,7 +1010,7 @@ def main() -> None:
 
         elif args.command == "filter":
             from .engine import apply_filter
-            params = json.loads(args.params) if args.params else {}
+            params = _parse_json_arg(args.params, "params") if args.params else {}
             result = _with_spinner("Applying filter...", apply_filter, args.input, filter_type=args.filter_type, params=params, output_path=args.output)
             if use_json:
                 output_json(result)
@@ -1052,7 +1080,7 @@ def main() -> None:
 
         elif args.command == "batch":
             from .engine import video_batch
-            params = json.loads(args.params) if args.params else {}
+            params = _parse_json_arg(args.params, "params") if args.params else {}
             result = video_batch(args.inputs, operation=args.operation, params=params, output_dir=args.output_dir)
             if use_json:
                 print(json.dumps(result, indent=2))
@@ -1171,10 +1199,7 @@ def main() -> None:
 
         elif args.command == "audio-waveform":
             from .engine import audio_waveform
-            waveform_kwargs: dict = {"bins": args.bins}
-            if args.output:
-                waveform_kwargs["output_path"] = args.output
-            result = _with_spinner("Extracting waveform...", audio_waveform, args.input, **waveform_kwargs)
+            result = _with_spinner("Extracting waveform...", audio_waveform, args.input, bins=args.bins)
             if use_json:
                 output_json(result)
             else:
@@ -1192,7 +1217,7 @@ def main() -> None:
 
         elif args.command == "generate-subtitles":
             from .engine import generate_subtitles
-            entries = json.loads(args.entries)
+            entries = _parse_json_arg(args.entries, "entries")
             result = _with_spinner("Generating subtitles...", generate_subtitles, entries, args.input, burn=args.burn, output_path=args.output)
             if use_json:
                 output_json(result)
@@ -1251,7 +1276,7 @@ def main() -> None:
 
         elif args.command == "remotion-render":
             from .remotion_engine import render_composition
-            props = json.loads(args.props) if args.props else None
+            props = _parse_json_arg(args.props, "props") if args.props else None
             result = _with_spinner(
                 f"Rendering {args.composition_id}...",
                 render_composition,
@@ -1372,7 +1397,7 @@ def main() -> None:
 
         elif args.command == "remotion-scaffold":
             from .remotion_engine import scaffold_composition
-            spec = json.loads(args.spec)
+            spec = _parse_json_arg(args.spec, "spec")
             result = _with_spinner(
                 f"Scaffolding '{args.slug}'...",
                 scaffold_composition,
@@ -1421,7 +1446,7 @@ def main() -> None:
 
         elif args.command == "remotion-pipeline":
             from .remotion_engine import render_pipeline
-            post_process = json.loads(args.post_process)
+            post_process = _parse_json_arg(args.post_process, "post-process")
             result = _with_spinner(
                 f"Running pipeline for {args.composition_id}...",
                 render_pipeline,
@@ -1613,7 +1638,7 @@ def main() -> None:
 
         elif args.command == "audio-synthesize":
             from .audio_engine import audio_synthesize
-            effects = json.loads(args.effects) if args.effects else None
+            effects = _parse_json_arg(args.effects, "effects") if args.effects else None
             result = _with_spinner("Synthesizing audio...", audio_synthesize, args.output,
                                    waveform=args.waveform, frequency=args.frequency,
                                    duration=args.duration, volume=args.volume, effects=effects)
@@ -1624,7 +1649,7 @@ def main() -> None:
 
         elif args.command == "audio-compose":
             from .audio_engine import audio_compose
-            tracks = json.loads(args.tracks)
+            tracks = _parse_json_arg(args.tracks, "tracks")
             result = _with_spinner("Composing audio...", audio_compose, tracks, args.duration, args.output)
             if use_json:
                 output_json({"success": True, "output_path": result})
@@ -1643,7 +1668,7 @@ def main() -> None:
 
         elif args.command == "audio-sequence":
             from .audio_engine import audio_sequence
-            sequence = json.loads(args.sequence)
+            sequence = _parse_json_arg(args.sequence, "sequence")
             result = _with_spinner("Composing audio sequence...", audio_sequence, sequence, args.output)
             if use_json:
                 output_json({"success": True, "output_path": result})
@@ -1652,7 +1677,7 @@ def main() -> None:
 
         elif args.command == "audio-effects":
             from .audio_engine import audio_effects
-            effects = json.loads(args.effects)
+            effects = _parse_json_arg(args.effects, "effects")
             result = _with_spinner("Applying audio effects...", audio_effects, args.input, args.output, effects)
             if use_json:
                 output_json({"success": True, "output_path": result})
@@ -1677,7 +1702,7 @@ def main() -> None:
 
         elif args.command == "video-mograph-count":
             from .effects_engine import mograph_count
-            style = json.loads(args.style) if args.style else None
+            style = _parse_json_arg(args.style, "style") if args.style else None
             result = _with_spinner("Generating counter...", mograph_count,
                                    args.start, args.end, args.duration, args.output,
                                    style=style, fps=args.fps)
@@ -1716,7 +1741,8 @@ def main() -> None:
                                    args.main, args.pip, args.output,
                                    position=args.position, size=args.size,
                                    margin=args.margin, border=args.border,
-                                   border_color=args.border_color, border_width=args.border_width)
+                                   border_color=args.border_color, border_width=args.border_width,
+                                   rounded_corners=args.rounded_corners)
             if use_json:
                 output_json({"success": True, "output_path": result})
             else:
@@ -1728,7 +1754,7 @@ def main() -> None:
 
         elif args.command == "video-add-generated-audio":
             from .audio_engine import add_generated_audio
-            audio_config = json.loads(args.audio_config)
+            audio_config = _parse_json_arg(args.audio_config, "audio-config")
             result = _with_spinner("Adding generated audio...", add_generated_audio,
                                    args.input, audio_config, args.output)
             if use_json:
@@ -1738,7 +1764,7 @@ def main() -> None:
 
         elif args.command == "video-audio-spatial":
             from .ai_engine import audio_spatial
-            positions = json.loads(args.positions)
+            positions = _parse_json_arg(args.positions, "positions")
             result = _with_spinner("Applying spatial audio...", audio_spatial,
                                    args.input, args.output, positions=positions, method=args.method)
             if use_json:
@@ -1776,8 +1802,7 @@ def main() -> None:
             if use_json:
                 output_json(result)
             else:
-                data = result.model_dump() if hasattr(result, "model_dump") else result
-                console.print(Panel(f"[bold green]Frame extracted:[/bold green] {data.get('output_path', 'N/A')}", border_style="green", title="Done"))
+                _format_thumbnail_text(result)
 
         elif args.command == "video-info-detailed":
             from .effects_engine import video_info_detailed

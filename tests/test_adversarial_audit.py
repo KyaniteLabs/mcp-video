@@ -7,8 +7,6 @@ parameter bounds, and consistency across all engines.
 from __future__ import annotations
 
 import os
-import subprocess
-from unittest.mock import patch, MagicMock
 
 import pytest
 
@@ -171,15 +169,15 @@ class TestErrorTypeConsistency:
     """All engines raise MCPVideoError subtypes."""
 
     def test_effects_engine_raises_processing_error(self) -> None:
-        """effects_engine raises ProcessingError, not RuntimeError."""
+        """effects_engine raises MCPVideoError (InputFileError), not RuntimeError."""
         from mcp_video.effects_engine import effect_vignette
-        with pytest.raises(ProcessingError):
+        with pytest.raises(MCPVideoError):
             effect_vignette("/nonexistent/video.mp4", "/tmp/out.mp4")
 
     def test_transitions_engine_raises_processing_error(self) -> None:
-        """transitions_engine raises ProcessingError, not RuntimeError."""
+        """transitions_engine raises MCPVideoError (InputFileError), not RuntimeError."""
         from mcp_video.transitions_engine import transition_pixelate
-        with pytest.raises((ProcessingError, FileNotFoundError, OSError)):
+        with pytest.raises(MCPVideoError):
             transition_pixelate(
                 "/nonexistent/clip1.mp4",
                 "/nonexistent/clip2.mp4",

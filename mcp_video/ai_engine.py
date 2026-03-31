@@ -566,7 +566,12 @@ def _build_keep_segments(
     for silence_start, silence_end in silence_regions:
         # Add margin to silence boundaries
         effective_silence_start = max(0, silence_start + keep_margin)
-        min(video_duration, silence_end - keep_margin)
+        effective_silence_end = max(effective_silence_start, silence_end - keep_margin)
+
+        # If silence region is too small after margins, skip it
+        if effective_silence_start >= effective_silence_end:
+            current_pos = silence_end
+            continue
 
         # If there's content before the silence, keep it
         if current_pos < effective_silence_start:
