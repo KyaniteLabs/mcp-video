@@ -52,51 +52,51 @@ from .design_quality import (
 
 __all__ = [
     "Client",
-    # Audio synthesis
-    "audio_synthesize",
-    "audio_preset",
-    "audio_sequence",
+    "DesignIssue",
+    "DesignQualityGuardrails",
+    "DesignQualityReport",
+    "QualityReport",
+    "VisualQualityGuardrails",
+    "add_generated_audio",
+    "ai_color_grade",
+    # NEW: AI Features
+    "ai_remove_silence",
+    "ai_scene_detect",
+    "ai_stem_separation",
+    "ai_transcribe",
+    "ai_upscale",
     "audio_compose",
     "audio_effects",
-    "add_generated_audio",
+    "audio_preset",
+    "audio_sequence",
+    "audio_spatial",
+    # Audio synthesis
+    "audio_synthesize",
+    "auto_chapters",
+    # NEW: Design Quality
+    "design_quality_check",
+    "effect_chromatic_aberration",
+    "effect_glow",
+    "effect_noise",
+    "effect_scanlines",
     # Visual effects
     "effect_vignette",
-    "effect_chromatic_aberration",
-    "effect_scanlines",
-    "effect_noise",
-    "effect_glow",
+    "fix_design_issues",
     # Layout
     "layout_grid",
     "layout_pip",
-    # Text
-    "text_animated",
-    "text_subtitles",
     # Motion graphics
     "mograph_count",
     "mograph_progress",
-    # Utility
-    "video_info_detailed",
-    "auto_chapters",
-    # NEW: Transitions
-    "transition_glitch",
-    "transition_pixelate",
-    "transition_morph",
-    # NEW: AI Features
-    "ai_remove_silence",
-    "ai_transcribe",
-    "ai_scene_detect",
-    "ai_stem_separation",
-    "ai_upscale",
-    "ai_color_grade",
-    "audio_spatial",
     # NEW: Quality Guardrails
     "quality_check",
-    "VisualQualityGuardrails",
-    "QualityReport",
-    # NEW: Design Quality
-    "design_quality_check",
-    "fix_design_issues",
-    "DesignQualityGuardrails",
-    "DesignQualityReport",
-    "DesignIssue",
+    # Text
+    "text_animated",
+    "text_subtitles",
+    # NEW: Transitions
+    "transition_glitch",
+    "transition_morph",
+    "transition_pixelate",
+    # Utility
+    "video_info_detailed",
 ]

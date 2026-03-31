@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import colorsys
 import os
-from typing import Any
 
 from .errors import MCPVideoError
 from .image_models import (
@@ -40,7 +39,7 @@ def _require_image_deps() -> None:
                 "auto_fix": False,
                 "description": "Run: pip install mcp-video[image]",
             },
-        )
+        ) from None
 
 
 def _validate_image(path: str) -> None:
@@ -70,10 +69,10 @@ def _rgb_to_hsl(r: int, g: int, b: int) -> tuple[float, float, float]:
     return colorsys.rgb_to_hls(r / 255.0, g / 255.0, b / 255.0)
 
 
-def _hsl_to_rgb(h: float, s: float, l: float) -> tuple[int, int, int]:
+def _hsl_to_rgb(h: float, s: float, lightness: float) -> tuple[int, int, int]:
     """Convert HSL (0-1 range) to RGB (0-255)."""
-    r, g, b = colorsys.hls_to_rgb(h, l, s)
-    return (int(round(r * 255)), int(round(g * 255)), int(round(b * 255)))
+    r, g, b = colorsys.hls_to_rgb(h, lightness, s)
+    return (round(r * 255), round(g * 255), round(b * 255))
 
 
 def _closest_color_name(r: int, g: int, b: int) -> str:
@@ -149,7 +148,7 @@ def extract_colors(
     colors: list[DominantColor] = []
     for cluster_id, count in sorted_clusters:
         center = kmeans.cluster_centers_[cluster_id]
-        r, g, b = int(round(center[0])), int(round(center[1])), int(round(center[2]))
+        r, g, b = round(center[0]), round(center[1]), round(center[2])
         r = max(0, min(255, r))
         g = max(0, min(255, g))
         b = max(0, min(255, b))
@@ -190,7 +189,7 @@ def generate_palette(
     r, g, b = source.rgb
 
     # Convert to HSL for harmony math
-    h, l, s = _rgb_to_hsl(r, g, b)
+    h, lightness, s = _rgb_to_hsl(r, g, b)
 
     # Harmony rotation rules
     harmony_offsets: dict[str, list[float]] = {
@@ -211,7 +210,7 @@ def generate_palette(
     palette: list[PaletteColor] = []
     for i, offset in enumerate(offsets):
         new_h = (h + offset) % 1.0
-        nr, ng, nb = _hsl_to_rgb(new_h, s, l)
+        nr, ng, nb = _hsl_to_rgb(new_h, s, lightness)
         role = role_names[harmony][i] if i < len(role_names[harmony]) else f"accent{i}"
         palette.append(PaletteColor(
             hex=_rgb_to_hex(nr, ng, nb),
@@ -252,7 +251,7 @@ def analyze_product(
                     "auto_fix": False,
                     "description": "Run: pip install mcp-video[image-ai]",
                 },
-            )
+            ) from None
 
         import base64
         import mimetypes

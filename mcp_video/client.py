@@ -41,11 +41,8 @@ from .engine import (
 )
 from .models import (
     EditResult,
-    ExportFormat,
     ImageSequenceResult,
     MetadataResult,
-    Position,
-    QualityLevel,
     QualityMetricsResult,
     SceneDetectionResult,
     StoryboardResult,
@@ -640,7 +637,7 @@ class Client:
         effects: dict | None = None,
     ) -> str:
         """Generate audio procedurally using synthesis.
-        
+
         Args:
             output: Output WAV file path
             waveform: Type of waveform (sine, square, sawtooth, triangle, noise)
@@ -648,7 +645,7 @@ class Client:
             duration: Duration in seconds
             volume: Amplitude (0-1)
             effects: Optional effects dict with envelope, fade_in, fade_out, reverb, lowpass
-        
+
         Returns:
             Path to generated WAV file
         """
@@ -671,13 +668,13 @@ class Client:
         intensity: float = 0.5,
     ) -> str:
         """Generate preset sound design elements.
-        
+
         Presets: ui-blip, ui-click, ui-tap, ui-whoosh-up, ui-whoosh-down,
                  drone-low, drone-mid, drone-tech, drone-ominous,
                  chime-success, chime-error, chime-notification,
                  typing, scan, processing, data-flow,
                  upload, download
-        
+
         Returns:
             Path to generated WAV file
         """
@@ -696,11 +693,11 @@ class Client:
         output: str,
     ) -> str:
         """Compose multiple audio events into a timed sequence.
-        
+
         Args:
             sequence: List of audio events with type, at (time), duration, etc.
             output: Output WAV file path
-        
+
         Returns:
             Path to generated WAV file
         """
@@ -714,12 +711,12 @@ class Client:
         output: str,
     ) -> str:
         """Layer multiple audio tracks with mixing.
-        
+
         Args:
             tracks: List of track configs with file, volume, start, loop
             duration: Total duration of output
             output: Output WAV file path
-        
+
         Returns:
             Path to generated WAV file
         """
@@ -733,12 +730,12 @@ class Client:
         effects: list[dict],
     ) -> str:
         """Apply audio effects chain.
-        
+
         Args:
             input_path: Input WAV file path
             output: Output WAV file path
             effects: List of effect configs with type and parameters
-        
+
         Returns:
             Path to processed WAV file
         """
@@ -752,12 +749,12 @@ class Client:
         output: str,
     ) -> str:
         """Add generated audio to a video file.
-        
+
         Args:
             video: Input video path
             audio_config: Configuration with drone and/or events
             output: Output video path
-        
+
         Returns:
             Path to output video
         """
@@ -1014,15 +1011,15 @@ class Client:
         strict: bool = False,
     ) -> dict:
         """Run comprehensive design quality analysis.
-        
+
         Checks layout, typography, color, motion, and composition.
         Can automatically fix issues where possible.
-        
+
         Args:
             video: Video file path
             auto_fix: If True, automatically apply fixes
             strict: If True, treat warnings as errors
-        
+
         Returns:
             Design quality report with scores and issues
         """
@@ -1035,11 +1032,11 @@ class Client:
         output: str | None = None,
     ) -> str:
         """Auto-fix design issues in a video.
-        
+
         Args:
             video: Input video path
             output: Output path (auto-generated if None)
-        
+
         Returns:
             Path to fixed video
         """
@@ -1048,4 +1045,3 @@ class Client:
 
 
 # Fix the circular import for resize
-from .engine import resize as _resize

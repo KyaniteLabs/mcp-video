@@ -9,6 +9,7 @@ if no output_path is provided.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import shutil
@@ -18,11 +19,9 @@ from pathlib import Path
 from typing import Any
 
 from .errors import (
-    MCPVideoError,
     RemotionNotFoundError,
     RemotionProjectError,
     RemotionRenderError,
-    RemotionValidationError,
 )
 from .remotion_models import (
     CompositionInfo,
@@ -102,9 +101,9 @@ def _run_remotion(
             timeout=timeout,
         )
     except subprocess.TimeoutExpired:
-        raise RemotionRenderError(" ".join(cmd), -1, "Render timed out")
+        raise RemotionRenderError(" ".join(cmd), -1, "Render timed out") from None
     except FileNotFoundError:
-        raise RemotionNotFoundError("npx command not found")
+        raise RemotionNotFoundError("npx command not found") from None
 
 
 # ---------------------------------------------------------------------------
@@ -257,7 +256,7 @@ def studio(
     project = _validate_project(project_path)
 
     cmd = ["npx", "remotion", "studio", str(project), "--port", str(port)]
-    proc = subprocess.Popen(
+    subprocess.Popen(
         cmd,
         cwd=str(project),
         stdout=subprocess.PIPE,
@@ -519,7 +518,7 @@ export const RemotionRoot: React.FC = () => {
         files.append("src/Root.tsx")
 
     # Run npm install
-    try:
+    with contextlib.suppress(subprocess.TimeoutExpired, FileNotFoundError):
         subprocess.run(
             ["npm", "install"],
             cwd=str(project_dir),
@@ -527,8 +526,6 @@ export const RemotionRoot: React.FC = () => {
             text=True,
             timeout=120,
         )
-    except (subprocess.TimeoutExpired, FileNotFoundError):
-        pass  # npm install failure is non-fatal
 
     return RemotionProjectResult(
         project_path=str(project_dir),

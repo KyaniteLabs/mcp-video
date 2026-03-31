@@ -54,7 +54,7 @@ def _run_ffmpeg(cmd: list[str], timeout: int = 600) -> subprocess.CompletedProce
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
     except subprocess.TimeoutExpired:
-        raise ProcessingError(cmd_str, -1, f"FFmpeg command timed out after {timeout}s")
+        raise ProcessingError(cmd_str, -1, f"FFmpeg command timed out after {timeout}s") from None
     if result.returncode != 0:
         raise ProcessingError(cmd_str, result.returncode, result.stderr)
     return result
@@ -73,24 +73,24 @@ def effect_vignette(
     smoothness: float = 0.5,
 ) -> str:
     """Apply vignette effect - darkened edges with adjustable curve.
-    
+
     Args:
         input_path: Input video path
         output: Output video path
         intensity: Darkness amount (0-1)
         radius: Vignette radius (0-1, 1 = edge of frame)
         smoothness: Edge softness (0-1)
-    
+
     Returns:
         Path to output video
     """
     # FFmpeg vignette filter: angle (in radians) controls the radius
     # intensity maps to darkness
-    
+
     # Convert radius to angle (FFmpeg uses angle in radians)
     # angle of PI/2 = corner to center, angle of PI/5 = closer to edges
     angle = 3.14159 * (1 - radius * 0.8)  # Scale to reasonable range
-    
+
     # Build filter chain
     # vignette creates the darkening, we overlay it with the original
     filters = (
@@ -99,7 +99,7 @@ def effect_vignette(
         f"[a]format=pix_fmts=yuva420p,colorchannelmixer=aa={intensity}[vignette];"
         f"[original][vignette]overlay=format=auto"
     )
-    
+
     cmd = [
         "ffmpeg", "-y",
         "-i", input_path,
@@ -110,7 +110,7 @@ def effect_vignette(
         "-crf", "23",
         output,
     ]
-    
+
     _run_ffmpeg(cmd)
 
     return output
@@ -123,23 +123,23 @@ def effect_chromatic_aberration(
     angle: float = 0,
 ) -> str:
     """Apply chromatic aberration - RGB channel separation.
-    
+
     Args:
         input_path: Input video path
         output: Output video path
         intensity: Pixel offset amount
         angle: Separation direction in degrees (0 = horizontal)
-    
+
     Returns:
         Path to output video
     """
     # Convert angle to radians
     angle_rad = angle * 3.14159 / 180
-    
+
     # Calculate x and y offsets
     offset_x = intensity * math.cos(angle_rad)
     offset_y = intensity * math.sin(angle_rad)
-    
+
     # Build filter: shift R channel right, B channel left
     # Using colorchannelmixer to extract and shift channels
     filters = (
@@ -151,17 +151,17 @@ def effect_chromatic_aberration(
         f"colorchannelmixer=rr=0:gg=0:bb=1[b];"
         f"[r][g][b]mergeplanes=0x0+0x1+0x2:rgb"
     )
-    
+
     # Simpler approach using chromashift if available
     # chromashift filter directly does what we want
     shift_x = int(offset_x)
     shift_y = int(offset_y)
-    
+
     filters = (
         f"chromashift=cbh={shift_x}:cbv={shift_y}:"
         f"crh=-{shift_x}:crv=-{shift_y}"
     )
-    
+
     cmd = [
         "ffmpeg", "-y",
         "-i", input_path,
@@ -172,13 +172,13 @@ def effect_chromatic_aberration(
         "-crf", "23",
         output,
     ]
-    
+
     # Run first attempt, capture error for fallback check
     cmd_str = " ".join(cmd)
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
     except subprocess.TimeoutExpired:
-        raise ProcessingError(cmd_str, -1, f"FFmpeg command timed out after 600s")
+        raise ProcessingError(cmd_str, -1, "FFmpeg command timed out after 600s") from None
 
     # Fallback if chromashift not available
     if result.returncode != 0 and "chromashift" in result.stderr:
@@ -201,14 +201,14 @@ def effect_scanlines(
     flicker: float = 0.1,
 ) -> str:
     """Apply CRT-style scanlines overlay.
-    
+
     Args:
         input_path: Input video path
         output: Output video path
         line_height: Pixels per line
         opacity: Line opacity (0-1)
         flicker: Subtle brightness variation
-    
+
     Returns:
         Path to output video
     """
@@ -216,13 +216,13 @@ def effect_scanlines(
     # drawgrid creates horizontal lines with specified spacing
     grid_spacing = line_height * 2
     line_thickness = line_height
-    
+
     filters = f"drawgrid=w=iw:h={grid_spacing}:t={line_thickness}:c=black@{opacity}"
-    
+
     if flicker > 0:
         # Add subtle flicker using eq filter
         filters += f",eq=brightness={flicker}*sin(t*10)"
-    
+
     cmd = [
         "ffmpeg", "-y",
         "-i", input_path,
@@ -233,7 +233,7 @@ def effect_scanlines(
         "-crf", "23",
         output,
     ]
-    
+
     _run_ffmpeg(cmd)
 
     return output
@@ -247,20 +247,20 @@ def effect_noise(
     animated: bool = True,
 ) -> str:
     """Apply film grain / digital noise.
-    
+
     Args:
         input_path: Input video path
         output: Output video path
         intensity: Noise amount (0-1)
         mode: "film", "digital", or "color"
         animated: Whether noise changes per frame
-    
+
     Returns:
         Path to output video
     """
     # Use noise filter if available, otherwise usegeq with random
     seed_expr = "random(0)" if animated else "0"
-    
+
     if mode == "color":
         # Color noise
         noise_expr = f"lum(X,Y)+{intensity*50}*({seed_expr}*2-1)"
@@ -269,7 +269,7 @@ def effect_noise(
         # Luminance noise only
         noise_expr = f"lum(X,Y)*(1+{intensity}*({seed_expr}*2-1))"
         filters = f"geq=lum='{noise_expr}'"
-    
+
     cmd = [
         "ffmpeg", "-y",
         "-i", input_path,
@@ -280,7 +280,7 @@ def effect_noise(
         "-crf", "23",
         output,
     ]
-    
+
     _run_ffmpeg(cmd)
 
     return output
@@ -294,27 +294,27 @@ def effect_glow(
     threshold: float = 0.7,
 ) -> str:
     """Apply bloom/glow effect for highlights.
-    
+
     Args:
         input_path: Input video path
         output: Output video path
         intensity: Glow strength (0-1)
         radius: Blur radius in pixels
         threshold: Brightness threshold (0-1) for glow
-    
+
     Returns:
         Path to output video
     """
     # Extract highlights, blur them, overlay back
     threshold_8bit = int(threshold * 255)
-    
+
     filters = (
         f"split[original][highlights];"
         f"[highlights]geq=lum='if(lt(lum(X,Y),{threshold_8bit}),0,lum(X,Y))',"
         f"gblur=sigma={radius}[glow];"
         f"[original][glow]blend=all_mode='addition':all_opacity={intensity}"
     )
-    
+
     cmd = [
         "ffmpeg", "-y",
         "-i", input_path,
@@ -325,13 +325,13 @@ def effect_glow(
         "-crf", "23",
         output,
     ]
-    
+
     # Run first attempt, capture error for fallback check
     cmd_str = " ".join(cmd)
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
     except subprocess.TimeoutExpired:
-        raise ProcessingError(cmd_str, -1, f"FFmpeg command timed out after 600s")
+        raise ProcessingError(cmd_str, -1, "FFmpeg command timed out after 600s") from None
 
     # Fallback if gblur not available
     if result.returncode != 0 and "gblur" in result.stderr:
@@ -363,7 +363,7 @@ def layout_grid(
     background: str = "#141414",
 ) -> str:
     """Create grid-based multi-video layout using hstack/vstack.
-    
+
     Args:
         clips: List of video file paths
         layout: Grid layout - "2x2", "3x1", "1x3", "2x3"
@@ -371,35 +371,35 @@ def layout_grid(
         gap: Pixels between clips (not used with hstack/vstack)
         padding: Padding around grid (not used with hstack/vstack)
         background: Background color (not used with hstack/vstack)
-    
+
     Returns:
         Path to output video
     """
     if len(clips) == 0:
         raise ValueError("At least one clip required")
-    
+
     # Parse layout
     cols, rows = map(int, layout.split('x'))
     n_clips = min(len(clips), cols * rows)
-    
+
     # Use even dimensions that work for x264
     cell_w = 640  # Standard width
     cell_h = 480  # Standard height
-    
+
     inputs = []
     for clip in clips[:n_clips]:
         inputs.extend(["-i", clip])
-    
+
     # Build filter complex
     filter_parts = []
-    
+
     # Scale each input to cell size
     for i in range(n_clips):
         filter_parts.append(
             f"[{i}:v]scale={cell_w}:{cell_h}:force_original_aspect_ratio=decrease,"
             f"setsar=1,pad={cell_w}:{cell_h}:(ow-iw)/2:(oh-ih)/2:black[s{i}];"
         )
-    
+
     # Stack horizontally within each row, then vertically
     # First, stack each row
     row_outputs = []
@@ -409,7 +409,7 @@ def layout_grid(
             idx = row * cols + col
             if idx < n_clips:
                 row_inputs.append(f"[s{idx}]")
-        
+
         if len(row_inputs) == 1:
             # Single column, just rename
             filter_parts.append(f"{row_inputs[0]}format=pix_fmts=yuv420p[row{row}];")
@@ -418,16 +418,16 @@ def layout_grid(
             hstack_in = "".join(row_inputs)
             filter_parts.append(f"{hstack_in}hstack=inputs={len(row_inputs)}[row{row}];")
         row_outputs.append(f"[row{row}]")
-    
+
     # Then stack rows vertically
     if len(row_outputs) == 1:
         filter_parts.append(f"{row_outputs[0]}format=pix_fmts=yuv420p[out];")
     else:
         vstack_in = "".join(row_outputs)
         filter_parts.append(f"{vstack_in}vstack=inputs={len(row_outputs)}[out];")
-    
+
     filter_complex = "".join(filter_parts).rstrip(";")
-    
+
     cmd = [
         "ffmpeg", "-y",
         *inputs,
@@ -439,7 +439,7 @@ def layout_grid(
         "-shortest",
         output,
     ]
-    
+
     _run_ffmpeg(cmd)
 
     return output
@@ -458,7 +458,7 @@ def layout_pip(
     border_width: int = 2,
 ) -> str:
     """Picture-in-picture overlay.
-    
+
     Args:
         main: Main video path
         pip: Picture-in-picture video path
@@ -470,7 +470,7 @@ def layout_pip(
         border: Add border around PIP
         border_color: Border color (hex)
         border_width: Border width in pixels
-    
+
     Returns:
         Path to output video
     """
@@ -482,11 +482,11 @@ def layout_pip(
     probe = _run_ffmpeg(probe_cmd)
     main_w, main_h = map(int, probe.stdout.strip().split('x'))
 
-    
+
     # Calculate PIP dimensions
     pip_w = int(main_w * size)
     pip_h = int(main_h * size)
-    
+
     # Calculate position
     positions = {
         "top-left": (margin, margin),
@@ -495,24 +495,24 @@ def layout_pip(
         "bottom-right": (main_w - pip_w - margin, main_h - pip_h - margin),
     }
     x, y = positions.get(position, positions["bottom-right"])
-    
+
     # Build PIP filter
     pip_filters = f"scale={pip_w}:{pip_h}"
-    
+
     if border:
         # Add border using pad
         pip_filters += f",pad={pip_w + border_width*2}:{pip_h + border_width*2}:{border_width}:{border_width}:color={border_color}"
-    
+
     if rounded_corners:
         # Use format and drawbox for rounded corners simulation
         # This is a simplified version - full rounded corners need more complex filter
         pass
-    
+
     filter_complex = (
         f"[1:v]{pip_filters}[pip];"
         f"[0:v][pip]overlay={x}:{y}"
     )
-    
+
     cmd = [
         "ffmpeg", "-y",
         "-i", main,
@@ -524,7 +524,7 @@ def layout_pip(
         "-crf", "23",
         output,
     ]
-    
+
     _run_ffmpeg(cmd)
 
     return output
@@ -548,7 +548,7 @@ def text_animated(
     duration: float = 3.0,
 ) -> str:
     """Add animated text to video.
-    
+
     Args:
         video: Input video path
         text: Text to display
@@ -560,7 +560,7 @@ def text_animated(
         position: Text position
         start: Start time in seconds
         duration: Display duration
-    
+
     Returns:
         Path to output video
     """
@@ -575,13 +575,13 @@ def text_animated(
         "bottom-right": "w-text_w-20:h-text_h-20",
     }
     pos = pos_map.get(position, pos_map["center"])
-    
+
     # Build animation expression
     fade_start = start
     fade_end = start + 0.5
     fade_out_start = start + duration - 0.5
     fade_out_end = start + duration
-    
+
     if animation == "fade":
         # Fade in/out opacity
         alpha_expr = (
@@ -592,22 +592,22 @@ def text_animated(
         )
     elif animation == "slide-up":
         # Slide up from bottom
-        y_offset = "+50*(1-min(1,(t-{})/0.3))".format(start)
+        y_offset = f"+50*(1-min(1,(t-{start})/0.3))"
         pos = pos.replace("(h-text_h)/2", f"(h-text_h)/2{y_offset}")
         alpha_expr = "1"
     else:
         alpha_expr = "1"
-    
+
     # Escape text for FFmpeg — handle all filter-special characters
     safe_text = _escape_ffmpeg_filter_value(text)
-    
+
     filter_complex = (
         f"drawtext=text='{safe_text}':font={font}:fontsize={size}:fontcolor={color}:"
         f"x={pos.split(':')[0]}:y={pos.split(':')[1]}:"
         f"enable='between(t\\,{start}\\,{start + duration})':"
         f"alpha='{alpha_expr}'"
     )
-    
+
     cmd = [
         "ffmpeg", "-y",
         "-i", video,
@@ -618,7 +618,7 @@ def text_animated(
         "-crf", "23",
         output,
     ]
-    
+
     _run_ffmpeg(cmd)
 
     return output
@@ -631,32 +631,32 @@ def text_subtitles(
     style: dict[str, Any] | None = None,
 ) -> str:
     """Burn subtitles from SRT/VTT into video with styling.
-    
+
     Args:
         video: Input video path
         subtitles: Subtitle file path (SRT or VTT)
         output: Output video path
         style: Style dict with keys:
             - font, size, color, outline, outline_color, background, position
-    
+
     Returns:
         Path to output video
     """
     style = style or {}
-    
+
     # Build subtitle filter options
     font = style.get("font", "Arial")
     size = style.get("size", 32)
     color = style.get("color", "white")
     outline = style.get("outline", 2)
     outline_color = style.get("outline_color", "black")
-    
+
     # Convert hex colors to FFmpeg format
     if color.startswith("#"):
         color = f"0x{color[1:]}"
     if outline_color.startswith("#"):
         outline_color = f"0x{outline_color[1:]}"
-    
+
     # Escape subtitle path for FFmpeg filter syntax
     safe_subtitles = _escape_ffmpeg_filter_value(subtitles)
 
@@ -669,7 +669,7 @@ def text_subtitles(
         f"Outline={outline},"
         f"BorderStyle=1'"
     )
-    
+
     cmd = [
         "ffmpeg", "-y",
         "-i", video,
@@ -680,7 +680,7 @@ def text_subtitles(
         "-crf", "23",
         output,
     ]
-    
+
     _run_ffmpeg(cmd)
 
     return output
@@ -700,7 +700,7 @@ def mograph_count(
     fps: int = 30,
 ) -> str:
     """Generate animated number counter video.
-    
+
     Args:
         start: Starting number
         end: Ending number
@@ -708,7 +708,7 @@ def mograph_count(
         output: Output video path
         style: Style dict with font, size, color, glow
         fps: Frame rate
-    
+
     Returns:
         Path to output video
     """
@@ -717,25 +717,25 @@ def mograph_count(
     size = style.get("size", 160)
     color = style.get("color", "white")
     glow = style.get("glow", False)
-    
+
     # Create temp directory for frames
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_path = Path(tmpdir)
         total_frames = int(duration * fps)
-        
+
         # Generate frames
         for frame in range(total_frames):
             progress = frame / total_frames
             current_value = int(start + (end - start) * progress)
-            
+
             # Use FFmpeg to generate frame
             frame_file = tmp_path / f"frame_{frame:05d}.png"
-            
+
             text_filter = f"drawtext=text='{current_value}':font={font}:fontsize={size}:fontcolor={color}:x=(w-text_w)/2:y=(h-text_h)/2"
-            
+
             if glow:
                 text_filter += f":box=1:boxcolor={color}@0.3:boxborderw=10"
-            
+
             cmd = [
                 "ffmpeg", "-y",
                 "-f", "lavfi", "-i", "color=c=black:s=1920x1080:d=1",
@@ -758,7 +758,7 @@ def mograph_count(
         ]
 
         _run_ffmpeg(cmd)
-    
+
     return output
 
 
@@ -771,7 +771,7 @@ def mograph_progress(
     fps: int = 30,
 ) -> str:
     """Generate progress bar / loading animation.
-    
+
     Args:
         duration: Animation duration in seconds
         output: Output video path
@@ -779,18 +779,18 @@ def mograph_progress(
         color: Progress color
         track_color: Background track color
         fps: Frame rate
-    
+
     Returns:
         Path to output video
     """
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_path = Path(tmpdir)
         total_frames = int(duration * fps)
-        
+
         for frame in range(total_frames):
             progress = frame / total_frames
             frame_file = tmp_path / f"frame_{frame:05d}.png"
-            
+
             if style == "bar":
                 # Progress bar
                 bar_width = int(800 * progress)
@@ -815,7 +815,7 @@ def mograph_progress(
                     dot_color = color if i < active_dots else track_color
                     filter_chain += f"drawbox=x={x}:y=540:w=20:h=20:color={dot_color}:t=fill,"
                 filter_chain = filter_chain.rstrip(",")
-            
+
             cmd = [
                 "ffmpeg", "-y",
                 "-f", "lavfi", "-i", "color=c=black:s=1920x1080:d=1",
@@ -838,7 +838,7 @@ def mograph_progress(
         ]
 
         _run_ffmpeg(cmd)
-    
+
     return output
 
 
@@ -849,16 +849,16 @@ def mograph_progress(
 
 def video_info_detailed(video: str) -> dict[str, Any]:
     """Get extended video metadata.
-    
+
     Args:
         video: Video file path
-    
+
     Returns:
-        Dict with duration, fps, resolution, bitrate, has_audio, 
+        Dict with duration, fps, resolution, bitrate, has_audio,
         scene_changes, dominant_colors
     """
     import json
-    
+
     # Get basic info
     cmd = [
         "ffprobe", "-v", "error",
@@ -869,23 +869,23 @@ def video_info_detailed(video: str) -> dict[str, Any]:
 
     result = _run_ffmpeg(cmd)
     data = json.loads(result.stdout)
-    
+
     # Extract video stream info
     video_stream = None
     audio_stream = None
-    
+
     for stream in data.get("streams", []):
         if stream["codec_type"] == "video":
             video_stream = stream
         elif stream["codec_type"] == "audio":
             audio_stream = stream
-    
+
     if not video_stream:
         raise ValueError("No video stream found")
-    
+
     # Calculate duration
     duration = float(video_stream.get("duration", 0) or data.get("format", {}).get("duration", 0))
-    
+
     # Calculate FPS
     fps_str = video_stream.get("r_frame_rate", "30/1")
     if "/" in fps_str:
@@ -893,10 +893,10 @@ def video_info_detailed(video: str) -> dict[str, Any]:
         fps = num / den if den else 30
     else:
         fps = float(fps_str)
-    
+
     resolution = [video_stream.get("width", 0), video_stream.get("height", 0)]
     bitrate = int(data.get("format", {}).get("bit_rate", 0))
-    
+
     # Try to detect scene changes
     scene_changes = []
     try:
@@ -919,7 +919,7 @@ def video_info_detailed(video: str) -> dict[str, Any]:
                         pass
     except Exception:
         pass  # Scene detection is optional
-    
+
     return {
         "duration": duration,
         "fps": fps,
@@ -936,16 +936,16 @@ def auto_chapters(
     threshold: float = 0.3,
 ) -> list[tuple[float, str]]:
     """Auto-detect scene changes and create chapters.
-    
+
     Args:
         video: Video file path
         threshold: Scene change detection threshold
-    
+
     Returns:
         List of (timestamp, description) tuples
     """
     chapters = []
-    
+
     cmd = [
         "ffmpeg", "-i", video,
         "-filter:v", f"select='gt(scene,{threshold})',showinfo",
@@ -953,7 +953,7 @@ def auto_chapters(
     ]
 
     result = _run_ffmpeg(cmd, timeout=60)
-    
+
     chapter_num = 1
     for line in result.stderr.split("\n"):
         if "pts_time:" in line:
@@ -965,5 +965,5 @@ def auto_chapters(
                     chapter_num += 1
                 except (ValueError, IndexError):
                     pass
-    
+
     return chapters

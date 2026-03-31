@@ -1887,7 +1887,7 @@ def main() -> None:
                 lines = []
                 colors = data.get("colors", [])
                 if colors:
-                    lines.append(f"[bold green]Colors:[/bold green]")
+                    lines.append("[bold green]Colors:[/bold green]")
                     for c in colors[:5]:
                         lines.append(f"  {c.get('hex', '')} ({c.get('css_name', '')}) - {c.get('coverage_pct', 0):.1f}%")
                 desc = data.get("description")

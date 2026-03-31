@@ -49,7 +49,7 @@ line-length = 120
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "S", "UP", "B", "SIM", "RUF"]
-ignore = ["E501"]
+ignore = ["E501", "S603", "S607", "S311", "S310", "S112", "S110"]
 
 [project.scripts]
 mcp-video = "mcp_video.__main__:main"

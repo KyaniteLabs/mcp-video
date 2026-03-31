@@ -9,8 +9,8 @@ import json
 import logging
 import subprocess
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any
+import contextlib
 
 logger = logging.getLogger(__name__)
 
@@ -126,10 +126,8 @@ class VisualQualityGuardrails:
                                 for p in parts[i:]:
                                     if "=" in p:
                                         key, val = p.split("=", 1)
-                                        try:
+                                        with contextlib.suppress(ValueError):
                                             stats[key.lower()] = float(val)
-                                        except ValueError:
-                                            pass
                             except (ValueError, IndexError):
                                 continue
             return stats
@@ -201,20 +199,14 @@ class VisualQualityGuardrails:
             for frame in frames:
                 tags = frame.get("tags", {})
                 if "lavfi.signalstats.RAVG" in tags:
-                    try:
+                    with contextlib.suppress(ValueError, TypeError):
                         r_vals.append(float(tags["lavfi.signalstats.RAVG"]))
-                    except (ValueError, TypeError):
-                        pass
                 if "lavfi.signalstats.GAVG" in tags:
-                    try:
+                    with contextlib.suppress(ValueError, TypeError):
                         g_vals.append(float(tags["lavfi.signalstats.GAVG"]))
-                    except (ValueError, TypeError):
-                        pass
                 if "lavfi.signalstats.BAVG" in tags:
-                    try:
+                    with contextlib.suppress(ValueError, TypeError):
                         b_vals.append(float(tags["lavfi.signalstats.BAVG"]))
-                    except (ValueError, TypeError):
-                        pass
 
             if not (r_vals and g_vals and b_vals):
                 return None

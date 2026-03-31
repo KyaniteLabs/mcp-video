@@ -4,24 +4,20 @@ from __future__ import annotations
 
 import base64
 import json
-import math
 import os
 import re
-import shlex
 import shutil
 import subprocess
 import tempfile
-from pathlib import Path
-from typing import Any, Callable
+from typing import Any
+from collections.abc import Callable
 
 from .errors import (
     MCPVideoError,
-    CodecError,
     FFmpegNotFoundError,
     FFprobeNotFoundError,
     InputFileError,
     ProcessingError,
-    ResolutionMismatchError,
     parse_ffmpeg_error,
 )
 from .models import (
@@ -30,7 +26,6 @@ from .models import (
     QUALITY_PRESETS,
     ColorPreset,
     EditResult,
-    ErrorResult,
     ExportFormat,
     FilterType,
     ImageSequenceResult,
@@ -45,10 +40,8 @@ from .models import (
     SubtitleResult,
     ThumbnailResult,
     Timeline,
-    TimelineClip,
     TimelineImageOverlay,
     VideoInfo,
-    WatermarkSettings,
     WaveformResult,
 )
 
@@ -146,7 +139,7 @@ _CSS_COLOR_NAMES = frozenset({
     "lightgoldenrod", "darkkhaki", "chartreuse", "greenyellow",
     "springgreen", "mediumspringgreen", "lawngreen", "darkgreen",
     "forestgreen", "seagreen", "darkseagreen", "lightgreen", "palegreen",
-    "limegreen", "greenyellow",
+    "limegreen",
 })
 
 _HEX_COLOR_RE = re.compile(r"^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$")
@@ -217,7 +210,7 @@ def _auto_output_dir(input_path: str, suffix: str = "output") -> str:
 
 
 def _run_ffmpeg(args: list[str]) -> subprocess.CompletedProcess[str]:
-    cmd = [_ffmpeg(), "-y"] + args
+    cmd = [_ffmpeg(), "-y", *args]
     proc = subprocess.run(
         cmd,
         capture_output=True,
@@ -253,7 +246,7 @@ def _run_ffmpeg_with_progress(
     if estimated_duration is None or estimated_duration <= 0 or on_progress is None:
         return _run_ffmpeg(args)
 
-    cmd = [_ffmpeg(), "-y"] + args
+    cmd = [_ffmpeg(), "-y", *args]
     proc = subprocess.Popen(
         cmd,
         stdout=subprocess.PIPE,
@@ -295,9 +288,8 @@ def _generate_thumbnail_base64(video_path: str) -> str | None:
     Returns base64 string or None if generation fails.
     """
     try:
-        tmp = tempfile.NamedTemporaryFile(suffix=".jpg", delete=False)
-        tmp_path = tmp.name
-        tmp.close()
+        with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tmp:
+            tmp_path = tmp.name
 
         proc = subprocess.run(
             [
@@ -412,7 +404,7 @@ def _position_coords(position: Position, width: int = 0, height: int = 0) -> str
     mapping: dict[NamedPosition, str] = {
         "top-left": "x=10:y=10",
         "top-center": "x=(w-text_w)/2:y=10",
-        "top-right": f"x=w-text_w-10:y=10",
+        "top-right": "x=w-text_w-10:y=10",
         "center-left": "x=10:y=(h-text_h)/2",
         "center": "x=(w-text_w)/2:y=(h-text_h)/2",
         "center-right": "x=w-text_w-10:y=(h-text_h)/2",
@@ -558,13 +550,7 @@ def normalize(input_path: str, output_path: str | None = None) -> str:
     """Normalize a video to H.264 video + AAC audio for reliable editing."""
     _validate_input(input_path)
     output = output_path or _auto_output(input_path, "normalized")
-    _run_ffmpeg([
-        "-i", input_path,
-        "-c:v", "libx264", "-preset", "fast", "-crf", "23",
-        "-c:a", "aac", "-b:a", "128k",
-    ] + _movflags_args(output) + [
-        output,
-    ])
+    _run_ffmpeg(["-i", input_path, "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-c:a", "aac", "-b:a", "128k", *_movflags_args(output), output])
     return output
 
 
@@ -591,12 +577,7 @@ def trim(
         args.extend(["-t", str(duration)])
     elif end:
         args.extend(["-to", str(end)])
-    args.extend([
-        "-c:v", "libx264", "-preset", "fast", "-crf", "23",
-        "-c:a", "aac", "-b:a", "128k",
-    ] + _movflags_args(output) + [
-        output,
-    ])
+    args.extend(["-c:v", "libx264", "-preset", "fast", "-crf", "23", "-c:a", "aac", "-b:a", "128k", *_movflags_args(output), output])
     _run_ffmpeg(args)
 
     info = probe(output)
@@ -682,13 +663,7 @@ def merge(
                     # Escape single quotes for FFmpeg concat demuxer
                     abs_path = os.path.abspath(clip).replace("'", "'\\''")
                     f.write(f"file '{abs_path}'\n")
-            _run_ffmpeg([
-                "-f", "concat", "-safe", "0",
-                "-i", concat_file,
-                "-c", "copy",
-            ] + _movflags_args(output) + [
-                output,
-            ])
+            _run_ffmpeg(["-f", "concat", "-safe", "0", "-i", concat_file, "-c", "copy", *_movflags_args(output), output])
 
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
@@ -778,13 +753,7 @@ def _merge_with_transitions(
         audio_codec_args = ["-an"]
 
     _run_ffmpeg(
-        inputs + [
-            "-filter_complex", filter_complex,
-        ] + map_args + [
-            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
-        ] + audio_codec_args + _movflags_args(output) + [
-            output,
-        ]
+        [*inputs, "-filter_complex", filter_complex, *map_args, "-c:v", "libx264", "-preset", "fast", "-crf", "23", *audio_codec_args, *_movflags_args(output), output]
     )
 
 
@@ -836,15 +805,7 @@ def add_text(
 
     vf = ":".join(filter_parts)
 
-    _run_ffmpeg([
-        "-i", input_path,
-        "-vf", vf,
-        "-c:v", "libx264",
-    ] + _quality_args(crf=crf, preset=preset) + [
-        "-c:a", "copy",
-    ] + _movflags_args(output) + [
-        output,
-    ])
+    _run_ffmpeg(["-i", input_path, "-vf", vf, "-c:v", "libx264", *_quality_args(crf=crf, preset=preset), "-c:a", "copy", *_movflags_args(output), output])
 
     info = probe(output)
     return EditResult(
@@ -896,15 +857,7 @@ def add_audio(
             f"[a0][a1]amix=inputs=2:duration=longest[aout]"
         )
 
-        _run_ffmpeg([
-            "-i", video_path, "-i", audio_path,
-            "-filter_complex", filter_complex,
-            "-map", "0:v", "-map", "[aout]",
-            "-c:v", "copy",
-            "-c:a", "aac", "-b:a", "128k",
-        ] + _movflags_args(output) + [
-            output,
-        ])
+        _run_ffmpeg(["-i", video_path, "-i", audio_path, "-filter_complex", filter_complex, "-map", "0:v", "-map", "[aout]", "-c:v", "copy", "-c:a", "aac", "-b:a", "128k", *_movflags_args(output), output])
     else:
         # Replace audio (or add if no existing audio)
         args = ["-i", video_path, "-i", audio_path]
@@ -926,13 +879,7 @@ def add_audio(
         if audio_filters:
             args.extend(["-af", ",".join(audio_filters)])
 
-        args.extend([
-            "-c:v", "copy",
-            "-c:a", "aac", "-b:a", "128k",
-            "-shortest",
-        ] + _movflags_args(output) + [
-            output,
-        ])
+        args.extend(["-c:v", "copy", "-c:a", "aac", "-b:a", "128k", "-shortest", *_movflags_args(output), output])
         _run_ffmpeg(args)
 
     info = probe(output)
@@ -988,16 +935,7 @@ def resize(
         f"pad={w}:{h}:(ow-iw)/2:(oh-ih)/2:black"
     )
 
-    _run_ffmpeg([
-        "-i", input_path,
-        "-vf", vf,
-        "-c:v", "libx264",
-        "-crf", str(preset["crf"]),
-        "-preset", preset["preset"],
-        "-c:a", "aac", "-b:a", "128k",
-    ] + _movflags_args(output) + [
-        output,
-    ])
+    _run_ffmpeg(["-i", input_path, "-vf", vf, "-c:v", "libx264", "-crf", str(preset["crf"]), "-preset", preset["preset"], "-c:a", "aac", "-b:a", "128k", *_movflags_args(output), output])
 
     info = probe(output)
     return EditResult(
@@ -1055,17 +993,7 @@ def convert(
                 "-passlogfile", passlogfile,
                 "-an", "-f", "null", "/dev/null",
             ])
-            _run_ffmpeg([
-                "-i", input_path,
-                "-c:v", "libx264",
-                "-b:v", f"{target_bitrate}k",
-                "-pass", "2",
-                "-passlogfile", passlogfile,
-                "-preset", preset["preset"],
-                "-c:a", "aac", "-b:a", "128k",
-            ] + _movflags_args(output) + [
-                output,
-            ])
+            _run_ffmpeg(["-i", input_path, "-c:v", "libx264", "-b:v", f"{target_bitrate}k", "-pass", "2", "-passlogfile", passlogfile, "-preset", preset["preset"], "-c:a", "aac", "-b:a", "128k", *_movflags_args(output), output])
         finally:
             shutil.rmtree(passlogdir, ignore_errors=True)
     elif format == "mp4":
@@ -1184,24 +1112,9 @@ def speed(
     has_audio = info.audio_codec is not None
 
     if has_audio:
-        _run_ffmpeg([
-            "-i", input_path,
-            "-filter_complex", f"[0:v]{video_filter}[v];[0:a]{audio_filter}[a]",
-            "-map", "[v]", "-map", "[a]",
-            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
-            "-c:a", "aac", "-b:a", "128k",
-        ] + _movflags_args(output) + [
-            output,
-        ])
+        _run_ffmpeg(["-i", input_path, "-filter_complex", f"[0:v]{video_filter}[v];[0:a]{audio_filter}[a]", "-map", "[v]", "-map", "[a]", "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-c:a", "aac", "-b:a", "128k", *_movflags_args(output), output])
     else:
-        _run_ffmpeg([
-            "-i", input_path,
-            "-vf", video_filter,
-            "-an",
-            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
-        ] + _movflags_args(output) + [
-            output,
-        ])
+        _run_ffmpeg(["-i", input_path, "-vf", video_filter, "-an", "-c:v", "libx264", "-preset", "fast", "-crf", "23", *_movflags_args(output), output])
 
     info = probe(output)
     return EditResult(
@@ -1263,16 +1176,7 @@ def preview(
 
     output = output_path or _auto_output(input_path, "preview")
 
-    _run_ffmpeg([
-        "-i", input_path,
-        "-vf", f"scale={w}:{h}",
-        "-c:v", "libx264",
-        "-crf", str(PREVIEW_PRESETS["crf"]),
-        "-preset", PREVIEW_PRESETS["preset"],
-        "-c:a", "aac", "-b:a", "64k", "-ac", "2",
-    ] + _movflags_args(output) + [
-        output,
-    ])
+    _run_ffmpeg(["-i", input_path, "-vf", f"scale={w}:{h}", "-c:v", "libx264", "-crf", str(PREVIEW_PRESETS["crf"]), "-preset", PREVIEW_PRESETS["preset"], "-c:a", "aac", "-b:a", "64k", "-ac", "2", *_movflags_args(output), output])
 
     result_info = probe(output)
     return EditResult(
@@ -1333,7 +1237,7 @@ def storyboard(
 
             # Normalize all frames to same size
             filter_parts = []
-            for i, fp in enumerate(frame_paths):
+            for i, _fp in enumerate(frame_paths):
                 filter_parts.append(f"[{i}:v]scale=480:270:force_original_aspect_ratio=decrease,pad=480:270:(ow-iw)/2:(oh-ih)/2[s{i}]")
 
             # Stack horizontally first, then vertically
@@ -1358,12 +1262,7 @@ def storyboard(
 
             try:
                 _run_ffmpeg(
-                    inputs + [
-                        "-filter_complex", filter_str,
-                        "-map", "[vout]",
-                        "-q:v", "2",
-                        "-y", grid_path,
-                    ]
+                    [*inputs, "-filter_complex", filter_str, "-map", "[vout]", "-q:v", "2", "-y", grid_path]
                 )
             except ProcessingError:
                 # Grid creation failed — frames are still useful individually
@@ -1399,14 +1298,7 @@ def subtitles(
     escaped_sub_path = _escape_ffmpeg_filter_value(subtitle_path)
     escaped_style = style.replace("'", "\\'").replace(":", "\\:")
 
-    _run_ffmpeg([
-        "-i", input_path,
-        "-vf", f"subtitles='{escaped_sub_path}':force_style='{escaped_style}'",
-        "-c:v", "libx264", "-preset", "fast", "-crf", "23",
-        "-c:a", "copy",
-    ] + _movflags_args(output) + [
-        output,
-    ])
+    _run_ffmpeg(["-i", input_path, "-vf", f"subtitles='{escaped_sub_path}':force_style='{escaped_style}'", "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-c:a", "copy", *_movflags_args(output), output])
 
     info = probe(output)
     return EditResult(
@@ -1451,16 +1343,7 @@ def watermark(
     # Format opacity for FFmpeg (0.0 to 1.0)
     opacity_fmt = f"{opacity:.2f}"
 
-    _run_ffmpeg([
-        "-i", input_path, "-i", image_path,
-        "-filter_complex",
-        f"[1:v]format=rgba,colorchannelmixer=aa={opacity_fmt}[wm];[0:v][wm]overlay={overlay_pos}",
-        "-c:v", "libx264",
-    ] + _quality_args(crf=crf, preset=preset) + [
-        "-c:a", "copy",
-    ] + _movflags_args(output) + [
-        output,
-    ])
+    _run_ffmpeg(["-i", input_path, "-i", image_path, "-filter_complex", f"[1:v]format=rgba,colorchannelmixer=aa={opacity_fmt}[wm];[0:v][wm]overlay={overlay_pos}", "-c:v", "libx264", *_quality_args(crf=crf, preset=preset), "-c:a", "copy", *_movflags_args(output), output])
 
     info = probe(output)
     return EditResult(
@@ -1500,14 +1383,7 @@ def crop(
 
     output = output_path or _auto_output(input_path, f"crop_{width}x{height}")
 
-    _run_ffmpeg([
-        "-i", input_path,
-        "-vf", f"crop={width}:{height}:{x}:{y}",
-        "-c:v", "libx264", "-preset", "fast", "-crf", "23",
-        "-c:a", "copy",
-    ] + _movflags_args(output) + [
-        output,
-    ])
+    _run_ffmpeg(["-i", input_path, "-vf", f"crop={width}:{height}:{x}:{y}", "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-c:a", "copy", *_movflags_args(output), output])
 
     result_info = probe(output)
     return EditResult(
@@ -1556,14 +1432,7 @@ def rotate(
     vf = ",".join(filters)
     output = output_path or _auto_output(input_path, f"rotated_{angle}")
 
-    _run_ffmpeg([
-        "-i", input_path,
-        "-vf", vf,
-        "-c:v", "libx264", "-preset", "fast", "-crf", "23",
-        "-c:a", "aac", "-b:a", "128k",
-    ] + _movflags_args(output) + [
-        output,
-    ])
+    _run_ffmpeg(["-i", input_path, "-vf", vf, "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-c:a", "aac", "-b:a", "128k", *_movflags_args(output), output])
 
     result_info = probe(output)
     return EditResult(
@@ -1601,15 +1470,7 @@ def fade(
 
     vf = ",".join(vf_parts)
 
-    _run_ffmpeg([
-        "-i", input_path,
-        "-vf", vf,
-        "-c:v", "libx264",
-    ] + _quality_args(crf=crf, preset=preset) + [
-        "-c:a", "copy",
-    ] + _movflags_args(output) + [
-        output,
-    ])
+    _run_ffmpeg(["-i", input_path, "-vf", vf, "-c:v", "libx264", *_quality_args(crf=crf, preset=preset), "-c:a", "copy", *_movflags_args(output), output])
 
     result_info = probe(output)
     return EditResult(
@@ -1884,35 +1745,19 @@ def _apply_composite_overlays(
             last_label = "vout"
 
         # Final map
-        cmd = inputs + [
-            "-filter_complex", ";".join(filter_parts),
-            "-map", f"[{last_label}]",
-            "-map", "0:a?",
-            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
-            "-c:a", "copy",
-        ] + _movflags_args(output_path) + [output_path]
+        cmd = [*inputs, "-filter_complex", ";".join(filter_parts), "-map", f"[{last_label}]", "-map", "0:a?", "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-c:a", "copy", *_movflags_args(output_path), output_path]
         _run_ffmpeg(cmd)
 
     elif image_overlays:
         # Only image overlays, no text
-        cmd = inputs + [
-            "-filter_complex", ";".join(filter_parts),
-            "-map", f"[{prev_label}]",
-            "-map", "0:a?",
-            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
-            "-c:a", "copy",
-        ] + _movflags_args(output_path) + [output_path]
+        cmd = [*inputs, "-filter_complex", ";".join(filter_parts), "-map", f"[{prev_label}]", "-map", "0:a?", "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-c:a", "copy", *_movflags_args(output_path), output_path]
         _run_ffmpeg(cmd)
 
     elif text_elements:
         # Only text overlays (no images) — use -vf
         vf = ",".join(vf_parts)
         _run_ffmpeg(
-            inputs + [
-                "-vf", vf,
-                "-c:v", "libx264", "-preset", "fast", "-crf", "23",
-                "-c:a", "copy",
-            ] + _movflags_args(output_path) + [output_path]
+            [*inputs, "-vf", vf, "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-c:a", "copy", *_movflags_args(output_path), output_path]
         )
 
 
@@ -2051,24 +1896,9 @@ def apply_filter(
                 error_type="validation_error",
                 code="audio_filter_no_audio",
             )
-        _run_ffmpeg([
-            "-i", input_path,
-            "-af", filter_string,
-            "-c:v", "copy",
-            "-c:a", "aac", "-b:a", "128k",
-        ] + _movflags_args(output) + [
-            output,
-        ])
+        _run_ffmpeg(["-i", input_path, "-af", filter_string, "-c:v", "copy", "-c:a", "aac", "-b:a", "128k", *_movflags_args(output), output])
     else:
-        _run_ffmpeg([
-            "-i", input_path,
-            "-vf", filter_string,
-            "-c:v", "libx264",
-        ] + _quality_args(crf=crf, preset=preset) + [
-            "-c:a", "copy",
-        ] + _movflags_args(output) + [
-            output,
-        ])
+        _run_ffmpeg(["-i", input_path, "-vf", filter_string, "-c:v", "libx264", *_quality_args(crf=crf, preset=preset), "-c:a", "copy", *_movflags_args(output), output])
 
     info = probe(output)
     return EditResult(
@@ -2108,14 +1938,7 @@ def normalize_audio(
     # TP (true peak) should be a fixed value near -1.5 dBTP regardless of target LUFS.
     tp = -1.5
 
-    _run_ffmpeg([
-        "-i", input_path,
-        "-af", f"loudnorm=I={target_lufs}:TP={tp}:LRA={lra}",
-        "-c:v", "copy",
-        "-c:a", "aac", "-b:a", "192k",
-    ] + _movflags_args(output) + [
-        output,
-    ])
+    _run_ffmpeg(["-i", input_path, "-af", f"loudnorm=I={target_lufs}:TP={tp}:LRA={lra}", "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", *_movflags_args(output), output])
 
     info = probe(output)
     return EditResult(
@@ -2209,15 +2032,7 @@ def overlay_video(
 
     filter_complex = f"[1:v]{overlay_chain}[ov];[0:v][ov]overlay={overlay_pos}{enable_expr}"
 
-    _run_ffmpeg([
-        "-i", background_path, "-i", overlay_path,
-        "-filter_complex", filter_complex,
-        "-c:v", "libx264",
-    ] + _quality_args(crf=crf, preset=preset) + [
-        "-c:a", "aac", "-b:a", "128k",
-    ] + _movflags_args(output) + [
-        output,
-    ])
+    _run_ffmpeg(["-i", background_path, "-i", overlay_path, "-filter_complex", filter_complex, "-c:v", "libx264", *_quality_args(crf=crf, preset=preset), "-c:a", "aac", "-b:a", "128k", *_movflags_args(output), output])
 
     info = probe(output)
     return EditResult(
@@ -2275,16 +2090,7 @@ def split_screen(
         else:
             filter_complex = "[0:v][1:v]vstack=inputs=2[v]"
 
-    _run_ffmpeg([
-        "-i", left_path, "-i", right_path,
-        "-filter_complex", filter_complex,
-        "-map", "[v]",
-        "-map", "0:a?",
-        "-c:v", "libx264", "-preset", "fast", "-crf", "23",
-        "-c:a", "aac", "-b:a", "128k",
-    ] + _movflags_args(output) + [
-        output,
-    ])
+    _run_ffmpeg(["-i", left_path, "-i", right_path, "-filter_complex", filter_complex, "-map", "[v]", "-map", "0:a?", "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-c:a", "aac", "-b:a", "128k", *_movflags_args(output), output])
 
     info = probe(output)
     return EditResult(
@@ -2370,12 +2176,7 @@ def chroma_key(
         vf = f"chromakey=color={color}:similarity={similarity}:blend={blend}"
         codec_args = ["-c:v", "libx264", "-preset", "fast", "-crf", "23", "-c:a", "aac", "-b:a", "128k"]
 
-    _run_ffmpeg([
-        "-i", input_path,
-        "-vf", vf,
-    ] + codec_args + _movflags_args(output) + [
-        output,
-    ])
+    _run_ffmpeg(["-i", input_path, "-vf", vf, *codec_args, *_movflags_args(output), output])
 
     info = probe(output)
     return EditResult(
@@ -2453,14 +2254,7 @@ def generate_subtitles(
         _require_filter("subtitles", "Subtitle burn-in")
         video_out = os.path.join(srt_dir, "subtitled.mp4")
         escaped_srt = _escape_ffmpeg_filter_value(srt_file)
-        _run_ffmpeg([
-            "-i", input_path,
-            "-vf", f"subtitles={escaped_srt}",
-            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
-            "-c:a", "copy",
-        ] + _movflags_args(video_out) + [
-            video_out,
-        ])
+        _run_ffmpeg(["-i", input_path, "-vf", f"subtitles={escaped_srt}", "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-c:a", "copy", *_movflags_args(video_out), video_out])
         return SubtitleResult(
             srt_path=srt_file,
             video_path=video_out,
@@ -2510,7 +2304,7 @@ def audio_waveform(
     segment_duration = duration / bins
 
     # Use astats filter to get per-segment audio levels
-    filter_str = f"astats=metadata=1:reset=0,ametadata=1"
+    filter_str = "astats=metadata=1:reset=0,ametadata=1"
     proc = subprocess.run(
         [_ffmpeg(), "-i", input_path, "-af", filter_str, "-f", "null", "-"],
         capture_output=True, text=True, timeout=120,
@@ -2544,7 +2338,7 @@ def audio_waveform(
             [
                 _ffprobe(), "-v", "quiet",
                 "-f", "lavfi",
-                f"ametadata=mode=print:silence",
+                "ametadata=mode=print:silence",
                 "-i", input_path,
             ],
             capture_output=True, text=True, timeout=120,
@@ -2776,14 +2570,7 @@ def create_from_images(
             abs_last = os.path.abspath(normalized[-1]).replace("'", "'\\''")
             f.write(f"file '{abs_last}'\n")
 
-        _run_ffmpeg([
-            "-f", "concat", "-safe", "0",
-            "-i", concat_file,
-            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
-            "-pix_fmt", "yuv420p",
-        ] + _movflags_args(output) + [
-            output,
-        ])
+        _run_ffmpeg(["-f", "concat", "-safe", "0", "-i", concat_file, "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-pix_fmt", "yuv420p", *_movflags_args(output), output])
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
 
@@ -2819,7 +2606,7 @@ def export_frames(
             error_type="validation_error",
             code="invalid_format",
         )
-    info = probe(input_path)
+    probe(input_path)
 
     out_dir = output_dir or _auto_output_dir(input_path, "frames")
     os.makedirs(out_dir, exist_ok=True)
@@ -2881,7 +2668,7 @@ def compare_quality(
             orig_info = probe(original_path)
             target_w = orig_info.width
             target_h = orig_info.height
-            
+
             # Scale distorted to match original resolution, then compare
             filter_str = f"[1:v]scale={target_w}:{target_h}[scaled];[0:v][scaled]{metric_lower}"
             proc = subprocess.run(
@@ -3026,11 +2813,7 @@ def write_metadata(
     args = ["-i", input_path]
     for key, value in metadata.items():
         args.extend(["-metadata", f"{key}={value}"])
-    args.extend([
-        "-c:v", "copy", "-c:a", "copy",
-    ] + _movflags_args(output) + [
-        output,
-    ])
+    args.extend(["-c:v", "copy", "-c:a", "copy", *_movflags_args(output), output])
     _run_ffmpeg(args)
 
     result_info = probe(output)
@@ -3085,14 +2868,7 @@ def stabilize(
             raise parse_ffmpeg_error(result.stderr)
 
         # Pass 2: apply stabilization
-        _run_ffmpeg([
-            "-i", input_path,
-            "-vf", f"vidstabtransform=input={vectors_file}:smoothing={smoothing}:zoom={zooming}:crop=black",
-            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
-            "-c:a", "aac", "-b:a", "128k",
-        ] + _movflags_args(output) + [
-            output,
-        ])
+        _run_ffmpeg(["-i", input_path, "-vf", f"vidstabtransform=input={vectors_file}:smoothing={smoothing}:zoom={zooming}:crop=black", "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-c:a", "aac", "-b:a", "128k", *_movflags_args(output), output])
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
 
@@ -3148,15 +2924,7 @@ def apply_mask(
             f"[0:v][alpha]alphamerge,format=yuv420p[out]"
         )
 
-    _run_ffmpeg([
-        "-i", input_path, "-i", mask_path,
-        "-filter_complex", filter_complex,
-        "-map", "[out]", "-map", "0:a?",
-        "-c:v", "libx264", "-preset", "fast", "-crf", "23",
-        "-c:a", "copy",
-    ] + _movflags_args(output) + [
-        output,
-    ])
+    _run_ffmpeg(["-i", input_path, "-i", mask_path, "-filter_complex", filter_complex, "-map", "[out]", "-map", "0:a?", "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-c:a", "copy", *_movflags_args(output), output])
 
     result_info = probe(output)
     return EditResult(
@@ -3200,10 +2968,10 @@ def video_batch(
             if output_dir:
                 os.makedirs(output_dir, exist_ok=True)
 
-            def _batch_output(ext: str | None = None) -> str:
+            def _batch_output(ext: str | None = None, _input_path: str = input_path) -> str:
                 """Generate output path in output_dir, or auto-generate."""
                 if output_dir:
-                    name = os.path.splitext(os.path.basename(input_path))[0]
+                    name = os.path.splitext(os.path.basename(_input_path))[0]
                     ext = ext or ".mp4"
                     return os.path.join(output_dir, f"{name}_{operation}{ext}")
                 return None  # let the engine auto-generate
