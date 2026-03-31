@@ -824,23 +824,27 @@ def test_ai_upscale():
 
 @requires_ffmpeg
 def test_ai_upscale_missing_dependency():
-    """Test that ai_upscale raises error when realesrgan not installed."""
+    """Test that ai_upscale falls back to OpenCV when realesrgan is not installed."""
     # Skip if realesrgan IS installed (this test is for when it's NOT installed)
     if realesrgan_installed():
         pytest.skip("Real-ESRGAN is installed, skipping missing dependency test")
-    
+
+    # Also skip if OpenCV is not available (fallback path requires it)
+    try:
+        import cv2  # noqa: F401
+    except ImportError:
+        pytest.skip("OpenCV not available, cannot test fallback path")
+
     from mcp_video.ai_engine import ai_upscale
-    
+
     with tempfile.TemporaryDirectory() as tmpdir:
         input_video = os.path.join(tmpdir, "input.mp4")
         create_low_res_video(input_video, "160x120")
         output_video = os.path.join(tmpdir, "output.mp4")
-        
-        with pytest.raises(RuntimeError) as exc_info:
-            ai_upscale(input_video, output_video, scale=2)
-        
-        assert "realesrgan" in str(exc_info.value).lower() or "Real-ESRGAN" in str(exc_info.value)
-        print(f"✓ Correctly raised RuntimeError: {exc_info.value}")
+
+        # When realesrgan is missing, falls back to OpenCV FSRCNN
+        result = ai_upscale(input_video, output_video, scale=2)
+        assert isinstance(result, str)
 
 
 @requires_ffmpeg

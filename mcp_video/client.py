@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Any, ClassVar, Literal
 
 from .engine import (
     add_audio as _add_audio,
@@ -155,6 +155,9 @@ class Client:
             output_path=output,
         )
 
+    _VALID_FORMATS: ClassVar[set[str]] = {"mp4", "webm", "gif", "mov"}
+    _VALID_QUALITIES: ClassVar[set[str]] = {"low", "medium", "high", "ultra"}
+
     def convert(
         self,
         video: str,
@@ -164,7 +167,23 @@ class Client:
         two_pass: bool = False,
         target_bitrate: int | None = None,
     ) -> EditResult:
-        """Convert video to a different format."""
+        """Convert video to a different format.
+
+        Args:
+            video: Input video path
+            format: Output format (mp4, webm, gif, mov). CLI: -f/--format
+            quality: Quality preset (low, medium, high, ultra). CLI: -q/--quality
+            output: Output file path
+            two_pass: Enable two-pass encoding
+            target_bitrate: Target bitrate in kbps
+
+        Raises:
+            ValueError: If format or quality is invalid
+        """
+        if format not in self._VALID_FORMATS:
+            raise ValueError(f"format must be one of {sorted(self._VALID_FORMATS)}, got {format}")
+        if quality not in self._VALID_QUALITIES:
+            raise ValueError(f"quality must be one of {sorted(self._VALID_QUALITIES)}, got {quality}")
         return _convert(video, format=format, quality=quality, output_path=output, two_pass=two_pass, target_bitrate=target_bitrate)
 
     def speed(
@@ -284,7 +303,19 @@ class Client:
         quality: str = "high",
         format: str = "mp4",
     ) -> EditResult:
-        """Render final video with quality settings."""
+        """Render final video with quality settings.
+
+        Args:
+            video: Input video path
+            output: Output file path
+            quality: Quality preset (low, medium, high, ultra). CLI: -q/--quality
+            format: Output format (mp4, webm, gif, mov)
+
+        Raises:
+            ValueError: If quality is invalid
+        """
+        if quality not in self._VALID_QUALITIES:
+            raise ValueError(f"quality must be one of {sorted(self._VALID_QUALITIES)}, got {quality}")
         return _export_video(video, output_path=output, quality=quality, format=format)
 
     def edit(self, timeline: dict[str, Any], output: str | None = None) -> EditResult:
@@ -592,8 +623,17 @@ class Client:
         name: str,
         output_dir: str | None = None,
         template: str = "blank",
-    ):
-        """Scaffold a new Remotion project."""
+    ) -> dict:
+        """Scaffold a new Remotion project.
+
+        Args:
+            name: Project name
+            output_dir: Directory to create project in (default: current dir)
+            template: Project template (blank, hello-world)
+
+        Returns:
+            dict with key "project_path" (str): absolute path to the new project
+        """
         from .remotion_engine import create_project
         return create_project(name, output_dir=output_dir, template=template)
 
@@ -608,7 +648,16 @@ class Client:
         return scaffold_template(project_path, spec, slug)
 
     def remotion_validate(self, project_path: str, composition_id: str | None = None):
-        """Validate project for rendering."""
+        """Validate project for rendering readiness.
+
+        Args:
+            project_path: Path to the Remotion project directory
+            composition_id: Optional specific composition to validate.
+                If omitted, validates the overall project structure.
+
+        Returns:
+            RemotionValidationResult with pass/fail status and issues list
+        """
         from .remotion_engine import validate
         return validate(project_path, composition_id=composition_id)
 
@@ -619,7 +668,19 @@ class Client:
         post_process: list[dict],
         output: str | None = None,
     ):
-        """Render + post-process in one step."""
+        """Render a Remotion composition then post-process with mcp-video tools.
+
+        Args:
+            project_path: Path to the Remotion project directory
+            composition_id: The composition ID to render
+            post_process: List of post-processing operations. Each op has "op" (str) and
+                optional "params" (dict). Valid op values: resize, convert, add_audio,
+                normalize_audio, add_text, fade, watermark
+            output: Output file path (auto-generated if omitted)
+
+        Returns:
+            RemotionPipelineResult with output path and applied operations
+        """
         from .remotion_engine import render_and_post
         return render_and_post(project_path, composition_id, post_process, output_path=output)
 
@@ -713,9 +774,15 @@ class Client:
         """Layer multiple audio tracks with mixing.
 
         Args:
-            tracks: List of track configs with file, volume, start, loop
-            duration: Total duration of output
+            tracks: List of track configs. Each dict has keys:
+                - file (str): Absolute path to WAV file (required)
+                - volume (float): Volume multiplier 0-1 (default 1.0)
+                - start (float): Start time offset in seconds (default 0.0)
+                - loop (bool): Whether to loop the track (default False)
+            duration: Total duration of output in seconds
             output: Output WAV file path
+
+        CLI equivalent: mcp-video audio-compose --tracks '<json>' ...
 
         Returns:
             Path to generated WAV file
@@ -828,6 +895,9 @@ class Client:
     # Layout & Composition
     # ------------------------------------------------------------------
 
+    _VALID_LAYOUTS: ClassVar[set[str]] = {"2x2", "3x1", "1x3", "2x3"}
+    _VALID_PIP_POSITIONS: ClassVar[set[str]] = {"top-left", "top-right", "bottom-left", "bottom-right"}
+
     def layout_grid(
         self,
         clips: list[str],
@@ -837,7 +907,21 @@ class Client:
         padding: int = 20,
         background: str = "#141414",
     ) -> str:
-        """Create grid-based multi-video layout."""
+        """Create grid-based multi-video layout.
+
+        Args:
+            clips: List of video file paths
+            layout: Grid layout (2x2, 3x1, 1x3, 2x3). CLI: -l/--layout
+            output: Output video path
+            gap: Pixels between clips
+            padding: Padding around grid
+            background: Background color hex
+
+        Raises:
+            ValueError: If layout is invalid
+        """
+        if layout not in self._VALID_LAYOUTS:
+            raise ValueError(f"layout must be one of {sorted(self._VALID_LAYOUTS)}, got {layout}")
         from .effects_engine import layout_grid
         return layout_grid(clips, layout, output, gap, padding, background)
 
@@ -849,13 +933,32 @@ class Client:
         position: str = "bottom-right",
         size: float = 0.25,
         margin: int = 20,
+        rounded_corners: bool = True,
         border: bool = True,
         border_color: str = "#CCFF00",
         border_width: int = 2,
     ) -> str:
-        """Picture-in-picture overlay."""
+        """Picture-in-picture overlay.
+
+        Args:
+            main: Main video path
+            pip: Picture-in-picture video path
+            output: Output video path
+            position: Position (top-left, top-right, bottom-left, bottom-right). CLI: -p/--position
+            size: PIP size as fraction of main (0-1)
+            margin: Margin from edges in pixels
+            rounded_corners: Apply rounded corners to PIP
+            border: Add border around PIP
+            border_color: Border color hex
+            border_width: Border width in pixels
+
+        Raises:
+            ValueError: If position is invalid
+        """
+        if position not in self._VALID_PIP_POSITIONS:
+            raise ValueError(f"position must be one of {sorted(self._VALID_PIP_POSITIONS)}, got {position}")
         from .effects_engine import layout_pip
-        return layout_pip(main, pip, output, position, size, margin, False, border, border_color, border_width)
+        return layout_pip(main, pip, output, position, size, margin, rounded_corners, border, border_color, border_width)
 
     # ------------------------------------------------------------------
     # Text & Typography
@@ -902,7 +1005,20 @@ class Client:
         style: dict | None = None,
         fps: int = 30,
     ) -> str:
-        """Generate animated number counter video."""
+        """Generate animated number counter video.
+
+        Args:
+            start: Starting number (CLI: positional arg)
+            end: Ending number (CLI: positional arg)
+            duration: Animation duration in seconds
+            output: Output video path
+            style: Style dict with optional keys: font, size, color, glow
+            fps: Frame rate
+
+        Note:
+            In the CLI (video-mograph-count), start and end are positional arguments.
+            In the Python client, they must be passed as named arguments.
+        """
         from .effects_engine import mograph_count
         return mograph_count(start, end, duration, output, style, fps)
 
@@ -938,17 +1054,41 @@ class Client:
     # ------------------------------------------------------------------
 
     def transition_glitch(self, clip1: str, clip2: str, output: str, duration: float = 0.5, intensity: float = 0.3) -> str:
-        """Apply glitch transition between two video clips."""
+        """Apply glitch transition between two video clips.
+
+        Args:
+            clip1: First video clip path
+            clip2: Second video clip path
+            output: Output video path
+            duration: Transition duration in seconds. CLI: -d/--duration
+            intensity: Glitch intensity 0-1. CLI: -i/--intensity
+        """
         from .transitions_engine import transition_glitch
         return transition_glitch(clip1, clip2, output, duration, intensity)
 
     def transition_pixelate(self, clip1: str, clip2: str, output: str, duration: float = 0.4, pixel_size: int = 50) -> str:
-        """Apply pixelate transition between two video clips."""
+        """Apply pixelate transition between two video clips.
+
+        Args:
+            clip1: First video clip path
+            clip2: Second video clip path
+            output: Output video path
+            duration: Transition duration in seconds. CLI: -d/--duration
+            pixel_size: Maximum pixel size during transition. CLI: -p/--pixel-size
+        """
         from .transitions_engine import transition_pixelate
         return transition_pixelate(clip1, clip2, output, duration, pixel_size)
 
     def transition_morph(self, clip1: str, clip2: str, output: str, duration: float = 0.6, mesh_size: int = 10) -> str:
-        """Apply morph transition between two video clips."""
+        """Apply morph transition between two video clips.
+
+        Args:
+            clip1: First video clip path
+            clip2: Second video clip path
+            output: Output video path
+            duration: Transition duration in seconds. CLI: -d/--duration
+            mesh_size: Grid subdivisions. CLI: -m/--mesh-size
+        """
         from .transitions_engine import transition_morph
         return transition_morph(clip1, clip2, output, duration, mesh_size)
 
@@ -962,7 +1102,20 @@ class Client:
         return ai_remove_silence(video, output, silence_threshold, min_silence_duration, keep_margin)
 
     def ai_transcribe(self, video: str, output_srt: str | None = None, model: str = "base", language: str | None = None) -> dict:
-        """Transcribe speech to text using Whisper."""
+        """Transcribe speech to text using Whisper.
+
+        Args:
+            video: Input video/audio path
+            output_srt: If provided, write SRT subtitle file to this path
+            model: Whisper model name (base, small, medium, large)
+            language: Language code (e.g. "en"), or None for auto-detect
+
+        Returns:
+            dict with keys:
+                - transcript (str): Full transcript text
+                - segments (list[dict]): Timestamped segments
+                - language (str): Detected language
+        """
         from .ai_engine import ai_transcribe
         return ai_transcribe(video, output_srt, model, language)
 
@@ -972,12 +1125,34 @@ class Client:
         return ai_scene_detect(video, threshold, use_ai)
 
     def ai_stem_separation(self, video: str, output_dir: str, stems: list[str] | None = None, model: str = "htdemucs") -> dict[str, str]:
-        """Separate audio into stems using Demucs."""
+        """Separate audio into stems using Demucs.
+
+        Args:
+            video: Input video/audio path
+            output_dir: Directory to write separated stem files
+            stems: List of stems to extract (e.g. ["vocals", "drums"]). Default (None)
+                extracts all four: vocals, drums, bass, other
+            model: Demucs model name (htdemucs, htdemucs_ft, mdx_extra)
+
+        Returns:
+            dict mapping stem name to output WAV file path, e.g.
+            {"vocals": "/path/to/vocals.wav", "drums": "/path/to/drums.wav", ...}
+        """
         from .ai_engine import ai_stem_separation
         return ai_stem_separation(video, output_dir, stems, model)
 
     def ai_upscale(self, video: str, output: str, scale: int = 2, model: str = "realesrgan") -> str:
-        """Upscale video using AI super-resolution."""
+        """Upscale video using AI super-resolution.
+
+        Args:
+            video: Input video path
+            output: Output video path
+            scale: Upscale factor (2 or 4). CLI: -s/--scale accepts {2, 4}
+            model: Model name (realesrgan, bsrgan, swinir)
+
+        Raises:
+            ValueError: If scale is not 2 or 4
+        """
         from .ai_engine import ai_upscale
         return ai_upscale(video, output, scale, model)
 
@@ -999,7 +1174,12 @@ class Client:
             fail_on_warning: Treat warnings as failures
 
         Returns:
-            Quality report with scores and recommendations
+            dict with keys:
+                - video (str): input path
+                - overall_score (float): 0-100 average across all checks
+                - all_passed (bool): True if every check passed
+                - checks (list[dict]): per-check results with name, passed, score, message, details
+                - recommendations (list[str]): improvement suggestions
         """
         from .quality_guardrails import quality_check
         return quality_check(video, fail_on_warning)
@@ -1009,7 +1189,7 @@ class Client:
         video: str,
         auto_fix: bool = False,
         strict: bool = False,
-    ) -> dict:
+    ):
         """Run comprehensive design quality analysis.
 
         Checks layout, typography, color, motion, and composition.
@@ -1017,11 +1197,21 @@ class Client:
 
         Args:
             video: Video file path
-            auto_fix: If True, automatically apply fixes
+            auto_fix: If True, automatically apply fixes to the video file.
+                WARNING: This modifies the input video directly (overwrites in place).
+                Use fix_design_issues() with a separate output path for non-destructive fixes.
             strict: If True, treat warnings as errors
 
         Returns:
-            Design quality report with scores and issues
+            DesignQualityReport with fields:
+                - overall_score (float): 0-100
+                - technical_score (float): brightness, contrast, audio
+                - design_score (float): layout, typography, color, motion
+                - hierarchy_score (float): text size ratios
+                - motion_score (float): fps, smoothness
+                - issues (list[DesignIssue]): categorized issues with severity (error/warning/info)
+                - fixes_applied (list[str]): descriptions of auto-applied fixes
+                - recommendations (list[str]): improvement suggestions
         """
         from .design_quality import design_quality_check
         return design_quality_check(video, auto_fix=auto_fix, strict=strict)

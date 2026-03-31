@@ -624,7 +624,7 @@ def main() -> None:
 
     # audio-preset
     apreset_p = subparsers.add_parser("audio-preset", help="Generate preset sound design elements")
-    apreset_p.add_argument("preset", help="Preset name (e.g. ui-click, chime-success, drone-low)")
+    apreset_p.add_argument("preset", help="Preset name: ui-blip, ui-click, ui-tap, ui-whoosh-up, ui-whoosh-down, drone-low, drone-mid, drone-tech, drone-ominous, chime-success, chime-error, chime-notification, typing, scan, processing, data-flow, upload, download")
     apreset_p.add_argument("-o", "--output", required=True, help="Output WAV file path")
     apreset_p.add_argument("--pitch", default="mid", choices=["low", "mid", "high"], help="Pitch variation (default: mid)")
     apreset_p.add_argument("-d", "--duration", type=float, help="Override default duration (seconds)")
