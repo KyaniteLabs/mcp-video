@@ -12,6 +12,7 @@ from __future__ import annotations
 import contextlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import time
@@ -63,7 +64,7 @@ def _find_entry_point(project: Path) -> Path:
                     content = f.read_text()
                     if "registerRoot" in content:
                         return f
-                except Exception:
+                except (PermissionError, UnicodeDecodeError):
                     pass
     raise RemotionProjectError(str(project), "Could not find entry point (file with registerRoot)")
 
@@ -150,11 +151,21 @@ def render(
     if concurrency is not None:
         args += ["--concurrency", str(concurrency)]
     if frames is not None:
+        if not re.match(r"^\d+-\d+$", frames):
+            raise ValueError(
+                f"Invalid frames format: '{frames}'. Expected format: 'START-END' (e.g. '0-90')"
+            )
         args += ["--frames", frames]
     if scale is not None:
         args += ["--scale", str(scale)]
     if props is not None:
-        args += ["--props", json.dumps(props)]
+        props_json = json.dumps(props)
+        if len(props_json) > 100_000:  # 100 KiB — well under OS arg limits
+            raise ValueError(
+                f"Props JSON is {len(props_json)} bytes — exceeds 100 KiB limit. "
+                "Use a file-based approach for large props."
+            )
+        args += ["--props", props_json]
 
     start_time = time.time()
     result = _run_remotion(args, cwd=project)
@@ -168,6 +179,16 @@ def render(
     resolution = None
     if width and height:
         resolution = f"{width}x{height}"
+
+    if not os.path.isfile(output_path):
+        return RemotionRenderResult(
+            output_path=output_path,
+            codec=codec,
+            size_mb=None,
+            render_time=render_time,
+            resolution=resolution,
+            success=False,
+        )
 
     return RemotionRenderResult(
         output_path=output_path,
@@ -192,7 +213,6 @@ def _parse_compositions_output(stdout: str) -> list[dict[str, Any]]:
 
     # Fallback: parse text format like:
     # McpVideoExplainer    30      1920x1080      1500 (50.00 sec)
-    import re
     comps = []
     # Match lines with: Name  fps  WxH  frames (duration)
     pattern = re.compile(
@@ -256,7 +276,7 @@ def studio(
     project, entry_point = _validate_project(project_path)
 
     cmd = ["npx", "remotion", "studio", str(entry_point), "--port", str(port)]
-    subprocess.Popen(
+    proc = subprocess.Popen(
         cmd,
         cwd=str(project),
         stdout=subprocess.PIPE,
@@ -268,6 +288,7 @@ def studio(
         url=f"http://localhost:{port}",
         port=port,
         project_path=str(project),
+        pid=proc.pid,
     )
 
 
@@ -453,6 +474,10 @@ def create_project(
     if output_dir is None:
         output_dir = os.getcwd()
     project_dir = Path(output_dir) / name
+
+    if project_dir.exists() and any(project_dir.iterdir()):
+        print(f"Warning: Project directory already exists and is not empty — files will be overwritten: {project_dir}")
+
     project_dir.mkdir(parents=True, exist_ok=True)
 
     files: list[str] = []
@@ -518,14 +543,20 @@ export const RemotionRoot: React.FC = () => {
         files.append("src/Root.tsx")
 
     # Run npm install
-    with contextlib.suppress(subprocess.TimeoutExpired, FileNotFoundError):
-        subprocess.run(
+    try:
+        npm_result = subprocess.run(
             ["npm", "install"],
             cwd=str(project_dir),
             capture_output=True,
             text=True,
             timeout=120,
         )
+        if npm_result.returncode != 0:
+            print(f"Warning: npm install failed: {npm_result.stderr[:200]}")
+    except subprocess.TimeoutExpired:
+        print("Warning: npm install timed out after 120 seconds")
+    except FileNotFoundError:
+        print("Warning: npm not found — skipping install. Run 'npm install' manually.")
 
     return RemotionProjectResult(
         project_path=str(project_dir),
@@ -541,7 +572,6 @@ def scaffold_template(
 ) -> ScaffoldResult:
     """Generate a generic composition from a spec."""
     # Sanitize slug — only alphanumeric, dashes, underscores
-    import re
     if not re.fullmatch(r"[a-zA-Z0-9_-]+", slug):
         raise RemotionProjectError(
             project_path,
@@ -676,50 +706,36 @@ def render_and_post(
     remotion_output = render_result.output_path
 
     # Step 2: Post-process with mcp-video engine
+    from . import engine as video_engine
     operations: list[str] = []
     current_input = remotion_output
+    temp_files: list[str] = []
 
-    for op in post_process:
+    op_map = {
+        "resize": video_engine.resize,
+        "convert": video_engine.convert,
+        "add_audio": video_engine.add_audio,
+        "normalize_audio": video_engine.normalize_audio,
+        "add_text": video_engine.add_text,
+        "fade": video_engine.fade,
+        "watermark": video_engine.watermark,
+    }
+
+    for i, op in enumerate(post_process):
         op_type = op.get("op", op.get("type", ""))
         params = op.get("params", {})
+        is_last = i == len(post_process) - 1
 
-        if op_type == "resize":
-            from .engine import resize
-            result = resize(current_input, output_path=output_path, **params)
-            current_input = result.output_path
-            operations.append("resize")
-        elif op_type == "convert":
-            from .engine import convert
-            result = convert(current_input, output_path=output_path, **params)
-            current_input = result.output_path
-            operations.append("convert")
-        elif op_type == "add_audio":
-            from .engine import add_audio
-            result = add_audio(current_input, output_path=output_path, **params)
-            current_input = result.output_path
-            operations.append("add_audio")
-        elif op_type == "normalize_audio":
-            from .engine import normalize_audio
-            result = normalize_audio(current_input, output_path=output_path, **params)
-            current_input = result.output_path
-            operations.append("normalize_audio")
-        elif op_type == "add_text":
-            from .engine import add_text
-            result = add_text(current_input, output_path=output_path, **params)
-            current_input = result.output_path
-            operations.append("add_text")
-        elif op_type == "fade":
-            from .engine import fade
-            result = fade(current_input, output_path=output_path, **params)
-            current_input = result.output_path
-            operations.append("fade")
-        elif op_type == "watermark":
-            from .engine import watermark
-            result = watermark(current_input, output_path=output_path, **params)
-            current_input = result.output_path
-            operations.append("watermark")
-        else:
-            operations.append(f"unknown({op_type})")
+        if op_type not in op_map:
+            raise ValueError(
+                f"Unknown post-processing operation: '{op_type}'. "
+                f"Valid operations: {', '.join(op_map)}"
+            )
+
+        step_output = output_path if is_last else None
+        result = op_map[op_type](current_input, output_path=step_output, **params)
+        current_input = result.output_path
+        operations.append(op_type)
 
     return RemotionPipelineResult(
         remotion_output=remotion_output,

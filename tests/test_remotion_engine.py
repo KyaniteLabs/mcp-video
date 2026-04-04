@@ -874,7 +874,7 @@ class TestRenderAndPost:
 
     @patch("mcp_video.remotion_engine.shutil.which")
     def test_unknown_operation(self, mock_which, sample_remotion_project):
-        """render_and_post() should log unknown operations without crashing."""
+        """render_and_post() should raise ValueError for unknown operations."""
         def _which(name: str):
             if name in ("node", "npx"):
                 return f"/usr/bin/{name}"
@@ -888,15 +888,14 @@ class TestRenderAndPost:
              patch("os.path.isfile", return_value=True), \
              patch("os.path.getsize", return_value=1024):
 
-            result = render_and_post(
-                project,
-                composition_id="Comp",
-                post_process=[
-                    {"op": "nonexistent_op", "params": {}},
-                ],
-            )
-
-            assert result.operations == ["unknown(nonexistent_op)"]
+            with pytest.raises(ValueError, match="Unknown post-processing operation.*nonexistent_op"):
+                render_and_post(
+                    project,
+                    composition_id="Comp",
+                    post_process=[
+                        {"op": "nonexistent_op", "params": {}},
+                    ],
+                )
 
     @patch("mcp_video.remotion_engine.shutil.which")
     def test_type_alias_for_op(self, mock_which, sample_remotion_project):

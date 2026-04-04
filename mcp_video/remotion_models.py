@@ -54,6 +54,7 @@ class RemotionStudioResult(BaseModel):
     url: str
     port: int
     project_path: str
+    pid: int | None = None
 
 
 class RemotionStillResult(BaseModel):
