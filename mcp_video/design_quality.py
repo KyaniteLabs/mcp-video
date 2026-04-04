@@ -7,6 +7,7 @@ Includes auto-fix capabilities.
 
 from __future__ import annotations
 
+import logging
 import subprocess
 import json
 import tempfile
@@ -17,6 +18,8 @@ from collections.abc import Callable
 import contextlib
 
 from .errors import InputFileError, ProcessingError
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -848,7 +851,8 @@ class DesignQualityGuardrails:
                 {'size': 18, 'type': 'body'},
             ]
 
-        except Exception:
+        except Exception as e:
+            logger.warning("Failed to analyze frame for text at %.1fs: %s", time_sec, e)
             return []
         finally:
             if os.path.exists(frame_path):
@@ -944,7 +948,10 @@ class DesignQualityGuardrails:
             output_path
         ]
 
-        subprocess.run(cmd, capture_output=True, check=True)
+        try:
+            subprocess.run(cmd, capture_output=True, check=True, timeout=120)
+        except subprocess.TimeoutExpired:
+            raise ProcessingError(" ".join(cmd), -1, "Quality check command timed out after 120s")
         return output_path
 
     # ============== UTILITY METHODS ==============
@@ -963,7 +970,10 @@ class DesignQualityGuardrails:
             '-of', 'json',
             video_path
         ]
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+        except subprocess.TimeoutExpired:
+            raise ProcessingError(" ".join(cmd), -1, "Quality check command timed out after 120s")
         data = json.loads(result.stdout)
 
         if data.get('streams'):
@@ -992,14 +1002,17 @@ class DesignQualityGuardrails:
             '-vf', 'signalstats,metadata=mode=print',
             '-f', 'null', '-'
         ]
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+        except subprocess.TimeoutExpired:
+            raise ProcessingError(" ".join(cmd), -1, "Quality check command timed out after 120s")
 
         for line in result.stderr.split('\n'):
             if 'lavfi.signalstats.YAVG' in line:
                 try:
                     return float(line.split('=')[-1].strip())
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning("Failed to parse luma value: %s", e)
         return 128
 
     def _get_contrast(self, video_path: str) -> float:
@@ -1009,14 +1022,17 @@ class DesignQualityGuardrails:
             '-vf', 'signalstats,metadata=mode=print',
             '-f', 'null', '-'
         ]
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+        except subprocess.TimeoutExpired:
+            raise ProcessingError(" ".join(cmd), -1, "Quality check command timed out after 120s")
 
         for line in result.stderr.split('\n'):
             if 'lavfi.signalstats.YSTD' in line:
                 try:
                     return float(line.split('=')[-1].strip())
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning("Failed to parse contrast value: %s", e)
         return 50
 
     def _analyze_colors(self, video_path: str) -> dict:
@@ -1027,7 +1043,10 @@ class DesignQualityGuardrails:
             '-vf', 'signalstats,metadata=mode=print',
             '-f', 'null', '-'
         ]
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+        except subprocess.TimeoutExpired:
+            raise ProcessingError(" ".join(cmd), -1, "Quality check command timed out after 120s")
 
         rgb_means = [128, 128, 128]
         for line in result.stderr.split('\n'):
@@ -1039,8 +1058,8 @@ class DesignQualityGuardrails:
                     val = float(line.split('=')[-1].strip()) + 128
                     rgb_means[0] = val  # Simplified conversion
                     rgb_means[2] = 255 - val
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning("Failed to parse color VAVG value: %s", e)
 
         # Calculate saturation estimate
         saturation = max(abs(c - 128) for c in rgb_means) / 128 * 100
@@ -1083,7 +1102,10 @@ class DesignQualityGuardrails:
             '-vf', "select='gt(scene,0.3)',showinfo",
             '-f', 'null', '-'
         ]
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+        except subprocess.TimeoutExpired:
+            raise ProcessingError(" ".join(cmd), -1, "Quality check command timed out after 120s")
 
         scenes = []
         for line in result.stderr.split('\n'):
@@ -1091,8 +1113,8 @@ class DesignQualityGuardrails:
                 try:
                     time = float(line.split('pts_time:')[1].split()[0])
                     scenes.append({'time': time})
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning("Failed to parse scene change time: %s", e)
         return scenes
 
     def _analyze_brand_colors(self, video_path: str) -> float:
@@ -1146,7 +1168,10 @@ class DesignQualityGuardrails:
             '-af', 'loudnorm=print_format=json',
             '-f', 'null', '-'
         ]
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+        except subprocess.TimeoutExpired:
+            raise ProcessingError(" ".join(cmd), -1, "Quality check command timed out after 120s")
 
         try:
             loudness_start = result.stderr.find('{')
@@ -1157,7 +1182,8 @@ class DesignQualityGuardrails:
 
             distance = abs(input_lufs - (-16))
             return max(0, 100 - distance * 5)
-        except Exception:
+        except Exception as e:
+            logger.warning("Failed to calculate audio score: %s", e)
             return 50
 
 
