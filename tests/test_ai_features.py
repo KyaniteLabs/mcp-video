@@ -886,6 +886,173 @@ def test_ai_upscale_missing_file():
         print(f"✓ Correctly raised FileNotFoundError: {exc_info.value}")
 
 
+# ---------------------------------------------------------------------------
+# analyze_video Tests
+# ---------------------------------------------------------------------------
+
+
+def create_simple_video(output_path: str, duration: float = 3) -> str:
+    """Create a minimal test video with audio."""
+    cmd = [
+        "ffmpeg", "-y",
+        "-f", "lavfi", "-i", f"color=c=red:s=320x240:d={duration}",
+        "-f", "lavfi", "-i", f"sine=frequency=440:duration={duration}",
+        "-map", "0:v", "-map", "1:a",
+        "-pix_fmt", "yuv420p", "-shortest",
+        output_path,
+    ]
+    subprocess.run(cmd, capture_output=True, check=True)
+    return output_path
+
+
+@requires_ffmpeg
+@requires_ffprobe
+def test_analyze_video_no_transcript():
+    """analyze_video returns metadata/scenes/audio/quality without Whisper."""
+    from mcp_video.ai_engine import analyze_video
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        video = create_simple_video(str(Path(tmpdir) / "test.mp4"))
+        result = analyze_video(video, include_transcript=False)
+
+    assert result["success"] is True
+    assert result["transcript"] is None
+
+    meta = result["metadata"]
+    assert meta["width"] == 320
+    assert meta["height"] == 240
+    assert meta["duration"] > 0
+
+    # scenes list should be present (even if empty for a short clip)
+    assert isinstance(result["scenes"], list)
+
+
+@requires_ffmpeg
+@requires_ffprobe
+def test_analyze_video_file_not_found():
+    """analyze_video raises FileNotFoundError for missing files."""
+    from mcp_video.ai_engine import analyze_video
+
+    with pytest.raises(FileNotFoundError):
+        analyze_video("/nonexistent/path/video.mp4", include_transcript=False)
+
+
+def test_analyze_video_null_byte_path():
+    """analyze_video raises FileNotFoundError for null-byte paths."""
+    from mcp_video.ai_engine import analyze_video
+
+    with pytest.raises(FileNotFoundError):
+        analyze_video("path/with\x00null", include_transcript=False)
+
+
+@requires_ffmpeg
+@requires_ffprobe
+def test_analyze_video_errors_are_non_fatal():
+    """A sub-analysis failure does not abort the whole result."""
+    from unittest.mock import patch
+    from mcp_video.ai_engine import analyze_video
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        video = create_simple_video(str(Path(tmpdir) / "test.mp4"))
+
+        with patch("mcp_video.quality_guardrails.quality_check", side_effect=RuntimeError("mock quality failure")):
+            result = analyze_video(video, include_transcript=False)
+
+    assert result["success"] is True
+    assert result["quality"] is None
+    quality_errors = [e for e in result["errors"] if e["section"] == "quality"]
+    assert len(quality_errors) == 1
+    assert "mock quality failure" in quality_errors[0]["error"]
+
+
+def test_format_txt_basic():
+    """_format_txt joins segment texts as plain lines."""
+    from mcp_video.ai_engine import _format_txt
+
+    segments = [
+        {"start": 0.0, "end": 1.0, "text": "Hello world"},
+        {"start": 1.0, "end": 2.0, "text": "Second line"},
+    ]
+    result = _format_txt(segments)
+    assert "Hello world" in result
+    assert "Second line" in result
+    assert "-->" not in result
+
+
+def test_format_txt_strips_whitespace():
+    """_format_txt strips leading/trailing whitespace from each segment."""
+    from mcp_video.ai_engine import _format_txt
+
+    segments = [{"start": 0.0, "end": 1.0, "text": "  padded  "}]
+    result = _format_txt(segments)
+    assert result.strip() == "padded"
+
+
+def test_format_md_contains_timestamps():
+    """_format_md includes bold HH:MM:SS timestamps."""
+    from mcp_video.ai_engine import _format_md
+
+    segments = [
+        {"start": 65.0, "end": 67.0, "text": "One minute in"},
+        {"start": 3661.0, "end": 3663.0, "text": "One hour in"},
+    ]
+    result = _format_md(segments)
+    assert "**[00:01:05]**" in result
+    assert "**[01:01:01]**" in result
+    assert "One minute in" in result
+    assert "One hour in" in result
+
+
+def test_format_json_transcript_structure():
+    """_format_json_transcript returns expected keys and segment count."""
+    from mcp_video.ai_engine import _format_json_transcript
+
+    segments = [
+        {"id": 0, "start": 0.0, "end": 1.5, "text": "Hello", "tokens": [1, 2]},
+    ]
+    result = _format_json_transcript("Hello", segments, "en")
+
+    assert result["transcript"] == "Hello"
+    assert result["language"] == "en"
+    assert result["segment_count"] == 1
+    assert result["segments"][0]["text"] == "Hello"
+    assert result["segments"][0]["start"] == 0.0
+
+
+@requires_ffmpeg
+@requires_ffprobe
+def test_analyze_video_writes_txt_output():
+    """analyze_video writes plain-text transcript file when output_txt is given."""
+    from unittest.mock import patch
+    from mcp_video.ai_engine import analyze_video
+
+    fake_transcribe_result = {
+        "transcript": "Hello world",
+        "segments": [{"id": 0, "start": 0.0, "end": 1.0, "text": "Hello world", "tokens": []}],
+        "language": "en",
+    }
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        video = create_simple_video(str(Path(tmpdir) / "test.mp4"))
+        txt_path = str(Path(tmpdir) / "transcript.txt")
+
+        with patch("mcp_video.ai_engine.ai_transcribe", return_value=fake_transcribe_result):
+            result = analyze_video(
+                video,
+                include_transcript=True,
+                output_txt=txt_path,
+                include_scenes=False,
+                include_audio=False,
+                include_quality=False,
+                include_chapters=False,
+                include_colors=False,
+            )
+
+    assert result["success"] is True
+    assert result["transcript"]["txt_path"] == txt_path
+    assert Path(txt_path).read_text(encoding="utf-8") == "Hello world"
+
+
 # Add ai_upscale tests to __main__ block
 if __name__ == "__main__":
     # Run transcription tests

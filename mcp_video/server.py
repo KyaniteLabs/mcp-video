@@ -2651,6 +2651,80 @@ def video_ai_transcribe(
 
 
 @mcp.tool()
+def video_analyze(
+    input_path: str,
+    whisper_model: str = "base",
+    language: str | None = None,
+    scene_threshold: float = 0.3,
+    include_transcript: bool = True,
+    include_scenes: bool = True,
+    include_audio: bool = True,
+    include_quality: bool = True,
+    include_chapters: bool = True,
+    include_colors: bool = True,
+    output_srt: str | None = None,
+    output_txt: str | None = None,
+    output_md: str | None = None,
+    output_json: str | None = None,
+) -> dict[str, Any]:
+    """Comprehensive video analysis — transcript, metadata, scenes, audio, quality, chapters, colors.
+
+    Points at any existing video file and reverse-engineers everything about it.
+    Each sub-analysis is independent so one failure will not abort the others.
+
+    Args:
+        input_path: Path to existing video file.
+        whisper_model: Whisper model size (tiny, base, small, medium, large, turbo).
+        language: Language code for transcription (auto-detect if None).
+        scene_threshold: Scene change sensitivity 0.0–1.0.
+        include_transcript: Run speech-to-text via Whisper (requires openai-whisper).
+        include_scenes: Detect scene changes and boundaries.
+        include_audio: Analyse audio waveform, peaks, and silence regions.
+        include_quality: Run visual quality check.
+        include_chapters: Auto-generate chapter markers from scene changes.
+        include_colors: Extract dominant colors and extended metadata.
+        output_srt: Optional path to write SRT subtitle file.
+        output_txt: Optional path to write plain-text transcript.
+        output_md: Optional path to write Markdown transcript with timestamps.
+        output_json: Optional path to write full JSON transcript data.
+    """
+    if whisper_model not in VALID_WHISPER_MODELS:
+        return _error_result(MCPVideoError(
+            f"Invalid model: must be one of {sorted(VALID_WHISPER_MODELS)}, got '{whisper_model}'",
+            error_type="validation_error",
+            code="invalid_parameter",
+        ))
+    if not 0.0 <= scene_threshold <= 1.0:
+        return _error_result(MCPVideoError(
+            f"scene_threshold must be between 0.0 and 1.0, got {scene_threshold}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        ))
+    try:
+        from .ai_engine import analyze_video
+        return analyze_video(
+            input_path,
+            whisper_model=whisper_model,
+            language=language,
+            scene_threshold=scene_threshold,
+            include_transcript=include_transcript,
+            include_scenes=include_scenes,
+            include_audio=include_audio,
+            include_quality=include_quality,
+            include_chapters=include_chapters,
+            include_colors=include_colors,
+            output_srt=output_srt,
+            output_txt=output_txt,
+            output_md=output_md,
+            output_json=output_json,
+        )
+    except MCPVideoError as e:
+        return _error_result(e)
+    except Exception as e:
+        return {"success": False, "error": {"type": "internal_error", "code": "unexpected_error", "message": str(e)}}
+
+
+@mcp.tool()
 def video_ai_scene_detect(
     input_path: str,
     threshold: float = 0.3,

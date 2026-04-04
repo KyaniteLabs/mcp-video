@@ -609,6 +609,23 @@ def main() -> None:
     aitrans_p.add_argument("--model", default="base", choices=["tiny", "base", "small", "medium", "large"], help="Whisper model (default: base)")
     aitrans_p.add_argument("--language", help="Language code (auto-detect if omitted)")
 
+    # video-analyze
+    analyze_p = subparsers.add_parser("video-analyze", help="Comprehensive video analysis: transcript, metadata, scenes, audio, quality, chapters, colors")
+    analyze_p.add_argument("input", help="Input video file")
+    analyze_p.add_argument("--model", default="base", choices=["tiny", "base", "small", "medium", "large", "turbo"], help="Whisper model (default: base)")
+    analyze_p.add_argument("--language", help="Language code for transcription (auto-detect if omitted)")
+    analyze_p.add_argument("--scene-threshold", type=float, default=0.3, help="Scene change sensitivity 0.0-1.0 (default: 0.3)")
+    analyze_p.add_argument("--no-transcript", action="store_true", help="Skip speech-to-text transcription")
+    analyze_p.add_argument("--no-scenes", action="store_true", help="Skip scene detection")
+    analyze_p.add_argument("--no-audio", action="store_true", help="Skip audio waveform analysis")
+    analyze_p.add_argument("--no-quality", action="store_true", help="Skip visual quality check")
+    analyze_p.add_argument("--no-chapters", action="store_true", help="Skip chapter generation")
+    analyze_p.add_argument("--no-colors", action="store_true", help="Skip color extraction")
+    analyze_p.add_argument("--output-srt", help="Write SRT subtitle file to this path")
+    analyze_p.add_argument("--output-txt", help="Write plain-text transcript to this path")
+    analyze_p.add_argument("--output-md", help="Write Markdown transcript to this path")
+    analyze_p.add_argument("--output-json", help="Write full JSON transcript to this path")
+
     # video-ai-upscale
     aiup_p = subparsers.add_parser("video-ai-upscale", help="Upscale video using AI super-resolution")
     aiup_p.add_argument("input", help="Input video file")
@@ -1608,6 +1625,112 @@ def main() -> None:
                 if text:
                     lines.append(f"[bold green]Preview:[/bold green] {text[:200]}...")
                 console.print(Panel("\n".join(lines), border_style="green", title="Transcription"))
+
+        elif args.command == "video-analyze":
+            from .ai_engine import analyze_video
+            result = _with_spinner(
+                "Analysing video...",
+                analyze_video,
+                args.input,
+                whisper_model=args.model,
+                language=args.language,
+                scene_threshold=args.scene_threshold,
+                include_transcript=not args.no_transcript,
+                include_scenes=not args.no_scenes,
+                include_audio=not args.no_audio,
+                include_quality=not args.no_quality,
+                include_chapters=not args.no_chapters,
+                include_colors=not args.no_colors,
+                output_srt=args.output_srt,
+                output_txt=args.output_txt,
+                output_md=args.output_md,
+                output_json=args.output_json,
+            )
+            if use_json:
+                output_json(result)
+            else:
+                from rich.table import Table
+                # Metadata panel
+                meta = result.get("metadata", {})
+                meta_lines = []
+                if meta.get("duration"):
+                    meta_lines.append(f"[bold]Duration:[/bold] {meta['duration']:.2f}s")
+                if meta.get("width") and meta.get("height"):
+                    meta_lines.append(f"[bold]Resolution:[/bold] {meta['width']}x{meta['height']}")
+                if meta.get("fps"):
+                    meta_lines.append(f"[bold]FPS:[/bold] {meta['fps']:.2f}")
+                if meta.get("codec"):
+                    meta_lines.append(f"[bold]Video codec:[/bold] {meta['codec']}")
+                if meta.get("audio_codec"):
+                    meta_lines.append(f"[bold]Audio codec:[/bold] {meta['audio_codec']}")
+                if meta.get("size_bytes"):
+                    meta_lines.append(f"[bold]Size:[/bold] {meta['size_bytes'] // 1024:,} KB")
+                console.print(Panel("\n".join(meta_lines) or "No metadata", title="[cyan]Metadata[/cyan]", border_style="cyan"))
+
+                # Transcript panel
+                transcript = result.get("transcript")
+                if transcript:
+                    text = transcript.get("text", "")
+                    lang = transcript.get("language", "unknown")
+                    segs = len(transcript.get("segments", []))
+                    preview = text[:300] + ("..." if len(text) > 300 else "")
+                    t_lines = [
+                        f"[bold]Language:[/bold] {lang}",
+                        f"[bold]Segments:[/bold] {segs}",
+                        f"[bold]Preview:[/bold] {preview}",
+                    ]
+                    if transcript.get("srt_path"):
+                        t_lines.append(f"[bold]SRT:[/bold] {transcript['srt_path']}")
+                    if transcript.get("txt_path"):
+                        t_lines.append(f"[bold]TXT:[/bold] {transcript['txt_path']}")
+                    if transcript.get("md_path"):
+                        t_lines.append(f"[bold]Markdown:[/bold] {transcript['md_path']}")
+                    if transcript.get("json_path"):
+                        t_lines.append(f"[bold]JSON:[/bold] {transcript['json_path']}")
+                    console.print(Panel("\n".join(t_lines), title="[green]Transcript[/green]", border_style="green"))
+                elif not args.no_transcript:
+                    console.print(Panel("[yellow]Transcript unavailable (Whisper not installed?)[/yellow]", title="Transcript", border_style="yellow"))
+
+                # Scenes panel
+                scenes = result.get("scenes")
+                if scenes is not None:
+                    table = Table(title="Scenes", show_header=True, header_style="bold magenta")
+                    table.add_column("#", style="dim", width=4)
+                    table.add_column("Start", justify="right")
+                    table.add_column("End", justify="right")
+                    for i, sc in enumerate(scenes[:20], 1):
+                        table.add_row(str(i), f"{sc.get('start', 0):.2f}s", f"{sc.get('end', 0):.2f}s")
+                    if len(scenes) > 20:
+                        table.add_row("...", f"+{len(scenes)-20} more", "")
+                    console.print(table)
+
+                # Chapters panel
+                chapters = result.get("chapters")
+                if chapters:
+                    ch_lines = [f"[bold]{ch['title']}[/bold] @ {ch['timestamp']:.2f}s" for ch in chapters[:10]]
+                    console.print(Panel("\n".join(ch_lines), title="[blue]Chapters[/blue]", border_style="blue"))
+
+                # Audio panel
+                audio = result.get("audio")
+                if audio:
+                    a_lines = [
+                        f"[bold]Mean level:[/bold] {audio.get('mean_level', 'N/A')} dBFS",
+                        f"[bold]Max level:[/bold] {audio.get('max_level', 'N/A')} dBFS",
+                        f"[bold]Silence regions:[/bold] {len(audio.get('silence_regions', []))}",
+                    ]
+                    console.print(Panel("\n".join(a_lines), title="[yellow]Audio[/yellow]", border_style="yellow"))
+
+                # Quality panel
+                quality = result.get("quality")
+                if quality:
+                    score = quality.get("overall_score", "N/A")
+                    console.print(Panel(f"[bold]Overall score:[/bold] {score}/100", title="[magenta]Quality[/magenta]", border_style="magenta"))
+
+                # Errors panel
+                errors = result.get("errors", [])
+                if errors:
+                    err_lines = [f"[red]{e['section']}:[/red] {e['error']}" for e in errors]
+                    console.print(Panel("\n".join(err_lines), title="[red]Warnings / Errors[/red]", border_style="red"))
 
         elif args.command == "video-ai-upscale":
             from .ai_engine import ai_upscale

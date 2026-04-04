@@ -149,6 +149,62 @@ def _seconds_to_srt_time(seconds: float) -> str:
     return f"{hours:02d}:{minutes:02d}:{secs:02d},{millis:03d}"
 
 
+def _format_txt(segments: list[dict[str, Any]]) -> str:
+    """Convert Whisper segments to plain text (no timestamps)."""
+    lines = []
+    for segment in segments:
+        text = segment.get("text", "").strip()
+        if text:
+            lines.append(text)
+    return "\n".join(lines)
+
+
+def _format_md(segments: list[dict[str, Any]]) -> str:
+    """Convert Whisper segments to Markdown with inline timestamps.
+
+    Format:
+        **[00:00:01]** Hello world.
+        **[00:00:03]** Second line.
+    """
+    lines = []
+    for segment in segments:
+        text = segment.get("text", "").strip()
+        start = segment.get("start", 0.0)
+        if text:
+            # Use HH:MM:SS (drop milliseconds for readability)
+            h = int(start // 3600)
+            m = int((start % 3600) // 60)
+            s = int(start % 60)
+            ts = f"{h:02d}:{m:02d}:{s:02d}"
+            lines.append(f"**[{ts}]** {text}")
+    return "\n\n".join(lines)
+
+
+def _format_json_transcript(
+    transcript: str,
+    segments: list[dict[str, Any]],
+    language: str,
+) -> dict[str, Any]:
+    """Return structured JSON-serializable transcript data with full segment metadata."""
+    return {
+        "transcript": transcript,
+        "language": language,
+        "segment_count": len(segments),
+        "segments": [
+            {
+                "id": seg.get("id", i),
+                "start": seg.get("start", 0.0),
+                "end": seg.get("end", 0.0),
+                "text": seg.get("text", "").strip(),
+                "tokens": seg.get("tokens", []),
+                "avg_logprob": seg.get("avg_logprob"),
+                "no_speech_prob": seg.get("no_speech_prob"),
+            }
+            for i, seg in enumerate(segments)
+        ],
+    }
+
+
 def _run_ffprobe(video: str) -> dict[str, Any]:
     """Get video info using ffprobe."""
     cmd = [
@@ -1453,3 +1509,195 @@ def _has_audio_stream(video_path: str) -> bool:
     except subprocess.TimeoutExpired:
         raise ProcessingError("Operation timed out after 600 seconds") from None
     return result.returncode == 0 and "audio" in result.stdout.lower()
+
+
+def analyze_video(
+    video: str,
+    *,
+    whisper_model: str = "base",
+    language: str | None = None,
+    scene_threshold: float = 0.3,
+    include_transcript: bool = True,
+    include_scenes: bool = True,
+    include_audio: bool = True,
+    include_quality: bool = True,
+    include_chapters: bool = True,
+    include_colors: bool = True,
+    output_srt: str | None = None,
+    output_txt: str | None = None,
+    output_md: str | None = None,
+    output_json: str | None = None,
+) -> dict[str, Any]:
+    """Comprehensive video analysis — transcript, metadata, scenes, audio, quality, chapters, colors.
+
+    Points at any existing video file and reverse-engineers everything about it.
+    Each sub-analysis is independent: one failure will not abort the others.
+
+    Args:
+        video: Path to existing video file.
+        whisper_model: Whisper model size (tiny, base, small, medium, large, turbo).
+        language: Language code for transcription (auto-detect if None).
+        scene_threshold: Scene change sensitivity 0.0–1.0 (lower = more sensitive).
+        include_transcript: Run speech-to-text via Whisper (requires openai-whisper).
+        include_scenes: Detect scene changes and boundaries.
+        include_audio: Analyse audio waveform, peaks, and silence regions.
+        include_quality: Run visual quality check (brightness, contrast, saturation, audio levels).
+        include_chapters: Auto-generate chapter markers from scene changes.
+        include_colors: Extract dominant colors and extended metadata.
+        output_srt: Optional path to write SRT subtitle file.
+        output_txt: Optional path to write plain-text transcript.
+        output_md: Optional path to write Markdown transcript with timestamps.
+        output_json: Optional path to write full JSON transcript data.
+
+    Returns:
+        Dict with keys: success, video, metadata, transcript, scenes, audio,
+        chapters, colors, quality, errors.
+    """
+    if "\x00" in video:
+        raise FileNotFoundError("Invalid path: contains null bytes")
+
+    video_path = Path(video)
+    if not video_path.exists():
+        raise FileNotFoundError(f"Video file not found: {video}")
+
+    # Lazy imports — keep optional-dependency pattern consistent with the rest
+    from . import engine as _engine
+    from . import effects_engine as _effects
+    from . import quality_guardrails as _quality
+
+    errors: list[dict[str, str]] = []
+
+    # ── 1. Metadata (always runs) ────────────────────────────────────────────
+    try:
+        info = _engine.probe(str(video_path))
+        metadata: dict[str, Any] = {
+            "path": str(video_path.resolve()),
+            "duration": info.duration,
+            "width": info.width,
+            "height": info.height,
+            "fps": info.fps,
+            "codec": info.codec,
+            "audio_codec": info.audio_codec,
+            "audio_sample_rate": info.audio_sample_rate,
+            "bitrate": info.bitrate,
+            "size_bytes": info.size_bytes,
+            "format": info.format,
+        }
+    except Exception as exc:
+        metadata = {"path": str(video_path.resolve())}
+        errors.append({"section": "metadata", "error": str(exc)})
+
+    # ── 2. Transcript ────────────────────────────────────────────────────────
+    transcript_result: dict[str, Any] | None = None
+    if include_transcript:
+        try:
+            raw = ai_transcribe(
+                str(video_path),
+                output_srt=output_srt,
+                model=whisper_model,
+                language=language,
+            )
+            segments = raw.get("segments", [])
+            txt_path: str | None = None
+            md_path: str | None = None
+            json_path: str | None = None
+
+            if output_txt:
+                Path(output_txt).write_text(_format_txt(segments), encoding="utf-8")
+                txt_path = output_txt
+            if output_md:
+                Path(output_md).write_text(_format_md(segments), encoding="utf-8")
+                md_path = output_md
+            if output_json:
+                json_data = _format_json_transcript(
+                    raw.get("transcript", ""),
+                    segments,
+                    raw.get("language", "unknown"),
+                )
+                Path(output_json).write_text(
+                    json.dumps(json_data, indent=2, ensure_ascii=False),
+                    encoding="utf-8",
+                )
+                json_path = output_json
+
+            transcript_result = {
+                "text": raw.get("transcript", ""),
+                "language": raw.get("language", "unknown"),
+                "segments": segments,
+                "srt_path": output_srt,
+                "txt_path": txt_path,
+                "md_path": md_path,
+                "json_path": json_path,
+            }
+        except RuntimeError as exc:
+            # Whisper not installed — record gracefully
+            errors.append({"section": "transcript", "error": str(exc)})
+        except Exception as exc:
+            errors.append({"section": "transcript", "error": str(exc)})
+
+    # ── 3. Scenes ────────────────────────────────────────────────────────────
+    scenes_result: list[dict] | None = None
+    if include_scenes:
+        try:
+            scene_det = _engine.detect_scenes(str(video_path), threshold=scene_threshold)
+            scenes_result = scene_det.scenes if hasattr(scene_det, "scenes") else list(scene_det)
+        except Exception as exc:
+            errors.append({"section": "scenes", "error": str(exc)})
+
+    # ── 4. Audio waveform ────────────────────────────────────────────────────
+    audio_result: dict[str, Any] | None = None
+    if include_audio:
+        try:
+            waveform = _engine.audio_waveform(str(video_path))
+            audio_result = {
+                "duration": waveform.duration if hasattr(waveform, "duration") else None,
+                "peaks": waveform.peaks if hasattr(waveform, "peaks") else [],
+                "mean_level": waveform.mean_level if hasattr(waveform, "mean_level") else None,
+                "max_level": waveform.max_level if hasattr(waveform, "max_level") else None,
+                "min_level": waveform.min_level if hasattr(waveform, "min_level") else None,
+                "silence_regions": waveform.silence_regions if hasattr(waveform, "silence_regions") else [],
+            }
+        except Exception as exc:
+            errors.append({"section": "audio", "error": str(exc)})
+
+    # ── 5. Chapters ──────────────────────────────────────────────────────────
+    chapters_result: list[dict] | None = None
+    if include_chapters:
+        try:
+            raw_chapters = _effects.auto_chapters(str(video_path), threshold=scene_threshold)
+            chapters_result = [
+                {"timestamp": ts, "title": title}
+                for ts, title in raw_chapters
+            ]
+        except Exception as exc:
+            errors.append({"section": "chapters", "error": str(exc)})
+
+    # ── 6. Colors / extended info ────────────────────────────────────────────
+    colors_result: list[Any] | None = None
+    if include_colors:
+        try:
+            detailed = _effects.video_info_detailed(str(video_path))
+            colors_result = detailed.get("dominant_colors", [])
+        except Exception as exc:
+            errors.append({"section": "colors", "error": str(exc)})
+
+    # ── 7. Quality ───────────────────────────────────────────────────────────
+    quality_result: dict[str, Any] | None = None
+    if include_quality:
+        try:
+            quality_result = _quality.quality_check(str(video_path))
+        except Exception as exc:
+            errors.append({"section": "quality", "error": str(exc)})
+
+    return {
+        "success": True,
+        "video": str(video_path.resolve()),
+        "metadata": metadata,
+        "transcript": transcript_result,
+        "scenes": scenes_result,
+        "audio": audio_result,
+        "chapters": chapters_result,
+        "colors": colors_result,
+        "quality": quality_result,
+        "errors": errors,
+    }
