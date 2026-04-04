@@ -1114,7 +1114,7 @@ def _ai_upscale_opencv(video_path: str, output_path: str, scale: int) -> str:
     # Download model if not exists (FSRCNN is ~57KB vs EDSR's 38MB!)
     model_filename = f"FSRCNN_x{scale}.pb"
     if model_filename not in _MODEL_HASHES:
-        raise ValueError(f"No known hash for model {model_filename}")
+        raise MCPVideoError(f"No known hash for model {model_filename}", error_type="validation_error", code="invalid_parameter")
     expected_hash = _MODEL_HASHES[model_filename]
 
     if not model_path.exists():
@@ -1285,7 +1285,7 @@ def ai_upscale(
     }
 
     if model not in model_configs:
-        raise ValueError(f"Unknown model: {model}. Choose from: {list(model_configs.keys())}")
+        raise MCPVideoError(f"Unknown model: {model}. Choose from: {list(model_configs.keys())}", error_type="validation_error", code="invalid_parameter")
 
     output_path = Path(output)
 

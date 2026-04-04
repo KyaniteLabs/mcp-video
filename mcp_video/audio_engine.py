@@ -588,7 +588,7 @@ def audio_sequence(
         Path to generated WAV file
     """
     if not sequence:
-        raise ValueError("Sequence cannot be empty")
+        raise MCPVideoError("Sequence cannot be empty", error_type="validation_error", code="invalid_parameter")
 
     # Calculate total duration
     max_end = max(event.get("at", 0) + event.get("duration", 1.0) for event in sequence)
@@ -828,7 +828,7 @@ def add_generated_audio(
         })
 
     if not events:
-        raise ValueError("No audio events specified")
+        raise MCPVideoError("No audio events specified", error_type="validation_error", code="invalid_parameter")
 
     # Create temp audio file
     with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
