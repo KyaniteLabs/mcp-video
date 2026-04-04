@@ -172,11 +172,8 @@ def _format_md(segments: list[dict[str, Any]]) -> str:
         text = segment.get("text", "").strip()
         start = segment.get("start", 0.0)
         if text:
-            # Use HH:MM:SS (drop milliseconds for readability)
-            h = int(start // 3600)
-            m = int((start % 3600) // 60)
-            s = int(start % 60)
-            ts = f"{h:02d}:{m:02d}:{s:02d}"
+            # Reuse SRT formatter but drop milliseconds for readability
+            ts = _seconds_to_srt_time(start).split(",")[0]
             lines.append(f"**[{ts}]** {text}")
     return "\n\n".join(lines)
 
@@ -428,13 +425,7 @@ def _apply_simple_spatial(
         # Concatenate all segments
         if len(segment_files) == 1:
             # Single segment - just copy
-            cmd = ["cp", str(segment_files[0]), output]
-            try:
-                result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
-            except subprocess.TimeoutExpired:
-                raise ProcessingError("Operation timed out after 600 seconds") from None
-            if result.returncode != 0:
-                raise RuntimeError(f"Failed to copy output: {result.stderr}")
+            shutil.copy2(str(segment_files[0]), output)
         else:
             # Multiple segments - use concat demuxer
             concat_list = tmpdir_path / "concat_list.txt"
@@ -1575,11 +1566,19 @@ def _download_direct_url(url: str, dest_dir: str) -> str:
 
     headers = {"User-Agent": "mcp-video/1.0 (+https://github.com/pastorsimon1798/mcp-video)"}
     req = urllib.request.Request(url, headers=headers)
+    max_download_bytes = 2 * (1 << 30)  # 2 GiB limit
     with urllib.request.urlopen(req, timeout=120) as resp, open(dest, "wb") as fh:
+        total = 0
         while True:
             chunk = resp.read(1 << 20)  # 1 MiB
             if not chunk:
                 break
+            total += len(chunk)
+            if total > max_download_bytes:
+                Path(dest).unlink(missing_ok=True)
+                raise RuntimeError(
+                    f"Download exceeded {max_download_bytes >> 30} GiB size limit"
+                )
             fh.write(chunk)
     return dest
 
@@ -1749,7 +1748,7 @@ def analyze_video(
         if path is not None:
             p = Path(path).resolve()
             # Block writes to system directories
-            blocked_prefixes = ("/etc/", "/usr/", "/bin/", "/sbin/", "/var/", "/root/", "/boot/")
+            blocked_prefixes = ("/etc/", "/usr/", "/bin/", "/sbin/", "/var/", "/root/", "/boot/", "/dev/", "/proc/", "/sys/")
             if any(str(p).startswith(prefix) for prefix in blocked_prefixes):
                 raise ValueError(f"{label} path escapes safe directory: {path}")
 
@@ -1880,12 +1879,8 @@ def analyze_video(
         # Leaving this section as a placeholder — remove include_colors flag
         # and this block when colors are actually implemented.
         colors_result: list[Any] | None = None
-        # if include_colors:
-        #     try:
-        #         detailed = _effects.video_info_detailed(str(video_path))
-        #         colors_result = detailed.get("dominant_colors", [])
-        #     except Exception as exc:
-        #         errors.append({"section": "colors", "error": str(exc)})
+        if include_colors:
+            errors.append({"section": "colors", "error": "Color extraction not yet implemented"})
 
         # ── 7. Quality ───────────────────────────────────────────────────────
         quality_result: dict[str, Any] | None = None
