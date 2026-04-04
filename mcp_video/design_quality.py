@@ -53,9 +53,6 @@ class DesignQualityReport:
     def get_warnings(self) -> list[DesignIssue]:
         return [i for i in self.issues if i.severity == 'warning']
 
-    def has_fixable_issues(self) -> bool:
-        return any(i.fix_available for i in self.issues)
-
     def get_score_breakdown(self) -> dict:
         """Get detailed score breakdown with improvement potential."""
         return {
@@ -129,39 +126,6 @@ class DesignQualityReport:
 
         return recs
 
-    def print_report(self):
-        """Print formatted report to console."""
-        print("=" * 70)
-        print("DESIGN QUALITY REPORT")
-        print("=" * 70)
-        print("\n📊 SCORES:")
-        print(f"   Overall:    {self.overall_score:.1f}/100")
-        print(f"   Technical:  {self.technical_score:.1f}/100")
-        print(f"   Design:     {self.design_score:.1f}/100")
-        print(f"   Hierarchy:  {self.hierarchy_score:.1f}/100")
-        print(f"   Motion:     {self.motion_score:.1f}/100")
-
-        print("\n📋 ISSUES:")
-        print(f"   Errors:   {len(self.get_errors())}")
-        print(f"   Warnings: {len(self.get_warnings())}")
-        print(f"   Info:     {len(self.issues) - len(self.get_errors()) - len(self.get_warnings())}")
-
-        if self.recommendations:
-            print("\n🎯 RECOMMENDATIONS TO REACH 100/100:")
-            for i, rec in enumerate(self.recommendations[:10], 1):
-                icon = "🔴" if rec['priority'] == 'CRITICAL' else "🟡" if rec['priority'] == 'HIGH' else "🔵"
-                auto = " [AUTO]" if rec.get('auto_fixable') else ""
-                print(f"   {icon} {i}. [{rec['category'].upper()}] {rec['issue']}{auto}")
-                print(f"      Fix: {rec['fix']}")
-                print(f"      Impact: {rec['impact']}")
-
-        if self.fixes_applied:
-            print("\n✅ FIXES APPLIED:")
-            for fix in self.fixes_applied:
-                print(f"   ✓ {fix}")
-
-        print(f"\n{'=' * 70}")
-
 
 class DesignQualityGuardrails:
     """Visual design quality guardrails with auto-fix capabilities.
@@ -207,7 +171,6 @@ class DesignQualityGuardrails:
 
     def __init__(self):
         self.issues: list[DesignIssue] = []
-        self._frame_data: list[dict] = []
 
     def analyze(self, video_path: str, auto_fix: bool = False) -> DesignQualityReport:
         """Run comprehensive design quality analysis.
@@ -220,11 +183,7 @@ class DesignQualityGuardrails:
             DesignQualityReport with issues and applied fixes
         """
         self.issues = []
-        self._frame_data = []
         fixes_applied = []
-
-        # Collect frame-by-frame data
-        self._collect_frame_data(video_path)
 
         # Run all checks
         self._check_layout(video_path)
@@ -586,30 +545,6 @@ class DesignQualityGuardrails:
                 fix_available=False,
             ))
 
-    def _check_spacing_consistency(self, video_path: str):
-        """Check for consistent spacing between elements."""
-        spacing_variance = self._analyze_spacing(video_path)
-
-        if spacing_variance > 0.3:  # High variance
-            self.issues.append(DesignIssue(
-                category='layout',
-                severity='info',
-                message='Inconsistent spacing detected. Consider using a spacing scale for uniformity.',
-                fix_available=False,
-            ))
-
-    def _check_focal_points(self, video_path: str):
-        """Check for clear focal points in each scene."""
-        focal_score = self._analyze_focal_points(video_path)
-
-        if focal_score < 0.6:
-            self.issues.append(DesignIssue(
-                category='composition',
-                severity='warning',
-                message='Unclear focal points. Each scene should have one primary element that draws attention.',
-                fix_available=False,
-            ))
-
     # ============== SCORE CALCULATIONS ==============
 
     def _calculate_technical_score(self, video_path: str) -> float:
@@ -886,23 +821,6 @@ class DesignQualityGuardrails:
             raise ProcessingError(" ".join(cmd), -1, "Quality check command timed out after 120s")
         return output_path
 
-    def _auto_fix_contrast(self, video_path: str) -> str:
-        """Auto-fix contrast."""
-        output_path = video_path.replace('.mp4', '_fixed.mp4')
-
-        cmd = [
-            'ffmpeg', '-y', '-i', video_path,
-            '-vf', 'eq=contrast=1.1',
-            '-c:a', 'copy',
-            output_path
-        ]
-
-        try:
-            subprocess.run(cmd, capture_output=True, check=True, timeout=120)
-        except subprocess.TimeoutExpired:
-            raise ProcessingError(" ".join(cmd), -1, "Quality check command timed out after 120s")
-        return output_path
-
     def _auto_fix_saturation(self, video_path: str, boost: float = 1.2) -> str:
         """Auto-fix saturation."""
         output_path = video_path.replace('.mp4', '_fixed.mp4')
@@ -910,23 +828,6 @@ class DesignQualityGuardrails:
         cmd = [
             'ffmpeg', '-y', '-i', video_path,
             '-vf', f'eq=saturation={boost}',
-            '-c:a', 'copy',
-            output_path
-        ]
-
-        try:
-            subprocess.run(cmd, capture_output=True, check=True, timeout=120)
-        except subprocess.TimeoutExpired:
-            raise ProcessingError(" ".join(cmd), -1, "Quality check command timed out after 120s")
-        return output_path
-
-    def _auto_fix_color_cast(self, video_path: str) -> str:
-        """Auto-fix color casts."""
-        output_path = video_path.replace('.mp4', '_fixed.mp4')
-
-        cmd = [
-            'ffmpeg', '-y', '-i', video_path,
-            '-vf', 'colorbalance=rm=0.1:gm=0.1:bm=0.1',
             '-c:a', 'copy',
             output_path
         ]
@@ -955,12 +856,6 @@ class DesignQualityGuardrails:
         return output_path
 
     # ============== UTILITY METHODS ==============
-
-    def _collect_frame_data(self, video_path: str):
-        """Collect frame-by-frame data for analysis."""
-        # This would collect data from multiple frames
-        # For now, simplified implementation
-        pass
 
     def _probe_video(self, video_path: str) -> dict:
         """Get video metadata."""
@@ -1090,11 +985,6 @@ class DesignQualityGuardrails:
         # Placeholder - would need text detection
         return 0.7
 
-    def _count_hierarchy_levels(self, video_path: str) -> int:
-        """Count number of distinct hierarchy levels."""
-        # Placeholder
-        return 3
-
     def _detect_scene_changes(self, video_path: str) -> list[dict]:
         """Detect scene change timestamps."""
         cmd = [
@@ -1150,16 +1040,6 @@ class DesignQualityGuardrails:
         """Analyze visual rhythm consistency (0-1)."""
         # Placeholder
         return 0.7
-
-    def _analyze_spacing(self, video_path: str) -> float:
-        """Analyze spacing consistency (variance, 0-1)."""
-        # Placeholder
-        return 0.2
-
-    def _analyze_focal_points(self, video_path: str) -> float:
-        """Analyze focal point clarity (0-1)."""
-        # Placeholder
-        return 0.75
 
     def _calculate_audio_score(self, video_path: str) -> float:
         """Calculate audio quality score."""
