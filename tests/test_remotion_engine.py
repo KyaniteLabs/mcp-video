@@ -24,7 +24,6 @@ from mcp_video.errors import (
     RemotionNotFoundError,
     RemotionProjectError,
     RemotionRenderError,
-    RemotionValidationError,
 )
 
 
