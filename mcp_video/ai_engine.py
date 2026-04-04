@@ -16,7 +16,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from .errors import ProcessingError
+from .errors import InputFileError, MCPVideoError, ProcessingError
 
 
 def ai_transcribe(
@@ -41,7 +41,7 @@ def ai_transcribe(
         FileNotFoundError: If video file doesn't exist
     """
     if "\x00" in video:
-        raise FileNotFoundError("Invalid path: contains null bytes")
+        raise InputFileError(video, "Invalid path: contains null bytes")
 
     # Check for whisper availability
     try:
@@ -56,7 +56,7 @@ def ai_transcribe(
     # Validate input file
     video_path = Path(video)
     if not video_path.exists():
-        raise FileNotFoundError(f"Video file not found: {video}")
+        raise InputFileError(video)
 
     # Step 1: Extract audio to temp WAV file
     with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
@@ -78,7 +78,7 @@ def ai_transcribe(
         except subprocess.TimeoutExpired:
             raise ProcessingError("Operation timed out after 600 seconds") from None
         if result.returncode != 0:
-            raise RuntimeError(f"FFmpeg audio extraction failed: {result.stderr}")
+            raise ProcessingError(" ".join(cmd), result.returncode, result.stderr)
 
         # Step 2: Load whisper model
         whisper_model = whisper.load_model(model)
@@ -165,17 +165,17 @@ def _run_ffprobe(video: str) -> dict[str, Any]:
     except subprocess.TimeoutExpired:
         raise ProcessingError("Operation timed out after 600 seconds") from None
     if result.returncode != 0:
-        raise RuntimeError(f"ffprobe error: {result.stderr}")
+        raise ProcessingError(" ".join(cmd), result.returncode, result.stderr)
     return json.loads(result.stdout)
 
 
 def _standard_scene_detect(video: str, threshold: float) -> list[dict]:
     """Standard FFmpeg scene detection."""
     if "\x00" in video:
-        raise FileNotFoundError("Invalid path: contains null bytes")
+        raise InputFileError(video, "Invalid path: contains null bytes")
     video_path = Path(video)
     if not video_path.exists():
-        raise FileNotFoundError(f"Video file not found: {video}")
+        raise InputFileError(video)
     if not isinstance(threshold, (int, float)) or not (0.0 <= threshold <= 1.0):
         raise MCPVideoError(f"threshold must be between 0.0 and 1.0, got {threshold}", error_type="validation_error", code="invalid_parameter")
     cmd = [
@@ -224,12 +224,12 @@ def audio_spatial(
         RuntimeError: If FFmpeg processing fails
     """
     if "\x00" in video:
-        raise FileNotFoundError("Invalid path: contains null bytes")
+        raise InputFileError(video, "Invalid path: contains null bytes")
 
     # Validate input file
     video_path = Path(video)
     if not video_path.exists():
-        raise FileNotFoundError(f"Video file not found: {video}")
+        raise InputFileError(video)
 
     # Validate positions
     if not positions:
@@ -377,7 +377,7 @@ def _apply_simple_spatial(
             except subprocess.TimeoutExpired:
                 raise ProcessingError("Operation timed out after 600 seconds") from None
             if result.returncode != 0:
-                raise RuntimeError(f"FFmpeg segment processing failed: {result.stderr}")
+                raise ProcessingError(" ".join(cmd), result.returncode, result.stderr)
 
         # Concatenate all segments
         if len(segment_files) == 1:
@@ -388,7 +388,7 @@ def _apply_simple_spatial(
             except subprocess.TimeoutExpired:
                 raise ProcessingError("Operation timed out after 600 seconds") from None
             if result.returncode != 0:
-                raise RuntimeError(f"Failed to copy output: {result.stderr}")
+                raise ProcessingError(" ".join(cmd), result.returncode, result.stderr)
         else:
             # Multiple segments - use concat demuxer
             concat_list = tmpdir_path / "concat_list.txt"
@@ -412,7 +412,7 @@ def _apply_simple_spatial(
             except subprocess.TimeoutExpired:
                 raise ProcessingError("Operation timed out after 600 seconds") from None
             if result.returncode != 0:
-                raise RuntimeError(f"FFmpeg concat failed: {result.stderr}")
+                raise ProcessingError(" ".join(cmd), result.returncode, result.stderr)
 
     return output
 
@@ -657,7 +657,7 @@ def _concat_segments(
         except subprocess.TimeoutExpired:
             raise ProcessingError("Operation timed out after 600 seconds") from None
         if result.returncode != 0:
-            raise RuntimeError(f"FFmpeg trim error: {result.stderr}")
+            raise ProcessingError(" ".join(cmd), result.returncode, result.stderr)
         return output
 
     # Multiple segments - extract each and concatenate
@@ -681,7 +681,7 @@ def _concat_segments(
             except subprocess.TimeoutExpired:
                 raise ProcessingError("Operation timed out after 600 seconds") from None
             if result.returncode != 0:
-                raise RuntimeError(f"FFmpeg segment extraction error: {result.stderr}")
+                raise ProcessingError(" ".join(cmd), result.returncode, result.stderr)
 
             segment_files.append(str(segment_file))
 
@@ -707,7 +707,7 @@ def _concat_segments(
         except subprocess.TimeoutExpired:
             raise ProcessingError("Operation timed out after 600 seconds") from None
         if result.returncode != 0:
-            raise RuntimeError(f"FFmpeg concat error: {result.stderr}")
+            raise ProcessingError(" ".join(cmd), result.returncode, result.stderr)
 
     return output
 
@@ -735,12 +735,12 @@ def ai_remove_silence(
         Path to output video
     """
     if "\x00" in video:
-        raise FileNotFoundError("Invalid path: contains null bytes")
+        raise InputFileError(video, "Invalid path: contains null bytes")
 
     # Validate input file
     video_path = Path(video)
     if not video_path.exists():
-        raise FileNotFoundError(f"Video file not found: {video}")
+        raise InputFileError(video)
 
     # Step 1: Get video duration
     info = _run_ffprobe(str(video_path))
@@ -794,7 +794,7 @@ def ai_stem_separation(
         FileNotFoundError: If video file doesn't exist
     """
     if "\x00" in video:
-        raise FileNotFoundError("Invalid path: contains null bytes")
+        raise InputFileError(video, "Invalid path: contains null bytes")
 
     # Check for demucs availability
     try:
@@ -809,7 +809,7 @@ def ai_stem_separation(
     # Validate input file
     video_path = Path(video)
     if not video_path.exists():
-        raise FileNotFoundError(f"Video file not found: {video}")
+        raise InputFileError(video)
 
     # Default stems if not provided
     stems = stems or ["vocals", "drums", "bass", "other"]
@@ -838,7 +838,7 @@ def ai_stem_separation(
         except subprocess.TimeoutExpired:
             raise ProcessingError("Operation timed out after 600 seconds") from None
         if result.returncode != 0:
-            raise RuntimeError(f"FFmpeg audio extraction failed: {result.stderr}")
+            raise ProcessingError(" ".join(cmd), result.returncode, result.stderr)
 
         # Step 2: Run Demucs separation
         # Demucs outputs to: output_dir/model_name/audio_name/stem.wav
@@ -895,12 +895,12 @@ def ai_color_grade(
         RuntimeError: If FFmpeg processing fails
     """
     if "\x00" in video:
-        raise FileNotFoundError("Invalid path: contains null bytes")
+        raise InputFileError(video, "Invalid path: contains null bytes")
 
     # Validate input file
     video_path = Path(video)
     if not video_path.exists():
-        raise FileNotFoundError(f"Video file not found: {video}")
+        raise InputFileError(video)
 
     # Style presets define color adjustments
     style_presets = {
@@ -1240,12 +1240,12 @@ def ai_upscale(
         FileNotFoundError: If input video doesn't exist
     """
     if "\x00" in video:
-        raise FileNotFoundError("Invalid path: contains null bytes")
+        raise InputFileError(video, "Invalid path: contains null bytes")
 
     # Validate input file
     video_path = Path(video)
     if not video_path.exists():
-        raise FileNotFoundError(f"Video file not found: {video}")
+        raise InputFileError(video)
 
     # Try to use Real-ESRGAN if available, otherwise use OpenCV DNN fallback
     try:
