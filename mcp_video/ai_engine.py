@@ -1513,7 +1513,31 @@ def _has_audio_stream(video_path: str) -> bool:
 
 def _is_url(s: str) -> bool:
     """Return True if *s* looks like an http/https URL."""
-    return s.startswith("http://") or s.startswith("https://")
+    return s.lower().startswith(("http://", "https://"))
+
+
+# --- SSRF protection: block private/reserved IP ranges ---
+import ipaddress as _ipaddress
+import socket as _socket
+
+def _is_safe_url(url: str) -> bool:
+    """Reject URLs that resolve to private, loopback, or link-local IPs (SSRF protection)."""
+    try:
+        from urllib.parse import urlparse
+        parsed = urlparse(url)
+        hostname = parsed.hostname
+        if not hostname:
+            return False
+        # Resolve hostname to IP addresses
+        addrinfos = _socket.getaddrinfo(hostname, parsed.port or 80, proto=_socket.IPPROTO_TCP)
+        for family, _type, _proto, _canonname, sockaddr in addrinfos:
+            ip_str = sockaddr[0]
+            addr = _ipaddress.ip_address(ip_str)
+            if addr.is_private or addr.is_loopback or addr.is_link_local or addr.is_reserved:
+                return False
+    except (socket.gaierror, ValueError, OSError):
+        return False
+    return True
 
 
 # Video file extensions that can be fetched directly via HTTP.
@@ -1551,6 +1575,9 @@ def _url_host(url: str) -> str:
 
 def _download_direct_url(url: str, dest_dir: str) -> str:
     """Download a direct video URL to *dest_dir* using urllib. Returns local path."""
+    if not _is_safe_url(url):
+        raise ValueError(f"URL blocked (SSRF protection): {url}")
+
     import urllib.request
     import urllib.parse
 
@@ -1592,7 +1619,7 @@ def _download_with_ytdlp(url: str, dest_dir: str) -> str:
         "merge_output_format": "mp4",
     }
 
-    with __import__("yt_dlp").YoutubeDL(ydl_opts) as ydl:
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=True)
         filename = ydl.prepare_filename(info)
         # yt-dlp may have merged to .mp4 even if template said otherwise
@@ -1612,29 +1639,34 @@ def _resolve_video_source(video: str) -> tuple[str, str | None, str | None]:
     if not _is_url(video):
         return video, None, None
 
-    source_url = video
-    tmp = tempfile.mkdtemp(prefix="mcp_video_url_")
+    if not _is_safe_url(video):
+        raise ValueError(f"URL blocked (SSRF protection): {video}")
 
+    source_url = video
     host = _url_host(video)
     is_platform = host in _PLATFORM_HOSTS
 
-    # Decide strategy
+    # Decide strategy — defer temp dir creation until download is imminent
     if is_platform:
         # Must use yt-dlp
+        tmp = tempfile.mkdtemp(prefix="mcp_video_url_")
         try:
             local = _download_with_ytdlp(video, tmp)
         except RuntimeError:
+            shutil.rmtree(tmp, ignore_errors=True)
             raise  # re-raise "yt-dlp not installed" cleanly
         except Exception as exc:
+            shutil.rmtree(tmp, ignore_errors=True)
             raise RuntimeError(f"Failed to download {video}: {exc}") from exc
     else:
         # Try yt-dlp first (handles edge cases like redirect-to-stream),
         # fall back to direct urllib download.
         try:
+            tmp = tempfile.mkdtemp(prefix="mcp_video_url_")
             local = _download_with_ytdlp(video, tmp)
         except RuntimeError:
             # yt-dlp not installed — fall back to urllib for direct URLs
-            suffix = Path(_url_host(video)).suffix or ""
+            shutil.rmtree(tmp, ignore_errors=True)
             url_path = video.split("?")[0]  # strip query string for ext detection
             ext = Path(url_path).suffix.lower()
             if ext not in _DIRECT_VIDEO_EXTENSIONS:
@@ -1642,18 +1674,23 @@ def _resolve_video_source(video: str) -> tuple[str, str | None, str | None]:
                     f"Cannot download '{video}': not a recognised direct video URL and "
                     "yt-dlp is not installed. Install yt-dlp with: pip install yt-dlp"
                 ) from None
+            tmp = tempfile.mkdtemp(prefix="mcp_video_url_")
             try:
                 local = _download_direct_url(video, tmp)
             except Exception as exc:
+                shutil.rmtree(tmp, ignore_errors=True)
                 raise RuntimeError(f"Failed to download {video}: {exc}") from exc
         except Exception as exc:
             # yt-dlp is installed but failed — try urllib as last resort
+            shutil.rmtree(tmp, ignore_errors=True)
             url_path = video.split("?")[0]
             ext = Path(url_path).suffix.lower()
             if ext in _DIRECT_VIDEO_EXTENSIONS:
+                tmp = tempfile.mkdtemp(prefix="mcp_video_url_")
                 try:
                     local = _download_direct_url(video, tmp)
                 except Exception as dl_exc:
+                    shutil.rmtree(tmp, ignore_errors=True)
                     raise RuntimeError(
                         f"Download failed (yt-dlp: {exc}; urllib: {dl_exc})"
                     ) from dl_exc
@@ -1714,10 +1751,27 @@ def analyze_video(
     if "\x00" in video:
         raise FileNotFoundError("Invalid path: contains null bytes")
 
-    # ── Resolve URL → local file ─────────────────────────────────────────────
-    local_video, _tmp_dir, source_url = _resolve_video_source(video)
+    # Validate scene_threshold
+    if not (0.0 <= scene_threshold <= 1.0):
+        raise ValueError(f"scene_threshold must be between 0.0 and 1.0, got {scene_threshold}")
 
+    # Validate output paths — ensure they don't escape safe directories
+    for label, path in [
+        ("output_srt", output_srt), ("output_txt", output_txt),
+        ("output_md", output_md), ("output_json", output_json),
+    ]:
+        if path is not None:
+            p = Path(path).resolve()
+            # Block writes to system directories
+            blocked_prefixes = ("/etc/", "/usr/", "/bin/", "/sbin/", "/var/", "/root/", "/boot/")
+            if any(str(p).startswith(prefix) for prefix in blocked_prefixes):
+                raise ValueError(f"{label} path escapes safe directory: {path}")
+
+    # ── Resolve URL → local file ─────────────────────────────────────────────
+    _tmp_dir: str | None = None
     try:
+        local_video, _tmp_dir, source_url = _resolve_video_source(video)
+
         video_path = Path(local_video)
         if not video_path.exists():
             raise FileNotFoundError(f"Video file not found: {video}")
@@ -1802,7 +1856,7 @@ def analyze_video(
         if include_scenes:
             try:
                 scene_det = _engine.detect_scenes(str(video_path), threshold=scene_threshold)
-                scenes_result = scene_det.scenes if hasattr(scene_det, "scenes") else list(scene_det)
+                scenes_result = scene_det.scenes
             except Exception as exc:
                 errors.append({"section": "scenes", "error": str(exc)})
 
@@ -1812,12 +1866,12 @@ def analyze_video(
             try:
                 waveform = _engine.audio_waveform(str(video_path))
                 audio_result = {
-                    "duration": waveform.duration if hasattr(waveform, "duration") else None,
-                    "peaks": waveform.peaks if hasattr(waveform, "peaks") else [],
-                    "mean_level": waveform.mean_level if hasattr(waveform, "mean_level") else None,
-                    "max_level": waveform.max_level if hasattr(waveform, "max_level") else None,
-                    "min_level": waveform.min_level if hasattr(waveform, "min_level") else None,
-                    "silence_regions": waveform.silence_regions if hasattr(waveform, "silence_regions") else [],
+                    "duration": waveform.duration,
+                    "peaks": waveform.peaks,
+                    "mean_level": waveform.mean_level,
+                    "max_level": waveform.max_level,
+                    "min_level": waveform.min_level,
+                    "silence_regions": waveform.silence_regions,
                 }
             except Exception as exc:
                 errors.append({"section": "audio", "error": str(exc)})
@@ -1835,13 +1889,17 @@ def analyze_video(
                 errors.append({"section": "chapters", "error": str(exc)})
 
         # ── 6. Colors / extended info ────────────────────────────────────────
+        # NOTE: Dominant color extraction is not yet implemented in effects_engine.
+        # video_info_detailed() returns an empty list for dominant_colors.
+        # Leaving this section as a placeholder — remove include_colors flag
+        # and this block when colors are actually implemented.
         colors_result: list[Any] | None = None
-        if include_colors:
-            try:
-                detailed = _effects.video_info_detailed(str(video_path))
-                colors_result = detailed.get("dominant_colors", [])
-            except Exception as exc:
-                errors.append({"section": "colors", "error": str(exc)})
+        # if include_colors:
+        #     try:
+        #         detailed = _effects.video_info_detailed(str(video_path))
+        #         colors_result = detailed.get("dominant_colors", [])
+        #     except Exception as exc:
+        #         errors.append({"section": "colors", "error": str(exc)})
 
         # ── 7. Quality ───────────────────────────────────────────────────────
         quality_result: dict[str, Any] | None = None
