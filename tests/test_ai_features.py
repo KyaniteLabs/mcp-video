@@ -1053,6 +1053,107 @@ def test_analyze_video_writes_txt_output():
     assert Path(txt_path).read_text(encoding="utf-8") == "Hello world"
 
 
+# ---------------------------------------------------------------------------
+# URL resolution helper tests
+# ---------------------------------------------------------------------------
+
+
+def test_is_url_detects_http():
+    from mcp_video.ai_engine import _is_url
+    assert _is_url("http://example.com/video.mp4") is True
+    assert _is_url("https://example.com/video.mp4") is True
+
+
+def test_is_url_rejects_local_path():
+    from mcp_video.ai_engine import _is_url
+    assert _is_url("/local/path/video.mp4") is False
+    assert _is_url("relative/path.mp4") is False
+    assert _is_url("C:\\Windows\\video.mp4") is False
+
+
+def test_url_host_extraction():
+    from mcp_video.ai_engine import _url_host
+    assert _url_host("https://www.youtube.com/watch?v=abc") == "www.youtube.com"
+    assert _url_host("https://example.com/path/video.mp4") == "example.com"
+    assert _url_host("http://cdn.example.com:8080/v.mp4") == "cdn.example.com:8080"
+
+
+def test_resolve_video_source_local_passthrough():
+    """Local paths pass through _resolve_video_source unchanged."""
+    from mcp_video.ai_engine import _resolve_video_source
+
+    local, tmp, url = _resolve_video_source("/some/local/file.mp4")
+    assert local == "/some/local/file.mp4"
+    assert tmp is None
+    assert url is None
+
+
+def test_resolve_video_source_platform_url_requires_ytdlp(monkeypatch):
+    """Platform URLs raise RuntimeError when yt-dlp is not installed."""
+    import builtins
+    real_import = builtins.__import__
+
+    def mock_import(name, *args, **kwargs):
+        if name == "yt_dlp":
+            raise ImportError("No module named 'yt_dlp'")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", mock_import)
+
+    from mcp_video.ai_engine import _resolve_video_source
+    with pytest.raises(RuntimeError, match="yt-dlp"):
+        _resolve_video_source("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+
+
+def test_resolve_video_source_direct_url_no_extension_no_ytdlp(monkeypatch):
+    """Non-video-extension direct URLs without yt-dlp raise a clear error."""
+    import builtins
+    real_import = builtins.__import__
+
+    def mock_import(name, *args, **kwargs):
+        if name == "yt_dlp":
+            raise ImportError("No module named 'yt_dlp'")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", mock_import)
+
+    from mcp_video.ai_engine import _resolve_video_source
+    with pytest.raises(RuntimeError, match="yt-dlp"):
+        _resolve_video_source("https://example.com/stream")  # no .mp4 extension
+
+
+@requires_ffmpeg
+@requires_ffprobe
+def test_analyze_video_url_download(monkeypatch):
+    """analyze_video downloads a direct URL to a temp file before analysing."""
+    from mcp_video.ai_engine import analyze_video
+
+    # Create a real local video to serve as the "downloaded" file
+    with tempfile.TemporaryDirectory() as tmpdir:
+        real_video = create_simple_video(str(Path(tmpdir) / "real.mp4"))
+
+        # Patch _resolve_video_source to simulate a URL download
+        def fake_resolve(video):
+            # Pretend it was a URL, return the real local file, no temp dir to clean
+            return real_video, None, "https://example.com/fake.mp4"
+
+        monkeypatch.setattr("mcp_video.ai_engine._resolve_video_source", fake_resolve)
+
+        result = analyze_video(
+            "https://example.com/fake.mp4",
+            include_transcript=False,
+            include_scenes=False,
+            include_audio=False,
+            include_quality=False,
+            include_chapters=False,
+            include_colors=False,
+        )
+
+    assert result["success"] is True
+    assert result["source_url"] == "https://example.com/fake.mp4"
+    assert result["metadata"]["width"] == 320
+
+
 # Add ai_upscale tests to __main__ block
 if __name__ == "__main__":
     # Run transcription tests

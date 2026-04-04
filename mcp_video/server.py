@@ -2669,11 +2669,14 @@ def video_analyze(
 ) -> dict[str, Any]:
     """Comprehensive video analysis — transcript, metadata, scenes, audio, quality, chapters, colors.
 
-    Points at any existing video file and reverse-engineers everything about it.
+    Accepts a local file path or an HTTP/HTTPS URL. Direct video URLs
+    (e.g. https://example.com/clip.mp4) are downloaded automatically.
+    Streaming-platform URLs (YouTube, Vimeo, TikTok, Twitter/X, Instagram,
+    Twitch, …) require yt-dlp (pip install yt-dlp).
     Each sub-analysis is independent so one failure will not abort the others.
 
     Args:
-        input_path: Path to existing video file.
+        input_path: Local path or HTTP/HTTPS URL to the video.
         whisper_model: Whisper model size (tiny, base, small, medium, large, turbo).
         language: Language code for transcription (auto-detect if None).
         scene_threshold: Scene change sensitivity 0.0–1.0.
