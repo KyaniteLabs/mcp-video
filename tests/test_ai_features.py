@@ -14,6 +14,7 @@ from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import pytest
+from mcp_video.errors import InputFileError, MCPVideoError
 
 
 def has_ffmpeg() -> bool:
@@ -201,14 +202,14 @@ def test_remove_silence_with_margin():
 @requires_ffmpeg
 @requires_ffprobe
 def test_remove_silence_missing_file():
-    """Test that ai_remove_silence raises FileNotFoundError for missing video."""
+    """Test that ai_remove_silence raises InputFileError for missing video."""
     from mcp_video.ai_engine import ai_remove_silence
     
     with tempfile.TemporaryDirectory() as tmpdir:
         nonexistent_video = os.path.join(tmpdir, "nonexistent.mp4")
         output_video = os.path.join(tmpdir, "output.mp4")
         
-        with pytest.raises(FileNotFoundError, match="Video file not found"):
+        with pytest.raises(InputFileError, match="Input file error"):
             ai_remove_silence(nonexistent_video, output_video)
 
 
@@ -253,10 +254,10 @@ class TestTranscription:
     """Tests for ai_transcribe function."""
 
     def test_transcribe_file_not_found(self, skip_if_no_whisper):
-        """Test that FileNotFoundError is raised for missing video."""
+        """Test that InputFileError is raised for missing video."""
         from mcp_video.ai_engine import ai_transcribe
 
-        with pytest.raises(FileNotFoundError, match="Video file not found"):
+        with pytest.raises(InputFileError, match="Input file error"):
             ai_transcribe("/nonexistent/video.mp4")
 
     def test_transcribe_basic(self, skip_if_no_whisper, sample_speech_video):
@@ -497,10 +498,10 @@ class TestColorGrade:
             assert os.path.exists(result), "Output should be created even with invalid style"
 
     def test_color_grade_file_not_found(self):
-        """Test that FileNotFoundError is raised for missing input."""
+        """Test that InputFileError is raised for missing input."""
         from mcp_video.ai_engine import ai_color_grade
         
-        with pytest.raises(FileNotFoundError, match="Video file not found"):
+        with pytest.raises(InputFileError, match="Input file error"):
             ai_color_grade("/nonexistent/video.mp4", "/tmp/output.mp4")
 
 
@@ -642,7 +643,7 @@ def test_spatial_audio():
 
 
 def test_spatial_audio_missing_video():
-    """Test that spatial audio raises FileNotFoundError for missing video."""
+    """Test that spatial audio raises InputFileError for missing video."""
     from mcp_video.ai_engine import audio_spatial
     
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -651,7 +652,7 @@ def test_spatial_audio_missing_video():
         
         positions = [{"time": 0, "azimuth": 0, "elevation": 0}]
         
-        with pytest.raises(FileNotFoundError, match="Video file not found"):
+        with pytest.raises(InputFileError, match="Input file error"):
             audio_spatial(nonexistent_video, output_video, positions)
 
 
@@ -668,7 +669,7 @@ def test_spatial_audio_invalid_method():
         
         positions = [{"time": 0, "azimuth": 0, "elevation": 0}]
         
-        with pytest.raises(ValueError, match="Method must be one of"):
+        with pytest.raises(MCPVideoError, match="Method must be one of"):
             audio_spatial(input_video, output_video, positions, method="invalid")
 
 
@@ -683,7 +684,7 @@ def test_spatial_audio_empty_positions():
         
         create_stereo_video(input_video)
         
-        with pytest.raises(ValueError, match="At least one position must be provided"):
+        with pytest.raises(MCPVideoError, match="At least one position must be provided"):
             audio_spatial(input_video, output_video, [])
 
 
@@ -879,11 +880,11 @@ def test_ai_upscale_missing_file():
         input_video = os.path.join(tmpdir, "nonexistent.mp4")
         output_video = os.path.join(tmpdir, "output.mp4")
         
-        with pytest.raises(FileNotFoundError) as exc_info:
+        with pytest.raises(InputFileError) as exc_info:
             ai_upscale(input_video, output_video, scale=2)
         
         assert "not found" in str(exc_info.value).lower()
-        print(f"✓ Correctly raised FileNotFoundError: {exc_info.value}")
+        print(f"✓ Correctly raised InputFileError: {exc_info.value}")
 
 
 # Add ai_upscale tests to __main__ block

@@ -61,14 +61,16 @@ class TestErrorHandlingRobustness:
         assert result["error"]["type"] == "input_error"
 
     def test_server_error_result_generic_exception(self) -> None:
-        """_error_result handles generic Exception without crash."""
+        """_error_result handles generic Exception without crash — sanitized for no detail leak."""
         from mcp_video.server import _error_result
         err = RuntimeError("unexpected failure")
         result = _error_result(err)
         assert result["success"] is False
         assert "error" in result
-        assert result["error"]["code"] == "invalid_parameter"
-        assert "unexpected failure" in result["error"]["message"]
+        assert result["error"]["code"] == "internal_error"
+        assert result["error"]["type"] == "internal_error"
+        # Generic exceptions should NOT expose raw message
+        assert "unexpected failure" not in result["error"]["message"]
 
 
 # ---------------------------------------------------------------------------
