@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import shutil
 import subprocess
 import tempfile
 from pathlib import Path
@@ -297,18 +298,9 @@ def audio_spatial(
     output_path = Path(output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    if method == "simple":
-        return _apply_simple_spatial(video, output, positions)
-    elif method == "hrtf":
-        # HRTF requires sofalizer filter and SOFA file
-        # For now, fall back to simple method with warning
-        return _apply_simple_spatial(video, output, positions)
-    elif method == "vbap":
-        # VBAP requires multi-channel setup
-        # For now, fall back to simple method with warning
-        return _apply_simple_spatial(video, output, positions)
-
-    return str(output_path)
+    # All methods currently fall back to simple spatial processing
+    # HRTF and VBAP require specialized filters not yet implemented
+    return _apply_simple_spatial(video, output, positions)
 
 
 def _azimuth_to_pan(azimuth: float) -> float:
@@ -1319,10 +1311,6 @@ def ai_upscale(
                 "Install with: pip install realesrgan or pip install opencv-python"
             ) from None
 
-    # Validate scale parameter
-    if scale not in (2, 4):
-        raise ValueError(f"Scale must be 2 or 4, got {scale}")
-
     # Map model names to RRDBNet configurations
     model_configs = {
         "realesrgan": {"num_block": 23, "num_feat": 64},
@@ -1332,8 +1320,6 @@ def ai_upscale(
 
     if model not in model_configs:
         raise ValueError(f"Unknown model: {model}. Choose from: {list(model_configs.keys())}")
-
-    output_path = Path(output)
 
     with tempfile.TemporaryDirectory() as tmpdir:
         tmpdir_path = Path(tmpdir)
@@ -1535,7 +1521,7 @@ def _is_safe_url(url: str) -> bool:
             addr = _ipaddress.ip_address(ip_str)
             if addr.is_private or addr.is_loopback or addr.is_link_local or addr.is_reserved:
                 return False
-    except (socket.gaierror, ValueError, OSError):
+    except (_socket.gaierror, ValueError, OSError):
         return False
     return True
 
@@ -1926,5 +1912,4 @@ def analyze_video(
     finally:
         # Clean up downloaded temp directory (if input was a URL)
         if _tmp_dir is not None:
-            import shutil
             shutil.rmtree(_tmp_dir, ignore_errors=True)
