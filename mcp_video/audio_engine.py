@@ -13,6 +13,8 @@ import wave
 from pathlib import Path
 from typing import Any, Literal
 
+from .errors import InputFileError, ProcessingError
+
 # ---------------------------------------------------------------------------
 # Audio Constants
 # ---------------------------------------------------------------------------
@@ -832,6 +834,12 @@ def add_generated_audio(
     with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
         audio_path = tmp.name
 
+    # Input validation before FFmpeg
+    if "\x00" in video:
+        raise InputFileError(video, "Path contains null bytes")
+    if not os.path.isfile(video):
+        raise InputFileError(video)
+
     try:
         # Generate audio
         audio_sequence(events, audio_path)
@@ -850,9 +858,12 @@ def add_generated_audio(
             output,
         ]
 
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+        except subprocess.TimeoutExpired:
+            raise ProcessingError(" ".join(cmd), -1, "Audio processing command timed out after 600s")
         if result.returncode != 0:
-            raise RuntimeError(f"FFmpeg error: {result.stderr}")
+            raise ProcessingError(" ".join(cmd), result.returncode, result.stderr)
 
         return output
 

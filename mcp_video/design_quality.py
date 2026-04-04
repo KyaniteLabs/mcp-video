@@ -16,6 +16,8 @@ from typing import ClassVar, Literal
 from collections.abc import Callable
 import contextlib
 
+from .errors import InputFileError, ProcessingError
+
 
 @dataclass
 class DesignIssue:
@@ -830,7 +832,10 @@ class DesignQualityGuardrails:
                 '-vf', 'signature=format=xml',
                 '-f', 'null', '-'
             ]
-            subprocess.run(cmd, capture_output=True, text=True)
+            try:
+                subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+            except subprocess.TimeoutExpired:
+                raise ProcessingError(" ".join(cmd), -1, "Quality check command timed out after 120s")
 
             # Return estimated text elements based on common video patterns
             # In explainer videos, we typically see:
@@ -871,7 +876,10 @@ class DesignQualityGuardrails:
             output_path
         ]
 
-        subprocess.run(cmd, capture_output=True, check=True)
+        try:
+            subprocess.run(cmd, capture_output=True, check=True, timeout=120)
+        except subprocess.TimeoutExpired:
+            raise ProcessingError(" ".join(cmd), -1, "Quality check command timed out after 120s")
         return output_path
 
     def _auto_fix_contrast(self, video_path: str) -> str:
@@ -885,7 +893,10 @@ class DesignQualityGuardrails:
             output_path
         ]
 
-        subprocess.run(cmd, capture_output=True, check=True)
+        try:
+            subprocess.run(cmd, capture_output=True, check=True, timeout=120)
+        except subprocess.TimeoutExpired:
+            raise ProcessingError(" ".join(cmd), -1, "Quality check command timed out after 120s")
         return output_path
 
     def _auto_fix_saturation(self, video_path: str, boost: float = 1.2) -> str:
@@ -899,7 +910,10 @@ class DesignQualityGuardrails:
             output_path
         ]
 
-        subprocess.run(cmd, capture_output=True, check=True)
+        try:
+            subprocess.run(cmd, capture_output=True, check=True, timeout=120)
+        except subprocess.TimeoutExpired:
+            raise ProcessingError(" ".join(cmd), -1, "Quality check command timed out after 120s")
         return output_path
 
     def _auto_fix_color_cast(self, video_path: str) -> str:
@@ -913,7 +927,10 @@ class DesignQualityGuardrails:
             output_path
         ]
 
-        subprocess.run(cmd, capture_output=True, check=True)
+        try:
+            subprocess.run(cmd, capture_output=True, check=True, timeout=120)
+        except subprocess.TimeoutExpired:
+            raise ProcessingError(" ".join(cmd), -1, "Quality check command timed out after 120s")
         return output_path
 
     def _auto_normalize_audio(self, video_path: str) -> str:
@@ -1161,6 +1178,13 @@ def design_quality_check(
     Returns:
         DesignQualityReport with comprehensive analysis
     """
+    # Null byte check
+    if video and "\x00" in video:
+        raise InputFileError(video, "Path contains null bytes")
+    # File existence check
+    if video and not os.path.isfile(video):
+        raise InputFileError(video)
+
     guardrails = DesignQualityGuardrails()
     report = guardrails.analyze(video, auto_fix=auto_fix)
 
@@ -1182,6 +1206,13 @@ def fix_design_issues(video: str, output: str | None = None) -> str:
     Returns:
         Path to fixed video
     """
+    # Null byte check
+    if video and "\x00" in video:
+        raise InputFileError(video, "Path contains null bytes")
+    # File existence check
+    if video and not os.path.isfile(video):
+        raise InputFileError(video)
+
     if output is None:
         base, ext = video.rsplit('.', 1)
         output = f"{base}_design_fixed.{ext}"

@@ -1328,7 +1328,7 @@ def subtitles(
     escaped_sub_path = _escape_ffmpeg_filter_value(subtitle_path)
     escaped_style = _escape_ffmpeg_filter_value(style)
 
-    _run_ffmpeg(["-i", input_path, "-vf", f"subtitles='{escaped_sub_path}':force_style='{escaped_style}'", "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-c:a", "copy", *_movflags_args(output), output])
+    _run_ffmpeg(["-i", input_path, "-vf", f"subtitles={escaped_sub_path}:force_style={escaped_style}", "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-c:a", "copy", *_movflags_args(output), output])
 
     info = probe(output)
     return EditResult(
