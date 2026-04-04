@@ -1310,11 +1310,11 @@ def main() -> None:
         # ------------------------------------------------------------------
 
         elif args.command == "remotion-render":
-            from .remotion_engine import render_composition
+            from .remotion_engine import render
             props = _parse_json_arg(args.props, "props", json_mode=use_json) if args.props else None
             result = _with_spinner(
                 f"Rendering {args.composition_id}...",
-                render_composition,
+                render,
                 args.project_path, args.composition_id,
                 output_path=args.output, codec=args.codec, crf=args.crf,
                 width=args.width, height=args.height, fps=args.fps,
@@ -1340,10 +1340,10 @@ def main() -> None:
                 console.print(Panel("\n".join(lines), border_style="green", title="Remotion Render"))
 
         elif args.command == "remotion-compositions":
-            from .remotion_engine import list_compositions
+            from .remotion_engine import compositions
             result = _with_spinner(
                 "Listing compositions...",
-                list_compositions,
+                compositions,
                 args.project_path,
                 composition_id=args.composition_id,
             )
@@ -1368,10 +1368,10 @@ def main() -> None:
                 console.print(table)
 
         elif args.command == "remotion-studio":
-            from .remotion_engine import launch_studio
+            from .remotion_engine import studio
             result = _with_spinner(
                 "Launching Remotion Studio...",
-                launch_studio,
+                studio,
                 args.project_path,
                 port=args.port,
             )
@@ -1388,10 +1388,10 @@ def main() -> None:
                 ))
 
         elif args.command == "remotion-still":
-            from .remotion_engine import render_still
+            from .remotion_engine import still
             result = _with_spinner(
                 f"Rendering still frame {args.frame}...",
-                render_still,
+                still,
                 args.project_path, args.composition_id,
                 output_path=args.output, frame=args.frame,
                 image_format=args.image_format,
@@ -1431,11 +1431,11 @@ def main() -> None:
                 console.print(Panel("\n".join(lines), border_style="green", title="Remotion Project Created"))
 
         elif args.command == "remotion-scaffold":
-            from .remotion_engine import scaffold_composition
+            from .remotion_engine import scaffold_template
             spec = _parse_json_arg(args.spec, "spec", json_mode=use_json)
             result = _with_spinner(
                 f"Scaffolding '{args.slug}'...",
-                scaffold_composition,
+                scaffold_template,
                 args.project_path,
                 spec=spec,
                 slug=args.slug,
@@ -1453,10 +1453,10 @@ def main() -> None:
                 console.print(Panel("\n".join(lines), border_style="green", title="Remotion Scaffold"))
 
         elif args.command == "remotion-validate":
-            from .remotion_engine import validate_project
+            from .remotion_engine import validate
             result = _with_spinner(
                 "Validating project...",
-                validate_project,
+                validate,
                 args.project_path,
                 composition_id=args.composition_id,
             )
@@ -1480,11 +1480,11 @@ def main() -> None:
                 console.print(Panel("\n".join(lines), border_style="green" if data.get("valid") else "red", title="Remotion Validate"))
 
         elif args.command == "remotion-pipeline":
-            from .remotion_engine import render_pipeline
+            from .remotion_engine import render_and_post
             post_process = _parse_json_arg(args.post_process, "post-process", json_mode=use_json)
             result = _with_spinner(
                 f"Running pipeline for {args.composition_id}...",
-                render_pipeline,
+                render_and_post,
                 args.project_path, args.composition_id,
                 post_process=post_process,
                 output_path=args.output,

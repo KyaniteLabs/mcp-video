@@ -253,9 +253,9 @@ def studio(
 ) -> RemotionStudioResult:
     """Launch Remotion Studio for live preview (non-blocking)."""
     _require_remotion_deps()
-    project, _entry_point = _validate_project(project_path)
+    project, entry_point = _validate_project(project_path)
 
-    cmd = ["npx", "remotion", "studio", str(project), "--port", str(port)]
+    cmd = ["npx", "remotion", "studio", str(entry_point), "--port", str(port)]
     subprocess.Popen(
         cmd,
         cwd=str(project),
@@ -269,45 +269,6 @@ def studio(
         port=port,
         project_path=str(project),
     )
-
-
-# ---------------------------------------------------------------------------
-# Backward-compatible aliases for CLI imports
-# ---------------------------------------------------------------------------
-
-def render_composition(*args, **kwargs):
-    """Backward-compatible alias for `render()`."""
-    return render(*args, **kwargs)
-
-
-def list_compositions(*args, **kwargs):
-    """Backward-compatible alias for `compositions()`."""
-    return compositions(*args, **kwargs)
-
-
-def launch_studio(*args, **kwargs):
-    """Backward-compatible alias for `studio()`."""
-    return studio(*args, **kwargs)
-
-
-def render_still(*args, **kwargs):
-    """Backward-compatible alias for `still()`."""
-    return still(*args, **kwargs)
-
-
-def scaffold_composition(*args, **kwargs):
-    """Backward-compatible alias for `scaffold_template()`."""
-    return scaffold_template(*args, **kwargs)
-
-
-def validate_project(*args, **kwargs):
-    """Backward-compatible alias for `validate()`."""
-    return validate(*args, **kwargs)
-
-
-def render_pipeline(*args, **kwargs):
-    """Backward-compatible alias for `render_and_post()`."""
-    return render_and_post(*args, **kwargs)
 
 
 def still(
