@@ -13,7 +13,7 @@ import wave
 from pathlib import Path
 from typing import Any, Literal
 
-from .errors import InputFileError, ProcessingError
+from .errors import InputFileError, MCPVideoError, ProcessingError
 
 # ---------------------------------------------------------------------------
 # Audio Constants
@@ -316,13 +316,13 @@ def audio_synthesize(
     from .limits import MAX_AUDIO_DURATION, MIN_FREQUENCY, MAX_FREQUENCY, MIN_SAMPLE_RATE, MAX_SAMPLE_RATE
 
     if not (MIN_FREQUENCY <= frequency <= MAX_FREQUENCY):
-        raise ValueError(f"Frequency must be between {MIN_FREQUENCY} and {MAX_FREQUENCY} Hz, got {frequency}")
+        raise MCPVideoError(f"Frequency must be between {MIN_FREQUENCY} and {MAX_FREQUENCY} Hz, got {frequency}", error_type="validation_error", code="invalid_parameter")
     if not (0.01 <= duration <= MAX_AUDIO_DURATION):
-        raise ValueError(f"Duration must be between 0.01 and {MAX_AUDIO_DURATION} seconds, got {duration}")
+        raise MCPVideoError(f"Duration must be between 0.01 and {MAX_AUDIO_DURATION} seconds, got {duration}", error_type="validation_error", code="invalid_parameter")
     if not (0.0 <= volume <= 1.0):
-        raise ValueError(f"Volume must be between 0.0 and 1.0, got {volume}")
+        raise MCPVideoError(f"Volume must be between 0.0 and 1.0, got {volume}", error_type="validation_error", code="invalid_parameter")
     if not (MIN_SAMPLE_RATE <= sample_rate <= MAX_SAMPLE_RATE):
-        raise ValueError(f"Sample rate must be between {MIN_SAMPLE_RATE} and {MAX_SAMPLE_RATE}, got {sample_rate}")
+        raise MCPVideoError(f"Sample rate must be between {MIN_SAMPLE_RATE} and {MAX_SAMPLE_RATE}, got {sample_rate}", error_type="validation_error", code="invalid_parameter")
     # Generate base waveform
     if waveform == "sine":
         pcm_data = generate_sine(frequency, duration, sample_rate, volume)
@@ -335,7 +335,7 @@ def audio_synthesize(
     elif waveform == "noise":
         pcm_data = generate_noise(duration, sample_rate, volume)
     else:
-        raise ValueError(f"Unknown waveform: {waveform}")
+        raise MCPVideoError(f"Unknown waveform: {waveform}", error_type="validation_error", code="invalid_parameter")
 
     # Convert to float for processing
     samples = _pcm_to_float(pcm_data)
@@ -557,7 +557,7 @@ def audio_preset(
     }
 
     if preset not in presets:
-        raise ValueError(f"Unknown preset: {preset}. Available: {list(presets.keys())}")
+        raise MCPVideoError(f"Unknown preset: {preset}. Available: {list(presets.keys())}", error_type="validation_error", code="invalid_parameter")
 
     config = presets[preset].copy()
     if duration:

@@ -47,8 +47,10 @@ def ai_transcribe(
     try:
         import whisper
     except ImportError:
-        raise RuntimeError(
-            "Whisper not installed. Install with: pip install openai-whisper"
+        raise MCPVideoError(
+            "Whisper not installed. Install with: pip install openai-whisper",
+            error_type="dependency_error",
+            code="whisper_not_installed",
         ) from None
 
     # Validate input file
@@ -175,7 +177,7 @@ def _standard_scene_detect(video: str, threshold: float) -> list[dict]:
     if not video_path.exists():
         raise FileNotFoundError(f"Video file not found: {video}")
     if not isinstance(threshold, (int, float)) or not (0.0 <= threshold <= 1.0):
-        raise ValueError(f"threshold must be between 0.0 and 1.0, got {threshold}")
+        raise MCPVideoError(f"threshold must be between 0.0 and 1.0, got {threshold}", error_type="validation_error", code="invalid_parameter")
     cmd = [
         "ffmpeg", "-i", video,
         "-filter:v", f"select='gt(scene,{threshold})',showinfo",
@@ -231,12 +233,12 @@ def audio_spatial(
 
     # Validate positions
     if not positions:
-        raise ValueError("At least one position must be provided")
+        raise MCPVideoError("At least one position must be provided", error_type="validation_error", code="invalid_parameter")
 
     # Validate method
     valid_methods = ("hrtf", "vbap", "simple")
     if method not in valid_methods:
-        raise ValueError(f"Method must be one of {valid_methods}, got {method}")
+        raise MCPVideoError(f"Method must be one of {valid_methods}, got {method}", error_type="validation_error", code="invalid_parameter")
 
     output_path = Path(output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -636,7 +638,7 @@ def _concat_segments(
     Uses segment extraction followed by concat demuxer.
     """
     if not segments:
-        raise ValueError("No segments to keep")
+        raise MCPVideoError("No segments to keep", error_type="validation_error", code="invalid_parameter")
 
     if len(segments) == 1:
         # Single segment - just trim
@@ -745,7 +747,7 @@ def ai_remove_silence(
     video_duration = float(info.get("format", {}).get("duration", 0))
 
     if video_duration == 0:
-        raise ValueError("Could not determine video duration")
+        raise MCPVideoError("Could not determine video duration", error_type="validation_error", code="invalid_parameter")
 
     # Step 2: Detect silent sections
     silence_regions = _detect_silence_regions(
@@ -798,8 +800,10 @@ def ai_stem_separation(
     try:
         import demucs.separate
     except ImportError:
-        raise RuntimeError(
-            "Demucs not installed. Install with: pip install demucs"
+        raise MCPVideoError(
+            "Demucs not installed. Install with: pip install demucs",
+            error_type="dependency_error",
+            code="demucs_not_installed",
         ) from None
 
     # Validate input file
@@ -958,7 +962,7 @@ def ai_color_grade(
     except subprocess.TimeoutExpired:
         raise ProcessingError("Operation timed out after 600 seconds") from None
     if result.returncode != 0:
-        raise RuntimeError(f"FFmpeg color grading failed: {result.stderr}")
+        raise ProcessingError(" ".join(cmd), result.returncode, result.stderr)
 
     return output
 
@@ -1100,7 +1104,7 @@ def _ai_upscale_opencv(video_path: str, output_path: str, scale: int) -> str:
     }
 
     if scale not in model_urls:
-        raise ValueError(f"Scale must be 2 or 4, got {scale}")
+        raise MCPVideoError(f"Scale must be 2 or 4, got {scale}", error_type="validation_error", code="invalid_parameter")
 
     # Setup model path in cache directory
     cache_dir = Path.home() / ".cache" / "mcp-video" / "models"
@@ -1161,18 +1165,22 @@ def _ai_upscale_opencv(video_path: str, output_path: str, scale: int) -> str:
         except subprocess.TimeoutExpired:
             raise ProcessingError("Operation timed out after 600 seconds") from None
         if result.returncode != 0:
-            raise RuntimeError(f"Failed to extract frames: {result.stderr}")
+            raise ProcessingError(" ".join(cmd), result.returncode, result.stderr)
 
         frames = sorted(frames_dir.glob("frame_*.png"))
         if not frames:
-            raise RuntimeError("No frames extracted from video")
+            raise ProcessingError("", 1, "No frames extracted from video")
 
         # Upscale each frame using OpenCV DNN
         for i, frame_path in enumerate(frames, 1):
             # Load frame with OpenCV
             img = cv2.imread(str(frame_path))
             if img is None:
-                raise RuntimeError(f"Failed to load frame: {frame_path}")
+                raise MCPVideoError(
+                    f"Failed to load frame: {frame_path}",
+                    error_type="processing_error",
+                    code="frame_load_failed",
+                )
 
             # Upscale using DNN
             result_img = sr.upsample(img)
@@ -1205,7 +1213,7 @@ def _ai_upscale_opencv(video_path: str, output_path: str, scale: int) -> str:
         except subprocess.TimeoutExpired:
             raise ProcessingError("Operation timed out after 600 seconds") from None
         if result.returncode != 0:
-            raise RuntimeError(f"Failed to create upscaled video: {result.stderr}")
+            raise ProcessingError(" ".join(cmd), result.returncode, result.stderr)
 
     return str(output_file)
 
@@ -1249,7 +1257,7 @@ def ai_upscale(
 
     # Validate scale parameter
     if scale not in (2, 4):
-        raise ValueError(f"Scale must be 2 or 4, got {scale}")
+        raise MCPVideoError(f"Scale must be 2 or 4, got {scale}", error_type="validation_error", code="invalid_parameter")
 
     output_path = Path(output)
 
@@ -1258,14 +1266,16 @@ def ai_upscale(
         try:
             return _ai_upscale_opencv(str(video_path), str(output_path), scale)
         except ImportError:
-            raise RuntimeError(
+            raise MCPVideoError(
                 "AI upscaling requires either realesrgan or opencv-python (cv2). "
-                "Install with: pip install realesrgan or pip install opencv-python"
+                "Install with: pip install realesrgan or pip install opencv-python",
+                error_type="dependency_error",
+                code="upscaling_dependency_missing",
             ) from None
 
     # Validate scale parameter
     if scale not in (2, 4):
-        raise ValueError(f"Scale must be 2 or 4, got {scale}")
+        raise MCPVideoError(f"Scale must be 2 or 4, got {scale}", error_type="validation_error", code="invalid_parameter")
 
     # Map model names to RRDBNet configurations
     model_configs = {
@@ -1303,12 +1313,12 @@ def ai_upscale(
         except subprocess.TimeoutExpired:
             raise ProcessingError("Operation timed out after 600 seconds") from None
         if result.returncode != 0:
-            raise RuntimeError(f"Failed to extract frames: {result.stderr}")
+            raise ProcessingError(" ".join(cmd), result.returncode, result.stderr)
 
         # Get list of extracted frames
         frames = sorted(frames_dir.glob("frame_*.png"))
         if not frames:
-            raise RuntimeError("No frames extracted from video")
+            raise ProcessingError("", 1, "No frames extracted from video")
 
         # Step 3: Initialize Real-ESRGAN model
         config = model_configs[model]
@@ -1403,7 +1413,7 @@ def ai_upscale(
         except subprocess.TimeoutExpired:
             raise ProcessingError("Operation timed out after 600 seconds") from None
         if result.returncode != 0:
-            raise RuntimeError(f"Failed to reconstruct video: {result.stderr}")
+            raise ProcessingError(" ".join(cmd), result.returncode, result.stderr)
 
     return str(output_path)
 
