@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import os
 import subprocess
+from typing import Any
 
 from .errors import InputFileError, ProcessingError
 
@@ -64,3 +65,26 @@ def _get_video_duration(video_path: str) -> float:
     ]
     result = _run_ffmpeg(cmd)
     return float(result.stdout.strip())
+
+
+def _run_ffprobe_json(path: str) -> dict[str, Any]:
+    """Run ffprobe returning full JSON (format + streams)."""
+    import json as _json
+    cmd = [
+        "ffprobe", "-v", "quiet",
+        "-print_format", "json",
+        "-show_format",
+        "-show_streams",
+        path,
+    ]
+    result = _run_ffmpeg(cmd, timeout=30)
+    return _json.loads(result.stdout)
+
+
+def _seconds_to_srt_time(seconds: float) -> str:
+    """Convert seconds to SRT time format HH:MM:SS,mmm."""
+    hours = int(seconds // 3600)
+    minutes = int((seconds % 3600) // 60)
+    secs = int(seconds % 60)
+    millis = int((seconds % 1) * 1000)
+    return f"{hours:02d}:{minutes:02d}:{secs:02d},{millis:03d}"

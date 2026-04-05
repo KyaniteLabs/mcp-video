@@ -44,7 +44,7 @@ from .models import (
     VideoInfo,
     WaveformResult,
 )
-from .ffmpeg_helpers import _escape_ffmpeg_filter_value
+from .ffmpeg_helpers import _escape_ffmpeg_filter_value, _run_ffprobe_json, _seconds_to_srt_time
 
 
 # ---------------------------------------------------------------------------
@@ -331,21 +331,6 @@ def _generate_thumbnail_base64(video_path: str) -> str | None:
         return base64.b64encode(data).decode("ascii")
     except Exception:
         return None
-
-
-def _run_ffprobe_json(path: str) -> dict[str, Any]:
-    cmd = [
-        _ffprobe(),
-        "-v", "quiet",
-        "-print_format", "json",
-        "-show_format",
-        "-show_streams",
-        path,
-    ]
-    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
-    if proc.returncode != 0:
-        raise InputFileError(path, f"FFprobe failed: {proc.stderr[:200]}")
-    return json.loads(proc.stdout)
 
 
 def _movflags_args(output_path: str) -> list[str]:
@@ -2328,15 +2313,6 @@ def generate_subtitles(
         srt_path=srt_file,
         entry_count=len(entries),
     )
-
-
-def _seconds_to_srt_time(seconds: float) -> str:
-    """Convert seconds to SRT time format HH:MM:SS,mmm."""
-    hours = int(seconds // 3600)
-    minutes = int((seconds % 3600) // 60)
-    secs = int(seconds % 60)
-    millis = int((seconds % 1) * 1000)
-    return f"{hours:02d}:{minutes:02d}:{secs:02d},{millis:03d}"
 
 
 # ---------------------------------------------------------------------------

@@ -322,7 +322,7 @@ class TestSRTFormatting:
 
     def test_seconds_to_srt_time(self):
         """Test conversion of seconds to SRT time format."""
-        from mcp_video.ai_engine import _seconds_to_srt_time
+        from mcp_video.ffmpeg_helpers import _seconds_to_srt_time
 
         # Test various time values
         assert _seconds_to_srt_time(0) == "00:00:00,000"

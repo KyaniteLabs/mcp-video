@@ -836,7 +836,7 @@ class Client:
             Path to output video
         """
         from .audio_engine import add_generated_audio
-        return add_generated_audio(input_path=video, audio_config=audio_config, output_path=output)
+        return add_generated_audio(video=video, audio_config=audio_config, output=output)
 
     # ------------------------------------------------------------------
     # Visual Effects (P1 Features)

@@ -6,6 +6,8 @@ import sys
 
 import pytest
 
+from mcp_video import __version__
+
 
 def run_cli(*args: str, expect_fail: bool = False) -> subprocess.CompletedProcess:
     """Run mcp-video CLI and return result."""
@@ -29,7 +31,7 @@ def run_cli_json(*args: str, expect_fail: bool = False) -> subprocess.CompletedP
 class TestCLIVersion:
     def test_version_flag(self):
         result = run_cli("--version")
-        assert "1.1.5" in result.stdout
+        assert __version__ in result.stdout
 
 
 class TestCLIInfo:

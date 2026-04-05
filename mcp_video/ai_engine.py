@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any
 
 from .errors import InputFileError, MCPVideoError, ProcessingError
+from .ffmpeg_helpers import _run_ffmpeg, _seconds_to_srt_time
 
 
 def ai_transcribe(
@@ -142,15 +143,6 @@ def _format_srt(segments: list[dict[str, Any]]) -> str:
     return "\n".join(srt_lines)
 
 
-def _seconds_to_srt_time(seconds: float) -> str:
-    """Convert seconds to SRT time format HH:MM:SS,mmm"""
-    hours = int(seconds // 3600)
-    minutes = int((seconds % 3600) // 60)
-    secs = int(seconds % 60)
-    millis = int((seconds % 1) * 1000)
-    return f"{hours:02d}:{minutes:02d}:{secs:02d},{millis:03d}"
-
-
 def _run_ffprobe(video: str) -> dict[str, Any]:
     """Get video info using ffprobe."""
     cmd = [
@@ -160,12 +152,7 @@ def _run_ffprobe(video: str) -> dict[str, Any]:
         "-of", "json",
         video,
     ]
-    try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
-    except subprocess.TimeoutExpired:
-        raise ProcessingError("Operation timed out after 600 seconds") from None
-    if result.returncode != 0:
-        raise ProcessingError(" ".join(cmd), result.returncode, result.stderr)
+    result = _run_ffmpeg(cmd)
     return json.loads(result.stdout)
 
 
