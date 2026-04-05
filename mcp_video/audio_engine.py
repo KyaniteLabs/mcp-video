@@ -873,7 +873,7 @@ def add_generated_audio(
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
         except subprocess.TimeoutExpired:
-            raise ProcessingError(" ".join(cmd), -1, "Audio processing command timed out after 600s")
+            raise ProcessingError(" ".join(cmd), -1, "Audio processing command timed out after 600s") from None
         if result.returncode != 0:
             raise ProcessingError(" ".join(cmd), result.returncode, result.stderr)
 
