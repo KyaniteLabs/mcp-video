@@ -16,6 +16,8 @@ from typing import ClassVar, Literal
 from collections.abc import Callable
 import contextlib
 
+from .limits import DEFAULT_FFMPEG_TIMEOUT
+
 
 @dataclass
 class DesignIssue:
@@ -876,7 +878,7 @@ class DesignQualityGuardrails:
             # Analyze frame for text regions using ffmpeg's signature filter
             # This gives us an estimate of complexity which correlates with text amount
             cmd = ["ffmpeg", "-y", "-i", frame_path, "-vf", "signature=format=xml", "-f", "null", "-"]
-            subprocess.run(cmd, capture_output=True, text=True)
+            subprocess.run(cmd, capture_output=True, text=True, timeout=DEFAULT_FFMPEG_TIMEOUT)
 
             # Return estimated text elements based on common video patterns
             # In explainer videos, we typically see:
@@ -912,7 +914,7 @@ class DesignQualityGuardrails:
 
         cmd = ["ffmpeg", "-y", "-i", video_path, "-vf", "eq=brightness=0.1:gamma=1.1", "-c:a", "copy", output_path]
 
-        subprocess.run(cmd, capture_output=True, check=True)
+        subprocess.run(cmd, capture_output=True, check=True, timeout=DEFAULT_FFMPEG_TIMEOUT)
         return output_path
 
     def _auto_fix_contrast(self, video_path: str) -> str:
@@ -921,7 +923,7 @@ class DesignQualityGuardrails:
 
         cmd = ["ffmpeg", "-y", "-i", video_path, "-vf", "eq=contrast=1.1", "-c:a", "copy", output_path]
 
-        subprocess.run(cmd, capture_output=True, check=True)
+        subprocess.run(cmd, capture_output=True, check=True, timeout=DEFAULT_FFMPEG_TIMEOUT)
         return output_path
 
     def _auto_fix_saturation(self, video_path: str, boost: float = 1.2) -> str:
@@ -930,7 +932,7 @@ class DesignQualityGuardrails:
 
         cmd = ["ffmpeg", "-y", "-i", video_path, "-vf", f"eq=saturation={boost}", "-c:a", "copy", output_path]
 
-        subprocess.run(cmd, capture_output=True, check=True)
+        subprocess.run(cmd, capture_output=True, check=True, timeout=DEFAULT_FFMPEG_TIMEOUT)
         return output_path
 
     def _auto_fix_color_cast(self, video_path: str) -> str:
@@ -949,7 +951,7 @@ class DesignQualityGuardrails:
             output_path,
         ]
 
-        subprocess.run(cmd, capture_output=True, check=True)
+        subprocess.run(cmd, capture_output=True, check=True, timeout=DEFAULT_FFMPEG_TIMEOUT)
         return output_path
 
     def _auto_normalize_audio(self, video_path: str) -> str:
@@ -958,7 +960,7 @@ class DesignQualityGuardrails:
 
         cmd = ["ffmpeg", "-y", "-i", video_path, "-af", "loudnorm=I=-16:TP=-1.5:LRA=11", "-c:v", "copy", output_path]
 
-        subprocess.run(cmd, capture_output=True, check=True)
+        subprocess.run(cmd, capture_output=True, check=True, timeout=DEFAULT_FFMPEG_TIMEOUT)
         return output_path
 
     # ============== UTILITY METHODS ==============
@@ -981,7 +983,7 @@ class DesignQualityGuardrails:
             "json",
             video_path,
         ]
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=DEFAULT_FFMPEG_TIMEOUT)
         data = json.loads(result.stdout)
 
         if data.get("streams"):
@@ -1006,7 +1008,7 @@ class DesignQualityGuardrails:
     def _get_mean_luma(self, video_path: str) -> float:
         """Get mean luminance."""
         cmd = ["ffmpeg", "-i", video_path, "-vf", "signalstats,metadata=mode=print", "-f", "null", "-"]
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=DEFAULT_FFMPEG_TIMEOUT)
 
         for line in result.stderr.split("\n"):
             if "lavfi.signalstats.YAVG" in line:
@@ -1019,7 +1021,7 @@ class DesignQualityGuardrails:
     def _get_contrast(self, video_path: str) -> float:
         """Get contrast (standard deviation of luminance)."""
         cmd = ["ffmpeg", "-i", video_path, "-vf", "signalstats,metadata=mode=print", "-f", "null", "-"]
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=DEFAULT_FFMPEG_TIMEOUT)
 
         for line in result.stderr.split("\n"):
             if "lavfi.signalstats.YSTD" in line:
@@ -1033,7 +1035,7 @@ class DesignQualityGuardrails:
         """Analyze color distribution."""
         # Get mean RGB values
         cmd = ["ffmpeg", "-i", video_path, "-vf", "signalstats,metadata=mode=print", "-f", "null", "-"]
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=DEFAULT_FFMPEG_TIMEOUT)
 
         rgb_means = [128, 128, 128]
         for line in result.stderr.split("\n"):
@@ -1082,7 +1084,7 @@ class DesignQualityGuardrails:
     def _detect_scene_changes(self, video_path: str) -> list[dict]:
         """Detect scene change timestamps."""
         cmd = ["ffmpeg", "-i", video_path, "-vf", "select='gt(scene,0.3)',showinfo", "-f", "null", "-"]
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=DEFAULT_FFMPEG_TIMEOUT)
 
         scenes = []
         for line in result.stderr.split("\n"):
@@ -1143,7 +1145,7 @@ class DesignQualityGuardrails:
     def _calculate_audio_score(self, video_path: str) -> float:
         """Calculate audio quality score."""
         cmd = ["ffmpeg", "-i", video_path, "-af", "loudnorm=print_format=json", "-f", "null", "-"]
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=DEFAULT_FFMPEG_TIMEOUT)
 
         try:
             loudness_start = result.stderr.find("{")
