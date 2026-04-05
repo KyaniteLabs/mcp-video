@@ -9,8 +9,11 @@ Optional dependencies:
 from __future__ import annotations
 
 import hashlib
+import ipaddress as _ipaddress
 import json
 import re
+import shutil
+import socket as _socket
 import subprocess
 import tempfile
 from pathlib import Path
@@ -150,6 +153,59 @@ def _seconds_to_srt_time(seconds: float) -> str:
     return f"{hours:02d}:{minutes:02d}:{secs:02d},{millis:03d}"
 
 
+def _format_txt(segments: list[dict[str, Any]]) -> str:
+    """Convert Whisper segments to plain text (no timestamps)."""
+    lines = []
+    for segment in segments:
+        text = segment.get("text", "").strip()
+        if text:
+            lines.append(text)
+    return "\n".join(lines)
+
+
+def _format_md(segments: list[dict[str, Any]]) -> str:
+    """Convert Whisper segments to Markdown with inline timestamps.
+
+    Format:
+        **[00:00:01]** Hello world.
+        **[00:00:03]** Second line.
+    """
+    lines = []
+    for segment in segments:
+        text = segment.get("text", "").strip()
+        start = segment.get("start", 0.0)
+        if text:
+            # Reuse SRT formatter but drop milliseconds for readability
+            ts = _seconds_to_srt_time(start).split(",")[0]
+            lines.append(f"**[{ts}]** {text}")
+    return "\n\n".join(lines)
+
+
+def _format_json_transcript(
+    transcript: str,
+    segments: list[dict[str, Any]],
+    language: str,
+) -> dict[str, Any]:
+    """Return structured JSON-serializable transcript data with full segment metadata."""
+    return {
+        "transcript": transcript,
+        "language": language,
+        "segment_count": len(segments),
+        "segments": [
+            {
+                "id": seg.get("id", i),
+                "start": seg.get("start", 0.0),
+                "end": seg.get("end", 0.0),
+                "text": seg.get("text", "").strip(),
+                "tokens": seg.get("tokens", []),
+                "avg_logprob": seg.get("avg_logprob"),
+                "no_speech_prob": seg.get("no_speech_prob"),
+            }
+            for i, seg in enumerate(segments)
+        ],
+    }
+
+
 def _run_ffprobe(video: str) -> dict[str, Any]:
     """Get video info using ffprobe."""
     cmd = [
@@ -245,18 +301,9 @@ def audio_spatial(
     output_path = Path(output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    if method == "simple":
-        return _apply_simple_spatial(video, output, positions)
-    elif method == "hrtf":
-        # HRTF requires sofalizer filter and SOFA file
-        # For now, fall back to simple method with warning
-        return _apply_simple_spatial(video, output, positions)
-    elif method == "vbap":
-        # VBAP requires multi-channel setup
-        # For now, fall back to simple method with warning
-        return _apply_simple_spatial(video, output, positions)
-
-    return str(output_path)
+    # All methods currently fall back to simple spatial processing
+    # HRTF and VBAP require specialized filters not yet implemented
+    return _apply_simple_spatial(video, output, positions)
 
 
 def _azimuth_to_pan(azimuth: float) -> float:
@@ -394,13 +441,7 @@ def _apply_simple_spatial(
         # Concatenate all segments
         if len(segment_files) == 1:
             # Single segment - just copy
-            cmd = ["cp", str(segment_files[0]), output]
-            try:
-                result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
-            except subprocess.TimeoutExpired:
-                raise ProcessingError("Operation timed out after 600 seconds") from None
-            if result.returncode != 0:
-                raise RuntimeError(f"Failed to copy output: {result.stderr}")
+            shutil.copy2(str(segment_files[0]), output)
         else:
             # Multiple segments - use concat demuxer
             concat_list = tmpdir_path / "concat_list.txt"
@@ -1303,10 +1344,6 @@ def ai_upscale(
                 "Install with: pip install realesrgan or pip install opencv-python"
             ) from None
 
-    # Validate scale parameter
-    if scale not in (2, 4):
-        raise ValueError(f"Scale must be 2 or 4, got {scale}")
-
     # Map model names to RRDBNet configurations
     model_configs = {
         "realesrgan": {"num_block": 23, "num_feat": 64},
@@ -1316,8 +1353,6 @@ def ai_upscale(
 
     if model not in model_configs:
         raise ValueError(f"Unknown model: {model}. Choose from: {list(model_configs.keys())}")
-
-    output_path = Path(output)
 
     with tempfile.TemporaryDirectory() as tmpdir:
         tmpdir_path = Path(tmpdir)
@@ -1513,3 +1548,454 @@ def _has_audio_stream(video_path: str) -> bool:
     except subprocess.TimeoutExpired:
         raise ProcessingError("Operation timed out after 600 seconds") from None
     return result.returncode == 0 and "audio" in result.stdout.lower()
+
+
+def _is_url(s: str) -> bool:
+    """Return True if *s* looks like an http/https URL."""
+    return s.lower().startswith(("http://", "https://"))
+
+
+# --- SSRF protection: block private/reserved IP ranges ---
+def _is_safe_url(url: str) -> bool:
+    """Reject URLs that resolve to private, loopback, or link-local IPs (SSRF protection)."""
+    try:
+        from urllib.parse import urlparse
+
+        parsed = urlparse(url)
+        hostname = parsed.hostname
+        if not hostname:
+            return False
+        # Resolve hostname to IP addresses
+        addrinfos = _socket.getaddrinfo(hostname, parsed.port or 80, proto=_socket.IPPROTO_TCP)
+        for _family, _type, _proto, _canonname, sockaddr in addrinfos:
+            ip_str = sockaddr[0]
+            addr = _ipaddress.ip_address(ip_str)
+            if addr.is_private or addr.is_loopback or addr.is_link_local or addr.is_reserved:
+                return False
+    except (_socket.gaierror, ValueError, OSError):
+        return False
+    return True
+
+
+# Video file extensions that can be fetched directly via HTTP.
+_DIRECT_VIDEO_EXTENSIONS = {
+    ".mp4",
+    ".mov",
+    ".mkv",
+    ".webm",
+    ".avi",
+    ".m4v",
+    ".flv",
+    ".wmv",
+    ".ts",
+    ".m2ts",
+    ".mts",
+}
+
+# Hostnames that require yt-dlp (streaming platforms).
+_PLATFORM_HOSTS = {
+    "youtube.com",
+    "youtu.be",
+    "www.youtube.com",
+    "vimeo.com",
+    "www.vimeo.com",
+    "player.vimeo.com",
+    "dailymotion.com",
+    "www.dailymotion.com",
+    "twitch.tv",
+    "www.twitch.tv",
+    "clips.twitch.tv",
+    "twitter.com",
+    "x.com",
+    "www.twitter.com",
+    "instagram.com",
+    "www.instagram.com",
+    "tiktok.com",
+    "www.tiktok.com",
+    "facebook.com",
+    "www.facebook.com",
+    "reddit.com",
+    "v.redd.it",
+    "streamable.com",
+    "www.streamable.com",
+    "rumble.com",
+    "www.rumble.com",
+    "odysee.com",
+    "www.odysee.com",
+    "loom.com",
+    "www.loom.com",
+    "wistia.com",
+    "www.wistia.com",
+}
+
+
+def _url_host(url: str) -> str:
+    """Extract the hostname from a URL (no stdlib urllib needed for this)."""
+    # Strip scheme
+    rest = url.split("://", 1)[-1]
+    # Strip path/query
+    return rest.split("/")[0].split("?")[0].lower()
+
+
+def _download_direct_url(url: str, dest_dir: str) -> str:
+    """Download a direct video URL to *dest_dir* using urllib. Returns local path."""
+    if not _is_safe_url(url):
+        raise ValueError(f"URL blocked (SSRF protection): {url}")
+
+    import urllib.request
+    import urllib.parse
+
+    parsed_path = urllib.parse.urlparse(url).path
+    filename = Path(parsed_path).name or "video.mp4"
+    # Sanitise filename
+    filename = re.sub(r"[^\w.\-]", "_", filename)
+    dest = str(Path(dest_dir) / filename)
+
+    headers = {"User-Agent": "mcp-video/1.0 (+https://github.com/pastorsimon1798/mcp-video)"}
+    req = urllib.request.Request(url, headers=headers)
+    max_download_bytes = 2 * (1 << 30)  # 2 GiB limit
+    with urllib.request.urlopen(req, timeout=120) as resp, open(dest, "wb") as fh:
+        total = 0
+        while True:
+            chunk = resp.read(1 << 20)  # 1 MiB
+            if not chunk:
+                break
+            total += len(chunk)
+            if total > max_download_bytes:
+                Path(dest).unlink(missing_ok=True)
+                raise RuntimeError(f"Download exceeded {max_download_bytes >> 30} GiB size limit")
+            fh.write(chunk)
+    return dest
+
+
+def _download_with_ytdlp(url: str, dest_dir: str) -> str:
+    """Download a platform video URL using yt-dlp. Returns local path.
+
+    Raises RuntimeError if yt-dlp is not installed.
+    """
+    try:
+        import yt_dlp
+    except ImportError:
+        raise RuntimeError("yt-dlp is not installed. Install it with: pip install yt-dlp") from None
+
+    dest_template = str(Path(dest_dir) / "%(id)s.%(ext)s")
+    ydl_opts = {
+        "outtmpl": dest_template,
+        "format": "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
+        "quiet": True,
+        "no_warnings": True,
+        "merge_output_format": "mp4",
+    }
+
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        info = ydl.extract_info(url, download=True)
+        filename = ydl.prepare_filename(info)
+        # yt-dlp may have merged to .mp4 even if template said otherwise
+        if not Path(filename).exists():
+            # Try .mp4 extension
+            filename = str(Path(filename).with_suffix(".mp4"))
+        return filename
+
+
+def _resolve_video_source(video: str) -> tuple[str, str | None, str | None]:
+    """Resolve *video* to a local file path, downloading if necessary.
+
+    Returns:
+        (local_path, temp_dir_to_cleanup, source_url)
+        temp_dir_to_cleanup is None for local files.
+    """
+    if not _is_url(video):
+        return video, None, None
+
+    if not _is_safe_url(video):
+        raise ValueError(f"URL blocked (SSRF protection): {video}")
+
+    source_url = video
+    host = _url_host(video)
+    is_platform = host in _PLATFORM_HOSTS
+
+    # Decide strategy — defer temp dir creation until download is imminent
+    if is_platform:
+        # Must use yt-dlp
+        tmp = tempfile.mkdtemp(prefix="mcp_video_url_")
+        try:
+            local = _download_with_ytdlp(video, tmp)
+        except RuntimeError:
+            shutil.rmtree(tmp, ignore_errors=True)
+            raise  # re-raise "yt-dlp not installed" cleanly
+        except Exception as exc:
+            shutil.rmtree(tmp, ignore_errors=True)
+            raise RuntimeError(f"Failed to download {video}: {exc}") from exc
+    else:
+        # Try yt-dlp first (handles edge cases like redirect-to-stream),
+        # fall back to direct urllib download.
+        try:
+            tmp = tempfile.mkdtemp(prefix="mcp_video_url_")
+            local = _download_with_ytdlp(video, tmp)
+        except RuntimeError:
+            # yt-dlp not installed — fall back to urllib for direct URLs
+            shutil.rmtree(tmp, ignore_errors=True)
+            url_path = video.split("?")[0]  # strip query string for ext detection
+            ext = Path(url_path).suffix.lower()
+            if ext not in _DIRECT_VIDEO_EXTENSIONS:
+                raise RuntimeError(
+                    f"Cannot download '{video}': not a recognised direct video URL and "
+                    "yt-dlp is not installed. Install yt-dlp with: pip install yt-dlp"
+                ) from None
+            tmp = tempfile.mkdtemp(prefix="mcp_video_url_")
+            try:
+                local = _download_direct_url(video, tmp)
+            except Exception as exc:
+                shutil.rmtree(tmp, ignore_errors=True)
+                raise RuntimeError(f"Failed to download {video}: {exc}") from exc
+        except Exception as exc:
+            # yt-dlp is installed but failed — try urllib as last resort
+            shutil.rmtree(tmp, ignore_errors=True)
+            url_path = video.split("?")[0]
+            ext = Path(url_path).suffix.lower()
+            if ext in _DIRECT_VIDEO_EXTENSIONS:
+                tmp = tempfile.mkdtemp(prefix="mcp_video_url_")
+                try:
+                    local = _download_direct_url(video, tmp)
+                except Exception as dl_exc:
+                    shutil.rmtree(tmp, ignore_errors=True)
+                    raise RuntimeError(f"Download failed (yt-dlp: {exc}; urllib: {dl_exc})") from dl_exc
+            else:
+                raise RuntimeError(f"Failed to download {video}: {exc}") from exc
+
+    return local, tmp, source_url
+
+
+def analyze_video(
+    video: str,
+    *,
+    whisper_model: str = "base",
+    language: str | None = None,
+    scene_threshold: float = 0.3,
+    include_transcript: bool = True,
+    include_scenes: bool = True,
+    include_audio: bool = True,
+    include_quality: bool = True,
+    include_chapters: bool = True,
+    include_colors: bool = True,
+    output_srt: str | None = None,
+    output_txt: str | None = None,
+    output_md: str | None = None,
+    output_json: str | None = None,
+) -> dict[str, Any]:
+    """Comprehensive video analysis — transcript, metadata, scenes, audio, quality, chapters, colors.
+
+    Accepts either a **local file path** or an **HTTP/HTTPS URL**.
+
+    For direct video URLs (e.g. ``https://example.com/clip.mp4``) the file is
+    downloaded automatically via ``urllib``.  For streaming-platform URLs
+    (YouTube, Vimeo, TikTok, Twitter/X, Instagram, Twitch, …) the optional
+    ``yt-dlp`` package is used — install it with ``pip install yt-dlp``.
+
+    Each sub-analysis is independent: one failure will not abort the others.
+
+    Args:
+        video: Local path **or** HTTP/HTTPS URL to the video.
+        whisper_model: Whisper model size (tiny, base, small, medium, large, turbo).
+        language: Language code for transcription (auto-detect if None).
+        scene_threshold: Scene change sensitivity 0.0-1.0 (lower = more sensitive).
+        include_transcript: Run speech-to-text via Whisper (requires openai-whisper).
+        include_scenes: Detect scene changes and boundaries.
+        include_audio: Analyse audio waveform, peaks, and silence regions.
+        include_quality: Run visual quality check (brightness, contrast, saturation, audio levels).
+        include_chapters: Auto-generate chapter markers from scene changes.
+        include_colors: Extract dominant colors and extended metadata.
+        output_srt: Optional path to write SRT subtitle file.
+        output_txt: Optional path to write plain-text transcript.
+        output_md: Optional path to write Markdown transcript with timestamps.
+        output_json: Optional path to write full JSON transcript data.
+
+    Returns:
+        Dict with keys: success, video, source_url, metadata, transcript, scenes,
+        audio, chapters, colors, quality, errors.
+    """
+    if "\x00" in video:
+        raise FileNotFoundError("Invalid path: contains null bytes")
+
+    # Validate scene_threshold
+    if not (0.0 <= scene_threshold <= 1.0):
+        raise ValueError(f"scene_threshold must be between 0.0 and 1.0, got {scene_threshold}")
+
+    # Validate output paths — ensure they don't escape safe directories
+    for label, path in [
+        ("output_srt", output_srt),
+        ("output_txt", output_txt),
+        ("output_md", output_md),
+        ("output_json", output_json),
+    ]:
+        if path is not None:
+            p = Path(path).resolve()
+            # Block writes to system directories
+            blocked_prefixes = (
+                "/etc/",
+                "/usr/",
+                "/bin/",
+                "/sbin/",
+                "/var/",
+                "/root/",
+                "/boot/",
+                "/dev/",
+                "/proc/",
+                "/sys/",
+            )
+            if any(str(p).startswith(prefix) for prefix in blocked_prefixes):
+                raise ValueError(f"{label} path escapes safe directory: {path}")
+
+    # ── Resolve URL → local file ─────────────────────────────────────────────
+    _tmp_dir: str | None = None
+    try:
+        local_video, _tmp_dir, source_url = _resolve_video_source(video)
+
+        video_path = Path(local_video)
+        if not video_path.exists():
+            raise FileNotFoundError(f"Video file not found: {video}")
+
+        # Lazy imports — keep optional-dependency pattern consistent with the rest
+        from . import engine as _engine
+        from . import effects_engine as _effects
+        from . import quality_guardrails as _quality
+
+        errors: list[dict[str, str]] = []
+
+        # ── 1. Metadata (always runs) ────────────────────────────────────────
+        try:
+            info = _engine.probe(str(video_path))
+            metadata: dict[str, Any] = {
+                "path": str(video_path.resolve()),
+                "duration": info.duration,
+                "width": info.width,
+                "height": info.height,
+                "fps": info.fps,
+                "codec": info.codec,
+                "audio_codec": info.audio_codec,
+                "audio_sample_rate": info.audio_sample_rate,
+                "bitrate": info.bitrate,
+                "size_bytes": info.size_bytes,
+                "format": info.format,
+            }
+        except Exception as exc:
+            metadata = {"path": str(video_path.resolve())}
+            errors.append({"section": "metadata", "error": str(exc)})
+
+        # ── 2. Transcript ────────────────────────────────────────────────────
+        transcript_result: dict[str, Any] | None = None
+        if include_transcript:
+            try:
+                raw = ai_transcribe(
+                    str(video_path),
+                    output_srt=output_srt,
+                    model=whisper_model,
+                    language=language,
+                )
+                segments = raw.get("segments", [])
+                txt_path: str | None = None
+                md_path: str | None = None
+                json_path: str | None = None
+
+                if output_txt:
+                    Path(output_txt).write_text(_format_txt(segments), encoding="utf-8")
+                    txt_path = output_txt
+                if output_md:
+                    Path(output_md).write_text(_format_md(segments), encoding="utf-8")
+                    md_path = output_md
+                if output_json:
+                    json_data = _format_json_transcript(
+                        raw.get("transcript", ""),
+                        segments,
+                        raw.get("language", "unknown"),
+                    )
+                    Path(output_json).write_text(
+                        json.dumps(json_data, indent=2, ensure_ascii=False),
+                        encoding="utf-8",
+                    )
+                    json_path = output_json
+
+                transcript_result = {
+                    "text": raw.get("transcript", ""),
+                    "language": raw.get("language", "unknown"),
+                    "segments": segments,
+                    "srt_path": output_srt,
+                    "txt_path": txt_path,
+                    "md_path": md_path,
+                    "json_path": json_path,
+                }
+            except RuntimeError as exc:
+                # Whisper not installed — record gracefully
+                errors.append({"section": "transcript", "error": str(exc)})
+            except Exception as exc:
+                errors.append({"section": "transcript", "error": str(exc)})
+
+        # ── 3. Scenes ────────────────────────────────────────────────────────
+        scenes_result: list[dict] | None = None
+        if include_scenes:
+            try:
+                scene_det = _engine.detect_scenes(str(video_path), threshold=scene_threshold)
+                scenes_result = scene_det.scenes
+            except Exception as exc:
+                errors.append({"section": "scenes", "error": str(exc)})
+
+        # ── 4. Audio waveform ────────────────────────────────────────────────
+        audio_result: dict[str, Any] | None = None
+        if include_audio:
+            try:
+                waveform = _engine.audio_waveform(str(video_path))
+                audio_result = {
+                    "duration": waveform.duration,
+                    "peaks": waveform.peaks,
+                    "mean_level": waveform.mean_level,
+                    "max_level": waveform.max_level,
+                    "min_level": waveform.min_level,
+                    "silence_regions": waveform.silence_regions,
+                }
+            except Exception as exc:
+                errors.append({"section": "audio", "error": str(exc)})
+
+        # ── 5. Chapters ──────────────────────────────────────────────────────
+        chapters_result: list[dict] | None = None
+        if include_chapters:
+            try:
+                raw_chapters = _effects.auto_chapters(str(video_path), threshold=scene_threshold)
+                chapters_result = [{"timestamp": ts, "title": title} for ts, title in raw_chapters]
+            except Exception as exc:
+                errors.append({"section": "chapters", "error": str(exc)})
+
+        # ── 6. Colors / extended info ────────────────────────────────────────
+        # NOTE: Dominant color extraction is not yet implemented in effects_engine.
+        # video_info_detailed() returns an empty list for dominant_colors.
+        # Leaving this section as a placeholder — remove include_colors flag
+        # and this block when colors are actually implemented.
+        colors_result: list[Any] | None = None
+        if include_colors:
+            errors.append({"section": "colors", "error": "Color extraction not yet implemented"})
+
+        # ── 7. Quality ───────────────────────────────────────────────────────
+        quality_result: dict[str, Any] | None = None
+        if include_quality:
+            try:
+                quality_result = _quality.quality_check(str(video_path))
+            except Exception as exc:
+                errors.append({"section": "quality", "error": str(exc)})
+
+        return {
+            "success": True,
+            "video": str(video_path.resolve()),
+            "source_url": source_url,
+            "metadata": metadata,
+            "transcript": transcript_result,
+            "scenes": scenes_result,
+            "audio": audio_result,
+            "chapters": chapters_result,
+            "colors": colors_result,
+            "quality": quality_result,
+            "errors": errors,
+        }
+
+    finally:
+        # Clean up downloaded temp directory (if input was a URL)
+        if _tmp_dir is not None:
+            shutil.rmtree(_tmp_dir, ignore_errors=True)

@@ -193,7 +193,6 @@ def parse_ffmpeg_error(stderr: str) -> MCPVideoError:
     return ProcessingError("", 1, stderr)
 
 
-
 def wrap_error(exc: Exception) -> MCPVideoError:
     """Convert any exception to MCPVideoError. Returns as-is if already MCPVideoError."""
     if isinstance(exc, MCPVideoError):

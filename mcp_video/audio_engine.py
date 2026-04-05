@@ -316,13 +316,27 @@ def audio_synthesize(
     from .limits import MAX_AUDIO_DURATION, MIN_FREQUENCY, MAX_FREQUENCY, MIN_SAMPLE_RATE, MAX_SAMPLE_RATE
 
     if not (MIN_FREQUENCY <= frequency <= MAX_FREQUENCY):
-        raise MCPVideoError(f"Frequency must be between {MIN_FREQUENCY} and {MAX_FREQUENCY} Hz, got {frequency}", error_type="validation_error", code="invalid_parameter")
+        raise MCPVideoError(
+            f"Frequency must be between {MIN_FREQUENCY} and {MAX_FREQUENCY} Hz, got {frequency}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
     if not (0.01 <= duration <= MAX_AUDIO_DURATION):
-        raise MCPVideoError(f"Duration must be between 0.01 and {MAX_AUDIO_DURATION} seconds, got {duration}", error_type="validation_error", code="invalid_parameter")
+        raise MCPVideoError(
+            f"Duration must be between 0.01 and {MAX_AUDIO_DURATION} seconds, got {duration}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
     if not (0.0 <= volume <= 1.0):
-        raise MCPVideoError(f"Volume must be between 0.0 and 1.0, got {volume}", error_type="validation_error", code="invalid_parameter")
+        raise MCPVideoError(
+            f"Volume must be between 0.0 and 1.0, got {volume}", error_type="validation_error", code="invalid_parameter"
+        )
     if not (MIN_SAMPLE_RATE <= sample_rate <= MAX_SAMPLE_RATE):
-        raise MCPVideoError(f"Sample rate must be between {MIN_SAMPLE_RATE} and {MAX_SAMPLE_RATE}, got {sample_rate}", error_type="validation_error", code="invalid_parameter")
+        raise MCPVideoError(
+            f"Sample rate must be between {MIN_SAMPLE_RATE} and {MAX_SAMPLE_RATE}, got {sample_rate}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
     # Generate base waveform
     if waveform == "sine":
         pcm_data = generate_sine(frequency, duration, sample_rate, volume)
@@ -561,7 +575,11 @@ def audio_preset(
     }
 
     if preset not in presets:
-        raise MCPVideoError(f"Unknown preset: {preset}. Available: {list(presets.keys())}", error_type="validation_error", code="invalid_parameter")
+        raise MCPVideoError(
+            f"Unknown preset: {preset}. Available: {list(presets.keys())}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
 
     config = presets[preset].copy()
     if duration:

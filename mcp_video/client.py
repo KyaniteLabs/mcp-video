@@ -1241,6 +1241,67 @@ class Client:
 
         return ai_transcribe(video, output_srt, model, language)
 
+    def analyze_video(
+        self,
+        video: str,
+        *,
+        whisper_model: str = "base",
+        language: str | None = None,
+        scene_threshold: float = 0.3,
+        include_transcript: bool = True,
+        include_scenes: bool = True,
+        include_audio: bool = True,
+        include_quality: bool = True,
+        include_chapters: bool = True,
+        include_colors: bool = True,
+        output_srt: str | None = None,
+        output_txt: str | None = None,
+        output_md: str | None = None,
+        output_json: str | None = None,
+    ) -> dict:
+        """Comprehensive video analysis — transcript, metadata, scenes, audio, quality, chapters, colors.
+
+        Points at any existing video file and reverse-engineers everything about it.
+
+        Args:
+            video: Path to existing video file.
+            whisper_model: Whisper model size (tiny, base, small, medium, large, turbo).
+            language: Language code for transcription (auto-detect if None).
+            scene_threshold: Scene change sensitivity 0.0-1.0.
+            include_transcript: Run speech-to-text via Whisper (requires openai-whisper).
+            include_scenes: Detect scene changes and boundaries.
+            include_audio: Analyse audio waveform, peaks, and silence regions.
+            include_quality: Run visual quality check.
+            include_chapters: Auto-generate chapter markers from scene changes.
+            include_colors: Extract dominant colors and extended metadata.
+            output_srt: Optional path to write SRT subtitle file.
+            output_txt: Optional path to write plain-text transcript.
+            output_md: Optional path to write Markdown transcript with timestamps.
+            output_json: Optional path to write full JSON transcript data.
+
+        Returns:
+            dict with keys: success, video, metadata, transcript, scenes, audio,
+            chapters, colors, quality, errors.
+        """
+        from .ai_engine import analyze_video as _analyze_video
+
+        return _analyze_video(
+            video,
+            whisper_model=whisper_model,
+            language=language,
+            scene_threshold=scene_threshold,
+            include_transcript=include_transcript,
+            include_scenes=include_scenes,
+            include_audio=include_audio,
+            include_quality=include_quality,
+            include_chapters=include_chapters,
+            include_colors=include_colors,
+            output_srt=output_srt,
+            output_txt=output_txt,
+            output_md=output_md,
+            output_json=output_json,
+        )
+
     def ai_scene_detect(self, video: str, threshold: float = 0.3, use_ai: bool = False) -> list[dict]:
         """Detect scene changes in video."""
         from .ai_engine import ai_scene_detect

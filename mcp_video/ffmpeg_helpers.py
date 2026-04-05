@@ -74,9 +74,13 @@ def _get_video_duration(video_path: str) -> float:
 def _run_ffprobe_json(path: str) -> dict[str, Any]:
     """Run ffprobe returning full JSON (format + streams)."""
     import json as _json
+
     cmd = [
-        "ffprobe", "-v", "quiet",
-        "-print_format", "json",
+        "ffprobe",
+        "-v",
+        "quiet",
+        "-print_format",
+        "json",
         "-show_format",
         "-show_streams",
         path,
