@@ -61,14 +61,16 @@ class TestErrorHandlingRobustness:
         assert result["error"]["type"] == "input_error"
 
     def test_server_error_result_generic_exception(self) -> None:
-        """_error_result handles generic Exception without crash."""
+        """_error_result handles generic Exception without crash — sanitized for no detail leak."""
         from mcp_video.server import _error_result
         err = RuntimeError("unexpected failure")
         result = _error_result(err)
         assert result["success"] is False
         assert "error" in result
-        assert result["error"]["code"] == "invalid_parameter"
-        assert "unexpected failure" in result["error"]["message"]
+        assert result["error"]["code"] == "internal_error"
+        assert result["error"]["type"] == "internal_error"
+        # Generic exceptions should NOT expose raw message
+        assert "unexpected failure" not in result["error"]["message"]
 
 
 # ---------------------------------------------------------------------------
@@ -247,43 +249,43 @@ class TestParameterBounds:
     def test_audio_frequency_too_low(self) -> None:
         """Frequency below 20 Hz is rejected."""
         from mcp_video.audio_engine import audio_synthesize
-        with pytest.raises(ValueError, match="[Ff]requency"):
+        with pytest.raises(MCPVideoError, match="[Ff]requency"):
             audio_synthesize("/tmp/test.wav", frequency=5)
 
     def test_audio_frequency_too_high(self) -> None:
         """Frequency above 20000 Hz is rejected."""
         from mcp_video.audio_engine import audio_synthesize
-        with pytest.raises(ValueError, match="[Ff]requency"):
+        with pytest.raises(MCPVideoError, match="[Ff]requency"):
             audio_synthesize("/tmp/test.wav", frequency=50000)
 
     def test_audio_frequency_zero(self) -> None:
         """Frequency of 0 Hz is rejected."""
         from mcp_video.audio_engine import audio_synthesize
-        with pytest.raises(ValueError, match="[Ff]requency"):
+        with pytest.raises(MCPVideoError, match="[Ff]requency"):
             audio_synthesize("/tmp/test.wav", frequency=0)
 
     def test_audio_duration_too_short(self) -> None:
         """Duration below 0.01s is rejected."""
         from mcp_video.audio_engine import audio_synthesize
-        with pytest.raises(ValueError, match="[Dd]uration"):
+        with pytest.raises(MCPVideoError, match="[Dd]uration"):
             audio_synthesize("/tmp/test.wav", duration=0.001)
 
     def test_audio_duration_too_long(self) -> None:
         """Duration above MAX_AUDIO_DURATION is rejected."""
         from mcp_video.audio_engine import audio_synthesize
-        with pytest.raises(ValueError, match="[Dd]uration"):
+        with pytest.raises(MCPVideoError, match="[Dd]uration"):
             audio_synthesize("/tmp/test.wav", duration=100000)
 
     def test_audio_volume_negative(self) -> None:
         """Negative volume is rejected."""
         from mcp_video.audio_engine import audio_synthesize
-        with pytest.raises(ValueError, match="[Vv]olume"):
+        with pytest.raises(MCPVideoError, match="[Vv]olume"):
             audio_synthesize("/tmp/test.wav", volume=-0.5)
 
     def test_audio_volume_over_one(self) -> None:
         """Volume > 1.0 is rejected."""
         from mcp_video.audio_engine import audio_synthesize
-        with pytest.raises(ValueError, match="[Vv]olume"):
+        with pytest.raises(MCPVideoError, match="[Vv]olume"):
             audio_synthesize("/tmp/test.wav", volume=1.5)
 
     def test_audio_valid_bounds(self) -> None:

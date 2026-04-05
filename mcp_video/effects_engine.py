@@ -496,7 +496,8 @@ def layout_pip(
 
     if border:
         # Add border using pad
-        pip_filters += f",pad={pip_w + border_width * 2}:{pip_h + border_width * 2}:{border_width}:{border_width}:color={border_color}"
+        safe_border_color = _escape_ffmpeg_filter_value(border_color)
+        pip_filters += f",pad={pip_w + border_width * 2}:{pip_h + border_width * 2}:{border_width}:{border_width}:color={safe_border_color}"
 
     if rounded_corners:
         # Use format and drawbox for rounded corners simulation
@@ -673,13 +674,16 @@ def text_subtitles(
 
     # Escape subtitle path for FFmpeg filter syntax
     safe_subtitles = _escape_ffmpeg_filter_value(subtitles)
+    safe_font = _escape_ffmpeg_filter_value(font)
+    safe_color = _escape_ffmpeg_filter_value(color)
+    safe_outline_color = _escape_ffmpeg_filter_value(outline_color)
 
     filter_complex = (
         f"subtitles={safe_subtitles}:force_style='"
-        f"FontName={font},"
+        f"FontName={safe_font},"
         f"FontSize={size},"
-        f"PrimaryColour={color},"
-        f"OutlineColour={outline_color},"
+        f"PrimaryColour={safe_color},"
+        f"OutlineColour={safe_outline_color},"
         f"Outline={outline},"
         f"BorderStyle=1'"
     )
@@ -752,10 +756,12 @@ def mograph_count(
             # Use FFmpeg to generate frame
             frame_file = tmp_path / f"frame_{frame:05d}.png"
 
-            text_filter = f"drawtext=text='{current_value}':font={font}:fontsize={size}:fontcolor={color}:x=(w-text_w)/2:y=(h-text_h)/2"
+            safe_font = _escape_ffmpeg_filter_value(font)
+            safe_color = _escape_ffmpeg_filter_value(color)
+            text_filter = f"drawtext=text='{current_value}':font={safe_font}:fontsize={size}:fontcolor={safe_color}:x=(w-text_w)/2:y=(h-text_h)/2"
 
             if glow:
-                text_filter += f":box=1:boxcolor={color}@0.3:boxborderw=10"
+                text_filter += f":box=1:boxcolor={safe_color}@0.3:boxborderw=10"
 
             cmd = [
                 "ffmpeg",
@@ -824,19 +830,22 @@ def mograph_progress(
             progress = frame / total_frames
             frame_file = tmp_path / f"frame_{frame:05d}.png"
 
+            safe_color = _escape_ffmpeg_filter_value(color)
+            safe_track_color = _escape_ffmpeg_filter_value(track_color)
+
             if style == "bar":
                 # Progress bar
                 bar_width = int(800 * progress)
                 # Draw track
                 filter_chain = (
-                    f"drawbox=x=560:y=540:w=800:h=20:color={track_color}:t=fill,"
-                    f"drawbox=x=560:y=540:w={bar_width}:h=20:color={color}:t=fill"
+                    f"drawbox=x=560:y=540:w=800:h=20:color={safe_track_color}:t=fill,"
+                    f"drawbox=x=560:y=540:w={bar_width}:h=20:color={safe_color}:t=fill"
                 )
             elif style == "circle":
                 # Circular progress (simplified as arc)
                 filter_chain = (
-                    f"drawbox=x=860:y=440:w=200:h=200:color={track_color}:t=fill,"
-                    f"drawbox=x=860:y=440:w={int(200 * progress)}:h=200:color={color}:t=fill"
+                    f"drawbox=x=860:y=440:w=200:h=200:color={safe_track_color}:t=fill,"
+                    f"drawbox=x=860:y=440:w={int(200 * progress)}:h=200:color={safe_color}:t=fill"
                 )
             else:
                 # Dots
@@ -845,7 +854,7 @@ def mograph_progress(
                 filter_chain = ""
                 for i in range(num_dots):
                     x = 760 + i * 80
-                    dot_color = color if i < active_dots else track_color
+                    dot_color = safe_color if i < active_dots else safe_track_color
                     filter_chain += f"drawbox=x={x}:y=540:w=20:h=20:color={dot_color}:t=fill,"
                 filter_chain = filter_chain.rstrip(",")
 

@@ -93,21 +93,6 @@ class CodecError(MCPVideoError):
         )
 
 
-class ResolutionMismatchError(MCPVideoError):
-    """Clips have different resolutions for concat operation."""
-
-    def __init__(self, resolutions: list[str]) -> None:
-        super().__init__(
-            f"Resolution mismatch: clips have different resolutions: {resolutions}",
-            error_type="encoding_error",
-            code="resolution_mismatch",
-            suggested_action={
-                "auto_fix": True,
-                "description": "Auto-resize all clips to match the largest resolution before merging",
-            },
-        )
-
-
 class RemotionNotFoundError(MCPVideoError):
     """Node.js or npx not found on PATH."""
 
@@ -156,18 +141,6 @@ class RemotionRenderError(MCPVideoError):
         self.full_stderr = stderr
 
 
-class RemotionValidationError(MCPVideoError):
-    """Remotion project validation failure."""
-
-    def __init__(self, issues: list[str]) -> None:
-        msg = "Remotion validation failed: " + "; ".join(issues)
-        super().__init__(
-            msg,
-            error_type="validation_error",
-            code="remotion_validation_failed",
-        )
-
-
 class ProcessingError(MCPVideoError):
     """FFmpeg processing failed."""
 
@@ -182,17 +155,6 @@ class ProcessingError(MCPVideoError):
         self.command = command
         self.returncode = returncode
         self.full_stderr = stderr
-
-
-class ExportError(MCPVideoError):
-    """Export/rendering failed."""
-
-    def __init__(self, format: str, detail: str) -> None:
-        super().__init__(
-            f"Export to {format} failed: {detail}",
-            error_type="export_error",
-            code=f"export_{format}_failed",
-        )
 
 
 class ResourceError(MCPVideoError):
@@ -229,10 +191,6 @@ def parse_ffmpeg_error(stderr: str) -> MCPVideoError:
         return ResourceError("disk_space", "No space left on device")
 
     return ProcessingError("", 1, stderr)
-
-
-# Backwards compatibility alias
-AgentCutError = MCPVideoError
 
 
 def wrap_error(exc: Exception) -> MCPVideoError:

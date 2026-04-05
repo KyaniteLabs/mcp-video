@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import re
 from typing import Any
@@ -89,11 +90,22 @@ mcp = FastMCP(
     ),
 )
 
+logger = logging.getLogger(__name__)
+
 
 def _error_result(err: MCPVideoError | Exception) -> dict[str, Any]:
     if isinstance(err, MCPVideoError):
         return {"success": False, "error": err.to_dict()}
-    return {"success": False, "error": {"type": "validation_error", "code": "invalid_parameter", "message": str(err)}}
+    # Unexpected exception — log full traceback, return generic message
+    logger.exception("Unexpected error in MCP tool handler")
+    return {
+        "success": False,
+        "error": {
+            "type": "internal_error",
+            "code": "internal_error",
+            "message": "An internal error occurred. Check server logs for details.",
+        },
+    }
 
 
 def _result(result: Any) -> dict[str, Any]:
