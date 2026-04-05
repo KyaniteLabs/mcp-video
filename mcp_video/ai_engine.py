@@ -9,9 +9,11 @@ Optional dependencies:
 from __future__ import annotations
 
 import hashlib
+import ipaddress as _ipaddress
 import json
 import re
 import shutil
+import socket as _socket
 import subprocess
 import tempfile
 from pathlib import Path
@@ -1494,9 +1496,6 @@ def _is_url(s: str) -> bool:
 
 
 # --- SSRF protection: block private/reserved IP ranges ---
-import ipaddress as _ipaddress
-import socket as _socket
-
 def _is_safe_url(url: str) -> bool:
     """Reject URLs that resolve to private, loopback, or link-local IPs (SSRF protection)."""
     try:
@@ -1507,7 +1506,7 @@ def _is_safe_url(url: str) -> bool:
             return False
         # Resolve hostname to IP addresses
         addrinfos = _socket.getaddrinfo(hostname, parsed.port or 80, proto=_socket.IPPROTO_TCP)
-        for family, _type, _proto, _canonname, sockaddr in addrinfos:
+        for _family, _type, _proto, _canonname, sockaddr in addrinfos:
             ip_str = sockaddr[0]
             addr = _ipaddress.ip_address(ip_str)
             if addr.is_private or addr.is_loopback or addr.is_link_local or addr.is_reserved:
@@ -1589,7 +1588,7 @@ def _download_with_ytdlp(url: str, dest_dir: str) -> str:
     Raises RuntimeError if yt-dlp is not installed.
     """
     try:
-        import yt_dlp  # noqa: F401
+        import yt_dlp
     except ImportError:
         raise RuntimeError(
             "yt-dlp is not installed. Install it with: pip install yt-dlp"
@@ -1717,7 +1716,7 @@ def analyze_video(
         video: Local path **or** HTTP/HTTPS URL to the video.
         whisper_model: Whisper model size (tiny, base, small, medium, large, turbo).
         language: Language code for transcription (auto-detect if None).
-        scene_threshold: Scene change sensitivity 0.0–1.0 (lower = more sensitive).
+        scene_threshold: Scene change sensitivity 0.0-1.0 (lower = more sensitive).
         include_transcript: Run speech-to-text via Whisper (requires openai-whisper).
         include_scenes: Detect scene changes and boundaries.
         include_audio: Analyse audio waveform, peaks, and silence regions.

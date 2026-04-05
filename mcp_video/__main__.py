@@ -1649,7 +1649,6 @@ def main() -> None:
             if use_json:
                 output_json(result)
             else:
-                from rich.table import Table
                 # Metadata panel
                 meta = result.get("metadata", {})
                 meta_lines = []

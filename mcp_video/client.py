@@ -1155,7 +1155,7 @@ class Client:
             video: Path to existing video file.
             whisper_model: Whisper model size (tiny, base, small, medium, large, turbo).
             language: Language code for transcription (auto-detect if None).
-            scene_threshold: Scene change sensitivity 0.0–1.0.
+            scene_threshold: Scene change sensitivity 0.0-1.0.
             include_transcript: Run speech-to-text via Whisper (requires openai-whisper).
             include_scenes: Detect scene changes and boundaries.
             include_audio: Analyse audio waveform, peaks, and silence regions.
