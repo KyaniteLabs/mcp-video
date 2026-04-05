@@ -1048,9 +1048,9 @@ def test_analyze_video_writes_txt_output():
                 include_colors=False,
             )
 
-    assert result["success"] is True
-    assert result["transcript"]["txt_path"] == txt_path
-    assert Path(txt_path).read_text(encoding="utf-8") == "Hello world"
+        assert result["success"] is True
+        assert result["transcript"]["txt_path"] == txt_path
+        assert Path(txt_path).read_text(encoding="utf-8") == "Hello world"
 
 
 # ---------------------------------------------------------------------------
@@ -1091,6 +1091,7 @@ def test_resolve_video_source_local_passthrough():
 def test_resolve_video_source_platform_url_requires_ytdlp(monkeypatch):
     """Platform URLs raise RuntimeError when yt-dlp is not installed."""
     import builtins
+
     real_import = builtins.__import__
 
     def mock_import(name, *args, **kwargs):
@@ -1098,9 +1099,12 @@ def test_resolve_video_source_platform_url_requires_ytdlp(monkeypatch):
             raise ImportError("No module named 'yt_dlp'")
         return real_import(name, *args, **kwargs)
 
+    # Bypass SSRF check so DNS availability doesn't affect the test
+    monkeypatch.setattr("mcp_video.ai_engine._is_safe_url", lambda url: True)
     monkeypatch.setattr(builtins, "__import__", mock_import)
 
     from mcp_video.ai_engine import _resolve_video_source
+
     with pytest.raises(RuntimeError, match="yt-dlp"):
         _resolve_video_source("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
 
@@ -1108,6 +1112,7 @@ def test_resolve_video_source_platform_url_requires_ytdlp(monkeypatch):
 def test_resolve_video_source_direct_url_no_extension_no_ytdlp(monkeypatch):
     """Non-video-extension direct URLs without yt-dlp raise a clear error."""
     import builtins
+
     real_import = builtins.__import__
 
     def mock_import(name, *args, **kwargs):
@@ -1115,9 +1120,12 @@ def test_resolve_video_source_direct_url_no_extension_no_ytdlp(monkeypatch):
             raise ImportError("No module named 'yt_dlp'")
         return real_import(name, *args, **kwargs)
 
+    # Bypass SSRF check so DNS availability doesn't affect the test
+    monkeypatch.setattr("mcp_video.ai_engine._is_safe_url", lambda url: True)
     monkeypatch.setattr(builtins, "__import__", mock_import)
 
     from mcp_video.ai_engine import _resolve_video_source
+
     with pytest.raises(RuntimeError, match="yt-dlp"):
         _resolve_video_source("https://example.com/stream")  # no .mp4 extension
 
