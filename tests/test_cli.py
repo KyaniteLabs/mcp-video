@@ -29,7 +29,11 @@ def run_cli_json(*args: str, expect_fail: bool = False) -> subprocess.CompletedP
 class TestCLIVersion:
     def test_version_flag(self):
         result = run_cli("--version")
-        assert "1.1.5" in result.stdout
+        # Dynamic version check — reads from package metadata so it
+        # never goes stale after a version bump.
+        from importlib.metadata import version as pkg_version
+
+        assert pkg_version("mcp-video") in result.stdout
 
 
 class TestCLIInfo:

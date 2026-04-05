@@ -98,7 +98,10 @@ def _error_result(err: MCPVideoError | Exception) -> dict[str, Any]:
 
 def _result(result: Any) -> dict[str, Any]:
     if result is None:
-        return {"success": False, "error": {"type": "processing_error", "code": "no_result", "message": "Operation returned no result"}}
+        return {
+            "success": False,
+            "error": {"type": "processing_error", "code": "no_result", "message": "Operation returned no result"},
+        }
     if hasattr(result, "model_dump"):
         data = result.model_dump()
         # Include thumbnail_base64 only if it was generated (keep MCP responses lean)
@@ -114,6 +117,7 @@ def _result(result: Any) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 # MCP Resources
 # ---------------------------------------------------------------------------
+
 
 @mcp.resource("mcp-video://video/{path}/info")
 def video_info_resource(path: str) -> str:
@@ -135,7 +139,7 @@ def video_preview_resource(path: str) -> str:
         count = 8
         for i in range(count):
             ts = dur * (i + 1) / (count + 1)
-            frames.append(f"Frame {i+1}: {ts:.1f}s")
+            frames.append(f"Frame {i + 1}: {ts:.1f}s")
         return "\n".join(frames)
     except MCPVideoError as e:
         return _error_result(e).__str__()
@@ -166,15 +170,20 @@ def templates_resource() -> str:
     data = {
         "aspect_ratios": {k: f"{v[0]}x{v[1]}" for k, v in ASPECT_RATIOS.items()},
         "quality_presets": {
-            k: f"CRF {v['crf']}, preset={v['preset']}, max_height={v['max_height']}"
-            for k, v in QUALITY_PRESETS.items()
+            k: f"CRF {v['crf']}, preset={v['preset']}, max_height={v['max_height']}" for k, v in QUALITY_PRESETS.items()
         },
         "transition_types": ["fade", "dissolve", "wipe-left", "wipe-right", "wipe-up", "wipe-down"],
         "export_formats": ["mp4", "webm", "gif", "mov"],
         "text_positions": [
-            "top-left", "top-center", "top-right",
-            "center-left", "center", "center-right",
-            "bottom-left", "bottom-center", "bottom-right",
+            "top-left",
+            "top-center",
+            "top-right",
+            "center-left",
+            "center",
+            "center-right",
+            "bottom-left",
+            "bottom-center",
+            "bottom-right",
         ],
     }
     return json.dumps(data, indent=2)
@@ -183,6 +192,7 @@ def templates_resource() -> str:
 # ---------------------------------------------------------------------------
 # MCP Tools
 # ---------------------------------------------------------------------------
+
 
 @mcp.tool()
 def video_info(input_path: str) -> dict[str, Any]:
@@ -226,10 +236,20 @@ def video_trim(
 
 
 VALID_XFADE_TRANSITIONS = {
-    "fade", "dissolve", "wipeleft", "wiperight",
-    "slideleft", "slideright", "slideup", "slidedown",
-    "circlecrop", "radial",
-    "smoothleft", "smoothright", "smoothup", "smoothdown",
+    "fade",
+    "dissolve",
+    "wipeleft",
+    "wiperight",
+    "slideleft",
+    "slideright",
+    "slideup",
+    "slidedown",
+    "circlecrop",
+    "radial",
+    "smoothleft",
+    "smoothright",
+    "smoothup",
+    "smoothdown",
 }
 
 
@@ -251,21 +271,33 @@ def video_merge(
         transition_duration: Duration of each transition in seconds.
     """
     if transition is not None and transition not in VALID_XFADE_TRANSITIONS:
-        return _error_result(MCPVideoError(
-            f"Invalid transition '{transition}'. Must be one of: {', '.join(sorted(VALID_XFADE_TRANSITIONS))}",
-            error_type="validation_error",
-            code="invalid_parameter",
-        ))
+        return _error_result(
+            MCPVideoError(
+                f"Invalid transition '{transition}'. Must be one of: {', '.join(sorted(VALID_XFADE_TRANSITIONS))}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
     if transitions is not None:
         invalid = [t for t in transitions if t not in VALID_XFADE_TRANSITIONS]
         if invalid:
-            return _error_result(MCPVideoError(
-                f"Invalid transition(s): {', '.join(invalid)}. Must be one of: {', '.join(sorted(VALID_XFADE_TRANSITIONS))}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            ))
+            return _error_result(
+                MCPVideoError(
+                    f"Invalid transition(s): {', '.join(invalid)}. Must be one of: {', '.join(sorted(VALID_XFADE_TRANSITIONS))}",
+                    error_type="validation_error",
+                    code="invalid_parameter",
+                )
+            )
     try:
-        return _result(merge(clips, output_path=output_path, transition=transition, transitions=transitions, transition_duration=transition_duration))
+        return _result(
+            merge(
+                clips,
+                output_path=output_path,
+                transition=transition,
+                transitions=transitions,
+                transition_duration=transition_duration,
+            )
+        )
     except MCPVideoError as e:
         return _error_result(e)
     except Exception as e:
@@ -304,22 +336,38 @@ def video_add_text(
         preset: Override FFmpeg encoding preset (ultrafast, fast, medium, slow, veryslow).
     """
     if crf is not None and not (0 <= crf <= 51):
-        return _error_result(MCPVideoError(f"crf must be 0-51, got {crf}", error_type="validation_error", code="invalid_parameter"))
+        return _error_result(
+            MCPVideoError(f"crf must be 0-51, got {crf}", error_type="validation_error", code="invalid_parameter")
+        )
     if preset is not None and preset not in VALID_PRESETS:
-        return _error_result(MCPVideoError(f"Invalid preset: {preset}", error_type="validation_error", code="invalid_parameter"))
+        return _error_result(
+            MCPVideoError(f"Invalid preset: {preset}", error_type="validation_error", code="invalid_parameter")
+        )
     try:
         if size < 8 or size > 500:
-            return _error_result(MCPVideoError(
-                f"Font size must be between 8 and 500, got {size}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            ))
-        return _result(add_text(
-            input_path, text=text, position=position, font=font,
-            size=size, color=color, shadow=shadow,
-            start_time=start_time, duration=duration,
-            output_path=output_path, crf=crf, preset=preset,
-        ))
+            return _error_result(
+                MCPVideoError(
+                    f"Font size must be between 8 and 500, got {size}",
+                    error_type="validation_error",
+                    code="invalid_parameter",
+                )
+            )
+        return _result(
+            add_text(
+                input_path,
+                text=text,
+                position=position,
+                font=font,
+                size=size,
+                color=color,
+                shadow=shadow,
+                start_time=start_time,
+                duration=duration,
+                output_path=output_path,
+                crf=crf,
+                preset=preset,
+            )
+        )
     except MCPVideoError as e:
         return _error_result(e)
     except Exception as e:
@@ -351,33 +399,45 @@ def video_add_audio(
     """
     try:
         if not 0 <= volume <= 2.0:
-            return _error_result(MCPVideoError(
-                f"volume must be between 0.0 and 2.0, got {volume}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            ))
+            return _error_result(
+                MCPVideoError(
+                    f"volume must be between 0.0 and 2.0, got {volume}",
+                    error_type="validation_error",
+                    code="invalid_parameter",
+                )
+            )
         if fade_in is not None and fade_in < 0:
-            return _error_result(MCPVideoError(
-                f"fade_in must be non-negative, got {fade_in}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            ))
+            return _error_result(
+                MCPVideoError(
+                    f"fade_in must be non-negative, got {fade_in}",
+                    error_type="validation_error",
+                    code="invalid_parameter",
+                )
+            )
         if fade_out is not None and fade_out < 0:
-            return _error_result(MCPVideoError(
-                f"fade_out must be non-negative, got {fade_out}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            ))
-        return _result(add_audio(
-            video_path, audio_path=audio_path, volume=volume,
-            fade_in=fade_in, fade_out=fade_out, mix=mix,
-            start_time=start_time, output_path=output_path,
-        ))
+            return _error_result(
+                MCPVideoError(
+                    f"fade_out must be non-negative, got {fade_out}",
+                    error_type="validation_error",
+                    code="invalid_parameter",
+                )
+            )
+        return _result(
+            add_audio(
+                video_path,
+                audio_path=audio_path,
+                volume=volume,
+                fade_in=fade_in,
+                fade_out=fade_out,
+                mix=mix,
+                start_time=start_time,
+                output_path=output_path,
+            )
+        )
     except MCPVideoError as e:
         return _error_result(e)
     except Exception as e:
         return _error_result(e)
-
 
 
 @mcp.tool()
@@ -400,35 +460,48 @@ def video_resize(
         output_path: Where to save the output. Auto-generated if omitted.
     """
     if width is not None and width > MAX_RESOLUTION:
-        return _error_result(MCPVideoError(
-            f"Width {width} exceeds maximum resolution of {MAX_RESOLUTION}",
-            error_type="validation_error",
-            code="resolution_too_high",
-        ))
+        return _error_result(
+            MCPVideoError(
+                f"Width {width} exceeds maximum resolution of {MAX_RESOLUTION}",
+                error_type="validation_error",
+                code="resolution_too_high",
+            )
+        )
     if width is not None and width <= 0:
-        return _error_result(MCPVideoError(
-            f"Width must be positive, got {width}",
-            error_type="validation_error",
-            code="invalid_parameter",
-        ))
+        return _error_result(
+            MCPVideoError(
+                f"Width must be positive, got {width}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
     if height is not None and height > MAX_RESOLUTION:
-        return _error_result(MCPVideoError(
-            f"Height {height} exceeds maximum resolution of {MAX_RESOLUTION}",
-            error_type="validation_error",
-            code="resolution_too_high",
-        ))
+        return _error_result(
+            MCPVideoError(
+                f"Height {height} exceeds maximum resolution of {MAX_RESOLUTION}",
+                error_type="validation_error",
+                code="resolution_too_high",
+            )
+        )
     if height is not None and height <= 0:
-        return _error_result(MCPVideoError(
-            f"Height must be positive, got {height}",
-            error_type="validation_error",
-            code="invalid_parameter",
-        ))
+        return _error_result(
+            MCPVideoError(
+                f"Height must be positive, got {height}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
     try:
-        return _result(resize(
-            input_path, width=width, height=height,
-            aspect_ratio=aspect_ratio, quality=quality,
-            output_path=output_path,
-        ))
+        return _result(
+            resize(
+                input_path,
+                width=width,
+                height=height,
+                aspect_ratio=aspect_ratio,
+                quality=quality,
+                output_path=output_path,
+            )
+        )
     except MCPVideoError as e:
         return _error_result(e)
     except Exception as e:
@@ -451,12 +524,22 @@ def video_convert(
         output_path: Where to save the output. Auto-generated if omitted.
     """
     if format not in VALID_FORMATS:
-        return _error_result(MCPVideoError(f"Invalid format: {format}. Must be one of {sorted(VALID_FORMATS)}", error_type="validation_error", code="invalid_parameter"))
+        return _error_result(
+            MCPVideoError(
+                f"Invalid format: {format}. Must be one of {sorted(VALID_FORMATS)}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
     try:
-        return _result(convert(
-            input_path, format=format, quality=quality,
-            output_path=output_path,
-        ))
+        return _result(
+            convert(
+                input_path,
+                format=format,
+                quality=quality,
+                output_path=output_path,
+            )
+        )
     except MCPVideoError as e:
         return _error_result(e)
     except Exception as e:
@@ -477,11 +560,13 @@ def video_speed(
         output_path: Where to save the output. Auto-generated if omitted.
     """
     if not (MIN_SPEED_FACTOR <= factor <= MAX_SPEED_FACTOR):
-        return _error_result(MCPVideoError(
-            f"Speed factor {factor} out of range [{MIN_SPEED_FACTOR}, {MAX_SPEED_FACTOR}]",
-            error_type="validation_error",
-            code="speed_out_of_range",
-        ))
+        return _error_result(
+            MCPVideoError(
+                f"Speed factor {factor} out of range [{MIN_SPEED_FACTOR}, {MAX_SPEED_FACTOR}]",
+                error_type="validation_error",
+                code="speed_out_of_range",
+            )
+        )
     try:
         return _result(speed(input_path, factor=factor, output_path=output_path))
     except MCPVideoError as e:
@@ -527,17 +612,21 @@ def video_preview(
     try:
         MAX_SCALE_FACTOR = 16
         if scale_factor < 2:
-            return _error_result(MCPVideoError(
-                f"scale_factor must be at least 2, got {scale_factor}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            ))
+            return _error_result(
+                MCPVideoError(
+                    f"scale_factor must be at least 2, got {scale_factor}",
+                    error_type="validation_error",
+                    code="invalid_parameter",
+                )
+            )
         if scale_factor > MAX_SCALE_FACTOR:
-            return _error_result(MCPVideoError(
-                f"scale_factor must be at most {MAX_SCALE_FACTOR}, got {scale_factor}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            ))
+            return _error_result(
+                MCPVideoError(
+                    f"scale_factor must be at most {MAX_SCALE_FACTOR}, got {scale_factor}",
+                    error_type="validation_error",
+                    code="invalid_parameter",
+                )
+            )
         return _result(preview(input_path, output_path=output_path, scale_factor=scale_factor))
     except MCPVideoError as e:
         return _error_result(e)
@@ -561,11 +650,13 @@ def video_storyboard(
     try:
         MAX_FRAME_COUNT = 100
         if frame_count is not None and (frame_count < 1 or frame_count > MAX_FRAME_COUNT):
-            return _error_result(MCPVideoError(
-                f"frame_count must be between 1 and {MAX_FRAME_COUNT}, got {frame_count}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            ))
+            return _error_result(
+                MCPVideoError(
+                    f"frame_count must be between 1 and {MAX_FRAME_COUNT}, got {frame_count}",
+                    error_type="validation_error",
+                    code="invalid_parameter",
+                )
+            )
         return _result(storyboard(input_path, output_dir=output_dir, frame_count=frame_count))
     except MCPVideoError as e:
         return _error_result(e)
@@ -618,27 +709,42 @@ def video_watermark(
         preset: Override FFmpeg encoding preset (ultrafast, fast, medium, slow, veryslow).
     """
     if not 0 <= opacity <= 1:
-        return _error_result(MCPVideoError(
-            f"opacity must be between 0 and 1, got {opacity}",
-            error_type="validation_error",
-            code="invalid_parameter",
-        ))
+        return _error_result(
+            MCPVideoError(
+                f"opacity must be between 0 and 1, got {opacity}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
     if margin < 0:
-        return _error_result(MCPVideoError(
-            f"margin must be non-negative, got {margin}",
-            error_type="validation_error",
-            code="invalid_parameter",
-        ))
+        return _error_result(
+            MCPVideoError(
+                f"margin must be non-negative, got {margin}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
     if crf is not None and not (0 <= crf <= 51):
-        return _error_result(MCPVideoError(f"crf must be 0-51, got {crf}", error_type="validation_error", code="invalid_parameter"))
+        return _error_result(
+            MCPVideoError(f"crf must be 0-51, got {crf}", error_type="validation_error", code="invalid_parameter")
+        )
     if preset is not None and preset not in VALID_PRESETS:
-        return _error_result(MCPVideoError(f"Invalid preset: {preset}", error_type="validation_error", code="invalid_parameter"))
+        return _error_result(
+            MCPVideoError(f"Invalid preset: {preset}", error_type="validation_error", code="invalid_parameter")
+        )
     try:
-        return _result(watermark(
-            input_path, image_path=image_path, position=position,
-            opacity=opacity, margin=margin, output_path=output_path,
-            crf=crf, preset=preset,
-        ))
+        return _result(
+            watermark(
+                input_path,
+                image_path=image_path,
+                position=position,
+                opacity=opacity,
+                margin=margin,
+                output_path=output_path,
+                crf=crf,
+                preset=preset,
+            )
+        )
     except MCPVideoError as e:
         return _error_result(e)
     except Exception as e:
@@ -661,12 +767,22 @@ def video_export(
         format: Output format (mp4, webm, gif, mov).
     """
     if format not in VALID_FORMATS:
-        return _error_result(MCPVideoError(f"Invalid format: {format}. Must be one of {sorted(VALID_FORMATS)}", error_type="validation_error", code="invalid_parameter"))
+        return _error_result(
+            MCPVideoError(
+                f"Invalid format: {format}. Must be one of {sorted(VALID_FORMATS)}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
     try:
-        return _result(export_video(
-            input_path, output_path=output_path,
-            quality=quality, format=format,
-        ))
+        return _result(
+            export_video(
+                input_path,
+                output_path=output_path,
+                quality=quality,
+                format=format,
+            )
+        )
     except MCPVideoError as e:
         return _error_result(e)
     except Exception as e:
@@ -718,7 +834,15 @@ def video_rotate(
         output_path: Where to save the output. Auto-generated if omitted.
     """
     try:
-        return _result(rotate(input_path, angle=angle, flip_horizontal=flip_horizontal, flip_vertical=flip_vertical, output_path=output_path))
+        return _result(
+            rotate(
+                input_path,
+                angle=angle,
+                flip_horizontal=flip_horizontal,
+                flip_vertical=flip_vertical,
+                output_path=output_path,
+            )
+        )
     except MCPVideoError as e:
         return _error_result(e)
     except Exception as e:
@@ -745,26 +869,40 @@ def video_fade(
         preset: Override FFmpeg encoding preset (ultrafast, fast, medium, slow, veryslow).
     """
     if crf is not None and not (0 <= crf <= 51):
-        return _error_result(MCPVideoError(f"crf must be 0-51, got {crf}", error_type="validation_error", code="invalid_parameter"))
+        return _error_result(
+            MCPVideoError(f"crf must be 0-51, got {crf}", error_type="validation_error", code="invalid_parameter")
+        )
     if preset is not None and preset not in VALID_PRESETS:
-        return _error_result(MCPVideoError(f"Invalid preset: {preset}", error_type="validation_error", code="invalid_parameter"))
+        return _error_result(
+            MCPVideoError(f"Invalid preset: {preset}", error_type="validation_error", code="invalid_parameter")
+        )
     try:
         if fade_in < 0:
-            return _error_result(MCPVideoError(
-                f"fade_in must be non-negative, got {fade_in}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            ))
+            return _error_result(
+                MCPVideoError(
+                    f"fade_in must be non-negative, got {fade_in}",
+                    error_type="validation_error",
+                    code="invalid_parameter",
+                )
+            )
         if fade_out < 0:
-            return _error_result(MCPVideoError(
-                f"fade_out must be non-negative, got {fade_out}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            ))
-        return _result(fade(
-            input_path, fade_in=fade_in, fade_out=fade_out,
-            output_path=output_path, crf=crf, preset=preset,
-        ))
+            return _error_result(
+                MCPVideoError(
+                    f"fade_out must be non-negative, got {fade_out}",
+                    error_type="validation_error",
+                    code="invalid_parameter",
+                )
+            )
+        return _result(
+            fade(
+                input_path,
+                fade_in=fade_in,
+                fade_out=fade_out,
+                output_path=output_path,
+                crf=crf,
+                preset=preset,
+            )
+        )
     except MCPVideoError as e:
         return _error_result(e)
     except Exception as e:
@@ -810,15 +948,23 @@ def video_extract_audio(
         format: Audio format (mp3, aac, wav, ogg, flac).
     """
     if format not in VALID_AUDIO_FORMATS:
-        return _error_result(MCPVideoError(f"Invalid audio format: {format}. Must be one of {sorted(VALID_AUDIO_FORMATS)}", error_type="validation_error", code="invalid_parameter"))
+        return _error_result(
+            MCPVideoError(
+                f"Invalid audio format: {format}. Must be one of {sorted(VALID_AUDIO_FORMATS)}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
     try:
         result = extract_audio(input_path, output_path=output_path, format=format)
         if not os.path.isfile(result):
-            return _error_result(MCPVideoError(
-                f"Audio extraction completed but output file not found: {result}",
-                error_type="processing_error",
-                code="missing_output",
-            ))
+            return _error_result(
+                MCPVideoError(
+                    f"Audio extraction completed but output file not found: {result}",
+                    error_type="processing_error",
+                    code="missing_output",
+                )
+            )
         size_mb = os.path.getsize(result) / (1024 * 1024)
         return {
             "success": True,
@@ -830,11 +976,13 @@ def video_extract_audio(
     except MCPVideoError as e:
         return _error_result(e)
     except OSError as e:
-        return _error_result(MCPVideoError(
-            f"File error during audio extraction: {e}",
-            error_type="processing_error",
-            code="file_error",
-        ))
+        return _error_result(
+            MCPVideoError(
+                f"File error during audio extraction: {e}",
+                error_type="processing_error",
+                code="file_error",
+            )
+        )
     except Exception as e:
         return _error_result(e)
 
@@ -859,14 +1007,24 @@ def video_filter(
         preset: Override FFmpeg encoding preset (ultrafast, fast, medium, slow, veryslow).
     """
     if crf is not None and not (0 <= crf <= 51):
-        return _error_result(MCPVideoError(f"crf must be 0-51, got {crf}", error_type="validation_error", code="invalid_parameter"))
+        return _error_result(
+            MCPVideoError(f"crf must be 0-51, got {crf}", error_type="validation_error", code="invalid_parameter")
+        )
     if preset is not None and preset not in VALID_PRESETS:
-        return _error_result(MCPVideoError(f"Invalid preset: {preset}", error_type="validation_error", code="invalid_parameter"))
+        return _error_result(
+            MCPVideoError(f"Invalid preset: {preset}", error_type="validation_error", code="invalid_parameter")
+        )
     try:
-        return _result(apply_filter(
-            input_path, filter_type=filter_type, params=params,
-            output_path=output_path, crf=crf, preset=preset,
-        ))
+        return _result(
+            apply_filter(
+                input_path,
+                filter_type=filter_type,
+                params=params,
+                output_path=output_path,
+                crf=crf,
+                preset=preset,
+            )
+        )
     except MCPVideoError as e:
         return _error_result(e)
     except Exception as e:
@@ -911,23 +1069,29 @@ def video_chroma_key(
     """
     # Validate color doesn't contain FFmpeg filter injection characters
     if any(c in color for c in (":", "]", "[", ";", "\x00")):
-        return _error_result(MCPVideoError(
-            f"Invalid color value containing forbidden characters: {color}",
-            error_type="validation_error",
-            code="invalid_parameter",
-        ))
+        return _error_result(
+            MCPVideoError(
+                f"Invalid color value containing forbidden characters: {color}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
     if not 0 <= similarity <= 1:
-        return _error_result(MCPVideoError(
-            f"similarity must be between 0 and 1, got {similarity}",
-            error_type="validation_error",
-            code="invalid_parameter",
-        ))
+        return _error_result(
+            MCPVideoError(
+                f"similarity must be between 0 and 1, got {similarity}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
     if not 0 <= blend <= 1:
-        return _error_result(MCPVideoError(
-            f"blend must be between 0 and 1, got {blend}",
-            error_type="validation_error",
-            code="invalid_parameter",
-        ))
+        return _error_result(
+            MCPVideoError(
+                f"blend must be between 0 and 1, got {blend}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
     try:
         return _result(chroma_key(input_path, color=color, similarity=similarity, blend=blend, output_path=output_path))
     except MCPVideoError as e:
@@ -952,11 +1116,14 @@ def video_blur(
         output_path: Where to save the output. Auto-generated if omitted.
     """
     try:
-        return _result(apply_filter(
-            input_path, filter_type="blur",
-            params={"radius": radius, "strength": strength},
-            output_path=output_path,
-        ))
+        return _result(
+            apply_filter(
+                input_path,
+                filter_type="blur",
+                params={"radius": radius, "strength": strength},
+                output_path=output_path,
+            )
+        )
     except MCPVideoError as e:
         return _error_result(e)
     except Exception as e:
@@ -977,11 +1144,14 @@ def video_color_grade(
         output_path: Where to save the output. Auto-generated if omitted.
     """
     try:
-        return _result(apply_filter(
-            input_path, filter_type="color_preset",
-            params={"preset": preset},
-            output_path=output_path,
-        ))
+        return _result(
+            apply_filter(
+                input_path,
+                filter_type="color_preset",
+                params={"preset": preset},
+                output_path=output_path,
+            )
+        )
     except MCPVideoError as e:
         return _error_result(e)
     except Exception as e:
@@ -1005,11 +1175,13 @@ def video_normalize_audio(
     """
     try:
         if not -70 <= target_lufs <= -5:
-            return _error_result(MCPVideoError(
-                f"target_lufs must be between -70 and -5, got {target_lufs}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            ))
+            return _error_result(
+                MCPVideoError(
+                    f"target_lufs must be between -70 and -5, got {target_lufs}",
+                    error_type="validation_error",
+                    code="invalid_parameter",
+                )
+            )
         return _result(normalize_audio(input_path, target_lufs=target_lufs, output_path=output_path))
     except MCPVideoError as e:
         return _error_result(e)
@@ -1047,34 +1219,53 @@ def video_overlay(
         preset: Override FFmpeg encoding preset (ultrafast, fast, medium, slow, veryslow).
     """
     if width is not None and width <= 0:
-        return _error_result(MCPVideoError(
-            f"width must be positive, got {width}",
-            error_type="validation_error",
-            code="invalid_parameter",
-        ))
-    if height is not None and height <= 0:
-        return _error_result(MCPVideoError(
-            f"height must be positive, got {height}",
-            error_type="validation_error",
-            code="invalid_parameter",
-        ))
-    if crf is not None and not (0 <= crf <= 51):
-        return _error_result(MCPVideoError(f"crf must be 0-51, got {crf}", error_type="validation_error", code="invalid_parameter"))
-    if preset is not None and preset not in VALID_PRESETS:
-        return _error_result(MCPVideoError(f"Invalid preset: {preset}", error_type="validation_error", code="invalid_parameter"))
-    try:
-        if not 0 <= opacity <= 1:
-            return _error_result(MCPVideoError(
-                f"opacity must be between 0 and 1, got {opacity}",
+        return _error_result(
+            MCPVideoError(
+                f"width must be positive, got {width}",
                 error_type="validation_error",
                 code="invalid_parameter",
-            ))
-        return _result(overlay_video(
-            background_path, overlay_path=overlay_path, position=position,
-            width=width, height=height, opacity=opacity,
-            start_time=start_time, duration=duration,
-            output_path=output_path, crf=crf, preset=preset,
-        ))
+            )
+        )
+    if height is not None and height <= 0:
+        return _error_result(
+            MCPVideoError(
+                f"height must be positive, got {height}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
+    if crf is not None and not (0 <= crf <= 51):
+        return _error_result(
+            MCPVideoError(f"crf must be 0-51, got {crf}", error_type="validation_error", code="invalid_parameter")
+        )
+    if preset is not None and preset not in VALID_PRESETS:
+        return _error_result(
+            MCPVideoError(f"Invalid preset: {preset}", error_type="validation_error", code="invalid_parameter")
+        )
+    try:
+        if not 0 <= opacity <= 1:
+            return _error_result(
+                MCPVideoError(
+                    f"opacity must be between 0 and 1, got {opacity}",
+                    error_type="validation_error",
+                    code="invalid_parameter",
+                )
+            )
+        return _result(
+            overlay_video(
+                background_path,
+                overlay_path=overlay_path,
+                position=position,
+                width=width,
+                height=height,
+                opacity=opacity,
+                start_time=start_time,
+                duration=duration,
+                output_path=output_path,
+                crf=crf,
+                preset=preset,
+            )
+        )
     except MCPVideoError as e:
         return _error_result(e)
     except Exception as e:
@@ -1097,11 +1288,13 @@ def video_split_screen(
         output_path: Where to save the output. Auto-generated if omitted.
     """
     if layout not in VALID_LAYOUTS:
-        return _error_result(MCPVideoError(
-            f"Invalid layout: must be one of {sorted(VALID_LAYOUTS)}, got '{layout}'",
-            error_type="validation_error",
-            code="invalid_parameter",
-        ))
+        return _error_result(
+            MCPVideoError(
+                f"Invalid layout: must be one of {sorted(VALID_LAYOUTS)}, got '{layout}'",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
     try:
         return _result(split_screen(left_path, right_path=right_path, layout=layout, output_path=output_path))
     except MCPVideoError as e:
@@ -1125,17 +1318,21 @@ def video_detect_scenes(
     """
     try:
         if not 0 <= threshold <= 1:
-            return _error_result(MCPVideoError(
-                f"threshold must be between 0 and 1, got {threshold}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            ))
+            return _error_result(
+                MCPVideoError(
+                    f"threshold must be between 0 and 1, got {threshold}",
+                    error_type="validation_error",
+                    code="invalid_parameter",
+                )
+            )
         if min_scene_duration <= 0:
-            return _error_result(MCPVideoError(
-                f"min_scene_duration must be positive, got {min_scene_duration}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            ))
+            return _error_result(
+                MCPVideoError(
+                    f"min_scene_duration must be positive, got {min_scene_duration}",
+                    error_type="validation_error",
+                    code="invalid_parameter",
+                )
+            )
         return _result(detect_scenes(input_path, threshold=threshold, min_scene_duration=min_scene_duration))
     except MCPVideoError as e:
         return _error_result(e)
@@ -1158,11 +1355,13 @@ def video_create_from_images(
     """
     try:
         if fps <= 0 or fps > MAX_EXPORT_FRAMES_FPS:
-            return _error_result(MCPVideoError(
-                f"fps must be between 1 and {MAX_EXPORT_FRAMES_FPS}, got {fps}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            ))
+            return _error_result(
+                MCPVideoError(
+                    f"fps must be between 1 and {MAX_EXPORT_FRAMES_FPS}, got {fps}",
+                    error_type="validation_error",
+                    code="invalid_parameter",
+                )
+            )
         return _result(create_from_images(images, output_path=output_path, fps=fps))
     except MCPVideoError as e:
         return _error_result(e)
@@ -1186,17 +1385,21 @@ def video_export_frames(
         format: Output image format (jpg or png, default jpg).
     """
     if fps <= 0:
-        return _error_result(MCPVideoError(
-            f"fps must be positive, got {fps}",
-            error_type="validation_error",
-            code="invalid_parameter",
-        ))
+        return _error_result(
+            MCPVideoError(
+                f"fps must be positive, got {fps}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
     if fps > MAX_EXPORT_FRAMES_FPS:
-        return _error_result(MCPVideoError(
-            f"FPS {fps} exceeds maximum of {MAX_EXPORT_FRAMES_FPS}",
-            error_type="validation_error",
-            code="fps_too_high",
-        ))
+        return _error_result(
+            MCPVideoError(
+                f"FPS {fps} exceeds maximum of {MAX_EXPORT_FRAMES_FPS}",
+                error_type="validation_error",
+                code="fps_too_high",
+            )
+        )
     try:
         return _result(export_frames(input_path, output_dir=output_dir, fps=fps, format=format))
     except MCPVideoError as e:
@@ -1219,11 +1422,13 @@ def video_generate_subtitles(
         burn: If True, burn subtitles into the video (default False).
     """
     if not isinstance(entries, list) or len(entries) == 0:
-        return _error_result(MCPVideoError(
-            "entries must be a non-empty list",
-            error_type="validation_error",
-            code="invalid_parameter",
-        ))
+        return _error_result(
+            MCPVideoError(
+                "entries must be a non-empty list",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
     try:
         return _result(generate_subtitles(entries, input_path, burn=burn))
     except MCPVideoError as e:
@@ -1308,17 +1513,21 @@ def video_stabilize(
     """
     try:
         if smoothing < 0:
-            return _error_result(MCPVideoError(
-                f"smoothing must be non-negative, got {smoothing}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            ))
+            return _error_result(
+                MCPVideoError(
+                    f"smoothing must be non-negative, got {smoothing}",
+                    error_type="validation_error",
+                    code="invalid_parameter",
+                )
+            )
         if zooming < 0:
-            return _error_result(MCPVideoError(
-                f"zooming must be non-negative, got {zooming}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            ))
+            return _error_result(
+                MCPVideoError(
+                    f"zooming must be non-negative, got {zooming}",
+                    error_type="validation_error",
+                    code="invalid_parameter",
+                )
+            )
         return _result(stabilize(input_path, smoothing=smoothing, zooming=zooming, output_path=output_path))
     except MCPVideoError as e:
         return _error_result(e)
@@ -1343,11 +1552,13 @@ def video_apply_mask(
     """
     try:
         if feather < 0:
-            return _error_result(MCPVideoError(
-                f"feather must be non-negative, got {feather}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            ))
+            return _error_result(
+                MCPVideoError(
+                    f"feather must be non-negative, got {feather}",
+                    error_type="validation_error",
+                    code="invalid_parameter",
+                )
+            )
         return _result(apply_mask(input_path, mask_path=mask_path, feather=feather, output_path=output_path))
     except MCPVideoError as e:
         return _error_result(e)
@@ -1368,11 +1579,13 @@ def video_audio_waveform(
     """
     try:
         if bins < 1 or bins > 1000:
-            return _error_result(MCPVideoError(
-                f"bins must be between 1 and 1000, got {bins}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            ))
+            return _error_result(
+                MCPVideoError(
+                    f"bins must be between 1 and 1000, got {bins}",
+                    error_type="validation_error",
+                    code="invalid_parameter",
+                )
+            )
         return _result(audio_waveform(input_path, bins=bins))
     except MCPVideoError as e:
         return _error_result(e)
@@ -1399,21 +1612,33 @@ def video_batch(
         output_dir: Directory for output files. Auto-generated if omitted.
     """
     VALID_BATCH_OPERATIONS = {
-        "trim", "resize", "convert", "filter", "blur", "color_grade",
-        "watermark", "speed", "fade", "normalize_audio",
+        "trim",
+        "resize",
+        "convert",
+        "filter",
+        "blur",
+        "color_grade",
+        "watermark",
+        "speed",
+        "fade",
+        "normalize_audio",
     }
     if operation not in VALID_BATCH_OPERATIONS:
-        return _error_result(MCPVideoError(
-            f"Unknown operation '{operation}'. Valid operations: {sorted(VALID_BATCH_OPERATIONS)}",
-            error_type="validation_error",
-            code="invalid_operation",
-        ))
+        return _error_result(
+            MCPVideoError(
+                f"Unknown operation '{operation}'. Valid operations: {sorted(VALID_BATCH_OPERATIONS)}",
+                error_type="validation_error",
+                code="invalid_operation",
+            )
+        )
     if len(inputs) > MAX_BATCH_SIZE:
-        return _error_result(MCPVideoError(
-            f"Batch size {len(inputs)} exceeds maximum of {MAX_BATCH_SIZE}",
-            error_type="validation_error",
-            code="batch_too_large",
-        ))
+        return _error_result(
+            MCPVideoError(
+                f"Batch size {len(inputs)} exceeds maximum of {MAX_BATCH_SIZE}",
+                error_type="validation_error",
+                code="batch_too_large",
+            )
+        )
     try:
         return _result(_video_batch(inputs, operation, params, output_dir))
     except MCPVideoError as e:
@@ -1447,6 +1672,7 @@ def video_extract_frame(
 # Image Analysis Tools
 # ---------------------------------------------------------------------------
 
+
 @mcp.tool()
 def image_extract_colors(
     image_path: str,
@@ -1463,6 +1689,7 @@ def image_extract_colors(
     """
     try:
         from .image_engine import extract_colors
+
         return _result(extract_colors(image_path, n_colors=n_colors))
     except MCPVideoError as e:
         return _error_result(e)
@@ -1488,6 +1715,7 @@ def image_generate_palette(
     """
     try:
         from .image_engine import generate_palette
+
         return _result(generate_palette(image_path, harmony=harmony, n_colors=n_colors))
     except MCPVideoError as e:
         return _error_result(e)
@@ -1513,6 +1741,7 @@ def image_analyze_product(
     """
     try:
         from .image_engine import analyze_product
+
         return _result(analyze_product(image_path, use_ai=use_ai, n_colors=n_colors))
     except MCPVideoError as e:
         return _error_result(e)
@@ -1523,6 +1752,7 @@ def image_analyze_product(
 # ---------------------------------------------------------------------------
 # Remotion Integration Tools
 # ---------------------------------------------------------------------------
+
 
 @mcp.tool()
 def remotion_render(
@@ -1556,20 +1786,70 @@ def remotion_render(
         scale: Render scale factor.
     """
     if codec not in VALID_CODECS:
-        return _error_result(MCPVideoError(f"Invalid codec: must be one of {sorted(VALID_CODECS)}, got '{codec}'", error_type="validation_error", code="invalid_parameter"))
+        return _error_result(
+            MCPVideoError(
+                f"Invalid codec: must be one of {sorted(VALID_CODECS)}, got '{codec}'",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
     if width is not None and (width < 1 or width > MAX_RESOLUTION):
-        return _error_result(MCPVideoError(f"Invalid width: must be 1-{MAX_RESOLUTION}, got {width}", error_type="validation_error", code="invalid_parameter"))
+        return _error_result(
+            MCPVideoError(
+                f"Invalid width: must be 1-{MAX_RESOLUTION}, got {width}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
     if height is not None and (height < 1 or height > MAX_RESOLUTION):
-        return _error_result(MCPVideoError(f"Invalid height: must be 1-{MAX_RESOLUTION}, got {height}", error_type="validation_error", code="invalid_parameter"))
+        return _error_result(
+            MCPVideoError(
+                f"Invalid height: must be 1-{MAX_RESOLUTION}, got {height}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
     if concurrency is not None and (concurrency < 1 or concurrency > MAX_CONCURRENCY):
-        return _error_result(MCPVideoError(f"Invalid concurrency: must be 1-{MAX_CONCURRENCY}, got {concurrency}", error_type="validation_error", code="invalid_parameter"))
+        return _error_result(
+            MCPVideoError(
+                f"Invalid concurrency: must be 1-{MAX_CONCURRENCY}, got {concurrency}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
     if scale is not None and scale <= 0:
-        return _error_result(MCPVideoError(f"Invalid scale: must be > 0, got {scale}", error_type="validation_error", code="invalid_parameter"))
+        return _error_result(
+            MCPVideoError(
+                f"Invalid scale: must be > 0, got {scale}", error_type="validation_error", code="invalid_parameter"
+            )
+        )
     if crf is not None and (crf < MIN_CRF or crf > MAX_CRF):
-        return _error_result(MCPVideoError(f"Invalid crf: must be {MIN_CRF}-{MAX_CRF}, got {crf}", error_type="validation_error", code="invalid_parameter"))
+        return _error_result(
+            MCPVideoError(
+                f"Invalid crf: must be {MIN_CRF}-{MAX_CRF}, got {crf}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
     try:
         from .remotion_engine import render
-        return _result(render(project_path, composition_id, output_path=output_path, codec=codec, crf=crf, width=width, height=height, fps=fps, concurrency=concurrency, frames=frames, props=props, scale=scale))
+
+        return _result(
+            render(
+                project_path,
+                composition_id,
+                output_path=output_path,
+                codec=codec,
+                crf=crf,
+                width=width,
+                height=height,
+                fps=fps,
+                concurrency=concurrency,
+                frames=frames,
+                props=props,
+                scale=scale,
+            )
+        )
     except MCPVideoError as e:
         return _error_result(e)
     except Exception as e:
@@ -1587,6 +1867,7 @@ def remotion_compositions(
     """
     try:
         from .remotion_engine import compositions
+
         return _result(compositions(project_path))
     except MCPVideoError as e:
         return _error_result(e)
@@ -1606,9 +1887,16 @@ def remotion_studio(
         port: Port for the studio server (default 3000).
     """
     if port < MIN_PORT or port > MAX_PORT:
-        return _error_result(MCPVideoError(f"Invalid port: must be {MIN_PORT}-{MAX_PORT}, got {port}", error_type="validation_error", code="invalid_parameter"))
+        return _error_result(
+            MCPVideoError(
+                f"Invalid port: must be {MIN_PORT}-{MAX_PORT}, got {port}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
     try:
         from .remotion_engine import studio
+
         return _result(studio(project_path, port=port))
     except MCPVideoError as e:
         return _error_result(e)
@@ -1635,7 +1923,10 @@ def remotion_still(
     """
     try:
         from .remotion_engine import still
-        return _result(still(project_path, composition_id, output_path=output_path, frame=frame, image_format=image_format))
+
+        return _result(
+            still(project_path, composition_id, output_path=output_path, frame=frame, image_format=image_format)
+        )
     except MCPVideoError as e:
         return _error_result(e)
     except Exception as e:
@@ -1656,11 +1947,22 @@ def remotion_create_project(
         template: Project template (blank, hello-world). Default blank.
     """
     if not re.match(r"^[a-zA-Z0-9_-]+$", name):
-        return _error_result(MCPVideoError("Invalid name: must match ^[a-zA-Z0-9_-]+$", error_type="validation_error", code="invalid_parameter"))
+        return _error_result(
+            MCPVideoError(
+                "Invalid name: must match ^[a-zA-Z0-9_-]+$", error_type="validation_error", code="invalid_parameter"
+            )
+        )
     if template not in VALID_REMOTION_TEMPLATES:
-        return _error_result(MCPVideoError(f"Invalid template: must be one of {sorted(VALID_REMOTION_TEMPLATES)}, got '{template}'", error_type="validation_error", code="invalid_parameter"))
+        return _error_result(
+            MCPVideoError(
+                f"Invalid template: must be one of {sorted(VALID_REMOTION_TEMPLATES)}, got '{template}'",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
     try:
         from .remotion_engine import create_project
+
         return _result(create_project(name, output_dir=output_dir, template=template))
     except MCPVideoError as e:
         return _error_result(e)
@@ -1682,9 +1984,14 @@ def remotion_scaffold_template(
         slug: Slug for the composition (used for filenames and component naming).
     """
     if not re.match(r"^[a-zA-Z0-9_-]+$", slug):
-        return _error_result(MCPVideoError("Invalid slug: must match ^[a-zA-Z0-9_-]+$", error_type="validation_error", code="invalid_parameter"))
+        return _error_result(
+            MCPVideoError(
+                "Invalid slug: must match ^[a-zA-Z0-9_-]+$", error_type="validation_error", code="invalid_parameter"
+            )
+        )
     try:
         from .remotion_engine import scaffold_template
+
         return _result(scaffold_template(project_path, spec, slug))
     except MCPVideoError as e:
         return _error_result(e)
@@ -1705,6 +2012,7 @@ def remotion_validate(
     """
     try:
         from .remotion_engine import validate
+
         return _result(validate(project_path, composition_id=composition_id))
     except MCPVideoError as e:
         return _error_result(e)
@@ -1729,9 +2037,16 @@ def remotion_to_mcpvideo(
         output_path: Where to save the final output. Auto-generated if omitted.
     """
     if not isinstance(post_process, list) or len(post_process) < 1:
-        return _error_result(MCPVideoError("Invalid post_process: must be a non-empty list", error_type="validation_error", code="invalid_parameter"))
+        return _error_result(
+            MCPVideoError(
+                "Invalid post_process: must be a non-empty list",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
     try:
         from .remotion_engine import render_and_post
+
         return _result(render_and_post(project_path, composition_id, post_process, output_path=output_path))
     except MCPVideoError as e:
         return _error_result(e)
@@ -1742,6 +2057,7 @@ def remotion_to_mcpvideo(
 # ---------------------------------------------------------------------------
 # Audio Synthesis Tools (P1 Features)
 # ---------------------------------------------------------------------------
+
 
 @mcp.tool()
 def audio_synthesize(
@@ -1774,23 +2090,48 @@ def audio_synthesize(
         Dict with success status and output_path.
     """
     if waveform not in VALID_WAVEFORMS:
-        return _error_result(MCPVideoError(f"Invalid waveform: must be one of {sorted(VALID_WAVEFORMS)}, got '{waveform}'", error_type="validation_error", code="invalid_parameter"))
+        return _error_result(
+            MCPVideoError(
+                f"Invalid waveform: must be one of {sorted(VALID_WAVEFORMS)}, got '{waveform}'",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
     if frequency < MIN_FREQUENCY or frequency > MAX_FREQUENCY:
-        return _error_result(MCPVideoError(f"Invalid frequency: must be {MIN_FREQUENCY}-{MAX_FREQUENCY}, got {frequency}", error_type="validation_error", code="invalid_parameter"))
+        return _error_result(
+            MCPVideoError(
+                f"Invalid frequency: must be {MIN_FREQUENCY}-{MAX_FREQUENCY}, got {frequency}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
     if duration <= 0:
-        return _error_result(MCPVideoError(f"Invalid duration: must be > 0, got {duration}", error_type="validation_error", code="invalid_parameter"))
+        return _error_result(
+            MCPVideoError(
+                f"Invalid duration: must be > 0, got {duration}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
     if volume < 0 or volume > 1:
-        return _error_result(MCPVideoError(f"Invalid volume: must be 0-1, got {volume}", error_type="validation_error", code="invalid_parameter"))
+        return _error_result(
+            MCPVideoError(
+                f"Invalid volume: must be 0-1, got {volume}", error_type="validation_error", code="invalid_parameter"
+            )
+        )
     try:
         from .audio_engine import audio_synthesize as _synth
-        return _result(_synth(
-            output=output_path,
-            waveform=waveform,
-            frequency=frequency,
-            duration=duration,
-            volume=volume,
-            effects=effects,
-        ))
+
+        return _result(
+            _synth(
+                output=output_path,
+                waveform=waveform,
+                frequency=frequency,
+                duration=duration,
+                volume=volume,
+                effects=effects,
+            )
+        )
     except MCPVideoError as e:
         return _error_result(e)
     except Exception as e:
@@ -1826,22 +2167,49 @@ def audio_preset(
         Dict with success status and output_path.
     """
     if preset not in VALID_AUDIO_PRESETS:
-        return _error_result(MCPVideoError(f"Invalid preset: must be one of {sorted(VALID_AUDIO_PRESETS)}, got '{preset}'", error_type="validation_error", code="invalid_parameter"))
+        return _error_result(
+            MCPVideoError(
+                f"Invalid preset: must be one of {sorted(VALID_AUDIO_PRESETS)}, got '{preset}'",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
     if pitch not in {"low", "mid", "high"}:
-        return _error_result(MCPVideoError(f"Invalid pitch: must be one of ['high', 'low', 'mid'], got '{pitch}'", error_type="validation_error", code="invalid_parameter"))
+        return _error_result(
+            MCPVideoError(
+                f"Invalid pitch: must be one of ['high', 'low', 'mid'], got '{pitch}'",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
     if intensity < 0 or intensity > 1:
-        return _error_result(MCPVideoError(f"Invalid intensity: must be 0-1, got {intensity}", error_type="validation_error", code="invalid_parameter"))
+        return _error_result(
+            MCPVideoError(
+                f"Invalid intensity: must be 0-1, got {intensity}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
     if duration is not None and duration <= 0:
-        return _error_result(MCPVideoError(f"Invalid duration: must be > 0, got {duration}", error_type="validation_error", code="invalid_parameter"))
+        return _error_result(
+            MCPVideoError(
+                f"Invalid duration: must be > 0, got {duration}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
     try:
         from .audio_engine import audio_preset as _preset
-        return _result(_preset(
-            preset=preset,
-            output=output_path,
-            pitch=pitch,
-            duration=duration,
-            intensity=intensity,
-        ))
+
+        return _result(
+            _preset(
+                preset=preset,
+                output=output_path,
+                pitch=pitch,
+                duration=duration,
+                intensity=intensity,
+            )
+        )
     except MCPVideoError as e:
         return _error_result(e)
     except Exception as e:
@@ -1872,21 +2240,48 @@ def audio_sequence(
         Dict with success status and output_path.
     """
     if not isinstance(sequence, list) or len(sequence) < 1:
-        return _error_result(MCPVideoError("Invalid sequence: must be a non-empty list", error_type="validation_error", code="invalid_parameter"))
+        return _error_result(
+            MCPVideoError(
+                "Invalid sequence: must be a non-empty list", error_type="validation_error", code="invalid_parameter"
+            )
+        )
     for i, event in enumerate(sequence):
         if not isinstance(event, dict):
-            return _error_result(MCPVideoError(f"Invalid sequence[{i}]: must be a dict", error_type="validation_error", code="invalid_parameter"))
+            return _error_result(
+                MCPVideoError(
+                    f"Invalid sequence[{i}]: must be a dict", error_type="validation_error", code="invalid_parameter"
+                )
+            )
         evt_type = event.get("type")
         if evt_type not in VALID_AUDIO_SEQUENCE_TYPES:
-            return _error_result(MCPVideoError(f"Invalid sequence[{i}].type: must be one of {sorted(VALID_AUDIO_SEQUENCE_TYPES)}, got '{evt_type}'", error_type="validation_error", code="invalid_parameter"))
+            return _error_result(
+                MCPVideoError(
+                    f"Invalid sequence[{i}].type: must be one of {sorted(VALID_AUDIO_SEQUENCE_TYPES)}, got '{evt_type}'",
+                    error_type="validation_error",
+                    code="invalid_parameter",
+                )
+            )
         evt_at = event.get("at")
         if not isinstance(evt_at, (int, float)):
-            return _error_result(MCPVideoError(f"Invalid sequence[{i}].at: must be numeric, got {type(evt_at).__name__}", error_type="validation_error", code="invalid_parameter"))
+            return _error_result(
+                MCPVideoError(
+                    f"Invalid sequence[{i}].at: must be numeric, got {type(evt_at).__name__}",
+                    error_type="validation_error",
+                    code="invalid_parameter",
+                )
+            )
         evt_dur = event.get("duration")
         if evt_dur is not None and evt_dur <= 0:
-            return _error_result(MCPVideoError(f"Invalid sequence[{i}].duration: must be > 0, got {evt_dur}", error_type="validation_error", code="invalid_parameter"))
+            return _error_result(
+                MCPVideoError(
+                    f"Invalid sequence[{i}].duration: must be > 0, got {evt_dur}",
+                    error_type="validation_error",
+                    code="invalid_parameter",
+                )
+            )
     try:
         from .audio_engine import audio_sequence as _sequence
+
         return _result(_sequence(sequence=sequence, output=output_path))
     except MCPVideoError as e:
         return _error_result(e)
@@ -1917,19 +2312,46 @@ def audio_compose(
         Dict with success status and output_path.
     """
     if duration <= 0:
-        return _error_result(MCPVideoError(f"Invalid duration: must be > 0, got {duration}", error_type="validation_error", code="invalid_parameter"))
+        return _error_result(
+            MCPVideoError(
+                f"Invalid duration: must be > 0, got {duration}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
     if not isinstance(tracks, list) or len(tracks) < 1:
-        return _error_result(MCPVideoError("Invalid tracks: must be a non-empty list", error_type="validation_error", code="invalid_parameter"))
+        return _error_result(
+            MCPVideoError(
+                "Invalid tracks: must be a non-empty list", error_type="validation_error", code="invalid_parameter"
+            )
+        )
     for i, track in enumerate(tracks):
         if not isinstance(track, dict):
-            return _error_result(MCPVideoError(f"Invalid tracks[{i}]: must be a dict", error_type="validation_error", code="invalid_parameter"))
+            return _error_result(
+                MCPVideoError(
+                    f"Invalid tracks[{i}]: must be a dict", error_type="validation_error", code="invalid_parameter"
+                )
+            )
         if not isinstance(track.get("file"), str):
-            return _error_result(MCPVideoError(f"Invalid tracks[{i}].file: must be a string", error_type="validation_error", code="invalid_parameter"))
+            return _error_result(
+                MCPVideoError(
+                    f"Invalid tracks[{i}].file: must be a string",
+                    error_type="validation_error",
+                    code="invalid_parameter",
+                )
+            )
         vol = track.get("volume", 1.0)
         if vol < 0 or vol > 1:
-            return _error_result(MCPVideoError(f"Invalid tracks[{i}].volume: must be 0-1, got {vol}", error_type="validation_error", code="invalid_parameter"))
+            return _error_result(
+                MCPVideoError(
+                    f"Invalid tracks[{i}].volume: must be 0-1, got {vol}",
+                    error_type="validation_error",
+                    code="invalid_parameter",
+                )
+            )
     try:
         from .audio_engine import audio_compose as _compose
+
         return _result(_compose(tracks=tracks, duration=duration, output=output_path))
     except MCPVideoError as e:
         return _error_result(e)
@@ -1958,15 +2380,30 @@ def audio_effects(
         Dict with success status and output_path.
     """
     if not isinstance(effects, list) or len(effects) < 1:
-        return _error_result(MCPVideoError("Invalid effects: must be a non-empty list", error_type="validation_error", code="invalid_parameter"))
+        return _error_result(
+            MCPVideoError(
+                "Invalid effects: must be a non-empty list", error_type="validation_error", code="invalid_parameter"
+            )
+        )
     for i, effect in enumerate(effects):
         if not isinstance(effect, dict):
-            return _error_result(MCPVideoError(f"Invalid effects[{i}]: must be a dict", error_type="validation_error", code="invalid_parameter"))
+            return _error_result(
+                MCPVideoError(
+                    f"Invalid effects[{i}]: must be a dict", error_type="validation_error", code="invalid_parameter"
+                )
+            )
         eff_type = effect.get("type")
         if eff_type not in VALID_AUDIO_EFFECT_TYPES:
-            return _error_result(MCPVideoError(f"Invalid effects[{i}].type: must be one of {sorted(VALID_AUDIO_EFFECT_TYPES)}, got '{eff_type}'", error_type="validation_error", code="invalid_parameter"))
+            return _error_result(
+                MCPVideoError(
+                    f"Invalid effects[{i}].type: must be one of {sorted(VALID_AUDIO_EFFECT_TYPES)}, got '{eff_type}'",
+                    error_type="validation_error",
+                    code="invalid_parameter",
+                )
+            )
     try:
         from .audio_engine import audio_effects as _effects
+
         return _result(_effects(input_path=input_path, output=output_path, effects=effects))
     except MCPVideoError as e:
         return _error_result(e)
@@ -1998,6 +2435,7 @@ def video_add_generated_audio(
         if not isinstance(audio_config, dict) or not audio_config:
             return _error_result(ValueError("audio_config must be a non-empty dict"))
         from .audio_engine import add_generated_audio as _add_gen_audio
+
         return _result(_add_gen_audio(input_path, audio_config, output_path))
     except MCPVideoError as e:
         return _error_result(e)
@@ -2008,6 +2446,7 @@ def video_add_generated_audio(
 # ---------------------------------------------------------------------------
 # Visual Effects Tools (P1 Features)
 # ---------------------------------------------------------------------------
+
 
 @mcp.tool()
 def effect_vignette(
@@ -2039,6 +2478,7 @@ def effect_vignette(
         if not (0.0 <= smoothness <= 1.0):
             return _error_result(ValueError(f"smoothness must be between 0.0 and 1.0, got {smoothness}"))
         from .effects_engine import effect_vignette as _vignette
+
         return _result(_vignette(input_path, output_path, intensity, radius, smoothness))
     except MCPVideoError as e:
         return _error_result(e)
@@ -2070,6 +2510,7 @@ def effect_chromatic_aberration(
         if intensity < 0:
             return _error_result(ValueError(f"intensity must be non-negative, got {intensity}"))
         from .effects_engine import effect_chromatic_aberration as _chroma
+
         return _result(_chroma(input_path, output_path, intensity, angle))
     except MCPVideoError as e:
         return _error_result(e)
@@ -2107,6 +2548,7 @@ def effect_scanlines(
         if not (0.0 <= flicker <= 1.0):
             return _error_result(ValueError(f"flicker must be between 0.0 and 1.0, got {flicker}"))
         from .effects_engine import effect_scanlines as _scanlines
+
         return _result(_scanlines(input_path, output_path, line_height, opacity, flicker))
     except MCPVideoError as e:
         return _error_result(e)
@@ -2142,6 +2584,7 @@ def effect_noise(
         if mode not in ("film", "digital", "color"):
             return _error_result(ValueError(f"mode must be film, digital, or color, got {mode}"))
         from .effects_engine import effect_noise as _noise
+
         return _result(_noise(input_path, output_path, intensity, mode, animated))
     except MCPVideoError as e:
         return _error_result(e)
@@ -2179,6 +2622,7 @@ def effect_glow(
         if not (0.0 <= threshold <= 1.0):
             return _error_result(ValueError(f"threshold must be between 0.0 and 1.0, got {threshold}"))
         from .effects_engine import effect_glow as _glow
+
         return _result(_glow(input_path, output_path, intensity, radius, threshold))
     except MCPVideoError as e:
         return _error_result(e)
@@ -2216,6 +2660,7 @@ def video_layout_grid(
         if padding < 0:
             return _error_result(ValueError(f"padding must be non-negative, got {padding}"))
         from .effects_engine import layout_grid as _grid
+
         return _result(_grid(clips, layout, output_path, gap, padding, background))
     except MCPVideoError as e:
         return _error_result(e)
@@ -2261,7 +2706,21 @@ def video_layout_pip(
         if border_width < 0:
             return _error_result(ValueError(f"border_width must be non-negative, got {border_width}"))
         from .effects_engine import layout_pip as _pip
-        return _result(_pip(main_path, pip_path, output_path, position=position, size=size, margin=margin, rounded_corners=rounded_corners, border=border, border_color=border_color, border_width=border_width))
+
+        return _result(
+            _pip(
+                main_path,
+                pip_path,
+                output_path,
+                position=position,
+                size=size,
+                margin=margin,
+                rounded_corners=rounded_corners,
+                border=border,
+                border_color=border_color,
+                border_width=border_width,
+            )
+        )
     except MCPVideoError as e:
         return _error_result(e)
     except Exception as e:
@@ -2308,6 +2767,7 @@ def video_text_animated(
         if start < 0:
             return _error_result(ValueError(f"start must be non-negative, got {start}"))
         from .effects_engine import text_animated as _text
+
         return _result(_text(input_path, text, output_path, animation, font, size, color, position, start, duration))
     except MCPVideoError as e:
         return _error_result(e)
@@ -2336,13 +2796,16 @@ def video_text_subtitles(
         Dict with success status and output_path.
     """
     if not os.path.isfile(subtitles_path):
-        return _error_result(MCPVideoError(
-            f"Subtitles file not found: {subtitles_path}",
-            error_type="validation_error",
-            code="file_not_found",
-        ))
+        return _error_result(
+            MCPVideoError(
+                f"Subtitles file not found: {subtitles_path}",
+                error_type="validation_error",
+                code="file_not_found",
+            )
+        )
     try:
         from .effects_engine import text_subtitles as _subs
+
         return _result(_subs(input_path, subtitles_path, output_path, style))
     except MCPVideoError as e:
         return _error_result(e)
@@ -2380,6 +2843,7 @@ def video_mograph_count(
         if duration <= 0:
             return _error_result(ValueError(f"duration must be positive, got {duration}"))
         from .effects_engine import mograph_count as _count
+
         return _result(_count(start, end, duration, output_path, style=style, fps=fps))
     except MCPVideoError as e:
         return _error_result(e)
@@ -2412,17 +2876,20 @@ def video_mograph_progress(
         Dict with success status and output_path.
     """
     if style not in VALID_MOGRAPH_STYLES:
-        return _error_result(MCPVideoError(
-            f"Invalid style: must be one of {sorted(VALID_MOGRAPH_STYLES)}, got '{style}'",
-            error_type="validation_error",
-            code="invalid_parameter",
-        ))
+        return _error_result(
+            MCPVideoError(
+                f"Invalid style: must be one of {sorted(VALID_MOGRAPH_STYLES)}, got '{style}'",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
     try:
         if not (1 <= fps <= 120):
             return _error_result(ValueError(f"fps must be between 1 and 120, got {fps}"))
         if duration <= 0:
             return _error_result(ValueError(f"duration must be positive, got {duration}"))
         from .effects_engine import mograph_progress as _progress
+
         return _result(_progress(duration, output_path, style=style, color=color, track_color=track_color, fps=fps))
     except MCPVideoError as e:
         return _error_result(e)
@@ -2447,6 +2914,7 @@ def video_info_detailed(
     """
     try:
         from .effects_engine import video_info_detailed as _info
+
         return _result(_info(input_path))
     except MCPVideoError as e:
         return _error_result(e)
@@ -2471,13 +2939,16 @@ def video_auto_chapters(
         List of (timestamp, description) chapter tuples.
     """
     if not 0.0 <= threshold <= 1.0:
-        return _error_result(MCPVideoError(
-            f"threshold must be between 0.0 and 1.0, got {threshold}",
-            error_type="validation_error",
-            code="invalid_parameter",
-        ))
+        return _error_result(
+            MCPVideoError(
+                f"threshold must be between 0.0 and 1.0, got {threshold}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
     try:
         from .effects_engine import auto_chapters as _chapters
+
         return _result(_chapters(input_path, threshold))
     except MCPVideoError as e:
         return _error_result(e)
@@ -2488,6 +2959,7 @@ def video_auto_chapters(
 # ---------------------------------------------------------------------------
 # Transition Tools (Advanced Effects)
 # ---------------------------------------------------------------------------
+
 
 @mcp.tool()
 def transition_glitch(
@@ -2507,19 +2979,24 @@ def transition_glitch(
         intensity: Glitch intensity 0-1 (default 0.3).
     """
     if duration <= 0:
-        return _error_result(MCPVideoError(
-            f"duration must be positive, got {duration}",
-            error_type="validation_error",
-            code="invalid_parameter",
-        ))
+        return _error_result(
+            MCPVideoError(
+                f"duration must be positive, got {duration}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
     if not 0.0 <= intensity <= 1.0:
-        return _error_result(MCPVideoError(
-            f"intensity must be between 0.0 and 1.0, got {intensity}",
-            error_type="validation_error",
-            code="invalid_parameter",
-        ))
+        return _error_result(
+            MCPVideoError(
+                f"intensity must be between 0.0 and 1.0, got {intensity}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
     try:
         from .transitions_engine import transition_glitch
+
         return _result(transition_glitch(clip1_path, clip2_path, output_path, duration, intensity))
     except MCPVideoError as e:
         return _error_result(e)
@@ -2537,19 +3014,24 @@ def transition_pixelate(
 ) -> dict[str, Any]:
     """Apply pixelate transition between two video clips."""
     if duration <= 0:
-        return _error_result(MCPVideoError(
-            f"duration must be positive, got {duration}",
-            error_type="validation_error",
-            code="invalid_parameter",
-        ))
+        return _error_result(
+            MCPVideoError(
+                f"duration must be positive, got {duration}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
     if pixel_size < 2:
-        return _error_result(MCPVideoError(
-            f"pixel_size must be at least 2, got {pixel_size}",
-            error_type="validation_error",
-            code="invalid_parameter",
-        ))
+        return _error_result(
+            MCPVideoError(
+                f"pixel_size must be at least 2, got {pixel_size}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
     try:
         from .transitions_engine import transition_pixelate
+
         return _result(transition_pixelate(clip1_path, clip2_path, output_path, duration, pixel_size))
     except MCPVideoError as e:
         return _error_result(e)
@@ -2567,19 +3049,24 @@ def transition_morph(
 ) -> dict[str, Any]:
     """Apply morph transition between two video clips."""
     if duration <= 0:
-        return _error_result(MCPVideoError(
-            f"duration must be positive, got {duration}",
-            error_type="validation_error",
-            code="invalid_parameter",
-        ))
+        return _error_result(
+            MCPVideoError(
+                f"duration must be positive, got {duration}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
     if mesh_size < 2:
-        return _error_result(MCPVideoError(
-            f"mesh_size must be at least 2, got {mesh_size}",
-            error_type="validation_error",
-            code="invalid_parameter",
-        ))
+        return _error_result(
+            MCPVideoError(
+                f"mesh_size must be at least 2, got {mesh_size}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
     try:
         from .transitions_engine import transition_morph
+
         return _result(transition_morph(clip1_path, clip2_path, output_path, duration, mesh_size))
     except MCPVideoError as e:
         return _error_result(e)
@@ -2591,6 +3078,7 @@ def transition_morph(
 # AI Feature Tools
 # ---------------------------------------------------------------------------
 
+
 @mcp.tool()
 def video_ai_remove_silence(
     input_path: str,
@@ -2601,25 +3089,32 @@ def video_ai_remove_silence(
 ) -> dict[str, Any]:
     """Remove silent sections from video."""
     if not -70 <= silence_threshold <= 0:
-        return _error_result(MCPVideoError(
-            f"silence_threshold must be between -70 and 0, got {silence_threshold}",
-            error_type="validation_error",
-            code="invalid_parameter",
-        ))
+        return _error_result(
+            MCPVideoError(
+                f"silence_threshold must be between -70 and 0, got {silence_threshold}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
     if min_silence_duration <= 0:
-        return _error_result(MCPVideoError(
-            f"min_silence_duration must be positive, got {min_silence_duration}",
-            error_type="validation_error",
-            code="invalid_parameter",
-        ))
+        return _error_result(
+            MCPVideoError(
+                f"min_silence_duration must be positive, got {min_silence_duration}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
     if keep_margin < 0:
-        return _error_result(MCPVideoError(
-            f"keep_margin must be non-negative, got {keep_margin}",
-            error_type="validation_error",
-            code="invalid_parameter",
-        ))
+        return _error_result(
+            MCPVideoError(
+                f"keep_margin must be non-negative, got {keep_margin}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
     try:
         from .ai_engine import ai_remove_silence
+
         return _result(ai_remove_silence(input_path, output_path, silence_threshold, min_silence_duration, keep_margin))
     except MCPVideoError as e:
         return _error_result(e)
@@ -2636,13 +3131,16 @@ def video_ai_transcribe(
 ) -> dict[str, Any]:
     """Transcribe speech to text using Whisper."""
     if model not in VALID_WHISPER_MODELS:
-        return _error_result(MCPVideoError(
-            f"Invalid model: must be one of {sorted(VALID_WHISPER_MODELS)}, got '{model}'",
-            error_type="validation_error",
-            code="invalid_parameter",
-        ))
+        return _error_result(
+            MCPVideoError(
+                f"Invalid model: must be one of {sorted(VALID_WHISPER_MODELS)}, got '{model}'",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
     try:
         from .ai_engine import ai_transcribe
+
         return _result(ai_transcribe(input_path, output_srt, model, language))
     except MCPVideoError as e:
         return _error_result(e)
@@ -2658,13 +3156,16 @@ def video_ai_scene_detect(
 ) -> dict[str, Any]:
     """Detect scene changes in video."""
     if not 0.0 <= threshold <= 1.0:
-        return _error_result(MCPVideoError(
-            f"threshold must be between 0.0 and 1.0, got {threshold}",
-            error_type="validation_error",
-            code="invalid_parameter",
-        ))
+        return _error_result(
+            MCPVideoError(
+                f"threshold must be between 0.0 and 1.0, got {threshold}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
     try:
         from .ai_engine import ai_scene_detect
+
         return _result(ai_scene_detect(input_path, threshold, use_ai))
     except MCPVideoError as e:
         return _error_result(e)
@@ -2681,19 +3182,24 @@ def video_ai_stem_separation(
 ) -> dict[str, Any]:
     """Separate audio into stems using Demucs."""
     if model not in VALID_DEMUCS_MODELS:
-        return _error_result(MCPVideoError(
-            f"Invalid model: must be one of {sorted(VALID_DEMUCS_MODELS)}, got '{model}'",
-            error_type="validation_error",
-            code="invalid_parameter",
-        ))
+        return _error_result(
+            MCPVideoError(
+                f"Invalid model: must be one of {sorted(VALID_DEMUCS_MODELS)}, got '{model}'",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
     if stems is not None and not isinstance(stems, list):
-        return _error_result(MCPVideoError(
-            f"stems must be a list, got {type(stems).__name__}",
-            error_type="validation_error",
-            code="invalid_parameter",
-        ))
+        return _error_result(
+            MCPVideoError(
+                f"stems must be a list, got {type(stems).__name__}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
     try:
         from .ai_engine import ai_stem_separation
+
         return _result(ai_stem_separation(input_path, output_dir, stems, model))
     except MCPVideoError as e:
         return _error_result(e)
@@ -2710,19 +3216,24 @@ def video_ai_upscale(
 ) -> dict[str, Any]:
     """Upscale video using AI super-resolution."""
     if scale not in {2, 4}:
-        return _error_result(MCPVideoError(
-            f"scale must be 2 or 4, got {scale}",
-            error_type="validation_error",
-            code="invalid_parameter",
-        ))
+        return _error_result(
+            MCPVideoError(
+                f"scale must be 2 or 4, got {scale}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
     if model not in VALID_UPSCALE_MODELS:
-        return _error_result(MCPVideoError(
-            f"Invalid model: must be one of {sorted(VALID_UPSCALE_MODELS)}, got '{model}'",
-            error_type="validation_error",
-            code="invalid_parameter",
-        ))
+        return _error_result(
+            MCPVideoError(
+                f"Invalid model: must be one of {sorted(VALID_UPSCALE_MODELS)}, got '{model}'",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
     try:
         from .ai_engine import ai_upscale
+
         return _result(ai_upscale(input_path, output_path, scale, model))
     except MCPVideoError as e:
         return _error_result(e)
@@ -2739,13 +3250,16 @@ def video_ai_color_grade(
 ) -> dict[str, Any]:
     """Auto color grade video."""
     if style not in VALID_COLOR_GRADE_STYLES:
-        return _error_result(MCPVideoError(
-            f"Invalid style: must be one of {sorted(VALID_COLOR_GRADE_STYLES)}, got '{style}'",
-            error_type="validation_error",
-            code="invalid_parameter",
-        ))
+        return _error_result(
+            MCPVideoError(
+                f"Invalid style: must be one of {sorted(VALID_COLOR_GRADE_STYLES)}, got '{style}'",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
     try:
         from .ai_engine import ai_color_grade
+
         return _result(ai_color_grade(input_path, output_path, reference_path, style))
     except MCPVideoError as e:
         return _error_result(e)
@@ -2762,19 +3276,24 @@ def video_audio_spatial(
 ) -> dict[str, Any]:
     """Apply 3D spatial audio positioning."""
     if method not in VALID_SPATIAL_METHODS:
-        return _error_result(MCPVideoError(
-            f"Invalid method: must be one of {sorted(VALID_SPATIAL_METHODS)}, got '{method}'",
-            error_type="validation_error",
-            code="invalid_parameter",
-        ))
+        return _error_result(
+            MCPVideoError(
+                f"Invalid method: must be one of {sorted(VALID_SPATIAL_METHODS)}, got '{method}'",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
     if not isinstance(positions, list) or len(positions) == 0:
-        return _error_result(MCPVideoError(
-            "positions must be a non-empty list",
-            error_type="validation_error",
-            code="invalid_parameter",
-        ))
+        return _error_result(
+            MCPVideoError(
+                "positions must be a non-empty list",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
     try:
         from .ai_engine import audio_spatial
+
         return _result(audio_spatial(input_path, output_path, positions, method))
     except MCPVideoError as e:
         return _error_result(e)
@@ -2798,6 +3317,7 @@ def video_quality_check(
     """
     try:
         from .quality_guardrails import quality_check
+
         return _result(quality_check(input_path, fail_on_warning))
     except MCPVideoError as e:
         return _error_result(e)
@@ -2823,6 +3343,7 @@ def video_design_quality_check(
     """
     try:
         from .design_quality import design_quality_check
+
         return _result(design_quality_check(input_path, auto_fix=auto_fix, strict=strict))
     except MCPVideoError as e:
         return _error_result(e)
@@ -2846,6 +3367,7 @@ def video_fix_design_issues(
     """
     try:
         from .design_quality import fix_design_issues
+
         return _result(fix_design_issues(input_path, output_path))
     except MCPVideoError as e:
         return _error_result(e)

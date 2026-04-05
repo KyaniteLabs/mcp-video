@@ -10,8 +10,13 @@ from .limits import *  # noqa: F403 — re-export all limit constants
 # Validation helpers — all raise MCPVideoError with validation metadata
 # ---------------------------------------------------------------------------
 
+
 def _validate_ffmpeg_param(
-    value, name, min_val=None, max_val=None, allowed_types=(int, float),
+    value,
+    name,
+    min_val=None,
+    max_val=None,
+    allowed_types=(int, float),
 ):
     """Validate a numeric FFmpeg parameter. Returns float(value)."""
     if not isinstance(value, allowed_types):
@@ -118,9 +123,20 @@ VALID_AUDIO_FORMATS = {"mp3", "aac", "wav", "ogg", "flac"}
 VALID_PRESETS = {"ultrafast", "fast", "medium", "slow", "veryslow"}
 VALID_CODECS = {"h264", "h265", "vp8", "vp9", "prores", "gif"}
 VALID_XFADE_TRANSITIONS = {
-    "fade", "dissolve", "wipeleft", "wiperight", "slideleft", "slideright",
-    "slideup", "slidedown", "circlecrop", "radial",
-    "smoothleft", "smoothright", "smoothup", "smoothdown",
+    "fade",
+    "dissolve",
+    "wipeleft",
+    "wiperight",
+    "slideleft",
+    "slideright",
+    "slideup",
+    "slidedown",
+    "circlecrop",
+    "radial",
+    "smoothleft",
+    "smoothright",
+    "smoothup",
+    "smoothdown",
 }
 VALID_WAVEFORMS = {"sine", "square", "sawtooth", "triangle", "noise"}
 VALID_AUDIO_EFFECT_TYPES = {"lowpass", "reverb", "normalize", "fade"}
@@ -135,10 +151,21 @@ VALID_COLOR_GRADE_STYLES = {"auto", "warm", "cool", "vintage", "cinematic", "noi
 VALID_AUDIO_SEQUENCE_TYPES = {"tone", "preset", "whoosh"}
 VALID_TEXT_ANIMATIONS = {"fade", "slide-up"}
 VALID_AUDIO_PRESETS = {
-    "ui-blip", "ui-click", "ui-tap", "ui-whoosh-up", "ui-whoosh-down",
-    "drone-low", "drone-mid", "drone-tech",
-    "chime-success", "chime-error", "chime-notification",
-    "data-flow", "typing", "scan", "processing",
+    "ui-blip",
+    "ui-click",
+    "ui-tap",
+    "ui-whoosh-up",
+    "ui-whoosh-down",
+    "drone-low",
+    "drone-mid",
+    "drone-tech",
+    "chime-success",
+    "chime-error",
+    "chime-notification",
+    "data-flow",
+    "typing",
+    "scan",
+    "processing",
 }
 
 
@@ -154,15 +181,37 @@ def get_valid_audio_presets():
         # The presets dict is local to audio_preset(), so we use the
         # known set documented in its docstring.
         return {
-            "ui-blip", "ui-click", "ui-tap", "ui-whoosh-up", "ui-whoosh-down",
-            "drone-low", "drone-mid", "drone-tech",
-            "chime-success", "chime-error", "chime-notification",
-            "typing", "scan", "processing", "data-flow",
+            "ui-blip",
+            "ui-click",
+            "ui-tap",
+            "ui-whoosh-up",
+            "ui-whoosh-down",
+            "drone-low",
+            "drone-mid",
+            "drone-tech",
+            "chime-success",
+            "chime-error",
+            "chime-notification",
+            "typing",
+            "scan",
+            "processing",
+            "data-flow",
         }
     except ImportError:
         return {
-            "ui-blip", "ui-click", "ui-tap", "ui-whoosh-up", "ui-whoosh-down",
-            "drone-low", "drone-mid", "drone-tech",
-            "chime-success", "chime-error", "chime-notification",
-            "typing", "scan", "processing", "data-flow",
+            "ui-blip",
+            "ui-click",
+            "ui-tap",
+            "ui-whoosh-up",
+            "ui-whoosh-down",
+            "drone-low",
+            "drone-mid",
+            "drone-tech",
+            "chime-success",
+            "chime-error",
+            "chime-notification",
+            "typing",
+            "scan",
+            "processing",
+            "data-flow",
         }

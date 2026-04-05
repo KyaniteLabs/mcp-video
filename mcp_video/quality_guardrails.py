@@ -60,16 +60,19 @@ class VisualQualityGuardrails:
         """Run ffprobe with signalstats filter and parse results."""
         cmd = [
             "ffprobe",
-            "-v", "error",
-            "-f", "lavfi",
-            "-i", f"movie={_escape_lavfi_path(video)},signalstats",
-            "-show_entries", f"frame_tags={filter_name}",
-            "-of", "json",
+            "-v",
+            "error",
+            "-f",
+            "lavfi",
+            "-i",
+            f"movie={_escape_lavfi_path(video)},signalstats",
+            "-show_entries",
+            f"frame_tags={filter_name}",
+            "-of",
+            "json",
         ]
         try:
-            result = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=60
-            )
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
             if result.returncode != 0:
                 return {}
             data = json.loads(result.stdout)
@@ -95,22 +98,25 @@ class VisualQualityGuardrails:
             logger.warning("ffprobe signalstats returned invalid JSON for %s (filter=%s)", video, filter_name)
             return {}
         except Exception as exc:
-            logger.warning("ffprobe signalstats failed for %s (filter=%s): %s: %s", video, filter_name, type(exc).__name__, exc)
+            logger.warning(
+                "ffprobe signalstats failed for %s (filter=%s): %s: %s", video, filter_name, type(exc).__name__, exc
+            )
             return {}
 
     def _run_ffmpeg_signalstats(self, video: str) -> dict[str, Any]:
         """Run ffmpeg with signalstats filter to get video statistics."""
         cmd = [
             "ffmpeg",
-            "-i", video,
-            "-vf", "signalstats",
-            "-f", "null",
+            "-i",
+            video,
+            "-vf",
+            "signalstats",
+            "-f",
+            "null",
             "-",
         ]
         try:
-            result = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=120
-            )
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
             # Parse stderr for signalstats output
             stderr = result.stderr
             stats = {}
@@ -142,15 +148,16 @@ class VisualQualityGuardrails:
         """Analyze audio loudness using loudnorm filter."""
         cmd = [
             "ffmpeg",
-            "-i", video,
-            "-af", "loudnorm=print_format=json",
-            "-f", "null",
+            "-i",
+            video,
+            "-af",
+            "loudnorm=print_format=json",
+            "-f",
+            "null",
             "-",
         ]
         try:
-            result = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=120
-            )
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
             # Parse JSON from the output (it's embedded in stderr)
             stderr = result.stderr
 
@@ -176,16 +183,19 @@ class VisualQualityGuardrails:
         """Get mean RGB values for color balance analysis."""
         cmd = [
             "ffprobe",
-            "-v", "error",
-            "-f", "lavfi",
-            "-i", f"movie={video},signalstats",
-            "-show_entries", "frame_tags=lavfi.signalstats.RAVG,lavfi.signalstats.GAVG,lavfi.signalstats.BAVG",
-            "-of", "json",
+            "-v",
+            "error",
+            "-f",
+            "lavfi",
+            "-i",
+            f"movie={video},signalstats",
+            "-show_entries",
+            "frame_tags=lavfi.signalstats.RAVG,lavfi.signalstats.GAVG,lavfi.signalstats.BAVG",
+            "-of",
+            "json",
         ]
         try:
-            result = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=60
-            )
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
             if result.returncode != 0:
                 return None
 
@@ -296,7 +306,9 @@ class VisualQualityGuardrails:
         score = float(max(0, 100 - (deviation / optimal_contrast) * 100))
 
         if y_std < self.CONTRAST_MIN:
-            message = f"Video has low contrast (std dev: {y_std:.1f}). Image may appear flat. Consider increasing contrast."
+            message = (
+                f"Video has low contrast (std dev: {y_std:.1f}). Image may appear flat. Consider increasing contrast."
+            )
         elif y_std > self.CONTRAST_MAX:
             message = f"Video has very high contrast (std dev: {y_std:.1f}). May lose detail in shadows/highlights."
         else:
@@ -365,10 +377,14 @@ class VisualQualityGuardrails:
             # Check if video has audio
             cmd = [
                 "ffprobe",
-                "-v", "error",
-                "-select_streams", "a:0",
-                "-show_entries", "stream=codec_type",
-                "-of", "csv=p=0",
+                "-v",
+                "error",
+                "-select_streams",
+                "a:0",
+                "-show_entries",
+                "stream=codec_type",
+                "-of",
+                "csv=p=0",
                 video,
             ]
             try:
@@ -536,9 +552,7 @@ class VisualQualityGuardrails:
                 }
                 for c in checks
             ],
-            "recommendations": [
-                c.message for c in checks if not c.passed
-            ],
+            "recommendations": [c.message for c in checks if not c.passed],
         }
 
 

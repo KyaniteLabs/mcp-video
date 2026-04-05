@@ -53,15 +53,23 @@ def transition_glitch(
     )
 
     cmd = [
-        "ffmpeg", "-y",
-        "-i", clip1,
-        "-i", clip2,
-        "-filter_complex", filter_complex,
-        "-map", "[glitched]",
-        "-c:v", "libx264",
-        "-pix_fmt", "yuv420p",
-        "-movflags", "+faststart",
-        output
+        "ffmpeg",
+        "-y",
+        "-i",
+        clip1,
+        "-i",
+        clip2,
+        "-filter_complex",
+        filter_complex,
+        "-map",
+        "[glitched]",
+        "-c:v",
+        "libx264",
+        "-pix_fmt",
+        "yuv420p",
+        "-movflags",
+        "+faststart",
+        output,
     ]
 
     _run_ffmpeg(cmd)
@@ -133,15 +141,23 @@ def transition_pixelate(
     )
 
     cmd = [
-        "ffmpeg", "-y",
-        "-i", clip1,
-        "-i", clip2,
-        "-filter_complex", filter_complex,
-        "-map", "[output]",
-        "-c:v", "libx264",
-        "-pix_fmt", "yuv420p",
-        "-movflags", "+faststart",
-        output
+        "ffmpeg",
+        "-y",
+        "-i",
+        clip1,
+        "-i",
+        clip2,
+        "-filter_complex",
+        filter_complex,
+        "-map",
+        "[output]",
+        "-c:v",
+        "libx264",
+        "-pix_fmt",
+        "yuv420p",
+        "-movflags",
+        "+faststart",
+        output,
     ]
 
     _run_ffmpeg(cmd)
@@ -189,20 +205,26 @@ def transition_morph(
 
     # Use xfade with pixelize transition for morph-like effect
     # pixelize creates a blocky dissolve that simulates mesh morphing
-    filter_complex = (
-        f"[0:v][1:v]xfade=transition=pixelize:duration={duration}:offset={offset}[output]"
-    )
+    filter_complex = f"[0:v][1:v]xfade=transition=pixelize:duration={duration}:offset={offset}[output]"
 
     cmd = [
-        "ffmpeg", "-y",
-        "-i", clip1,
-        "-i", clip2,
-        "-filter_complex", filter_complex,
-        "-map", "[output]",
-        "-c:v", "libx264",
-        "-pix_fmt", "yuv420p",
-        "-movflags", "+faststart",
-        output
+        "ffmpeg",
+        "-y",
+        "-i",
+        clip1,
+        "-i",
+        clip2,
+        "-filter_complex",
+        filter_complex,
+        "-map",
+        "[output]",
+        "-c:v",
+        "libx264",
+        "-pix_fmt",
+        "yuv420p",
+        "-movflags",
+        "+faststart",
+        output,
     ]
 
     _run_ffmpeg(cmd)

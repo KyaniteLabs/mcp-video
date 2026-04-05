@@ -57,10 +57,14 @@ def _escape_ffmpeg_filter_value(value: str) -> str:
 def _get_video_duration(video_path: str) -> float:
     """Get video duration using ffprobe."""
     cmd = [
-        "ffprobe", "-v", "error",
-        "-show_entries", "format=duration",
-        "-of", "default=noprint_wrappers=1:nokey=1",
-        video_path
+        "ffprobe",
+        "-v",
+        "error",
+        "-show_entries",
+        "format=duration",
+        "-of",
+        "default=noprint_wrappers=1:nokey=1",
+        video_path,
     ]
     result = _run_ffmpeg(cmd)
     return float(result.stdout.strip())
