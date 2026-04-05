@@ -5,12 +5,10 @@ import pytest
 from mcp_video.errors import (
     MCPVideoError,
     CodecError,
-    ExportError,
     FFmpegNotFoundError,
     FFprobeNotFoundError,
     InputFileError,
     ProcessingError,
-    ResolutionMismatchError,
     ResourceError,
     parse_ffmpeg_error,
 )
@@ -130,22 +128,6 @@ class TestCodecError:
         assert "documentation_url" in d
 
 
-class TestResolutionMismatchError:
-    def test_message_includes_resolutions(self):
-        err = ResolutionMismatchError(["1920x1080", "1280x720"])
-        assert "1920x1080" in str(err)
-        assert "1280x720" in str(err)
-
-    def test_error_type(self):
-        err = ResolutionMismatchError(["640x480", "320x240"])
-        assert err.error_type == "encoding_error"
-        assert err.code == "resolution_mismatch"
-
-    def test_auto_fix_true(self):
-        err = ResolutionMismatchError(["640x480", "320x240"])
-        d = err.to_dict()
-        assert d["suggested_action"]["auto_fix"] is True
-
 
 class TestProcessingError:
     def test_message_includes_returncode(self):
@@ -179,17 +161,6 @@ class TestProcessingError:
         assert err.command == "ffmpeg -i a.mp4 b.mp4"
         assert err.returncode == 1
 
-
-class TestExportError:
-    def test_message_includes_format(self):
-        err = ExportError("gif", "palette generation failed")
-        assert "gif" in str(err)
-        assert "palette generation failed" in str(err)
-
-    def test_error_type(self):
-        err = ExportError("webm", "encoding error")
-        assert err.error_type == "export_error"
-        assert err.code == "export_webm_failed"
 
 
 class TestResourceError:

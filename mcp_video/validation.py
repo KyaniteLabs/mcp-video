@@ -149,7 +149,6 @@ VALID_DEMUCS_MODELS = {"htdemucs", "htdemucs_ft", "mdx", "mdx_extra", "mdx_extra
 VALID_UPSCALE_MODELS = {"realesrgan", "bsrgan", "swinir"}
 VALID_COLOR_GRADE_STYLES = {"auto", "warm", "cool", "vintage", "cinematic", "noir"}
 VALID_AUDIO_SEQUENCE_TYPES = {"tone", "preset", "whoosh"}
-VALID_TEXT_ANIMATIONS = {"fade", "slide-up"}
 VALID_AUDIO_PRESETS = {
     "ui-blip",
     "ui-click",

@@ -16,7 +16,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from .errors import ProcessingError
+from .errors import InputFileError, MCPVideoError, ProcessingError
 
 
 def ai_transcribe(
@@ -41,7 +41,7 @@ def ai_transcribe(
         FileNotFoundError: If video file doesn't exist
     """
     if "\x00" in video:
-        raise FileNotFoundError("Invalid path: contains null bytes")
+        raise InputFileError(video, "Invalid path: contains null bytes")
 
     # Check for whisper availability
     try:
@@ -52,7 +52,7 @@ def ai_transcribe(
     # Validate input file
     video_path = Path(video)
     if not video_path.exists():
-        raise FileNotFoundError(f"Video file not found: {video}")
+        raise InputFileError(video)
 
     # Step 1: Extract audio to temp WAV file
     with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
@@ -176,10 +176,10 @@ def _run_ffprobe(video: str) -> dict[str, Any]:
 def _standard_scene_detect(video: str, threshold: float) -> list[dict]:
     """Standard FFmpeg scene detection."""
     if "\x00" in video:
-        raise FileNotFoundError("Invalid path: contains null bytes")
+        raise InputFileError(video, "Invalid path: contains null bytes")
     video_path = Path(video)
     if not video_path.exists():
-        raise FileNotFoundError(f"Video file not found: {video}")
+        raise InputFileError(video)
     if not isinstance(threshold, (int, float)) or not (0.0 <= threshold <= 1.0):
         raise ValueError(f"threshold must be between 0.0 and 1.0, got {threshold}")
     cmd = ["ffmpeg", "-i", video, "-filter:v", f"select='gt(scene,{threshold})',showinfo", "-f", "null", "-"]
@@ -226,21 +226,21 @@ def audio_spatial(
         RuntimeError: If FFmpeg processing fails
     """
     if "\x00" in video:
-        raise FileNotFoundError("Invalid path: contains null bytes")
+        raise InputFileError(video, "Invalid path: contains null bytes")
 
     # Validate input file
     video_path = Path(video)
     if not video_path.exists():
-        raise FileNotFoundError(f"Video file not found: {video}")
+        raise InputFileError(video)
 
     # Validate positions
     if not positions:
-        raise ValueError("At least one position must be provided")
+        raise MCPVideoError("At least one position must be provided", error_type="validation_error")
 
     # Validate method
     valid_methods = ("hrtf", "vbap", "simple")
     if method not in valid_methods:
-        raise ValueError(f"Method must be one of {valid_methods}, got {method}")
+        raise MCPVideoError(f"Method must be one of {valid_methods}, got {method}", error_type="validation_error")
 
     output_path = Path(output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -772,12 +772,12 @@ def ai_remove_silence(
         Path to output video
     """
     if "\x00" in video:
-        raise FileNotFoundError("Invalid path: contains null bytes")
+        raise InputFileError(video, "Invalid path: contains null bytes")
 
     # Validate input file
     video_path = Path(video)
     if not video_path.exists():
-        raise FileNotFoundError(f"Video file not found: {video}")
+        raise InputFileError(video)
 
     # Step 1: Get video duration
     info = _run_ffprobe(str(video_path))
@@ -831,7 +831,7 @@ def ai_stem_separation(
         FileNotFoundError: If video file doesn't exist
     """
     if "\x00" in video:
-        raise FileNotFoundError("Invalid path: contains null bytes")
+        raise InputFileError(video, "Invalid path: contains null bytes")
 
     # Check for demucs availability
     try:
@@ -842,7 +842,7 @@ def ai_stem_separation(
     # Validate input file
     video_path = Path(video)
     if not video_path.exists():
-        raise FileNotFoundError(f"Video file not found: {video}")
+        raise InputFileError(video)
 
     # Default stems if not provided
     stems = stems or ["vocals", "drums", "bass", "other"]
@@ -934,12 +934,12 @@ def ai_color_grade(
         RuntimeError: If FFmpeg processing fails
     """
     if "\x00" in video:
-        raise FileNotFoundError("Invalid path: contains null bytes")
+        raise InputFileError(video, "Invalid path: contains null bytes")
 
     # Validate input file
     video_path = Path(video)
     if not video_path.exists():
-        raise FileNotFoundError(f"Video file not found: {video}")
+        raise InputFileError(video)
 
     # Style presets define color adjustments
     style_presets = {
@@ -1271,12 +1271,12 @@ def ai_upscale(
         FileNotFoundError: If input video doesn't exist
     """
     if "\x00" in video:
-        raise FileNotFoundError("Invalid path: contains null bytes")
+        raise InputFileError(video, "Invalid path: contains null bytes")
 
     # Validate input file
     video_path = Path(video)
     if not video_path.exists():
-        raise FileNotFoundError(f"Video file not found: {video}")
+        raise InputFileError(video)
 
     # Try to use Real-ESRGAN if available, otherwise use OpenCV DNN fallback
     try:

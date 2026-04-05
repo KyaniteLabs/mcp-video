@@ -13,6 +13,8 @@ import wave
 from pathlib import Path
 from typing import Any, Literal
 
+from .errors import InputFileError, MCPVideoError, ProcessingError
+
 # ---------------------------------------------------------------------------
 # Audio Constants
 # ---------------------------------------------------------------------------
@@ -314,13 +316,13 @@ def audio_synthesize(
     from .limits import MAX_AUDIO_DURATION, MIN_FREQUENCY, MAX_FREQUENCY, MIN_SAMPLE_RATE, MAX_SAMPLE_RATE
 
     if not (MIN_FREQUENCY <= frequency <= MAX_FREQUENCY):
-        raise ValueError(f"Frequency must be between {MIN_FREQUENCY} and {MAX_FREQUENCY} Hz, got {frequency}")
+        raise MCPVideoError(f"Frequency must be between {MIN_FREQUENCY} and {MAX_FREQUENCY} Hz, got {frequency}", error_type="validation_error", code="invalid_parameter")
     if not (0.01 <= duration <= MAX_AUDIO_DURATION):
-        raise ValueError(f"Duration must be between 0.01 and {MAX_AUDIO_DURATION} seconds, got {duration}")
+        raise MCPVideoError(f"Duration must be between 0.01 and {MAX_AUDIO_DURATION} seconds, got {duration}", error_type="validation_error", code="invalid_parameter")
     if not (0.0 <= volume <= 1.0):
-        raise ValueError(f"Volume must be between 0.0 and 1.0, got {volume}")
+        raise MCPVideoError(f"Volume must be between 0.0 and 1.0, got {volume}", error_type="validation_error", code="invalid_parameter")
     if not (MIN_SAMPLE_RATE <= sample_rate <= MAX_SAMPLE_RATE):
-        raise ValueError(f"Sample rate must be between {MIN_SAMPLE_RATE} and {MAX_SAMPLE_RATE}, got {sample_rate}")
+        raise MCPVideoError(f"Sample rate must be between {MIN_SAMPLE_RATE} and {MAX_SAMPLE_RATE}, got {sample_rate}", error_type="validation_error", code="invalid_parameter")
     # Generate base waveform
     if waveform == "sine":
         pcm_data = generate_sine(frequency, duration, sample_rate, volume)
@@ -333,7 +335,7 @@ def audio_synthesize(
     elif waveform == "noise":
         pcm_data = generate_noise(duration, sample_rate, volume)
     else:
-        raise ValueError(f"Unknown waveform: {waveform}")
+        raise MCPVideoError(f"Unknown waveform: {waveform}", error_type="validation_error", code="invalid_parameter")
 
     # Convert to float for processing
     samples = _pcm_to_float(pcm_data)
@@ -559,7 +561,7 @@ def audio_preset(
     }
 
     if preset not in presets:
-        raise ValueError(f"Unknown preset: {preset}. Available: {list(presets.keys())}")
+        raise MCPVideoError(f"Unknown preset: {preset}. Available: {list(presets.keys())}", error_type="validation_error", code="invalid_parameter")
 
     config = presets[preset].copy()
     if duration:
@@ -590,7 +592,7 @@ def audio_sequence(
         Path to generated WAV file
     """
     if not sequence:
-        raise ValueError("Sequence cannot be empty")
+        raise MCPVideoError("Sequence cannot be empty", error_type="validation_error", code="invalid_parameter")
 
     # Calculate total duration
     max_end = max(event.get("at", 0) + event.get("duration", 1.0) for event in sequence)
@@ -833,11 +835,17 @@ def add_generated_audio(
         )
 
     if not events:
-        raise ValueError("No audio events specified")
+        raise MCPVideoError("No audio events specified", error_type="validation_error", code="invalid_parameter")
 
     # Create temp audio file
     with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
         audio_path = tmp.name
+
+    # Input validation before FFmpeg
+    if "\x00" in video:
+        raise InputFileError(video, "Path contains null bytes")
+    if not os.path.isfile(video):
+        raise InputFileError(video)
 
     try:
         # Generate audio
@@ -862,9 +870,12 @@ def add_generated_audio(
             output,
         ]
 
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+        except subprocess.TimeoutExpired:
+            raise ProcessingError(" ".join(cmd), -1, "Audio processing command timed out after 600s") from None
         if result.returncode != 0:
-            raise RuntimeError(f"FFmpeg error: {result.stderr}")
+            raise ProcessingError(" ".join(cmd), result.returncode, result.stderr)
 
         return output
 

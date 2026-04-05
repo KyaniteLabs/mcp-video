@@ -6,6 +6,8 @@ import sys
 
 import pytest
 
+from mcp_video import __version__
+
 
 def run_cli(*args: str, expect_fail: bool = False) -> subprocess.CompletedProcess:
     """Run mcp-video CLI and return result."""
@@ -29,11 +31,7 @@ def run_cli_json(*args: str, expect_fail: bool = False) -> subprocess.CompletedP
 class TestCLIVersion:
     def test_version_flag(self):
         result = run_cli("--version")
-        # Dynamic version check — reads from package metadata so it
-        # never goes stale after a version bump.
-        from importlib.metadata import version as pkg_version
-
-        assert pkg_version("mcp-video") in result.stdout
+        assert __version__ in result.stdout
 
 
 class TestCLIInfo:
