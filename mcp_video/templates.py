@@ -34,25 +34,29 @@ def tiktok_template(
     }
 
     if caption:
-        timeline["tracks"].append({
-            "type": "text",
-            "elements": [
-                {
-                    "text": caption,
-                    "start": 0,
-                    "position": "bottom-center",
-                    "style": {"size": 36, "color": "white", "shadow": True},
-                }
-            ],
-        })
+        timeline["tracks"].append(
+            {
+                "type": "text",
+                "elements": [
+                    {
+                        "text": caption,
+                        "start": 0,
+                        "position": "bottom-center",
+                        "style": {"size": 36, "color": "white", "shadow": True},
+                    }
+                ],
+            }
+        )
 
     if music_path:
-        timeline["tracks"].append({
-            "type": "audio",
-            "clips": [
-                {"source": music_path, "start": 0, "volume": 0.5, "fade_in": 1.0, "fade_out": 2.0},
-            ],
-        })
+        timeline["tracks"].append(
+            {
+                "type": "audio",
+                "clips": [
+                    {"source": music_path, "start": 0, "volume": 0.5, "fade_in": 1.0, "fade_out": 2.0},
+                ],
+            }
+        )
 
     return timeline
 
@@ -120,26 +124,30 @@ def youtube_video_template(
     }
 
     if title:
-        timeline["tracks"].append({
-            "type": "text",
-            "elements": [
-                {
-                    "text": title,
-                    "start": 0,
-                    "duration": 3,
-                    "position": "top-center",
-                    "style": {"size": 48, "color": "white", "shadow": True},
-                }
-            ],
-        })
+        timeline["tracks"].append(
+            {
+                "type": "text",
+                "elements": [
+                    {
+                        "text": title,
+                        "start": 0,
+                        "duration": 3,
+                        "position": "top-center",
+                        "style": {"size": 48, "color": "white", "shadow": True},
+                    }
+                ],
+            }
+        )
 
     if music_path:
-        timeline["tracks"].append({
-            "type": "audio",
-            "clips": [
-                {"source": music_path, "start": 0, "volume": 0.3, "fade_in": 2.0, "fade_out": 3.0},
-            ],
-        })
+        timeline["tracks"].append(
+            {
+                "type": "audio",
+                "clips": [
+                    {"source": music_path, "start": 0, "volume": 0.3, "fade_in": 2.0, "fade_out": 3.0},
+                ],
+            }
+        )
 
     return timeline
 
@@ -165,17 +173,19 @@ def instagram_post_template(
     }
 
     if caption:
-        timeline["tracks"].append({
-            "type": "text",
-            "elements": [
-                {
-                    "text": caption,
-                    "start": 0,
-                    "position": "bottom-center",
-                    "style": {"size": 32, "color": "white", "shadow": True},
-                }
-            ],
-        })
+        timeline["tracks"].append(
+            {
+                "type": "text",
+                "elements": [
+                    {
+                        "text": caption,
+                        "start": 0,
+                        "position": "bottom-center",
+                        "style": {"size": 32, "color": "white", "shadow": True},
+                    }
+                ],
+            }
+        )
 
     return timeline
 

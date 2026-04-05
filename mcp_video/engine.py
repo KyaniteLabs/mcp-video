@@ -51,6 +51,7 @@ from .ffmpeg_helpers import _escape_ffmpeg_filter_value
 # FFmpeg / FFprobe availability
 # ---------------------------------------------------------------------------
 
+
 def _find_executable(name: str) -> str:
     path = shutil.which(name)
     if path is None:
@@ -82,7 +83,9 @@ def _check_filter_available(name: str) -> bool:
     if _AVAILABLE_FILTERS is None:
         proc = subprocess.run(
             [_ffmpeg(), "-filters"],
-            capture_output=True, text=True, timeout=10,
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
         _AVAILABLE_FILTERS = set()
         for line in proc.stdout.split("\n"):
@@ -104,8 +107,7 @@ def _require_filter(name: str, feature: str) -> None:
             code=f"missing_filter_{name}",
             suggested_action={
                 "auto_fix": False,
-                "description": f"Reinstall FFmpeg with {name} support. "
-                               "On macOS: brew reinstall ffmpeg",
+                "description": f"Reinstall FFmpeg with {name} support. On macOS: brew reinstall ffmpeg",
             },
         )
 
@@ -113,6 +115,7 @@ def _require_filter(name: str, feature: str) -> None:
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _validate_input(path: str) -> None:
     if "\x00" in path:
@@ -128,33 +131,127 @@ def _sanitize_ffmpeg_number(value: Any, name: str) -> float:
     except (TypeError, ValueError):
         raise MCPVideoError(
             f"Invalid {name}: expected number, got {type(value).__name__}",
-            error_type="validation_error", code="invalid_parameter",
+            error_type="validation_error",
+            code="invalid_parameter",
         ) from None
 
 
-_CSS_COLOR_NAMES = frozenset({
-    "white", "black", "red", "green", "blue", "yellow", "cyan", "magenta",
-    "orange", "purple", "pink", "brown", "gray", "grey", "silver", "gold",
-    "navy", "teal", "maroon", "olive", "lime", "aqua", "fuchsia", "indigo",
-    "violet", "coral", "salmon", "tomato", "khaki", "lavender", "turquoise",
-    "tan", "wheat", "ivory", "beige", "linen", "snow", "mintcream", "azure",
-    "aliceblue", "ghostwhite", "honeydew", "seashell", "whitesmoke",
-    "oldlace", "floralwhite", "cornsilk", "lemonchiffon", "lightyellow",
-    "lightcyan", "paleturquoise", "powderblue", "lightblue", "skyblue",
-    "lightskyblue", "steelblue", "dodgerblue", "deepskyblue",
-    "cornflowerblue", "royalblue", "mediumblue", "darkblue", "midnightblue",
-    "slateblue", "darkslateblue", "mediumpurple", "blueviolet", "darkviolet",
-    "darkorchid", "mediumorchid", "orchid", "plum", "mediumvioletred",
-    "palevioletred", "hotpink", "deeppink", "lightpink", "rosybrown",
-    "indianred", "firebrick", "darkred", "crimson", "orangered",
-    "lightsalmon", "darksalmon", "lightcoral", "peachpuff", "bisque",
-    "moccasin", "navajowhite", "sandybrown", "chocolate", "saddlebrown",
-    "sienna", "burlywood", "peru", "darkgoldenrod", "goldenrod",
-    "lightgoldenrod", "darkkhaki", "chartreuse", "greenyellow",
-    "springgreen", "mediumspringgreen", "lawngreen", "darkgreen",
-    "forestgreen", "seagreen", "darkseagreen", "lightgreen", "palegreen",
-    "limegreen",
-})
+_CSS_COLOR_NAMES = frozenset(
+    {
+        "white",
+        "black",
+        "red",
+        "green",
+        "blue",
+        "yellow",
+        "cyan",
+        "magenta",
+        "orange",
+        "purple",
+        "pink",
+        "brown",
+        "gray",
+        "grey",
+        "silver",
+        "gold",
+        "navy",
+        "teal",
+        "maroon",
+        "olive",
+        "lime",
+        "aqua",
+        "fuchsia",
+        "indigo",
+        "violet",
+        "coral",
+        "salmon",
+        "tomato",
+        "khaki",
+        "lavender",
+        "turquoise",
+        "tan",
+        "wheat",
+        "ivory",
+        "beige",
+        "linen",
+        "snow",
+        "mintcream",
+        "azure",
+        "aliceblue",
+        "ghostwhite",
+        "honeydew",
+        "seashell",
+        "whitesmoke",
+        "oldlace",
+        "floralwhite",
+        "cornsilk",
+        "lemonchiffon",
+        "lightyellow",
+        "lightcyan",
+        "paleturquoise",
+        "powderblue",
+        "lightblue",
+        "skyblue",
+        "lightskyblue",
+        "steelblue",
+        "dodgerblue",
+        "deepskyblue",
+        "cornflowerblue",
+        "royalblue",
+        "mediumblue",
+        "darkblue",
+        "midnightblue",
+        "slateblue",
+        "darkslateblue",
+        "mediumpurple",
+        "blueviolet",
+        "darkviolet",
+        "darkorchid",
+        "mediumorchid",
+        "orchid",
+        "plum",
+        "mediumvioletred",
+        "palevioletred",
+        "hotpink",
+        "deeppink",
+        "lightpink",
+        "rosybrown",
+        "indianred",
+        "firebrick",
+        "darkred",
+        "crimson",
+        "orangered",
+        "lightsalmon",
+        "darksalmon",
+        "lightcoral",
+        "peachpuff",
+        "bisque",
+        "moccasin",
+        "navajowhite",
+        "sandybrown",
+        "chocolate",
+        "saddlebrown",
+        "sienna",
+        "burlywood",
+        "peru",
+        "darkgoldenrod",
+        "goldenrod",
+        "lightgoldenrod",
+        "darkkhaki",
+        "chartreuse",
+        "greenyellow",
+        "springgreen",
+        "mediumspringgreen",
+        "lawngreen",
+        "darkgreen",
+        "forestgreen",
+        "seagreen",
+        "darkseagreen",
+        "lightgreen",
+        "palegreen",
+        "limegreen",
+    }
+)
 
 _HEX_COLOR_RE = re.compile(r"^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$")
 _FFMPEG_SPECIAL_CHARS = set(":=;'[]\\")
@@ -169,12 +266,14 @@ def _validate_color(color: str) -> None:
     if not isinstance(color, str):
         raise MCPVideoError(
             "invalid_color: value must be a string",
-            error_type="validation_error", code="invalid_color",
+            error_type="validation_error",
+            code="invalid_color",
         )
     if any(c in _FFMPEG_SPECIAL_CHARS for c in color):
         raise MCPVideoError(
             "invalid_color: contains FFmpeg special characters",
-            error_type="validation_error", code="invalid_color",
+            error_type="validation_error",
+            code="invalid_color",
         )
     if color.lower() in _CSS_COLOR_NAMES:
         return
@@ -182,7 +281,8 @@ def _validate_color(color: str) -> None:
         return
     raise MCPVideoError(
         "invalid_color: not a recognized CSS name or hex color",
-        error_type="validation_error", code="invalid_color",
+        error_type="validation_error",
+        code="invalid_color",
     )
 
 
@@ -195,13 +295,15 @@ def _validate_chroma_color(color: str) -> None:
     if not isinstance(color, str) or len(color) != 8 or not color.startswith("0x"):
         raise MCPVideoError(
             "color must be in 0xRRGGBB format (e.g. 0x00FF00)",
-            error_type="validation_error", code="invalid_parameter",
+            error_type="validation_error",
+            code="invalid_parameter",
         )
     hex_part = color[2:]
     if not all(c in "0123456789abcdefABCDEF" for c in hex_part):
         raise MCPVideoError(
             "color must contain only hex characters (0-9, a-f, A-F) after 0x prefix",
-            error_type="validation_error", code="invalid_parameter",
+            error_type="validation_error",
+            code="invalid_parameter",
         )
 
 
@@ -295,7 +397,10 @@ def _run_ffmpeg_with_progress(
     on_progress(100.0)
 
     return subprocess.CompletedProcess(
-        cmd, proc.returncode, "", stderr,
+        cmd,
+        proc.returncode,
+        "",
+        stderr,
     )
 
 
@@ -310,11 +415,16 @@ def _generate_thumbnail_base64(video_path: str) -> str | None:
 
         proc = subprocess.run(
             [
-                _ffmpeg(), "-y",
-                "-i", video_path,
-                "-vframes", "1",
-                "-q:v", "5",
-                "-vf", "scale=320:-1",
+                _ffmpeg(),
+                "-y",
+                "-i",
+                video_path,
+                "-vframes",
+                "1",
+                "-q:v",
+                "5",
+                "-vf",
+                "scale=320:-1",
                 tmp_path,
             ],
             capture_output=True,
@@ -336,8 +446,10 @@ def _generate_thumbnail_base64(video_path: str) -> str | None:
 def _run_ffprobe_json(path: str) -> dict[str, Any]:
     cmd = [
         _ffprobe(),
-        "-v", "quiet",
-        "-print_format", "json",
+        "-v",
+        "quiet",
+        "-print_format",
+        "json",
         "-show_format",
         "-show_streams",
         path,
@@ -380,14 +492,26 @@ def _validate_position(position: Position) -> None:
         for key in ("x_pct", "y_pct"):
             val = position[key]
             if not isinstance(val, (int, float)) or isinstance(val, bool):
-                raise MCPVideoError(f"Invalid position: {position}. Must be a named position (top-left, top-center, etc.) or a dict with 'x'/'y' keys", error_type="validation_error", code="invalid_parameter")
+                raise MCPVideoError(
+                    f"Invalid position: {position}. Must be a named position (top-left, top-center, etc.) or a dict with 'x'/'y' keys",
+                    error_type="validation_error",
+                    code="invalid_parameter",
+                )
             if not (0.0 <= float(val) <= 1.0):
-                raise MCPVideoError(f"Invalid position: {position}. Must be a named position (top-left, top-center, etc.) or a dict with 'x'/'y' keys", error_type="validation_error", code="invalid_parameter")
+                raise MCPVideoError(
+                    f"Invalid position: {position}. Must be a named position (top-left, top-center, etc.) or a dict with 'x'/'y' keys",
+                    error_type="validation_error",
+                    code="invalid_parameter",
+                )
     elif "x" in position and "y" in position:
         for key in ("x", "y"):
             val = position[key]
             if not isinstance(val, (int, float)) or isinstance(val, bool):
-                raise MCPVideoError(f"Invalid position: {position}. Must be a named position (top-left, top-center, etc.) or a dict with 'x'/'y' keys", error_type="validation_error", code="invalid_parameter")
+                raise MCPVideoError(
+                    f"Invalid position: {position}. Must be a named position (top-left, top-center, etc.) or a dict with 'x'/'y' keys",
+                    error_type="validation_error",
+                    code="invalid_parameter",
+                )
     else:
         raise MCPVideoError(
             "Position dict must have 'x'+'y' (pixels) or 'x_pct'+'y_pct' (percentage)",
@@ -460,6 +584,7 @@ def _resolve_position(
 def _default_font() -> str:
     """Return a sensible default font path for the current OS."""
     import platform
+
     system = platform.system()
     if system == "Darwin":
         return "/System/Library/Fonts/Helvetica.ttc"
@@ -498,6 +623,7 @@ def _has_audio(data: dict) -> bool:
 # ---------------------------------------------------------------------------
 # Probe
 # ---------------------------------------------------------------------------
+
 
 def probe(path: str) -> VideoInfo:
     """Get metadata about a video file using ffprobe."""
@@ -563,17 +689,36 @@ def get_duration(path: str) -> float:
 # Normalize — convert to H.264/AAC for editing
 # ---------------------------------------------------------------------------
 
+
 def normalize(input_path: str, output_path: str | None = None) -> str:
     """Normalize a video to H.264 video + AAC audio for reliable editing."""
     _validate_input(input_path)
     output = output_path or _auto_output(input_path, "normalized")
-    _run_ffmpeg(["-i", input_path, "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-c:a", "aac", "-b:a", "128k", *_movflags_args(output), output])
+    _run_ffmpeg(
+        [
+            "-i",
+            input_path,
+            "-c:v",
+            "libx264",
+            "-preset",
+            "fast",
+            "-crf",
+            "23",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "128k",
+            *_movflags_args(output),
+            output,
+        ]
+    )
     return output
 
 
 # ---------------------------------------------------------------------------
 # Core operations
 # ---------------------------------------------------------------------------
+
 
 def trim(
     input_path: str,
@@ -594,7 +739,22 @@ def trim(
         args.extend(["-t", str(duration)])
     elif end:
         args.extend(["-to", str(end)])
-    args.extend(["-c:v", "libx264", "-preset", "fast", "-crf", "23", "-c:a", "aac", "-b:a", "128k", *_movflags_args(output), output])
+    args.extend(
+        [
+            "-c:v",
+            "libx264",
+            "-preset",
+            "fast",
+            "-crf",
+            "23",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "128k",
+            *_movflags_args(output),
+            output,
+        ]
+    )
     _run_ffmpeg(args)
 
     info = probe(output)
@@ -647,15 +807,31 @@ def merge(
         if needs_normalize:
             for i, clip in enumerate(clips):
                 norm_path = os.path.join(tmpdir, f"clip_{i:04d}.mp4")
-                _run_ffmpeg([
-                    "-i", clip,
-                    "-vf", f"scale={target_w}:{target_h}:force_original_aspect_ratio=decrease,pad={target_w}:{target_h}:(ow-iw)/2:(oh-ih)/2",
-                    "-c:v", "libx264", "-preset", "fast", "-crf", "23",
-                    "-c:a", "aac", "-b:a", "128k",
-                    "-r", "30",
-                    "-ar", "44100", "-ac", "2",
-                    norm_path,
-                ])
+                _run_ffmpeg(
+                    [
+                        "-i",
+                        clip,
+                        "-vf",
+                        f"scale={target_w}:{target_h}:force_original_aspect_ratio=decrease,pad={target_w}:{target_h}:(ow-iw)/2:(oh-ih)/2",
+                        "-c:v",
+                        "libx264",
+                        "-preset",
+                        "fast",
+                        "-crf",
+                        "23",
+                        "-c:a",
+                        "aac",
+                        "-b:a",
+                        "128k",
+                        "-r",
+                        "30",
+                        "-ar",
+                        "44100",
+                        "-ac",
+                        "2",
+                        norm_path,
+                    ]
+                )
                 working_clips.append(norm_path)
         else:
             working_clips = list(clips)
@@ -680,7 +856,9 @@ def merge(
                     # Escape single quotes for FFmpeg concat demuxer
                     abs_path = os.path.abspath(clip).replace("'", "'\\''")
                     f.write(f"file '{abs_path}'\n")
-            _run_ffmpeg(["-f", "concat", "-safe", "0", "-i", concat_file, "-c", "copy", *_movflags_args(output), output])
+            _run_ffmpeg(
+                ["-f", "concat", "-safe", "0", "-i", concat_file, "-c", "copy", *_movflags_args(output), output]
+            )
 
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
@@ -727,7 +905,7 @@ def _merge_with_transitions(
         if transition_duration >= clip_dur:
             raise MCPVideoError(
                 f"Transition duration ({transition_duration}s) must be less than "
-                f"clip {i+1} duration ({clip_dur:.1f}s)",
+                f"clip {i + 1} duration ({clip_dur:.1f}s)",
                 code="transition_too_long",
             )
         cumulative += clip_dur - transition_duration
@@ -749,7 +927,9 @@ def _merge_with_transitions(
         in2 = labels[i + 1]
         out = f"xt{i}" if i < pairs - 1 else "vout"
         xfade_type = transition_types[i].replace("-", "")
-        filter_parts.append(f"[{in1}][{in2}]xfade=transition={xfade_type}:offset={offsets[i]:.3f}:duration={transition_duration:.3f}[{out}]")
+        filter_parts.append(
+            f"[{in1}][{in2}]xfade=transition={xfade_type}:offset={offsets[i]:.3f}:duration={transition_duration:.3f}[{out}]"
+        )
         labels[i + 1] = out
 
     filter_str = ";".join(filter_parts)
@@ -770,7 +950,21 @@ def _merge_with_transitions(
         audio_codec_args = ["-an"]
 
     _run_ffmpeg(
-        [*inputs, "-filter_complex", filter_complex, *map_args, "-c:v", "libx264", "-preset", "fast", "-crf", "23", *audio_codec_args, *_movflags_args(output), output]
+        [
+            *inputs,
+            "-filter_complex",
+            filter_complex,
+            *map_args,
+            "-c:v",
+            "libx264",
+            "-preset",
+            "fast",
+            "-crf",
+            "23",
+            *audio_codec_args,
+            *_movflags_args(output),
+            output,
+        ]
     )
 
 
@@ -807,7 +1001,14 @@ def add_text(
     # Escape FFmpeg drawtext special characters
     # Colons and backslashes must be escaped even inside single quotes
     # because FFmpeg parses filter options as key=value pairs with : delimiters
-    escaped_text = text.replace("\\", "\\\\").replace("'", "'\\''").replace(":", "\\:").replace("[", "\\[").replace("]", "\\]").replace(";", "\\;")
+    escaped_text = (
+        text.replace("\\", "\\\\")
+        .replace("'", "'\\''")
+        .replace(":", "\\:")
+        .replace("[", "\\[")
+        .replace("]", "\\]")
+        .replace(";", "\\;")
+    )
 
     filter_parts = [
         f"drawtext=text='{escaped_text}'",
@@ -829,7 +1030,21 @@ def add_text(
 
     vf = ":".join(filter_parts)
 
-    _run_ffmpeg(["-i", input_path, "-vf", vf, "-c:v", "libx264", *_quality_args(crf=crf, preset=preset), "-c:a", "copy", *_movflags_args(output), output])
+    _run_ffmpeg(
+        [
+            "-i",
+            input_path,
+            "-vf",
+            vf,
+            "-c:v",
+            "libx264",
+            *_quality_args(crf=crf, preset=preset),
+            "-c:a",
+            "copy",
+            *_movflags_args(output),
+            output,
+        ]
+    )
 
     info = probe(output)
     return EditResult(
@@ -875,13 +1090,30 @@ def add_audio(
         if start_time:
             delay = f"[1:a]adelay={int(start_time * 1000)}|{int(start_time * 1000)},"
 
-        filter_complex = (
-            f"[0:a]anull[a0];"
-            f"{delay}[1:a]{af}[a1];"
-            f"[a0][a1]amix=inputs=2:duration=longest[aout]"
-        )
+        filter_complex = f"[0:a]anull[a0];{delay}[1:a]{af}[a1];[a0][a1]amix=inputs=2:duration=longest[aout]"
 
-        _run_ffmpeg(["-i", video_path, "-i", audio_path, "-filter_complex", filter_complex, "-map", "0:v", "-map", "[aout]", "-c:v", "copy", "-c:a", "aac", "-b:a", "128k", *_movflags_args(output), output])
+        _run_ffmpeg(
+            [
+                "-i",
+                video_path,
+                "-i",
+                audio_path,
+                "-filter_complex",
+                filter_complex,
+                "-map",
+                "0:v",
+                "-map",
+                "[aout]",
+                "-c:v",
+                "copy",
+                "-c:a",
+                "aac",
+                "-b:a",
+                "128k",
+                *_movflags_args(output),
+                output,
+            ]
+        )
     else:
         # Replace audio (or add if no existing audio)
         args = ["-i", video_path, "-i", audio_path]
@@ -940,8 +1172,7 @@ def resize(
         w, h = ASPECT_RATIOS[aspect_ratio]
     elif aspect_ratio:
         raise MCPVideoError(
-            f"Unknown aspect ratio: {aspect_ratio}. "
-            f"Available: {', '.join(ASPECT_RATIOS.keys())}",
+            f"Unknown aspect ratio: {aspect_ratio}. Available: {', '.join(ASPECT_RATIOS.keys())}",
             error_type="input_error",
             code="invalid_aspect_ratio",
         )
@@ -960,12 +1191,28 @@ def resize(
     output = output_path or _auto_output(input_path, f"{w}x{h}")
 
     # Scale to fit within target, then pad to exact dimensions
-    vf = (
-        f"scale={w}:{h}:force_original_aspect_ratio=decrease,"
-        f"pad={w}:{h}:(ow-iw)/2:(oh-ih)/2:black"
-    )
+    vf = f"scale={w}:{h}:force_original_aspect_ratio=decrease,pad={w}:{h}:(ow-iw)/2:(oh-ih)/2:black"
 
-    _run_ffmpeg(["-i", input_path, "-vf", vf, "-c:v", "libx264", "-crf", str(preset["crf"]), "-preset", preset["preset"], "-c:a", "aac", "-b:a", "128k", *_movflags_args(output), output])
+    _run_ffmpeg(
+        [
+            "-i",
+            input_path,
+            "-vf",
+            vf,
+            "-c:v",
+            "libx264",
+            "-crf",
+            str(preset["crf"]),
+            "-preset",
+            preset["preset"],
+            "-c:a",
+            "aac",
+            "-b:a",
+            "128k",
+            *_movflags_args(output),
+            output,
+        ]
+    )
 
     info = probe(output)
     return EditResult(
@@ -1015,45 +1262,106 @@ def convert(
         passlogdir = tempfile.mkdtemp(prefix="mcp_video_2pass_")
         try:
             passlogfile = os.path.join(passlogdir, "pass")
-            _run_ffmpeg([
-                "-i", input_path,
-                "-c:v", "libx264",
-                "-b:v", f"{target_bitrate}k",
-                "-pass", "1",
-                "-passlogfile", passlogfile,
-                "-an", "-f", "null", os.devnull,
-            ])
-            _run_ffmpeg(["-i", input_path, "-c:v", "libx264", "-b:v", f"{target_bitrate}k", "-pass", "2", "-passlogfile", passlogfile, "-preset", preset["preset"], "-c:a", "aac", "-b:a", "128k", *_movflags_args(output), output])
+            _run_ffmpeg(
+                [
+                    "-i",
+                    input_path,
+                    "-c:v",
+                    "libx264",
+                    "-b:v",
+                    f"{target_bitrate}k",
+                    "-pass",
+                    "1",
+                    "-passlogfile",
+                    passlogfile,
+                    "-an",
+                    "-f",
+                    "null",
+                    os.devnull,
+                ]
+            )
+            _run_ffmpeg(
+                [
+                    "-i",
+                    input_path,
+                    "-c:v",
+                    "libx264",
+                    "-b:v",
+                    f"{target_bitrate}k",
+                    "-pass",
+                    "2",
+                    "-passlogfile",
+                    passlogfile,
+                    "-preset",
+                    preset["preset"],
+                    "-c:a",
+                    "aac",
+                    "-b:a",
+                    "128k",
+                    *_movflags_args(output),
+                    output,
+                ]
+            )
         finally:
             shutil.rmtree(passlogdir, ignore_errors=True)
     elif format == "mp4":
-        _run_ffmpeg_with_progress([
-            "-i", input_path,
-            "-c:v", "libx264",
-            "-crf", str(preset["crf"]),
-            "-preset", preset["preset"],
-            "-c:a", "aac", "-b:a", "128k",
-            "-movflags", "+faststart",
-            output,
-        ], estimated_duration=input_info.duration, on_progress=on_progress)
+        _run_ffmpeg_with_progress(
+            [
+                "-i",
+                input_path,
+                "-c:v",
+                "libx264",
+                "-crf",
+                str(preset["crf"]),
+                "-preset",
+                preset["preset"],
+                "-c:a",
+                "aac",
+                "-b:a",
+                "128k",
+                "-movflags",
+                "+faststart",
+                output,
+            ],
+            estimated_duration=input_info.duration,
+            on_progress=on_progress,
+        )
     elif format == "webm":
-        _run_ffmpeg_with_progress([
-            "-i", input_path,
-            "-c:v", "libvpx-vp9",
-            "-crf", str(preset["crf"]),
-            "-b:v", "0",
-            "-c:a", "libopus",
-            output,
-        ], estimated_duration=input_info.duration, on_progress=on_progress)
+        _run_ffmpeg_with_progress(
+            [
+                "-i",
+                input_path,
+                "-c:v",
+                "libvpx-vp9",
+                "-crf",
+                str(preset["crf"]),
+                "-b:v",
+                "0",
+                "-c:a",
+                "libopus",
+                output,
+            ],
+            estimated_duration=input_info.duration,
+            on_progress=on_progress,
+        )
     elif format == "mov":
-        _run_ffmpeg_with_progress([
-            "-i", input_path,
-            "-c:v", "libx264",
-            "-crf", str(preset["crf"]),
-            "-preset", preset["preset"],
-            "-c:a", "pcm_s16le",
-            output,
-        ], estimated_duration=input_info.duration, on_progress=on_progress)
+        _run_ffmpeg_with_progress(
+            [
+                "-i",
+                input_path,
+                "-c:v",
+                "libx264",
+                "-crf",
+                str(preset["crf"]),
+                "-preset",
+                preset["preset"],
+                "-c:a",
+                "pcm_s16le",
+                output,
+            ],
+            estimated_duration=input_info.duration,
+            on_progress=on_progress,
+        )
     elif format == "gif":
         # Two-pass palette-based GIF generation for quality
         # Scale by quality level: low=320, medium=480, high=640, ultra=800
@@ -1062,17 +1370,30 @@ def convert(
         tmpdir = tempfile.mkdtemp(prefix="mcp_video_gif_")
         try:
             palette = os.path.join(tmpdir, "palette.png")
-            _run_ffmpeg([
-                "-i", input_path,
-                "-vf", f"fps=15,scale={width}:-1:flags=lanczos,palettegen",
-                "-y", palette,
-            ])
-            _run_ffmpeg_with_progress([
-                "-i", input_path,
-                "-i", palette,
-                "-lavfi", f"fps=15,scale={width}:-1:flags=lanczos [x]; [x][1:v] paletteuse",
-                "-y", output,
-            ], estimated_duration=input_info.duration, on_progress=on_progress)
+            _run_ffmpeg(
+                [
+                    "-i",
+                    input_path,
+                    "-vf",
+                    f"fps=15,scale={width}:-1:flags=lanczos,palettegen",
+                    "-y",
+                    palette,
+                ]
+            )
+            _run_ffmpeg_with_progress(
+                [
+                    "-i",
+                    input_path,
+                    "-i",
+                    palette,
+                    "-lavfi",
+                    f"fps=15,scale={width}:-1:flags=lanczos [x]; [x][1:v] paletteuse",
+                    "-y",
+                    output,
+                ],
+                estimated_duration=input_info.duration,
+                on_progress=on_progress,
+            )
         finally:
             shutil.rmtree(tmpdir, ignore_errors=True)
     else:
@@ -1120,7 +1441,7 @@ def speed(
     output = output_path or _auto_output(input_path, f"speed_{factor}x")
 
     # Use setpts for video, atempo for audio
-    video_filter = f"setpts={1/factor}*PTS"
+    video_filter = f"setpts={1 / factor}*PTS"
     audio_filter = f"atempo={factor}"
 
     # atempo only supports 0.5 to 100.0; chain if needed
@@ -1130,7 +1451,11 @@ def speed(
         while factor ** (1 / chain_count) < 0.5:
             chain_count += 1
             if chain_count > MAX_SPEED_CHAIN_COUNT:
-                raise MCPVideoError("Speed factor too extreme: would require more than 20 atempo filters", error_type="validation_error", code="invalid_parameter")
+                raise MCPVideoError(
+                    "Speed factor too extreme: would require more than 20 atempo filters",
+                    error_type="validation_error",
+                    code="invalid_parameter",
+                )
         tempo_val = factor ** (1 / chain_count)
         audio_filter = ",".join([f"atempo={tempo_val}"] * chain_count)
     elif factor > 100:
@@ -1138,7 +1463,11 @@ def speed(
         while factor ** (1 / chain_count) > 100:
             chain_count += 1
             if chain_count > MAX_SPEED_CHAIN_COUNT:
-                raise MCPVideoError("Speed factor too extreme: would require more than 20 atempo filters", error_type="validation_error", code="invalid_parameter")
+                raise MCPVideoError(
+                    "Speed factor too extreme: would require more than 20 atempo filters",
+                    error_type="validation_error",
+                    code="invalid_parameter",
+                )
         tempo_val = factor ** (1 / chain_count)
         audio_filter = ",".join([f"atempo={tempo_val}"] * chain_count)
 
@@ -1147,9 +1476,48 @@ def speed(
     has_audio = info.audio_codec is not None
 
     if has_audio:
-        _run_ffmpeg(["-i", input_path, "-filter_complex", f"[0:v]{video_filter}[v];[0:a]{audio_filter}[a]", "-map", "[v]", "-map", "[a]", "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-c:a", "aac", "-b:a", "128k", *_movflags_args(output), output])
+        _run_ffmpeg(
+            [
+                "-i",
+                input_path,
+                "-filter_complex",
+                f"[0:v]{video_filter}[v];[0:a]{audio_filter}[a]",
+                "-map",
+                "[v]",
+                "-map",
+                "[a]",
+                "-c:v",
+                "libx264",
+                "-preset",
+                "fast",
+                "-crf",
+                "23",
+                "-c:a",
+                "aac",
+                "-b:a",
+                "128k",
+                *_movflags_args(output),
+                output,
+            ]
+        )
     else:
-        _run_ffmpeg(["-i", input_path, "-vf", video_filter, "-an", "-c:v", "libx264", "-preset", "fast", "-crf", "23", *_movflags_args(output), output])
+        _run_ffmpeg(
+            [
+                "-i",
+                input_path,
+                "-vf",
+                video_filter,
+                "-an",
+                "-c:v",
+                "libx264",
+                "-preset",
+                "fast",
+                "-crf",
+                "23",
+                *_movflags_args(output),
+                output,
+            ]
+        )
 
     info = probe(output)
     return EditResult(
@@ -1181,13 +1549,20 @@ def thumbnail(
 
     output = output_path or _auto_output(input_path, f"frame_{timestamp:.1f}s", ext=".jpg")
 
-    _run_ffmpeg([
-        "-ss", str(timestamp),
-        "-i", input_path,
-        "-vframes", "1",
-        "-q:v", "2",
-        "-y", output,
-    ])
+    _run_ffmpeg(
+        [
+            "-ss",
+            str(timestamp),
+            "-i",
+            input_path,
+            "-vframes",
+            "1",
+            "-q:v",
+            "2",
+            "-y",
+            output,
+        ]
+    )
 
     return ThumbnailResult(
         frame_path=output,
@@ -1211,7 +1586,28 @@ def preview(
 
     output = output_path or _auto_output(input_path, "preview")
 
-    _run_ffmpeg(["-i", input_path, "-vf", f"scale={w}:{h}", "-c:v", "libx264", "-crf", str(PREVIEW_PRESETS["crf"]), "-preset", PREVIEW_PRESETS["preset"], "-c:a", "aac", "-b:a", "64k", "-ac", "2", *_movflags_args(output), output])
+    _run_ffmpeg(
+        [
+            "-i",
+            input_path,
+            "-vf",
+            f"scale={w}:{h}",
+            "-c:v",
+            "libx264",
+            "-crf",
+            str(PREVIEW_PRESETS["crf"]),
+            "-preset",
+            PREVIEW_PRESETS["preset"],
+            "-c:a",
+            "aac",
+            "-b:a",
+            "64k",
+            "-ac",
+            "2",
+            *_movflags_args(output),
+            output,
+        ]
+    )
 
     result_info = probe(output)
     return EditResult(
@@ -1246,13 +1642,20 @@ def storyboard(
         frame_name = f"frame_{i + 1:02d}_{ts:.1f}s.jpg"
         frame_path = os.path.join(out_dir, frame_name)
 
-        _run_ffmpeg([
-            "-ss", str(ts),
-            "-i", input_path,
-            "-vframes", "1",
-            "-q:v", "2",
-            "-y", frame_path,
-        ])
+        _run_ffmpeg(
+            [
+                "-ss",
+                str(ts),
+                "-i",
+                input_path,
+                "-vframes",
+                "1",
+                "-q:v",
+                "2",
+                "-y",
+                frame_path,
+            ]
+        )
         frame_paths.append(frame_path)
 
     # Create storyboard grid using FFmpeg
@@ -1271,7 +1674,9 @@ def storyboard(
         # Normalize all frames to same size
         filter_parts = []
         for i, _fp in enumerate(frame_paths):
-            filter_parts.append(f"[{i}:v]scale=480:270:force_original_aspect_ratio=decrease,pad=480:270:(ow-iw)/2:(oh-ih)/2[s{i}]")
+            filter_parts.append(
+                f"[{i}:v]scale=480:270:force_original_aspect_ratio=decrease,pad=480:270:(ow-iw)/2:(oh-ih)/2[s{i}]"
+            )
 
         # Stack horizontally first, then vertically
         # Row 0: [s0][s1][s2][s3]hstack=inputs=4[r0]
@@ -1294,9 +1699,7 @@ def storyboard(
         filter_str = ";".join(filter_parts)
 
         try:
-            _run_ffmpeg(
-                [*inputs, "-filter_complex", filter_str, "-map", "[vout]", "-q:v", "2", "-y", grid_path]
-            )
+            _run_ffmpeg([*inputs, "-filter_complex", filter_str, "-map", "[vout]", "-q:v", "2", "-y", grid_path])
         except ProcessingError:
             # Grid creation failed — frames are still useful individually
             grid_path = None
@@ -1328,7 +1731,24 @@ def subtitles(
     escaped_sub_path = _escape_ffmpeg_filter_value(subtitle_path)
     escaped_style = _escape_ffmpeg_filter_value(style)
 
-    _run_ffmpeg(["-i", input_path, "-vf", f"subtitles='{escaped_sub_path}':force_style='{escaped_style}'", "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-c:a", "copy", *_movflags_args(output), output])
+    _run_ffmpeg(
+        [
+            "-i",
+            input_path,
+            "-vf",
+            f"subtitles='{escaped_sub_path}':force_style='{escaped_style}'",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "fast",
+            "-crf",
+            "23",
+            "-c:a",
+            "copy",
+            *_movflags_args(output),
+            output,
+        ]
+    )
 
     info = probe(output)
     return EditResult(
@@ -1373,7 +1793,23 @@ def watermark(
     # Format opacity for FFmpeg (0.0 to 1.0)
     opacity_fmt = f"{opacity:.2f}"
 
-    _run_ffmpeg(["-i", input_path, "-i", image_path, "-filter_complex", f"[1:v]format=rgba,colorchannelmixer=aa={opacity_fmt}[wm];[0:v][wm]overlay={overlay_pos}", "-c:v", "libx264", *_quality_args(crf=crf, preset=preset), "-c:a", "copy", *_movflags_args(output), output])
+    _run_ffmpeg(
+        [
+            "-i",
+            input_path,
+            "-i",
+            image_path,
+            "-filter_complex",
+            f"[1:v]format=rgba,colorchannelmixer=aa={opacity_fmt}[wm];[0:v][wm]overlay={overlay_pos}",
+            "-c:v",
+            "libx264",
+            *_quality_args(crf=crf, preset=preset),
+            "-c:a",
+            "copy",
+            *_movflags_args(output),
+            output,
+        ]
+    )
 
     info = probe(output)
     return EditResult(
@@ -1413,7 +1849,24 @@ def crop(
 
     output = output_path or _auto_output(input_path, f"crop_{width}x{height}")
 
-    _run_ffmpeg(["-i", input_path, "-vf", f"crop={width}:{height}:{x}:{y}", "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-c:a", "copy", *_movflags_args(output), output])
+    _run_ffmpeg(
+        [
+            "-i",
+            input_path,
+            "-vf",
+            f"crop={width}:{height}:{x}:{y}",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "fast",
+            "-crf",
+            "23",
+            "-c:a",
+            "copy",
+            *_movflags_args(output),
+            output,
+        ]
+    )
 
     result_info = probe(output)
     return EditResult(
@@ -1462,7 +1915,26 @@ def rotate(
     vf = ",".join(filters)
     output = output_path or _auto_output(input_path, f"rotated_{angle}")
 
-    _run_ffmpeg(["-i", input_path, "-vf", vf, "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-c:a", "aac", "-b:a", "128k", *_movflags_args(output), output])
+    _run_ffmpeg(
+        [
+            "-i",
+            input_path,
+            "-vf",
+            vf,
+            "-c:v",
+            "libx264",
+            "-preset",
+            "fast",
+            "-crf",
+            "23",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "128k",
+            *_movflags_args(output),
+            output,
+        ]
+    )
 
     result_info = probe(output)
     return EditResult(
@@ -1500,7 +1972,21 @@ def fade(
 
     vf = ",".join(vf_parts)
 
-    _run_ffmpeg(["-i", input_path, "-vf", vf, "-c:v", "libx264", *_quality_args(crf=crf, preset=preset), "-c:a", "copy", *_movflags_args(output), output])
+    _run_ffmpeg(
+        [
+            "-i",
+            input_path,
+            "-vf",
+            vf,
+            "-c:v",
+            "libx264",
+            *_quality_args(crf=crf, preset=preset),
+            "-c:a",
+            "copy",
+            *_movflags_args(output),
+            output,
+        ]
+    )
 
     result_info = probe(output)
     return EditResult(
@@ -1525,8 +2011,13 @@ def export_video(
     """Export a video with specified quality and format settings."""
     _validate_input(input_path)
     result = convert(
-        input_path, format=format, quality=quality, output_path=output_path,
-        on_progress=on_progress, two_pass=two_pass, target_bitrate=target_bitrate,
+        input_path,
+        format=format,
+        quality=quality,
+        output_path=output_path,
+        on_progress=on_progress,
+        two_pass=two_pass,
+        target_bitrate=target_bitrate,
     )
     result.operation = "export"
     return result
@@ -1535,6 +2026,7 @@ def export_video(
 # ---------------------------------------------------------------------------
 # Timeline-based edit (composite operation)
 # ---------------------------------------------------------------------------
+
 
 def edit_timeline(timeline: Timeline | dict, output_path: str | None = None) -> EditResult:
     """Execute a full timeline-based edit described in JSON."""
@@ -1604,7 +2096,10 @@ def edit_timeline(timeline: Timeline | dict, output_path: str | None = None) -> 
         if text_elements or image_overlays:
             composited = os.path.join(tmpdir, "composited.mp4")
             _apply_composite_overlays(
-                merged, composited, text_elements, image_overlays,
+                merged,
+                composited,
+                text_elements,
+                image_overlays,
             )
             current = composited
 
@@ -1770,19 +2265,69 @@ def _apply_composite_overlays(
             last_label = "vout"
 
         # Final map
-        cmd = [*inputs, "-filter_complex", ";".join(filter_parts), "-map", f"[{last_label}]", "-map", "0:a?", "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-c:a", "copy", *_movflags_args(output_path), output_path]
+        cmd = [
+            *inputs,
+            "-filter_complex",
+            ";".join(filter_parts),
+            "-map",
+            f"[{last_label}]",
+            "-map",
+            "0:a?",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "fast",
+            "-crf",
+            "23",
+            "-c:a",
+            "copy",
+            *_movflags_args(output_path),
+            output_path,
+        ]
         _run_ffmpeg(cmd)
 
     elif image_overlays:
         # Only image overlays, no text
-        cmd = [*inputs, "-filter_complex", ";".join(filter_parts), "-map", f"[{prev_label}]", "-map", "0:a?", "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-c:a", "copy", *_movflags_args(output_path), output_path]
+        cmd = [
+            *inputs,
+            "-filter_complex",
+            ";".join(filter_parts),
+            "-map",
+            f"[{prev_label}]",
+            "-map",
+            "0:a?",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "fast",
+            "-crf",
+            "23",
+            "-c:a",
+            "copy",
+            *_movflags_args(output_path),
+            output_path,
+        ]
         _run_ffmpeg(cmd)
 
     elif text_elements:
         # Only text overlays (no images) — use -vf
         vf = ",".join(vf_parts)
         _run_ffmpeg(
-            [*inputs, "-vf", vf, "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-c:a", "copy", *_movflags_args(output_path), output_path]
+            [
+                *inputs,
+                "-vf",
+                vf,
+                "-c:v",
+                "libx264",
+                "-preset",
+                "fast",
+                "-crf",
+                "23",
+                "-c:a",
+                "copy",
+                *_movflags_args(output_path),
+                output_path,
+            ]
         )
 
 
@@ -1812,13 +2357,19 @@ def extract_audio(
     }
     codec = codec_map[format]
 
-    _run_ffmpeg([
-        "-i", input_path,
-        "-vn",
-        "-c:a", codec,
-        "-b:a", "192k" if format != "wav" else "0",
-        "-y", output,
-    ])
+    _run_ffmpeg(
+        [
+            "-i",
+            input_path,
+            "-vn",
+            "-c:a",
+            codec,
+            "-b:a",
+            "192k" if format != "wav" else "0",
+            "-y",
+            output,
+        ]
+    )
 
     return output
 
@@ -1826,6 +2377,7 @@ def extract_audio(
 # ---------------------------------------------------------------------------
 # Video filters & effects
 # ---------------------------------------------------------------------------
+
 
 def _get_color_preset_filter(preset: ColorPreset) -> str:
     """Return FFmpeg eq filter string for a named color preset."""
@@ -1920,11 +2472,27 @@ def apply_filter(
         "invert": ("negate", "negate", False),
         "vignette": ("vignette", f"vignette=angle={params.get('angle', 'PI/4')}", False),
         "color_preset": ("eq", _get_color_preset_filter(params.get("preset", "warm")), False),
-        "denoise": ("hqdn3d", f"hqdn3d={params.get('luma_spatial', 4)}:{params.get('chroma_spatial', 3)}:{params.get('luma_tmp', 6)}:{params.get('chroma_tmp', 4.5)}", False),
+        "denoise": (
+            "hqdn3d",
+            f"hqdn3d={params.get('luma_spatial', 4)}:{params.get('chroma_spatial', 3)}:{params.get('luma_tmp', 6)}:{params.get('chroma_tmp', 4.5)}",
+            False,
+        ),
         "deinterlace": ("yadif", "yadif=0:-1:0", False),
-        "ken_burns": ("zoompan", f"zoompan=z='min(zoom+{params.get('zoom_speed', 0.0015)},1.5)':d={params.get('duration', 150)}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s={info.width}x{info.height}", False),
-        "reverb": ("aecho", f"aecho={params.get('in_gain', 0.8)}:{params.get('out_gain', 0.9)}:{params.get('delays', 60)}:{params.get('decay', 0.2)}", True),
-        "compressor": ("acompressor", f"acompressor=threshold={params.get('threshold_db', -20)}dB:ratio={params.get('ratio', 4)}:attack={params.get('attack', 5)}:release={params.get('release', 50)}", True),
+        "ken_burns": (
+            "zoompan",
+            f"zoompan=z='min(zoom+{params.get('zoom_speed', 0.0015)},1.5)':d={params.get('duration', 150)}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s={info.width}x{info.height}",
+            False,
+        ),
+        "reverb": (
+            "aecho",
+            f"aecho={params.get('in_gain', 0.8)}:{params.get('out_gain', 0.9)}:{params.get('delays', 60)}:{params.get('decay', 0.2)}",
+            True,
+        ),
+        "compressor": (
+            "acompressor",
+            f"acompressor=threshold={params.get('threshold_db', -20)}dB:ratio={params.get('ratio', 4)}:attack={params.get('attack', 5)}:release={params.get('release', 50)}",
+            True,
+        ),
         "pitch_shift": ("asetrate", _build_pitch_shift_filter(params.get("semitones", 0)), True),
         "noise_reduction": ("afftdn", f"afftdn=nf={params.get('noise_level', -25)}", True),
     }
@@ -1948,9 +2516,38 @@ def apply_filter(
                 error_type="validation_error",
                 code="audio_filter_no_audio",
             )
-        _run_ffmpeg(["-i", input_path, "-af", filter_string, "-c:v", "copy", "-c:a", "aac", "-b:a", "128k", *_movflags_args(output), output])
+        _run_ffmpeg(
+            [
+                "-i",
+                input_path,
+                "-af",
+                filter_string,
+                "-c:v",
+                "copy",
+                "-c:a",
+                "aac",
+                "-b:a",
+                "128k",
+                *_movflags_args(output),
+                output,
+            ]
+        )
     else:
-        _run_ffmpeg(["-i", input_path, "-vf", filter_string, "-c:v", "libx264", *_quality_args(crf=crf, preset=preset), "-c:a", "copy", *_movflags_args(output), output])
+        _run_ffmpeg(
+            [
+                "-i",
+                input_path,
+                "-vf",
+                filter_string,
+                "-c:v",
+                "libx264",
+                *_quality_args(crf=crf, preset=preset),
+                "-c:a",
+                "copy",
+                *_movflags_args(output),
+                output,
+            ]
+        )
 
     info = probe(output)
     return EditResult(
@@ -1966,6 +2563,7 @@ def apply_filter(
 # ---------------------------------------------------------------------------
 # Audio normalization
 # ---------------------------------------------------------------------------
+
 
 def normalize_audio(
     input_path: str,
@@ -1984,7 +2582,9 @@ def normalize_audio(
     """
     _validate_input(input_path)
     if not isinstance(target_lufs, (int, float)) or not (-70 <= target_lufs <= -5):
-        raise MCPVideoError(f"target_lufs must be -70 to -5, got {target_lufs}", error_type="validation_error", code="invalid_parameter")
+        raise MCPVideoError(
+            f"target_lufs must be -70 to -5, got {target_lufs}", error_type="validation_error", code="invalid_parameter"
+        )
     _require_filter("loudnorm", "Audio normalization")
     output = output_path or _auto_output(input_path, "normalized")
 
@@ -1992,7 +2592,22 @@ def normalize_audio(
     # TP (true peak) should be a fixed value near -1.5 dBTP regardless of target LUFS.
     tp = -1.5
 
-    _run_ffmpeg(["-i", input_path, "-af", f"loudnorm=I={target_lufs}:TP={tp}:LRA={lra}", "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", *_movflags_args(output), output])
+    _run_ffmpeg(
+        [
+            "-i",
+            input_path,
+            "-af",
+            f"loudnorm=I={target_lufs}:TP={tp}:LRA={lra}",
+            "-c:v",
+            "copy",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "192k",
+            *_movflags_args(output),
+            output,
+        ]
+    )
 
     info = probe(output)
     return EditResult(
@@ -2008,6 +2623,7 @@ def normalize_audio(
 # ---------------------------------------------------------------------------
 # Compositing & overlays
 # ---------------------------------------------------------------------------
+
 
 def overlay_video(
     background_path: str,
@@ -2086,7 +2702,25 @@ def overlay_video(
 
     filter_complex = f"[1:v]{overlay_chain}[ov];[0:v][ov]overlay={overlay_pos}{enable_expr}"
 
-    _run_ffmpeg(["-i", background_path, "-i", overlay_path, "-filter_complex", filter_complex, "-c:v", "libx264", *_quality_args(crf=crf, preset=preset), "-c:a", "aac", "-b:a", "128k", *_movflags_args(output), output])
+    _run_ffmpeg(
+        [
+            "-i",
+            background_path,
+            "-i",
+            overlay_path,
+            "-filter_complex",
+            filter_complex,
+            "-c:v",
+            "libx264",
+            *_quality_args(crf=crf, preset=preset),
+            "-c:a",
+            "aac",
+            "-b:a",
+            "128k",
+            *_movflags_args(output),
+            output,
+        ]
+    )
 
     info = probe(output)
     return EditResult(
@@ -2144,7 +2778,32 @@ def split_screen(
         else:
             filter_complex = "[0:v][1:v]vstack=inputs=2[v]"
 
-    _run_ffmpeg(["-i", left_path, "-i", right_path, "-filter_complex", filter_complex, "-map", "[v]", "-map", "0:a?", "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-c:a", "aac", "-b:a", "128k", *_movflags_args(output), output])
+    _run_ffmpeg(
+        [
+            "-i",
+            left_path,
+            "-i",
+            right_path,
+            "-filter_complex",
+            filter_complex,
+            "-map",
+            "[v]",
+            "-map",
+            "0:a?",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "fast",
+            "-crf",
+            "23",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "128k",
+            *_movflags_args(output),
+            output,
+        ]
+    )
 
     info = probe(output)
     return EditResult(
@@ -2180,9 +2839,13 @@ def reverse(
         args += ["-an"]
     args += ["-c:v", "libx264", "-preset", "fast", "-crf", "23"]
 
-    _run_ffmpeg(args + _movflags_args(output) + [
-        output,
-    ])
+    _run_ffmpeg(
+        args
+        + _movflags_args(output)
+        + [
+            output,
+        ]
+    )
 
     info = probe(output)
     return EditResult(
@@ -2249,6 +2912,7 @@ def chroma_key(
 # ---------------------------------------------------------------------------
 # Subtitle generation
 # ---------------------------------------------------------------------------
+
 
 def generate_subtitles(
     entries: list[dict],
@@ -2317,7 +2981,24 @@ def generate_subtitles(
         _require_filter("subtitles", "Subtitle burn-in")
         video_out = os.path.join(srt_dir, "subtitled.mp4")
         escaped_srt = _escape_ffmpeg_filter_value(srt_file)
-        _run_ffmpeg(["-i", input_path, "-vf", f"subtitles={escaped_srt}", "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-c:a", "copy", *_movflags_args(video_out), video_out])
+        _run_ffmpeg(
+            [
+                "-i",
+                input_path,
+                "-vf",
+                f"subtitles={escaped_srt}",
+                "-c:v",
+                "libx264",
+                "-preset",
+                "fast",
+                "-crf",
+                "23",
+                "-c:a",
+                "copy",
+                *_movflags_args(video_out),
+                video_out,
+            ]
+        )
         return SubtitleResult(
             srt_path=srt_file,
             video_path=video_out,
@@ -2342,6 +3023,7 @@ def _seconds_to_srt_time(seconds: float) -> str:
 # ---------------------------------------------------------------------------
 # Audio waveform extraction
 # ---------------------------------------------------------------------------
+
 
 def audio_waveform(
     input_path: str,
@@ -2370,7 +3052,9 @@ def audio_waveform(
     filter_str = "astats=metadata=1:reset=0,ametadata=1"
     proc = subprocess.run(
         [_ffmpeg(), "-i", input_path, "-af", filter_str, "-f", "null", "-"],
-        capture_output=True, text=True, timeout=120,
+        capture_output=True,
+        text=True,
+        timeout=120,
     )
     # Parse astats output for RMS level
     peaks: list[dict] = []
@@ -2455,6 +3139,7 @@ def audio_waveform(
 # Scene detection
 # ---------------------------------------------------------------------------
 
+
 def detect_scenes(
     input_path: str,
     threshold: float = 0.3,
@@ -2469,18 +3154,27 @@ def detect_scenes(
     """
     _validate_input(input_path)
     if not isinstance(threshold, (int, float)) or not (0.0 <= threshold <= 1.0):
-        raise MCPVideoError(f"threshold must be 0.0-1.0, got {threshold}", error_type="validation_error", code="invalid_parameter")
+        raise MCPVideoError(
+            f"threshold must be 0.0-1.0, got {threshold}", error_type="validation_error", code="invalid_parameter"
+        )
     info = probe(input_path)
     duration = info.duration
 
     # Use FFmpeg select filter with scene detection
     proc = subprocess.run(
         [
-            _ffmpeg(), "-i", input_path,
-            "-vf", f"select='gt(scene,{threshold})',showinfo",
-            "-f", "null", "-",
+            _ffmpeg(),
+            "-i",
+            input_path,
+            "-vf",
+            f"select='gt(scene,{threshold})',showinfo",
+            "-f",
+            "null",
+            "-",
         ],
-        capture_output=True, text=True, timeout=300,
+        capture_output=True,
+        text=True,
+        timeout=300,
     )
     if proc.returncode != 0:
         raise parse_ffmpeg_error(proc.stderr)
@@ -2502,22 +3196,26 @@ def detect_scenes(
     prev_time = 0.0
     for t in scene_times:
         if t - prev_time >= min_scene_duration:
-            scenes.append({
-                "start": round(prev_time, 2),
-                "end": round(t, 2),
-                "start_frame": round(prev_time * info.fps),
-                "end_frame": round(t * info.fps),
-            })
+            scenes.append(
+                {
+                    "start": round(prev_time, 2),
+                    "end": round(t, 2),
+                    "start_frame": round(prev_time * info.fps),
+                    "end_frame": round(t * info.fps),
+                }
+            )
             prev_time = t
 
     # Add final scene
     if duration - prev_time >= 0.1:
-        scenes.append({
-            "start": round(prev_time, 2),
-            "end": round(duration, 2),
-            "start_frame": round(prev_time * info.fps),
-            "end_frame": round(duration * info.fps),
-        })
+        scenes.append(
+            {
+                "start": round(prev_time, 2),
+                "end": round(duration, 2),
+                "start_frame": round(prev_time * info.fps),
+                "end_frame": round(duration * info.fps),
+            }
+        )
 
     return SceneDetectionResult(
         scenes=scenes,
@@ -2529,6 +3227,7 @@ def detect_scenes(
 # ---------------------------------------------------------------------------
 # Image sequences
 # ---------------------------------------------------------------------------
+
 
 def create_from_images(
     images: list[str],
@@ -2565,19 +3264,31 @@ def create_from_images(
         for i, img in enumerate(images):
             norm_path = os.path.join(tmpdir, f"img_{i:04d}{ext}")
             if img_format == "png":
-                _run_ffmpeg([
-                    "-y", "-i", img,
-                    "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2",
-                    "-c:v", "png",
-                    norm_path,
-                ])
+                _run_ffmpeg(
+                    [
+                        "-y",
+                        "-i",
+                        img,
+                        "-vf",
+                        "scale=trunc(iw/2)*2:trunc(ih/2)*2",
+                        "-c:v",
+                        "png",
+                        norm_path,
+                    ]
+                )
             else:
-                _run_ffmpeg([
-                    "-y", "-i", img,
-                    "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2",
-                    "-q:v", "2",
-                    norm_path,
-                ])
+                _run_ffmpeg(
+                    [
+                        "-y",
+                        "-i",
+                        img,
+                        "-vf",
+                        "scale=trunc(iw/2)*2:trunc(ih/2)*2",
+                        "-q:v",
+                        "2",
+                        norm_path,
+                    ]
+                )
             normalized.append(norm_path)
 
         # Build concat file
@@ -2591,7 +3302,26 @@ def create_from_images(
             abs_last = os.path.abspath(normalized[-1]).replace("'", "'\\''")
             f.write(f"file '{abs_last}'\n")
 
-        _run_ffmpeg(["-f", "concat", "-safe", "0", "-i", concat_file, "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-pix_fmt", "yuv420p", *_movflags_args(output), output])
+        _run_ffmpeg(
+            [
+                "-f",
+                "concat",
+                "-safe",
+                "0",
+                "-i",
+                concat_file,
+                "-c:v",
+                "libx264",
+                "-preset",
+                "fast",
+                "-crf",
+                "23",
+                "-pix_fmt",
+                "yuv420p",
+                *_movflags_args(output),
+                output,
+            ]
+        )
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
 
@@ -2637,20 +3367,23 @@ def export_frames(
     ext = format if format.startswith(".") else f".{format}"
     pattern = os.path.join(out_dir, f"frame_%04d{ext}")
 
-    _run_ffmpeg([
-        "-i", input_path,
-        "-vf", f"fps={fps}",
-        "-q:v", "2",
-        "-y",
-        pattern,
-    ])
+    _run_ffmpeg(
+        [
+            "-i",
+            input_path,
+            "-vf",
+            f"fps={fps}",
+            "-q:v",
+            "2",
+            "-y",
+            pattern,
+        ]
+    )
 
     # Collect generated frame paths
-    frame_paths = sorted([
-        os.path.join(out_dir, f)
-        for f in os.listdir(out_dir)
-        if f.startswith("frame_") and f.endswith(ext)
-    ])
+    frame_paths = sorted(
+        [os.path.join(out_dir, f) for f in os.listdir(out_dir) if f.startswith("frame_") and f.endswith(ext)]
+    )
 
     return ImageSequenceResult(
         frame_paths=frame_paths,
@@ -2662,6 +3395,7 @@ def export_frames(
 # ---------------------------------------------------------------------------
 # Quality metrics
 # ---------------------------------------------------------------------------
+
 
 def compare_quality(
     original_path: str,
@@ -2696,11 +3430,20 @@ def compare_quality(
             filter_str = f"[1:v]scale={target_w}:{target_h}[scaled];[0:v][scaled]{metric_lower}"
             proc = subprocess.run(
                 [
-                    _ffmpeg(), "-i", original_path, "-i", distorted_path,
-                    "-lavfi", filter_str,
-                    "-f", "null", "-",
+                    _ffmpeg(),
+                    "-i",
+                    original_path,
+                    "-i",
+                    distorted_path,
+                    "-lavfi",
+                    filter_str,
+                    "-f",
+                    "null",
+                    "-",
                 ],
-                capture_output=True, text=True, timeout=300,
+                capture_output=True,
+                text=True,
+                timeout=300,
             )
             if proc.returncode != 0:
                 raise ProcessingError(
@@ -2765,6 +3508,7 @@ def compare_quality(
 # ---------------------------------------------------------------------------
 # Metadata editing
 # ---------------------------------------------------------------------------
+
 
 def read_metadata(input_path: str) -> MetadataResult:
     """Read metadata tags from a video/audio file.
@@ -2854,6 +3598,7 @@ def write_metadata(
 # Video stabilization
 # ---------------------------------------------------------------------------
 
+
 def stabilize(
     input_path: str,
     smoothing: float = 15,
@@ -2880,18 +3625,44 @@ def stabilize(
         vectors_file = os.path.join(tmpdir, "vectors.trf")
         result = subprocess.run(
             [
-                _ffmpeg(), "-y",
-                "-i", input_path,
-                "-vf", "vidstabdetect=shakiness=10:accuracy=15:result=" + vectors_file,
-                "-f", "null", "-",
+                _ffmpeg(),
+                "-y",
+                "-i",
+                input_path,
+                "-vf",
+                "vidstabdetect=shakiness=10:accuracy=15:result=" + vectors_file,
+                "-f",
+                "null",
+                "-",
             ],
-            capture_output=True, text=True, timeout=600,
+            capture_output=True,
+            text=True,
+            timeout=600,
         )
         if result.returncode != 0:
             raise parse_ffmpeg_error(result.stderr)
 
         # Pass 2: apply stabilization
-        _run_ffmpeg(["-i", input_path, "-vf", f"vidstabtransform=input={vectors_file}:smoothing={smoothing}:zoom={zooming}:crop=black", "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-c:a", "aac", "-b:a", "128k", *_movflags_args(output), output])
+        _run_ffmpeg(
+            [
+                "-i",
+                input_path,
+                "-vf",
+                f"vidstabtransform=input={vectors_file}:smoothing={smoothing}:zoom={zooming}:crop=black",
+                "-c:v",
+                "libx264",
+                "-preset",
+                "fast",
+                "-crf",
+                "23",
+                "-c:a",
+                "aac",
+                "-b:a",
+                "128k",
+                *_movflags_args(output),
+                output,
+            ]
+        )
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
 
@@ -2909,6 +3680,7 @@ def stabilize(
 # ---------------------------------------------------------------------------
 # Advanced masking
 # ---------------------------------------------------------------------------
+
 
 def apply_mask(
     input_path: str,
@@ -2943,11 +3715,33 @@ def apply_mask(
         )
     else:
         filter_complex = (
-            f"[1:v]format=gray,scale={w}:{h},colorchannelmixer=aa=1.0[alpha];"
-            f"[0:v][alpha]alphamerge,format=yuv420p[out]"
+            f"[1:v]format=gray,scale={w}:{h},colorchannelmixer=aa=1.0[alpha];[0:v][alpha]alphamerge,format=yuv420p[out]"
         )
 
-    _run_ffmpeg(["-i", input_path, "-i", mask_path, "-filter_complex", filter_complex, "-map", "[out]", "-map", "0:a?", "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-c:a", "copy", *_movflags_args(output), output])
+    _run_ffmpeg(
+        [
+            "-i",
+            input_path,
+            "-i",
+            mask_path,
+            "-filter_complex",
+            filter_complex,
+            "-map",
+            "[out]",
+            "-map",
+            "0:a?",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "fast",
+            "-crf",
+            "23",
+            "-c:a",
+            "copy",
+            *_movflags_args(output),
+            output,
+        ]
+    )
 
     result_info = probe(output)
     return EditResult(
@@ -2964,6 +3758,7 @@ def apply_mask(
 # Batch processing
 # ---------------------------------------------------------------------------
 
+
 def video_batch(
     inputs: list[str],
     operation: str,
@@ -2979,7 +3774,10 @@ def video_batch(
         output_dir: Directory for output files. Auto-generated if omitted.
     """
     if not inputs:
-        return {"success": False, "error": {"type": "input_error", "code": "empty_inputs", "message": "No input files provided"}}
+        return {
+            "success": False,
+            "error": {"type": "input_error", "code": "empty_inputs", "message": "No input files provided"},
+        }
 
     params = params or {}
     results = []
@@ -3000,26 +3798,69 @@ def video_batch(
                 return None  # let the engine auto-generate
 
             if operation == "trim":
-                result = trim(input_path, start=params.get("start", "0"), duration=params.get("duration"), end=params.get("end"), output_path=_batch_output())
+                result = trim(
+                    input_path,
+                    start=params.get("start", "0"),
+                    duration=params.get("duration"),
+                    end=params.get("end"),
+                    output_path=_batch_output(),
+                )
             elif operation == "resize":
-                result = resize(input_path, width=params.get("width"), height=params.get("height"), aspect_ratio=params.get("aspect_ratio"), quality=params.get("quality", "high"), output_path=_batch_output())
+                result = resize(
+                    input_path,
+                    width=params.get("width"),
+                    height=params.get("height"),
+                    aspect_ratio=params.get("aspect_ratio"),
+                    quality=params.get("quality", "high"),
+                    output_path=_batch_output(),
+                )
             elif operation == "convert":
                 out_ext = f".{params.get('format', 'mp4')}"
-                result = convert(input_path, format=params.get("format", "mp4"), quality=params.get("quality", "high"), output_path=_batch_output(out_ext))
+                result = convert(
+                    input_path,
+                    format=params.get("format", "mp4"),
+                    quality=params.get("quality", "high"),
+                    output_path=_batch_output(out_ext),
+                )
             elif operation == "filter":
-                result = apply_filter(input_path, filter_type=params.get("filter_type", "blur"), params=params.get("filter_params", {}), output_path=_batch_output())
+                result = apply_filter(
+                    input_path,
+                    filter_type=params.get("filter_type", "blur"),
+                    params=params.get("filter_params", {}),
+                    output_path=_batch_output(),
+                )
             elif operation == "blur":
-                result = apply_filter(input_path, filter_type="blur", params=params.get("filter_params", {}), output_path=_batch_output())
+                result = apply_filter(
+                    input_path, filter_type="blur", params=params.get("filter_params", {}), output_path=_batch_output()
+                )
             elif operation == "color_grade":
-                result = apply_filter(input_path, filter_type="color_preset", params={"preset": params.get("preset", "warm")}, output_path=_batch_output())
+                result = apply_filter(
+                    input_path,
+                    filter_type="color_preset",
+                    params={"preset": params.get("preset", "warm")},
+                    output_path=_batch_output(),
+                )
             elif operation == "watermark":
-                result = watermark(input_path, image_path=params.get("image_path", ""), position=params.get("position", "bottom-right"), opacity=params.get("opacity", 0.7), output_path=_batch_output())
+                result = watermark(
+                    input_path,
+                    image_path=params.get("image_path", ""),
+                    position=params.get("position", "bottom-right"),
+                    opacity=params.get("opacity", 0.7),
+                    output_path=_batch_output(),
+                )
             elif operation == "speed":
                 result = speed(input_path, factor=params.get("factor", 1.0), output_path=_batch_output())
             elif operation == "fade":
-                result = fade(input_path, fade_in=params.get("fade_in", 0.5), fade_out=params.get("fade_out", 0.5), output_path=_batch_output())
+                result = fade(
+                    input_path,
+                    fade_in=params.get("fade_in", 0.5),
+                    fade_out=params.get("fade_out", 0.5),
+                    output_path=_batch_output(),
+                )
             elif operation == "normalize_audio":
-                result = normalize_audio(input_path, target_lufs=params.get("target_lufs", -16.0), output_path=_batch_output())
+                result = normalize_audio(
+                    input_path, target_lufs=params.get("target_lufs", -16.0), output_path=_batch_output()
+                )
             else:
                 results.append({"input": input_path, "success": False, "error": f"Unknown operation: {operation}"})
                 failed += 1

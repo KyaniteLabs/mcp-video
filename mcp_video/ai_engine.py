@@ -50,9 +50,7 @@ def ai_transcribe(
     try:
         import whisper
     except ImportError:
-        raise RuntimeError(
-            "Whisper not installed. Install with: pip install openai-whisper"
-        ) from None
+        raise RuntimeError("Whisper not installed. Install with: pip install openai-whisper") from None
 
     # Validate input file
     video_path = Path(video)
@@ -66,12 +64,17 @@ def ai_transcribe(
     try:
         # Extract audio using ffmpeg: 16kHz mono 16-bit PCM (Whisper optimal format)
         cmd = [
-            "ffmpeg", "-y",
-            "-i", str(video_path),
+            "ffmpeg",
+            "-y",
+            "-i",
+            str(video_path),
             "-vn",  # No video
-            "-acodec", "pcm_s16le",  # 16-bit PCM
-            "-ar", "16000",  # 16kHz (Whisper expects this)
-            "-ac", "1",  # Mono
+            "-acodec",
+            "pcm_s16le",  # 16-bit PCM
+            "-ar",
+            "16000",  # 16kHz (Whisper expects this)
+            "-ac",
+            "1",  # Mono
             audio_path,
         ]
         try:
@@ -133,9 +136,7 @@ def _format_srt(segments: list[dict[str, Any]]) -> str:
 
         # Format: index, time range, text, blank line
         srt_lines.append(str(index))
-        srt_lines.append(
-            f"{_seconds_to_srt_time(start_time)} --> {_seconds_to_srt_time(end_time)}"
-        )
+        srt_lines.append(f"{_seconds_to_srt_time(start_time)} --> {_seconds_to_srt_time(end_time)}")
         srt_lines.append(text)
         srt_lines.append("")  # Blank line between entries
         index += 1
@@ -208,10 +209,15 @@ def _format_json_transcript(
 def _run_ffprobe(video: str) -> dict[str, Any]:
     """Get video info using ffprobe."""
     cmd = [
-        "ffprobe", "-v", "error",
-        "-show_entries", "format=duration",
-        "-show_entries", "stream=codec_type",
-        "-of", "json",
+        "ffprobe",
+        "-v",
+        "error",
+        "-show_entries",
+        "format=duration",
+        "-show_entries",
+        "stream=codec_type",
+        "-of",
+        "json",
         video,
     ]
     try:
@@ -232,11 +238,7 @@ def _standard_scene_detect(video: str, threshold: float) -> list[dict]:
         raise FileNotFoundError(f"Video file not found: {video}")
     if not isinstance(threshold, (int, float)) or not (0.0 <= threshold <= 1.0):
         raise ValueError(f"threshold must be between 0.0 and 1.0, got {threshold}")
-    cmd = [
-        "ffmpeg", "-i", video,
-        "-filter:v", f"select='gt(scene,{threshold})',showinfo",
-        "-f", "null", "-"
-    ]
+    cmd = ["ffmpeg", "-i", video, "-filter:v", f"select='gt(scene,{threshold})',showinfo", "-f", "null", "-"]
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
     except subprocess.TimeoutExpired:
@@ -248,10 +250,12 @@ def _standard_scene_detect(video: str, threshold: float) -> list[dict]:
             # Extract timestamp
             match = re.search(r"pts_time:([\d.]+)", line)
             if match:
-                scenes.append({
-                    "timestamp": float(match.group(1)),
-                    "frame": None  # Could extract from output
-                })
+                scenes.append(
+                    {
+                        "timestamp": float(match.group(1)),
+                        "frame": None,  # Could extract from output
+                    }
+                )
 
     return scenes
 
@@ -404,16 +408,26 @@ def _apply_simple_spatial(
             )
 
             cmd = [
-                "ffmpeg", "-y",
-                "-ss", str(time_start),
-                "-t", str(segment_duration),
-                "-i", video,
-                "-filter_complex", filter_complex,
-                "-map", "0:v",  # Copy video stream
-                "-map", "[aout]",  # Use processed audio
-                "-c:v", "copy",  # Copy video without re-encoding
-                "-c:a", "aac",  # Re-encode audio
-                "-b:a", "192k",
+                "ffmpeg",
+                "-y",
+                "-ss",
+                str(time_start),
+                "-t",
+                str(segment_duration),
+                "-i",
+                video,
+                "-filter_complex",
+                filter_complex,
+                "-map",
+                "0:v",  # Copy video stream
+                "-map",
+                "[aout]",  # Use processed audio
+                "-c:v",
+                "copy",  # Copy video without re-encoding
+                "-c:a",
+                "aac",  # Re-encode audio
+                "-b:a",
+                "192k",
                 str(segment_file),
             ]
 
@@ -438,11 +452,16 @@ def _apply_simple_spatial(
                     f.write(f"file '{escaped_path}'\n")
 
             cmd = [
-                "ffmpeg", "-y",
-                "-f", "concat",
-                "-safe", "0",
-                "-i", str(concat_list),
-                "-c", "copy",
+                "ffmpeg",
+                "-y",
+                "-f",
+                "concat",
+                "-safe",
+                "0",
+                "-i",
+                str(concat_list),
+                "-c",
+                "copy",
                 output,
             ]
 
@@ -459,9 +478,13 @@ def _apply_simple_spatial(
 def _get_video_duration(video_path: str) -> float | None:
     """Get video duration in seconds using ffprobe."""
     cmd = [
-        "ffprobe", "-v", "error",
-        "-show_entries", "format=duration",
-        "-of", "default=noprint_wrappers=1:nokey=1",
+        "ffprobe",
+        "-v",
+        "error",
+        "-show_entries",
+        "format=duration",
+        "-of",
+        "default=noprint_wrappers=1:nokey=1",
         video_path,
     ]
     try:
@@ -518,11 +541,15 @@ def ai_scene_detect(
         # Extract frames at regular intervals
         frame_pattern = Path(tmpdir) / "frame_%04d.jpg"
         cmd = [
-            "ffmpeg", "-y",
-            "-i", video,
-            "-vf", f"fps=1/{frame_interval},scale=320:-1",
-            "-q:v", "2",
-            str(frame_pattern).replace("%04d", "%04d")
+            "ffmpeg",
+            "-y",
+            "-i",
+            video,
+            "-vf",
+            f"fps=1/{frame_interval},scale=320:-1",
+            "-q:v",
+            "2",
+            str(frame_pattern).replace("%04d", "%04d"),
         ]
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
@@ -547,11 +574,7 @@ def ai_scene_detect(
                 # frame_0001.jpg corresponds to 0.0s, frame_0002.jpg to 0.5s, etc.
                 frame_num = int(frame_path.stem.split("_")[1])
                 timestamp = (frame_num - 1) * frame_interval
-                hashes.append({
-                    "timestamp": timestamp,
-                    "hash": phash,
-                    "path": frame_path
-                })
+                hashes.append({"timestamp": timestamp, "hash": phash, "path": frame_path})
             except Exception:
                 continue
 
@@ -567,11 +590,7 @@ def ai_scene_detect(
             hash_diff = prev_hash - curr_hash
 
             if hash_diff > hash_threshold:
-                scenes.append({
-                    "timestamp": hashes[i]["timestamp"],
-                    "frame": None,
-                    "hash_diff": hash_diff
-                })
+                scenes.append({"timestamp": hashes[i]["timestamp"], "frame": None, "hash_diff": hash_diff})
 
     return scenes
 
@@ -593,9 +612,14 @@ def _detect_silence_regions(
     """
     # Run silencedetect filter
     cmd = [
-        "ffmpeg", "-i", video,
-        "-af", f"silencedetect=noise={silence_threshold}dB:d={min_silence_duration}",
-        "-f", "null", "-",
+        "ffmpeg",
+        "-i",
+        video,
+        "-af",
+        f"silencedetect=noise={silence_threshold}dB:d={min_silence_duration}",
+        "-f",
+        "null",
+        "-",
     ]
 
     try:
@@ -684,11 +708,16 @@ def _concat_segments(
         start, end = segments[0]
         duration = end - start
         cmd = [
-            "ffmpeg", "-y",
-            "-i", video,
-            "-ss", str(start),
-            "-t", str(duration),
-            "-c", "copy",
+            "ffmpeg",
+            "-y",
+            "-i",
+            video,
+            "-ss",
+            str(start),
+            "-t",
+            str(duration),
+            "-c",
+            "copy",
             output,
         ]
         try:
@@ -708,11 +737,16 @@ def _concat_segments(
             duration = end - start
 
             cmd = [
-                "ffmpeg", "-y",
-                "-i", video,
-                "-ss", str(start),
-                "-t", str(duration),
-                "-c", "copy",
+                "ffmpeg",
+                "-y",
+                "-i",
+                video,
+                "-ss",
+                str(start),
+                "-t",
+                str(duration),
+                "-c",
+                "copy",
                 str(segment_file),
             ]
             try:
@@ -734,11 +768,16 @@ def _concat_segments(
 
         # Concatenate using concat demuxer
         cmd = [
-            "ffmpeg", "-y",
-            "-f", "concat",
-            "-safe", "0",
-            "-i", str(concat_list),
-            "-c", "copy",
+            "ffmpeg",
+            "-y",
+            "-f",
+            "concat",
+            "-safe",
+            "0",
+            "-i",
+            str(concat_list),
+            "-c",
+            "copy",
             output,
         ]
         try:
@@ -839,9 +878,7 @@ def ai_stem_separation(
     try:
         import demucs.separate
     except ImportError:
-        raise RuntimeError(
-            "Demucs not installed. Install with: pip install demucs"
-        ) from None
+        raise RuntimeError("Demucs not installed. Install with: pip install demucs") from None
 
     # Validate input file
     video_path = Path(video)
@@ -862,12 +899,17 @@ def ai_stem_separation(
     try:
         # Extract audio using ffmpeg: 16-bit PCM stereo (Demucs works best with stereo)
         cmd = [
-            "ffmpeg", "-y",
-            "-i", str(video_path),
+            "ffmpeg",
+            "-y",
+            "-i",
+            str(video_path),
             "-vn",  # No video
-            "-acodec", "pcm_s16le",  # 16-bit PCM
-            "-ar", "44100",  # 44.1kHz (CD quality)
-            "-ac", "2",  # Stereo (Demucs expects stereo)
+            "-acodec",
+            "pcm_s16le",  # 16-bit PCM
+            "-ar",
+            "44100",  # 44.1kHz (CD quality)
+            "-ac",
+            "2",  # Stereo (Demucs expects stereo)
             audio_path,
         ]
         try:
@@ -883,8 +925,10 @@ def ai_stem_separation(
 
         # Build demucs command arguments
         demucs_args = [
-            "--out", str(output_path),
-            "--name", model,
+            "--out",
+            str(output_path),
+            "--name",
+            model,
             audio_path,
         ]
 
@@ -907,7 +951,6 @@ def ai_stem_separation(
     finally:
         # Clean up temp audio file
         Path(audio_path).unlink(missing_ok=True)
-
 
 
 def ai_color_grade(
@@ -984,11 +1027,16 @@ def ai_color_grade(
 
     # Build FFmpeg command
     cmd = [
-        "ffmpeg", "-y",
-        "-i", str(video_path),
-        "-vf", filter_string,
-        "-c:a", "copy",  # Copy audio without re-encoding
-        "-pix_fmt", "yuv420p",  # Ensure compatibility
+        "ffmpeg",
+        "-y",
+        "-i",
+        str(video_path),
+        "-vf",
+        filter_string,
+        "-c:a",
+        "copy",  # Copy audio without re-encoding
+        "-pix_fmt",
+        "yuv420p",  # Ensure compatibility
         output,
     ]
 
@@ -1017,13 +1065,10 @@ def _match_reference_colors(video: str, reference: str) -> dict:
     Returns:
         Dict with color adjustment parameters
     """
+
     def extract_mean_color(video_path: str) -> dict:
         """Extract mean RGB values from video using signalstats filter."""
-        cmd = [
-            "ffmpeg", "-i", video_path,
-            "-vf", "signalstats=out=JSON:stat=tout+vrep+brng",
-            "-f", "null", "-"
-        ]
+        cmd = ["ffmpeg", "-i", video_path, "-vf", "signalstats=out=JSON:stat=tout+vrep+brng", "-f", "null", "-"]
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
         except subprocess.TimeoutExpired:
@@ -1038,9 +1083,9 @@ def _match_reference_colors(video: str, reference: str) -> dict:
 
         # Try to extract mean Y/U/V or R/G/B values
         # This is a simplified extraction - signalstats outputs in YUV by default
-        y_match = re.search(r'YAVG ([\d.]+)', stderr)
-        u_match = re.search(r'UAVG ([\d.]+)', stderr)
-        v_match = re.search(r'VAVG ([\d.]+)', stderr)
+        y_match = re.search(r"YAVG ([\d.]+)", stderr)
+        u_match = re.search(r"UAVG ([\d.]+)", stderr)
+        v_match = re.search(r"VAVG ([\d.]+)", stderr)
 
         if y_match and u_match and v_match:
             # Convert YUV to approximate RGB (simplified)
@@ -1156,6 +1201,7 @@ def _ai_upscale_opencv(video_path: str, output_path: str, scale: int) -> str:
 
     if not model_path.exists():
         import urllib.request
+
         url = model_urls[scale]
         print(f"Downloading FSRCNN x{scale} model...")
         urllib.request.urlretrieve(url, model_path)
@@ -1191,12 +1237,7 @@ def _ai_upscale_opencv(video_path: str, output_path: str, scale: int) -> str:
 
         # Extract frames
         frame_pattern = frames_dir / "frame_%04d.png"
-        cmd = [
-            "ffmpeg", "-y",
-            "-i", str(video_file),
-            "-vsync", "0",
-            str(frame_pattern)
-        ]
+        cmd = ["ffmpeg", "-y", "-i", str(video_file), "-vsync", "0", str(frame_pattern)]
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
         except subprocess.TimeoutExpired:
@@ -1225,21 +1266,19 @@ def _ai_upscale_opencv(video_path: str, output_path: str, scale: int) -> str:
         # Reconstruct video
         upscaled_pattern = upscaled_dir / "frame_%04d.png"
         cmd = [
-            "ffmpeg", "-y",
-            "-framerate", str(fps),
-            "-i", str(upscaled_pattern),
+            "ffmpeg",
+            "-y",
+            "-framerate",
+            str(fps),
+            "-i",
+            str(upscaled_pattern),
         ]
 
         if has_audio:
             # Copy audio from original
             cmd.extend(["-i", str(video_file), "-c:a", "copy", "-shortest"])
 
-        cmd.extend([
-            "-c:v", "libx264",
-            "-pix_fmt", "yuv420p",
-            "-crf", "18",
-            str(output_file)
-        ])
+        cmd.extend(["-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "18", str(output_file)])
 
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
@@ -1284,6 +1323,7 @@ def ai_upscale(
     try:
         from realesrgan import RealESRGANer
         from basicsr.archs.rrdbnet_arch import RRDBNet
+
         has_realesrgan = True
     except ImportError:
         has_realesrgan = False
@@ -1327,12 +1367,7 @@ def ai_upscale(
 
         # Step 2: Extract frames from video
         frame_pattern = frames_dir / "frame_%04d.png"
-        cmd = [
-            "ffmpeg", "-y",
-            "-i", str(video_path),
-            "-vsync", "0",
-            str(frame_pattern)
-        ]
+        cmd = ["ffmpeg", "-y", "-i", str(video_path), "-vsync", "0", str(frame_pattern)]
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
         except subprocess.TimeoutExpired:
@@ -1353,7 +1388,7 @@ def ai_upscale(
             num_feat=config["num_feat"],
             num_block=config["num_block"],
             num_grow_ch=32,
-            scale=scale
+            scale=scale,
         )
 
         # Determine model URL/path based on model and scale
@@ -1365,7 +1400,7 @@ def ai_upscale(
             tile=0,  # No tiling - process whole image
             tile_pad=10,
             pre_pad=0,
-            half=False  # Use FP32
+            half=False,  # Use FP32
         )
 
         # Step 4: Upscale each frame
@@ -1390,11 +1425,14 @@ def ai_upscale(
         if has_audio:
             audio_path = tmpdir_path / "audio.aac"
             cmd = [
-                "ffmpeg", "-y",
-                "-i", str(video_path),
+                "ffmpeg",
+                "-y",
+                "-i",
+                str(video_path),
                 "-vn",  # No video
-                "-c:a", "copy",
-                str(audio_path)
+                "-c:a",
+                "copy",
+                str(audio_path),
             ]
             try:
                 result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
@@ -1412,25 +1450,37 @@ def ai_upscale(
         if audio_path and audio_path.exists():
             # Reconstruct with audio
             cmd = [
-                "ffmpeg", "-y",
-                "-framerate", str(fps),
-                "-i", str(upscaled_pattern),
-                "-i", str(audio_path),
-                "-c:v", "libx264",
-                "-pix_fmt", "yuv420p",
-                "-c:a", "copy",
+                "ffmpeg",
+                "-y",
+                "-framerate",
+                str(fps),
+                "-i",
+                str(upscaled_pattern),
+                "-i",
+                str(audio_path),
+                "-c:v",
+                "libx264",
+                "-pix_fmt",
+                "yuv420p",
+                "-c:a",
+                "copy",
                 "-shortest",
-                str(output_path)
+                str(output_path),
             ]
         else:
             # Reconstruct without audio
             cmd = [
-                "ffmpeg", "-y",
-                "-framerate", str(fps),
-                "-i", str(upscaled_pattern),
-                "-c:v", "libx264",
-                "-pix_fmt", "yuv420p",
-                str(output_path)
+                "ffmpeg",
+                "-y",
+                "-framerate",
+                str(fps),
+                "-i",
+                str(upscaled_pattern),
+                "-c:v",
+                "libx264",
+                "-pix_fmt",
+                "yuv420p",
+                str(output_path),
             ]
 
         try:
@@ -1446,11 +1496,16 @@ def ai_upscale(
 def _get_video_fps(video_path: str) -> float | None:
     """Get video frame rate using ffprobe."""
     cmd = [
-        "ffprobe", "-v", "error",
-        "-select_streams", "v:0",
-        "-show_entries", "stream=r_frame_rate",
-        "-of", "default=noprint_wrappers=1:nokey=1",
-        video_path
+        "ffprobe",
+        "-v",
+        "error",
+        "-select_streams",
+        "v:0",
+        "-show_entries",
+        "stream=r_frame_rate",
+        "-of",
+        "default=noprint_wrappers=1:nokey=1",
+        video_path,
     ]
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
@@ -1477,11 +1532,16 @@ def _get_video_fps(video_path: str) -> float | None:
 def _has_audio_stream(video_path: str) -> bool:
     """Check if video has an audio stream."""
     cmd = [
-        "ffprobe", "-v", "error",
-        "-select_streams", "a",
-        "-show_entries", "stream=codec_type",
-        "-of", "default=noprint_wrappers=1:nokey=1",
-        video_path
+        "ffprobe",
+        "-v",
+        "error",
+        "-select_streams",
+        "a",
+        "-show_entries",
+        "stream=codec_type",
+        "-of",
+        "default=noprint_wrappers=1:nokey=1",
+        video_path,
     ]
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
@@ -1500,6 +1560,7 @@ def _is_safe_url(url: str) -> bool:
     """Reject URLs that resolve to private, loopback, or link-local IPs (SSRF protection)."""
     try:
         from urllib.parse import urlparse
+
         parsed = urlparse(url)
         hostname = parsed.hostname
         if not hostname:
@@ -1518,26 +1579,53 @@ def _is_safe_url(url: str) -> bool:
 
 # Video file extensions that can be fetched directly via HTTP.
 _DIRECT_VIDEO_EXTENSIONS = {
-    ".mp4", ".mov", ".mkv", ".webm", ".avi", ".m4v",
-    ".flv", ".wmv", ".ts", ".m2ts", ".mts",
+    ".mp4",
+    ".mov",
+    ".mkv",
+    ".webm",
+    ".avi",
+    ".m4v",
+    ".flv",
+    ".wmv",
+    ".ts",
+    ".m2ts",
+    ".mts",
 }
 
 # Hostnames that require yt-dlp (streaming platforms).
 _PLATFORM_HOSTS = {
-    "youtube.com", "youtu.be", "www.youtube.com",
-    "vimeo.com", "www.vimeo.com", "player.vimeo.com",
-    "dailymotion.com", "www.dailymotion.com",
-    "twitch.tv", "www.twitch.tv", "clips.twitch.tv",
-    "twitter.com", "x.com", "www.twitter.com",
-    "instagram.com", "www.instagram.com",
-    "tiktok.com", "www.tiktok.com",
-    "facebook.com", "www.facebook.com",
-    "reddit.com", "v.redd.it",
-    "streamable.com", "www.streamable.com",
-    "rumble.com", "www.rumble.com",
-    "odysee.com", "www.odysee.com",
-    "loom.com", "www.loom.com",
-    "wistia.com", "www.wistia.com",
+    "youtube.com",
+    "youtu.be",
+    "www.youtube.com",
+    "vimeo.com",
+    "www.vimeo.com",
+    "player.vimeo.com",
+    "dailymotion.com",
+    "www.dailymotion.com",
+    "twitch.tv",
+    "www.twitch.tv",
+    "clips.twitch.tv",
+    "twitter.com",
+    "x.com",
+    "www.twitter.com",
+    "instagram.com",
+    "www.instagram.com",
+    "tiktok.com",
+    "www.tiktok.com",
+    "facebook.com",
+    "www.facebook.com",
+    "reddit.com",
+    "v.redd.it",
+    "streamable.com",
+    "www.streamable.com",
+    "rumble.com",
+    "www.rumble.com",
+    "odysee.com",
+    "www.odysee.com",
+    "loom.com",
+    "www.loom.com",
+    "wistia.com",
+    "www.wistia.com",
 }
 
 
@@ -1575,9 +1663,7 @@ def _download_direct_url(url: str, dest_dir: str) -> str:
             total += len(chunk)
             if total > max_download_bytes:
                 Path(dest).unlink(missing_ok=True)
-                raise RuntimeError(
-                    f"Download exceeded {max_download_bytes >> 30} GiB size limit"
-                )
+                raise RuntimeError(f"Download exceeded {max_download_bytes >> 30} GiB size limit")
             fh.write(chunk)
     return dest
 
@@ -1590,9 +1676,7 @@ def _download_with_ytdlp(url: str, dest_dir: str) -> str:
     try:
         import yt_dlp
     except ImportError:
-        raise RuntimeError(
-            "yt-dlp is not installed. Install it with: pip install yt-dlp"
-        ) from None
+        raise RuntimeError("yt-dlp is not installed. Install it with: pip install yt-dlp") from None
 
     dest_template = str(Path(dest_dir) / "%(id)s.%(ext)s")
     ydl_opts = {
@@ -1675,9 +1759,7 @@ def _resolve_video_source(video: str) -> tuple[str, str | None, str | None]:
                     local = _download_direct_url(video, tmp)
                 except Exception as dl_exc:
                     shutil.rmtree(tmp, ignore_errors=True)
-                    raise RuntimeError(
-                        f"Download failed (yt-dlp: {exc}; urllib: {dl_exc})"
-                    ) from dl_exc
+                    raise RuntimeError(f"Download failed (yt-dlp: {exc}; urllib: {dl_exc})") from dl_exc
             else:
                 raise RuntimeError(f"Failed to download {video}: {exc}") from exc
 
@@ -1741,13 +1823,26 @@ def analyze_video(
 
     # Validate output paths — ensure they don't escape safe directories
     for label, path in [
-        ("output_srt", output_srt), ("output_txt", output_txt),
-        ("output_md", output_md), ("output_json", output_json),
+        ("output_srt", output_srt),
+        ("output_txt", output_txt),
+        ("output_md", output_md),
+        ("output_json", output_json),
     ]:
         if path is not None:
             p = Path(path).resolve()
             # Block writes to system directories
-            blocked_prefixes = ("/etc/", "/usr/", "/bin/", "/sbin/", "/var/", "/root/", "/boot/", "/dev/", "/proc/", "/sys/")
+            blocked_prefixes = (
+                "/etc/",
+                "/usr/",
+                "/bin/",
+                "/sbin/",
+                "/var/",
+                "/root/",
+                "/boot/",
+                "/dev/",
+                "/proc/",
+                "/sys/",
+            )
             if any(str(p).startswith(prefix) for prefix in blocked_prefixes):
                 raise ValueError(f"{label} path escapes safe directory: {path}")
 
@@ -1865,10 +1960,7 @@ def analyze_video(
         if include_chapters:
             try:
                 raw_chapters = _effects.auto_chapters(str(video_path), threshold=scene_threshold)
-                chapters_result = [
-                    {"timestamp": ts, "title": title}
-                    for ts, title in raw_chapters
-                ]
+                chapters_result = [{"timestamp": ts, "title": title} for ts, title in raw_chapters]
             except Exception as exc:
                 errors.append({"section": "chapters", "error": str(exc)})
 

@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 
 # --- Video metadata ---
 
+
 class VideoInfo(BaseModel):
     """Metadata about a video file."""
 
@@ -31,6 +32,7 @@ class VideoInfo(BaseModel):
     @property
     def aspect_ratio(self) -> str:
         from math import gcd
+
         g = gcd(self.width, self.height)
         return f"{self.width // g}:{self.height // g}"
 
@@ -42,6 +44,7 @@ class VideoInfo(BaseModel):
 
 
 # --- Operation results ---
+
 
 class EditResult(BaseModel):
     """Result of a video editing operation."""
@@ -97,7 +100,9 @@ class WaveformResult(BaseModel):
     max_level: float
     min_level: float
     silence_regions: list[dict] = Field(description="List of {start, end} silence regions")
-    synthetic: bool = Field(default=False, description="True if data was synthetically generated due to analysis failure")
+    synthetic: bool = Field(
+        default=False, description="True if data was synthetically generated due to analysis failure"
+    )
 
 
 class SceneDetectionResult(BaseModel):
@@ -177,9 +182,15 @@ ASPECT_RATIOS: dict[str, tuple[int, int]] = {
 # --- Text positioning ---
 
 NamedPosition = Literal[
-    "top-left", "top-center", "top-right",
-    "center-left", "center", "center-right",
-    "bottom-left", "bottom-center", "bottom-right",
+    "top-left",
+    "top-center",
+    "top-right",
+    "center-left",
+    "center",
+    "center-right",
+    "bottom-left",
+    "bottom-center",
+    "bottom-right",
 ]
 
 # Position can be a named position string, pixel coordinates, or percentage coordinates
@@ -192,10 +203,23 @@ TransitionType = Literal["fade", "dissolve", "wipe-left", "wipe-right", "wipe-up
 # --- Filter types ---
 
 FilterType = Literal[
-    "blur", "sharpen", "brightness", "contrast", "saturation",
-    "grayscale", "sepia", "invert", "vignette", "color_preset",
-    "denoise", "deinterlace", "ken_burns",
-    "reverb", "compressor", "pitch_shift", "noise_reduction",
+    "blur",
+    "sharpen",
+    "brightness",
+    "contrast",
+    "saturation",
+    "grayscale",
+    "sepia",
+    "invert",
+    "vignette",
+    "color_preset",
+    "denoise",
+    "deinterlace",
+    "ken_burns",
+    "reverb",
+    "compressor",
+    "pitch_shift",
+    "noise_reduction",
 ]
 
 ColorPreset = Literal["warm", "cool", "vintage", "cinematic", "noir"]
@@ -209,6 +233,7 @@ SplitLayout = Literal["side-by-side", "top-bottom"]
 ExportFormat = Literal["mp4", "webm", "gif", "mov"]
 
 # --- Timeline DSL models ---
+
 
 class TimelineClip(BaseModel):
     """A single clip in a timeline track."""
@@ -238,12 +263,14 @@ class TimelineTextElement(BaseModel):
     start: float = 0.0
     duration: float | None = None
     position: Position = "top-center"
-    style: dict[str, Any] = Field(default_factory=lambda: {
-        "font": "Arial",
-        "size": 48,
-        "color": "white",
-        "shadow": True,
-    })
+    style: dict[str, Any] = Field(
+        default_factory=lambda: {
+            "font": "Arial",
+            "size": 48,
+            "color": "white",
+            "shadow": True,
+        }
+    )
 
 
 class TimelineImageOverlay(BaseModel):
@@ -288,6 +315,7 @@ class Timeline(BaseModel):
 
 
 # --- Watermark settings ---
+
 
 class WatermarkSettings(BaseModel):
     """Settings for watermark overlay."""
