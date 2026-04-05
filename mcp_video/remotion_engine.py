@@ -9,7 +9,6 @@ if no output_path is provided.
 
 from __future__ import annotations
 
-import contextlib
 import json
 import os
 import re
@@ -709,7 +708,6 @@ def render_and_post(
     from . import engine as video_engine
     operations: list[str] = []
     current_input = remotion_output
-    temp_files: list[str] = []
 
     op_map = {
         "resize": video_engine.resize,
