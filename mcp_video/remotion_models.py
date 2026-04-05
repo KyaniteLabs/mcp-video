@@ -16,6 +16,7 @@ RemotionImageFormat = Literal["png", "jpeg", "webp"]
 
 # --- Result models ---
 
+
 class CompositionInfo(BaseModel):
     """A single composition found in a Remotion project."""
 

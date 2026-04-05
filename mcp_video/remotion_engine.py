@@ -40,6 +40,7 @@ from .remotion_models import (
 # Private helpers
 # ---------------------------------------------------------------------------
 
+
 def _require_remotion_deps() -> None:
     """Raise a helpful error if Node.js/npx are not available."""
     if shutil.which("node") is None:
@@ -110,6 +111,7 @@ def _run_remotion(
 # Public API
 # ---------------------------------------------------------------------------
 
+
 def render(
     project_path: str,
     composition_id: str,
@@ -137,7 +139,8 @@ def render(
         str(entry_point),
         composition_id,
         output_path,
-        "--codec", codec,
+        "--codec",
+        codec,
     ]
     if crf is not None:
         args += ["--crf", str(crf)]
@@ -219,14 +222,16 @@ def _parse_compositions_output(stdout: str) -> list[dict[str, Any]]:
         re.MULTILINE,
     )
     for m in pattern.finditer(stdout):
-        comps.append({
-            "id": m.group(1),
-            "fps": int(m.group(2)),
-            "width": int(m.group(3)),
-            "height": int(m.group(4)),
-            "durationInFrames": int(m.group(5)),
-            "defaultProps": {},
-        })
+        comps.append(
+            {
+                "id": m.group(1),
+                "fps": int(m.group(2)),
+                "width": int(m.group(3)),
+                "height": int(m.group(4)),
+                "durationInFrames": int(m.group(5)),
+                "defaultProps": {},
+            }
+        )
     return comps
 
 
@@ -251,14 +256,16 @@ def compositions(
 
     comp_list = []
     for c in raw:
-        comp_list.append(CompositionInfo(
-            id=c.get("id", c.get("compositionId", "")),
-            width=c.get("width", 1920),
-            height=c.get("height", 1080),
-            fps=c.get("fps", 30),
-            duration_in_frames=c.get("durationInFrames", c.get("duration", 0)),
-            default_props=c.get("defaultProps", {}),
-        ))
+        comp_list.append(
+            CompositionInfo(
+                id=c.get("id", c.get("compositionId", "")),
+                width=c.get("width", 1920),
+                height=c.get("height", 1080),
+                fps=c.get("fps", 30),
+                duration_in_frames=c.get("durationInFrames", c.get("duration", 0)),
+                default_props=c.get("defaultProps", {}),
+            )
+        )
 
     return CompositionsResult(
         compositions=comp_list,
@@ -312,8 +319,10 @@ def still(
         str(entry_point),
         composition_id,
         output_path,
-        "--frame", str(frame),
-        "--image-format", image_format,
+        "--frame",
+        str(frame),
+        "--image-format",
+        image_format,
     ]
 
     result = _run_remotion(args, cwd=project, timeout=120)
@@ -331,7 +340,7 @@ def still(
 # Template scaffolding helpers
 # ---------------------------------------------------------------------------
 
-_CONSTANTS_TSX = '''// Design tokens — edit these values to customize appearance
+_CONSTANTS_TSX = """// Design tokens — edit these values to customize appearance
 export const PRIMARY_COLOR = "{primary_color}";
 export const SECONDARY_COLOR = "{secondary_color}";
 export const BACKGROUND_COLOR = "{background_color}";
@@ -339,9 +348,9 @@ export const HEADING_FONT = "{heading_font}";
 export const BODY_FONT = "{body_font}";
 export const TARGET_FPS = {target_fps};
 export const TARGET_DURATION = {target_duration};
-'''
+"""
 
-_ROOT_TSX = '''import {{ Composition }} from "remotion";
+_ROOT_TSX = """import {{ Composition }} from "remotion";
 import React from "react";
 import {{ {slug}Composition }} from "./compositions/{slug}";
 
@@ -359,9 +368,9 @@ export const RemotionRoot: React.FC = () => {{
     </>
   );
 }};
-'''
+"""
 
-_COMPOSITION_TSX = '''import React from "react";
+_COMPOSITION_TSX = """import React from "react";
 import {{ AbsoluteFill, useCurrentFrame, interpolate }} from "remotion";
 import {{ PRIMARY_COLOR, TARGET_FPS }} from "../constants";
 
@@ -391,9 +400,9 @@ const {slug}Composition: React.FC<Props> = ({{ title, subtitle }}) => {{
 }};
 
 export default {slug}Composition;
-'''
+"""
 
-_PACKAGE_JSON = '''{{
+_PACKAGE_JSON = """{{
   "name": "{name}",
   "version": "1.0.0",
   "private": true,
@@ -415,9 +424,9 @@ _PACKAGE_JSON = '''{{
     "typescript": "^5"
   }}
 }}
-'''
+"""
 
-_TS_CONFIG = '''{{
+_TS_CONFIG = """{{
   "compilerOptions": {{
     "target": "ES2018",
     "module": "commonjs",
@@ -431,9 +440,9 @@ _TS_CONFIG = '''{{
   }},
   "include": ["src/**/*"]
 }}
-'''
+"""
 
-_HELLO_WORLD_TSX = '''import React from "react";
+_HELLO_WORLD_TSX = """import React from "react";
 import {{ AbsoluteFill, useCurrentFrame, interpolate, spring }} from "remotion";
 
 export const HelloWorld: React.FC = () => {{
@@ -459,7 +468,7 @@ export const HelloWorld: React.FC = () => {{
     </AbsoluteFill>
   );
 }};
-'''
+"""
 
 
 def create_project(
@@ -504,7 +513,7 @@ def create_project(
         (src_dir / "HelloWorld.tsx").write_text(_HELLO_WORLD_TSX)
         files.append("src/HelloWorld.tsx")
 
-        root_content = '''import { Composition } from "remotion";
+        root_content = """import { Composition } from "remotion";
 import React from "react";
 import { HelloWorld } from "./HelloWorld";
 
@@ -522,12 +531,12 @@ export const RemotionRoot: React.FC = () => {
     </>
   );
 };
-'''
+"""
         (src_dir / "Root.tsx").write_text(root_content)
         files.append("src/Root.tsx")
     else:
         # Blank template — minimal Root.tsx
-        root_content = '''import { Composition } from "remotion";
+        root_content = """import { Composition } from "remotion";
 import React from "react";
 
 export const RemotionRoot: React.FC = () => {
@@ -537,7 +546,7 @@ export const RemotionRoot: React.FC = () => {
     </>
   );
 };
-'''
+"""
         (src_dir / "Root.tsx").write_text(root_content)
         files.append("src/Root.tsx")
 
@@ -571,6 +580,8 @@ def scaffold_template(
 ) -> ScaffoldResult:
     """Generate a generic composition from a spec."""
     # Sanitize slug — only alphanumeric, dashes, underscores
+    import re
+
     if not re.fullmatch(r"[a-zA-Z0-9_-]+", slug):
         raise RemotionProjectError(
             project_path,
@@ -663,7 +674,10 @@ def validate(
     if not p.is_dir():
         issues.append("Project directory does not exist")
         return RemotionValidationResult(
-            valid=False, issues=issues, warnings=warnings, project_path=str(p),
+            valid=False,
+            issues=issues,
+            warnings=warnings,
+            project_path=str(p),
         )
 
     if not (p / "package.json").is_file():
@@ -689,7 +703,10 @@ def validate(
     valid = len(issues) == 0
 
     return RemotionValidationResult(
-        valid=valid, issues=issues, warnings=warnings, project_path=str(p),
+        valid=valid,
+        issues=issues,
+        warnings=warnings,
+        project_path=str(p),
     )
 
 

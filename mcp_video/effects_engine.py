@@ -58,13 +58,20 @@ def effect_vignette(
     )
 
     cmd = [
-        "ffmpeg", "-y",
-        "-i", input_path,
-        "-vf", filters,
-        "-c:a", "copy",
-        "-c:v", "libx264",
-        "-pix_fmt", "yuv420p",
-        "-crf", "23",
+        "ffmpeg",
+        "-y",
+        "-i",
+        input_path,
+        "-vf",
+        filters,
+        "-c:a",
+        "copy",
+        "-c:v",
+        "libx264",
+        "-pix_fmt",
+        "yuv420p",
+        "-crf",
+        "23",
         output,
     ]
 
@@ -102,19 +109,23 @@ def effect_chromatic_aberration(
     shift_x = int(offset_x)
     shift_y = int(offset_y)
 
-    filters = (
-        f"chromashift=cbh={shift_x}:cbv={shift_y}:"
-        f"crh=-{shift_x}:crv=-{shift_y}"
-    )
+    filters = f"chromashift=cbh={shift_x}:cbv={shift_y}:crh=-{shift_x}:crv=-{shift_y}"
 
     cmd = [
-        "ffmpeg", "-y",
-        "-i", input_path,
-        "-vf", filters,
-        "-c:a", "copy",
-        "-c:v", "libx264",
-        "-pix_fmt", "yuv420p",
-        "-crf", "23",
+        "ffmpeg",
+        "-y",
+        "-i",
+        input_path,
+        "-vf",
+        filters,
+        "-c:a",
+        "copy",
+        "-c:v",
+        "libx264",
+        "-pix_fmt",
+        "yuv420p",
+        "-crf",
+        "23",
         output,
     ]
 
@@ -123,9 +134,7 @@ def effect_chromatic_aberration(
 
     # Fallback if chromashift not available
     if result.returncode != 0 and "chromashift" in result.stderr:
-        filters = (
-            f"colorbalance=rs={intensity/100}:bs=-{intensity/100}"
-        )
+        filters = f"colorbalance=rs={intensity / 100}:bs=-{intensity / 100}"
         cmd[4] = filters
         _run_ffmpeg(cmd)
     elif result.returncode != 0:
@@ -167,13 +176,20 @@ def effect_scanlines(
         filters += f",eq=brightness={flicker}*sin(t*10)"
 
     cmd = [
-        "ffmpeg", "-y",
-        "-i", input_path,
-        "-vf", filters,
-        "-c:a", "copy",
-        "-c:v", "libx264",
-        "-pix_fmt", "yuv420p",
-        "-crf", "23",
+        "ffmpeg",
+        "-y",
+        "-i",
+        input_path,
+        "-vf",
+        filters,
+        "-c:a",
+        "copy",
+        "-c:v",
+        "libx264",
+        "-pix_fmt",
+        "yuv420p",
+        "-crf",
+        "23",
         output,
     ]
 
@@ -207,21 +223,28 @@ def effect_noise(
 
     if mode == "color":
         # Color noise
-        noise_expr = f"lum(X,Y)+{intensity*50}*({seed_expr}*2-1)"
-        filters = f"geq=lum='{noise_expr}':cb='cb(X,Y)+{intensity*30}*({seed_expr}*2-1)':cr='cr(X,Y)+{intensity*30}*({seed_expr}*2-1)'"
+        noise_expr = f"lum(X,Y)+{intensity * 50}*({seed_expr}*2-1)"
+        filters = f"geq=lum='{noise_expr}':cb='cb(X,Y)+{intensity * 30}*({seed_expr}*2-1)':cr='cr(X,Y)+{intensity * 30}*({seed_expr}*2-1)'"
     else:
         # Luminance noise only
         noise_expr = f"lum(X,Y)*(1+{intensity}*({seed_expr}*2-1))"
         filters = f"geq=lum='{noise_expr}'"
 
     cmd = [
-        "ffmpeg", "-y",
-        "-i", input_path,
-        "-vf", filters,
-        "-c:a", "copy",
-        "-c:v", "libx264",
-        "-pix_fmt", "yuv420p",
-        "-crf", "23",
+        "ffmpeg",
+        "-y",
+        "-i",
+        input_path,
+        "-vf",
+        filters,
+        "-c:a",
+        "copy",
+        "-c:v",
+        "libx264",
+        "-pix_fmt",
+        "yuv420p",
+        "-crf",
+        "23",
         output,
     ]
 
@@ -261,13 +284,20 @@ def effect_glow(
     )
 
     cmd = [
-        "ffmpeg", "-y",
-        "-i", input_path,
-        "-vf", filters,
-        "-c:a", "copy",
-        "-c:v", "libx264",
-        "-pix_fmt", "yuv420p",
-        "-crf", "23",
+        "ffmpeg",
+        "-y",
+        "-i",
+        input_path,
+        "-vf",
+        filters,
+        "-c:a",
+        "copy",
+        "-c:v",
+        "libx264",
+        "-pix_fmt",
+        "yuv420p",
+        "-crf",
+        "23",
         output,
     ]
 
@@ -321,12 +351,14 @@ def layout_grid(
         raise ValueError("At least one clip required")
 
     if gap < 0 or padding < 0:
-        raise MCPVideoError("gap and padding must be non-negative", error_type="validation_error", code="invalid_parameter")
+        raise MCPVideoError(
+            "gap and padding must be non-negative", error_type="validation_error", code="invalid_parameter"
+        )
 
     clips = [_validate_input_path(clip) for clip in clips]
 
     # Parse layout
-    cols, rows = map(int, layout.split('x'))
+    cols, rows = map(int, layout.split("x"))
     n_clips = min(len(clips), cols * rows)
 
     # Use even dimensions that work for x264
@@ -376,13 +408,19 @@ def layout_grid(
     filter_complex = "".join(filter_parts).rstrip(";")
 
     cmd = [
-        "ffmpeg", "-y",
+        "ffmpeg",
+        "-y",
         *inputs,
-        "-filter_complex", filter_complex,
-        "-map", "[out]",
-        "-c:v", "libx264",
-        "-pix_fmt", "yuv420p",
-        "-crf", "23",
+        "-filter_complex",
+        filter_complex,
+        "-map",
+        "[out]",
+        "-c:v",
+        "libx264",
+        "-pix_fmt",
+        "yuv420p",
+        "-crf",
+        "23",
         "-shortest",
         output,
     ]
@@ -426,12 +464,19 @@ def layout_pip(
 
     # Get main video dimensions
     probe_cmd = [
-        "ffprobe", "-v", "error", "-select_streams", "v:0",
-        "-show_entries", "stream=width,height", "-of", "csv=s=x:p=0", main,
+        "ffprobe",
+        "-v",
+        "error",
+        "-select_streams",
+        "v:0",
+        "-show_entries",
+        "stream=width,height",
+        "-of",
+        "csv=s=x:p=0",
+        main,
     ]
     probe = _run_ffmpeg(probe_cmd)
-    main_w, main_h = map(int, probe.stdout.strip().split('x'))
-
+    main_w, main_h = map(int, probe.stdout.strip().split("x"))
 
     # Calculate PIP dimensions
     pip_w = int(main_w * size)
@@ -452,27 +497,32 @@ def layout_pip(
     if border:
         # Add border using pad
         safe_border_color = _escape_ffmpeg_filter_value(border_color)
-        pip_filters += f",pad={pip_w + border_width*2}:{pip_h + border_width*2}:{border_width}:{border_width}:color={safe_border_color}"
+        pip_filters += f",pad={pip_w + border_width * 2}:{pip_h + border_width * 2}:{border_width}:{border_width}:color={safe_border_color}"
 
     if rounded_corners:
         # Use format and drawbox for rounded corners simulation
         # This is a simplified version - full rounded corners need more complex filter
         pass
 
-    filter_complex = (
-        f"[1:v]{pip_filters}[pip];"
-        f"[0:v][pip]overlay={x}:{y}"
-    )
+    filter_complex = f"[1:v]{pip_filters}[pip];[0:v][pip]overlay={x}:{y}"
 
     cmd = [
-        "ffmpeg", "-y",
-        "-i", main,
-        "-i", pip,
-        "-filter_complex", filter_complex,
-        "-c:v", "libx264",
-        "-c:a", "copy",
-        "-pix_fmt", "yuv420p",
-        "-crf", "23",
+        "ffmpeg",
+        "-y",
+        "-i",
+        main,
+        "-i",
+        pip,
+        "-filter_complex",
+        filter_complex,
+        "-c:v",
+        "libx264",
+        "-c:a",
+        "copy",
+        "-pix_fmt",
+        "yuv420p",
+        "-crf",
+        "23",
         output,
     ]
 
@@ -562,13 +612,20 @@ def text_animated(
     )
 
     cmd = [
-        "ffmpeg", "-y",
-        "-i", video,
-        "-vf", filter_complex,
-        "-c:v", "libx264",
-        "-c:a", "copy",
-        "-pix_fmt", "yuv420p",
-        "-crf", "23",
+        "ffmpeg",
+        "-y",
+        "-i",
+        video,
+        "-vf",
+        filter_complex,
+        "-c:v",
+        "libx264",
+        "-c:a",
+        "copy",
+        "-pix_fmt",
+        "yuv420p",
+        "-crf",
+        "23",
         output,
     ]
 
@@ -632,13 +689,20 @@ def text_subtitles(
     )
 
     cmd = [
-        "ffmpeg", "-y",
-        "-i", video,
-        "-vf", filter_complex,
-        "-c:v", "libx264",
-        "-c:a", "copy",
-        "-pix_fmt", "yuv420p",
-        "-crf", "23",
+        "ffmpeg",
+        "-y",
+        "-i",
+        video,
+        "-vf",
+        filter_complex,
+        "-c:v",
+        "libx264",
+        "-c:a",
+        "copy",
+        "-pix_fmt",
+        "yuv420p",
+        "-crf",
+        "23",
         output,
     ]
 
@@ -700,10 +764,16 @@ def mograph_count(
                 text_filter += f":box=1:boxcolor={safe_color}@0.3:boxborderw=10"
 
             cmd = [
-                "ffmpeg", "-y",
-                "-f", "lavfi", "-i", "color=c=black:s=1920x1080:d=1",
-                "-vf", text_filter,
-                "-vframes", "1",
+                "ffmpeg",
+                "-y",
+                "-f",
+                "lavfi",
+                "-i",
+                "color=c=black:s=1920x1080:d=1",
+                "-vf",
+                text_filter,
+                "-vframes",
+                "1",
                 str(frame_file),
             ]
 
@@ -711,12 +781,18 @@ def mograph_count(
 
         # Combine frames into video
         cmd = [
-            "ffmpeg", "-y",
-            "-framerate", str(fps),
-            "-i", str(tmp_path / "frame_%05d.png"),
-            "-c:v", "libx264",
-            "-pix_fmt", "yuv420p",
-            "-crf", "23",
+            "ffmpeg",
+            "-y",
+            "-framerate",
+            str(fps),
+            "-i",
+            str(tmp_path / "frame_%05d.png"),
+            "-c:v",
+            "libx264",
+            "-pix_fmt",
+            "yuv420p",
+            "-crf",
+            "23",
             output,
         ]
 
@@ -783,10 +859,16 @@ def mograph_progress(
                 filter_chain = filter_chain.rstrip(",")
 
             cmd = [
-                "ffmpeg", "-y",
-                "-f", "lavfi", "-i", "color=c=black:s=1920x1080:d=1",
-                "-vf", filter_chain,
-                "-vframes", "1",
+                "ffmpeg",
+                "-y",
+                "-f",
+                "lavfi",
+                "-i",
+                "color=c=black:s=1920x1080:d=1",
+                "-vf",
+                filter_chain,
+                "-vframes",
+                "1",
                 str(frame_file),
             ]
 
@@ -794,12 +876,18 @@ def mograph_progress(
 
         # Combine frames
         cmd = [
-            "ffmpeg", "-y",
-            "-framerate", str(fps),
-            "-i", str(tmp_path / "frame_%05d.png"),
-            "-c:v", "libx264",
-            "-pix_fmt", "yuv420p",
-            "-crf", "23",
+            "ffmpeg",
+            "-y",
+            "-framerate",
+            str(fps),
+            "-i",
+            str(tmp_path / "frame_%05d.png"),
+            "-c:v",
+            "libx264",
+            "-pix_fmt",
+            "yuv420p",
+            "-crf",
+            "23",
             output,
         ]
 
@@ -829,9 +917,13 @@ def video_info_detailed(video: str) -> dict[str, Any]:
 
     # Get basic info
     cmd = [
-        "ffprobe", "-v", "error",
-        "-show_format", "-show_streams",
-        "-print_format", "json",
+        "ffprobe",
+        "-v",
+        "error",
+        "-show_format",
+        "-show_streams",
+        "-print_format",
+        "json",
         video,
     ]
 
@@ -869,9 +961,14 @@ def video_info_detailed(video: str) -> dict[str, Any]:
     scene_changes = []
     try:
         scene_cmd = [
-            "ffmpeg", "-i", video,
-            "-filter:v", "select='gt(scene,0.3)',showinfo",
-            "-f", "null", "-",
+            "ffmpeg",
+            "-i",
+            video,
+            "-filter:v",
+            "select='gt(scene,0.3)',showinfo",
+            "-f",
+            "null",
+            "-",
         ]
         scene_result = subprocess.run(scene_cmd, capture_output=True, text=True, timeout=30)
         # Parse scene change timestamps from stderr
@@ -918,16 +1015,19 @@ def auto_chapters(
     _validate_input_path(video)
 
     if not isinstance(threshold, (int, float)) or not (0.0 <= threshold <= 1.0):
-        raise MCPVideoError(
-            f"threshold must be a number between 0.0 and 1.0, got {threshold!r}"
-        )
+        raise MCPVideoError(f"threshold must be a number between 0.0 and 1.0, got {threshold!r}")
 
     chapters = []
 
     cmd = [
-        "ffmpeg", "-i", video,
-        "-filter:v", f"select='gt(scene,{threshold})',showinfo",
-        "-f", "null", "-",
+        "ffmpeg",
+        "-i",
+        video,
+        "-filter:v",
+        f"select='gt(scene,{threshold})',showinfo",
+        "-f",
+        "null",
+        "-",
     ]
 
     result = _run_ffmpeg(cmd, timeout=60)

@@ -25,14 +25,14 @@ SUPPORTED_EXTENSIONS = frozenset({".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tif
 # Private helpers
 # ---------------------------------------------------------------------------
 
+
 def _require_image_deps() -> None:
     """Raise a helpful error if optional image deps are not installed."""
     try:
         import PIL.Image  # noqa: F401
     except ImportError:
         raise MCPVideoError(
-            "Image analysis requires optional dependencies. "
-            "Install with: pip install mcp-video[image]",
+            "Image analysis requires optional dependencies. Install with: pip install mcp-video[image]",
             error_type="dependency_error",
             code="missing_optional_dep",
             suggested_action={
@@ -109,6 +109,7 @@ def _closest_color_name(r: int, g: int, b: int) -> str:
 # Public API
 # ---------------------------------------------------------------------------
 
+
 def extract_colors(
     image_path: str,
     n_colors: int = 5,
@@ -152,12 +153,14 @@ def extract_colors(
         r = max(0, min(255, r))
         g = max(0, min(255, g))
         b = max(0, min(255, b))
-        colors.append(DominantColor(
-            hex=_rgb_to_hex(r, g, b),
-            rgb=(r, g, b),
-            name=_closest_color_name(r, g, b),
-            percentage=round(count / total * 100, 1),
-        ))
+        colors.append(
+            DominantColor(
+                hex=_rgb_to_hex(r, g, b),
+                rgb=(r, g, b),
+                name=_closest_color_name(r, g, b),
+                percentage=round(count / total * 100, 1),
+            )
+        )
 
     return ColorExtractionResult(
         image_path=image_path,
@@ -194,9 +197,9 @@ def generate_palette(
     # Harmony rotation rules
     harmony_offsets: dict[str, list[float]] = {
         "complementary": [0.0, 0.5],
-        "analogous": [0.0, 1/12, -1/12, 2/12, -2/12],
-        "triadic": [0.0, 1/3, 2/3],
-        "split_complementary": [0.0, 150/360, 210/360],
+        "analogous": [0.0, 1 / 12, -1 / 12, 2 / 12, -2 / 12],
+        "triadic": [0.0, 1 / 3, 2 / 3],
+        "split_complementary": [0.0, 150 / 360, 210 / 360],
     }
     offsets = harmony_offsets[harmony]
 
@@ -212,11 +215,13 @@ def generate_palette(
         new_h = (h + offset) % 1.0
         nr, ng, nb = _hsl_to_rgb(new_h, s, lightness)
         role = role_names[harmony][i] if i < len(role_names[harmony]) else f"accent{i}"
-        palette.append(PaletteColor(
-            hex=_rgb_to_hex(nr, ng, nb),
-            rgb=(nr, ng, nb),
-            role=role,
-        ))
+        palette.append(
+            PaletteColor(
+                hex=_rgb_to_hex(nr, ng, nb),
+                rgb=(nr, ng, nb),
+                role=role,
+            )
+        )
 
     return PaletteResult(
         image_path=image_path,
@@ -243,8 +248,7 @@ def analyze_product(
             import anthropic
         except ImportError:
             raise MCPVideoError(
-                "AI description requires the anthropic package. "
-                "Install with: pip install mcp-video[image-ai]",
+                "AI description requires the anthropic package. Install with: pip install mcp-video[image-ai]",
                 error_type="dependency_error",
                 code="missing_ai_dep",
                 suggested_action={
@@ -272,24 +276,26 @@ def analyze_product(
         response = client.messages.create(
             model="claude-sonnet-4-20250514",
             max_tokens=300,
-            messages=[{
-                "role": "user",
-                "content": [
-                    {
-                        "type": "image",
-                        "source": {
-                            "type": "base64",
-                            "media_type": mime_type,
-                            "data": img_data,
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image",
+                            "source": {
+                                "type": "base64",
+                                "media_type": mime_type,
+                                "data": img_data,
+                            },
                         },
-                    },
-                    {
-                        "type": "text",
-                        "text": "Describe this product image concisely in 2-3 sentences. "
-                                "Focus on the product type, colors, and key visual features.",
-                    },
-                ],
-            }],
+                        {
+                            "type": "text",
+                            "text": "Describe this product image concisely in 2-3 sentences. "
+                            "Focus on the product type, colors, and key visual features.",
+                        },
+                    ],
+                }
+            ],
         )
         description = response.content[0].text
 

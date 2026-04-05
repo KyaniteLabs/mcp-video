@@ -252,15 +252,15 @@ def _float_to_pcm(samples: list[float]) -> bytes:
         # Clamp to [-1, 1]
         sample = max(-1, min(1, sample))
         # Convert to 16-bit signed int
-        pcm_data.append(struct.pack('<h', int(sample * 32767)))
-    return b''.join(pcm_data)
+        pcm_data.append(struct.pack("<h", int(sample * 32767)))
+    return b"".join(pcm_data)
 
 
 def _pcm_to_float(pcm_bytes: bytes) -> list[float]:
     """Convert 16-bit PCM bytes to float samples."""
     samples = []
     for i in range(0, len(pcm_bytes), 2):
-        value = struct.unpack('<h', pcm_bytes[i:i+2])[0]
+        value = struct.unpack("<h", pcm_bytes[i : i + 2])[0]
         samples.append(value / 32767)
     return samples
 
@@ -272,7 +272,7 @@ def write_wav(
     channels: int = DEFAULT_CHANNELS,
 ) -> str:
     """Write PCM data to a WAV file."""
-    with wave.open(output_path, 'wb') as wav_file:
+    with wave.open(output_path, "wb") as wav_file:
         wav_file.setnchannels(channels)
         wav_file.setsampwidth(DEFAULT_SAMPLE_WIDTH)
         wav_file.setframerate(sample_rate)
@@ -532,7 +532,11 @@ def audio_preset(
             "frequency": 200,
             "duration": duration or 0.5,
             "volume": 0.25,
-            "effects": {"fade_in": 0.1, "fade_out": 0.2, "reverb": {"room_size": 0.3, "damping": 0.5, "wet_level": 0.2}},
+            "effects": {
+                "fade_in": 0.1,
+                "fade_out": 0.2,
+                "reverb": {"room_size": 0.3, "damping": 0.5, "wet_level": 0.2},
+            },
         },
         "upload": {
             "waveform": "sine",
@@ -637,7 +641,7 @@ def audio_sequence(
                     intensity=event.get("intensity", 0.5),
                 )
 
-                with wave.open(tmp_path, 'rb') as wav_file:
+                with wave.open(tmp_path, "rb") as wav_file:
                     frames = wav_file.readframes(wav_file.getnframes())
                     samples = _pcm_to_float(frames)
             finally:
@@ -703,7 +707,7 @@ def audio_compose(
             continue
 
         # Read WAV file
-        with wave.open(file_path, 'rb') as wav_file:
+        with wave.open(file_path, "rb") as wav_file:
             frames = wav_file.readframes(wav_file.getnframes())
             track_samples = _pcm_to_float(frames)
 
@@ -749,7 +753,7 @@ def audio_effects(
         Path to processed WAV file
     """
     # Read input
-    with wave.open(input_path, 'rb') as wav_file:
+    with wave.open(input_path, "rb") as wav_file:
         sample_rate = wav_file.getframerate()
         frames = wav_file.readframes(wav_file.getnframes())
         samples = _pcm_to_float(frames)
@@ -818,14 +822,17 @@ def add_generated_audio(
     # Add drone if specified
     drone_config = audio_config.get("drone")
     if drone_config:
-        events.insert(0, {
-            "type": "tone",
-            "at": 0,
-            "duration": 60,  # Will be truncated to video length
-            "freq": drone_config.get("frequency", 100),
-            "volume": drone_config.get("volume", 0.2),
-            "waveform": "sine",
-        })
+        events.insert(
+            0,
+            {
+                "type": "tone",
+                "at": 0,
+                "duration": 60,  # Will be truncated to video length
+                "freq": drone_config.get("frequency", 100),
+                "volume": drone_config.get("volume", 0.2),
+                "waveform": "sine",
+            },
+        )
 
     if not events:
         raise MCPVideoError("No audio events specified", error_type="validation_error", code="invalid_parameter")
@@ -849,11 +856,16 @@ def add_generated_audio(
         if out_dir:
             os.makedirs(out_dir, exist_ok=True)
         cmd = [
-            "ffmpeg", "-y",
-            "-i", video,
-            "-i", audio_path,
-            "-c:v", "copy",
-            "-c:a", "aac",
+            "ffmpeg",
+            "-y",
+            "-i",
+            video,
+            "-i",
+            audio_path,
+            "-c:v",
+            "copy",
+            "-c:a",
+            "aac",
             "-shortest",
             output,
         ]

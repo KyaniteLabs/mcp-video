@@ -121,10 +121,18 @@ class Client:
     ) -> EditResult:
         """Overlay text on a video."""
         return _add_text(
-            video, text=text, position=position, font=font,
-            size=size, color=color, shadow=shadow,
-            start_time=start_time, duration=duration,
-            output_path=output, crf=crf, preset=preset,
+            video,
+            text=text,
+            position=position,
+            font=font,
+            size=size,
+            color=color,
+            shadow=shadow,
+            start_time=start_time,
+            duration=duration,
+            output_path=output,
+            crf=crf,
+            preset=preset,
         )
 
     def add_audio(
@@ -140,9 +148,14 @@ class Client:
     ) -> EditResult:
         """Add or replace audio track."""
         return _add_audio(
-            video, audio_path=audio, volume=volume,
-            fade_in=fade_in, fade_out=fade_out, mix=mix,
-            start_time=start_time, output_path=output,
+            video,
+            audio_path=audio,
+            volume=volume,
+            fade_in=fade_in,
+            fade_out=fade_out,
+            mix=mix,
+            start_time=start_time,
+            output_path=output,
         )
 
     def resize(
@@ -156,8 +169,11 @@ class Client:
     ) -> EditResult:
         """Resize a video or change aspect ratio."""
         return _resize(
-            video, width=width, height=height,
-            aspect_ratio=aspect_ratio, quality=quality,
+            video,
+            width=width,
+            height=height,
+            aspect_ratio=aspect_ratio,
+            quality=quality,
             output_path=output,
         )
 
@@ -190,7 +206,9 @@ class Client:
             raise ValueError(f"format must be one of {sorted(self._VALID_FORMATS)}, got {format}")
         if quality not in self._VALID_QUALITIES:
             raise ValueError(f"quality must be one of {sorted(self._VALID_QUALITIES)}, got {quality}")
-        return _convert(video, format=format, quality=quality, output_path=output, two_pass=two_pass, target_bitrate=target_bitrate)
+        return _convert(
+            video, format=format, quality=quality, output_path=output, two_pass=two_pass, target_bitrate=target_bitrate
+        )
 
     def speed(
         self,
@@ -259,9 +277,14 @@ class Client:
     ) -> EditResult:
         """Add image watermark."""
         return _watermark(
-            video, image_path=image, position=position,
-            opacity=opacity, margin=margin, output_path=output,
-            crf=crf, preset=preset,
+            video,
+            image_path=image,
+            position=position,
+            opacity=opacity,
+            margin=margin,
+            output_path=output,
+            crf=crf,
+            preset=preset,
         )
 
     def crop(
@@ -285,7 +308,9 @@ class Client:
         output: str | None = None,
     ) -> EditResult:
         """Rotate and/or flip a video."""
-        return _rotate(video, angle=angle, flip_horizontal=flip_horizontal, flip_vertical=flip_vertical, output_path=output)
+        return _rotate(
+            video, angle=angle, flip_horizontal=flip_horizontal, flip_vertical=flip_vertical, output_path=output
+        )
 
     def fade(
         self,
@@ -298,8 +323,12 @@ class Client:
     ) -> EditResult:
         """Add fade in/out effect to a video."""
         return _fade(
-            video, fade_in=fade_in, fade_out=fade_out,
-            output_path=output, crf=crf, preset=preset,
+            video,
+            fade_in=fade_in,
+            fade_out=fade_out,
+            output_path=output,
+            crf=crf,
+            preset=preset,
         )
 
     def export(
@@ -355,8 +384,12 @@ class Client:
     ) -> EditResult:
         """Apply a visual filter to a video."""
         return _apply_filter(
-            video, filter_type=filter_type, params=params,
-            output_path=output, crf=crf, preset=preset,
+            video,
+            filter_type=filter_type,
+            params=params,
+            output_path=output,
+            crf=crf,
+            preset=preset,
         )
 
     def blur(
@@ -368,7 +401,8 @@ class Client:
     ) -> EditResult:
         """Apply blur effect to a video."""
         return _apply_filter(
-            video, filter_type="blur",
+            video,
+            filter_type="blur",
             params={"radius": radius, "strength": strength},
             output_path=output,
         )
@@ -380,6 +414,7 @@ class Client:
     ) -> EditResult:
         """Reverse video and audio playback."""
         from .engine import reverse as _reverse
+
         return _reverse(input_path=video, output_path=output)
 
     def chroma_key(
@@ -392,6 +427,7 @@ class Client:
     ) -> EditResult:
         """Remove a solid color background (green screen / chroma key)."""
         from .engine import chroma_key as _chroma_key
+
         return _chroma_key(input_path=video, color=color, similarity=similarity, blend=blend, output_path=output)
 
     def color_grade(
@@ -402,7 +438,8 @@ class Client:
     ) -> EditResult:
         """Apply a color grading preset to a video."""
         return _apply_filter(
-            video, filter_type="color_preset",
+            video,
+            filter_type="color_preset",
             params={"preset": preset},
             output_path=output,
         )
@@ -432,10 +469,17 @@ class Client:
     ) -> EditResult:
         """Picture-in-picture: overlay a video on top of another."""
         return _overlay_video(
-            background_path=background, overlay_path=overlay, position=position,
-            width=width, height=height, opacity=opacity,
-            start_time=start_time, duration=duration,
-            output_path=output, crf=crf, preset=preset,
+            background_path=background,
+            overlay_path=overlay,
+            position=position,
+            width=width,
+            height=height,
+            opacity=opacity,
+            start_time=start_time,
+            duration=duration,
+            output_path=output,
+            crf=crf,
+            preset=preset,
         )
 
     def split_screen(
@@ -548,6 +592,7 @@ class Client:
     ) -> dict:
         """Apply the same operation to multiple video files."""
         from .engine import video_batch
+
         return video_batch(inputs, operation=operation, params=params, output_dir=output_dir)
 
     # ------------------------------------------------------------------
@@ -561,6 +606,7 @@ class Client:
     ) -> dict:
         """Extract dominant colors from an image using K-means clustering."""
         from .image_engine import extract_colors
+
         return extract_colors(image_path, n_colors=n_colors)
 
     def generate_palette(
@@ -571,6 +617,7 @@ class Client:
     ) -> dict:
         """Generate a color harmony palette from an image's dominant color."""
         from .image_engine import generate_palette
+
         return generate_palette(image_path, harmony=harmony, n_colors=n_colors)
 
     def analyze_product(
@@ -581,6 +628,7 @@ class Client:
     ) -> dict:
         """Analyze a product image — extract colors and optionally generate AI description."""
         from .image_engine import analyze_product
+
         return analyze_product(image_path, use_ai=use_ai, n_colors=n_colors)
 
     # ------------------------------------------------------------------
@@ -604,16 +652,32 @@ class Client:
     ):
         """Render a Remotion composition to video."""
         from .remotion_engine import render
-        return render(project_path, composition_id, output_path=output, codec=codec, crf=crf, width=width, height=height, fps=fps, concurrency=concurrency, frames=frames, props=props, scale=scale)
+
+        return render(
+            project_path,
+            composition_id,
+            output_path=output,
+            codec=codec,
+            crf=crf,
+            width=width,
+            height=height,
+            fps=fps,
+            concurrency=concurrency,
+            frames=frames,
+            props=props,
+            scale=scale,
+        )
 
     def remotion_compositions(self, project_path: str) -> list[dict]:
         """List compositions in a Remotion project."""
         from .remotion_engine import compositions
+
         return compositions(project_path)
 
     def remotion_studio(self, project_path: str, port: int = 3000) -> dict:
         """Launch Remotion Studio for live preview."""
         from .remotion_engine import studio
+
         return studio(project_path, port=port)
 
     def remotion_still(
@@ -626,6 +690,7 @@ class Client:
     ) -> dict:
         """Render a single frame as image."""
         from .remotion_engine import still
+
         return still(project_path, composition_id, output_path=output, frame=frame, image_format=image_format)
 
     def remotion_create_project(
@@ -645,6 +710,7 @@ class Client:
             dict with key "project_path" (str): absolute path to the new project
         """
         from .remotion_engine import create_project
+
         return create_project(name, output_dir=output_dir, template=template)
 
     def remotion_scaffold_template(
@@ -655,6 +721,7 @@ class Client:
     ) -> None:
         """Generate composition from spec."""
         from .remotion_engine import scaffold_template
+
         return scaffold_template(project_path, spec, slug)
 
     def remotion_validate(self, project_path: str, composition_id: str | None = None) -> dict:
@@ -669,6 +736,7 @@ class Client:
             RemotionValidationResult with pass/fail status and issues list
         """
         from .remotion_engine import validate
+
         return validate(project_path, composition_id=composition_id)
 
     def remotion_to_mcpvideo(
@@ -692,6 +760,7 @@ class Client:
             RemotionPipelineResult with output path and applied operations
         """
         from .remotion_engine import render_and_post
+
         return render_and_post(project_path, composition_id, post_process, output_path=output)
 
     # ------------------------------------------------------------------
@@ -721,6 +790,7 @@ class Client:
             Path to generated WAV file
         """
         from .audio_engine import audio_synthesize
+
         return audio_synthesize(
             output=output,
             waveform=waveform,
@@ -750,6 +820,7 @@ class Client:
             Path to generated WAV file
         """
         from .audio_engine import audio_preset
+
         return audio_preset(
             preset=preset,
             output=output,
@@ -773,6 +844,7 @@ class Client:
             Path to generated WAV file
         """
         from .audio_engine import audio_sequence
+
         return audio_sequence(sequence=sequence, output=output)
 
     def audio_compose(
@@ -798,6 +870,7 @@ class Client:
             Path to generated WAV file
         """
         from .audio_engine import audio_compose
+
         return audio_compose(tracks=tracks, duration=duration, output=output)
 
     def audio_effects(
@@ -817,6 +890,7 @@ class Client:
             Path to processed WAV file
         """
         from .audio_engine import audio_effects
+
         return audio_effects(input_path=input_path, output=output, effects=effects)
 
     def add_generated_audio(
@@ -836,7 +910,8 @@ class Client:
             Path to output video
         """
         from .audio_engine import add_generated_audio
-        return add_generated_audio(video=video, audio_config=audio_config, output=output)
+
+        return add_generated_audio(input_path=video, audio_config=audio_config, output_path=output)
 
     # ------------------------------------------------------------------
     # Visual Effects (P1 Features)
@@ -852,7 +927,10 @@ class Client:
     ) -> str:
         """Apply vignette effect - darkened edges."""
         from .effects_engine import effect_vignette
-        return effect_vignette(input_path=video, output=output, intensity=intensity, radius=radius, smoothness=smoothness)
+
+        return effect_vignette(
+            input_path=video, output=output, intensity=intensity, radius=radius, smoothness=smoothness
+        )
 
     def effect_chromatic_aberration(
         self,
@@ -863,6 +941,7 @@ class Client:
     ) -> str:
         """Apply RGB channel separation effect."""
         from .effects_engine import effect_chromatic_aberration
+
         return effect_chromatic_aberration(input_path=video, output=output, intensity=intensity, angle=angle)
 
     def effect_scanlines(
@@ -875,7 +954,10 @@ class Client:
     ) -> str:
         """Apply CRT-style scanline overlay."""
         from .effects_engine import effect_scanlines
-        return effect_scanlines(input_path=video, output=output, line_height=line_height, opacity=opacity, flicker=flicker)
+
+        return effect_scanlines(
+            input_path=video, output=output, line_height=line_height, opacity=opacity, flicker=flicker
+        )
 
     def effect_noise(
         self,
@@ -887,6 +969,7 @@ class Client:
     ) -> str:
         """Apply film grain / digital noise."""
         from .effects_engine import effect_noise
+
         return effect_noise(input_path=video, output=output, intensity=intensity, mode=mode, animated=animated)
 
     def effect_glow(
@@ -899,6 +982,7 @@ class Client:
     ) -> str:
         """Apply bloom/glow effect for highlights."""
         from .effects_engine import effect_glow
+
         return effect_glow(input_path=video, output=output, intensity=intensity, radius=radius, threshold=threshold)
 
     # ------------------------------------------------------------------
@@ -933,6 +1017,7 @@ class Client:
         if layout not in self._VALID_LAYOUTS:
             raise ValueError(f"layout must be one of {sorted(self._VALID_LAYOUTS)}, got {layout}")
         from .effects_engine import layout_grid
+
         return layout_grid(clips, layout, output, gap, padding, background)
 
     def layout_pip(
@@ -968,7 +1053,10 @@ class Client:
         if position not in self._VALID_PIP_POSITIONS:
             raise ValueError(f"position must be one of {sorted(self._VALID_PIP_POSITIONS)}, got {position}")
         from .effects_engine import layout_pip
-        return layout_pip(main, pip, output, position, size, margin, rounded_corners, border, border_color, border_width)
+
+        return layout_pip(
+            main, pip, output, position, size, margin, rounded_corners, border, border_color, border_width
+        )
 
     # ------------------------------------------------------------------
     # Text & Typography
@@ -989,6 +1077,7 @@ class Client:
     ) -> str:
         """Add animated text to video."""
         from .effects_engine import text_animated
+
         return text_animated(video, text, output, animation, font, size, color, position, start, duration)
 
     def text_subtitles(
@@ -1000,6 +1089,7 @@ class Client:
     ) -> str:
         """Burn subtitles from SRT/VTT with styling."""
         from .effects_engine import text_subtitles
+
         return text_subtitles(video=video, subtitles=subtitles, output=output, style=style)
 
     # ------------------------------------------------------------------
@@ -1030,6 +1120,7 @@ class Client:
             In the Python client, they must be passed as named arguments.
         """
         from .effects_engine import mograph_count
+
         return mograph_count(start, end, duration, output, style, fps)
 
     def mograph_progress(
@@ -1043,6 +1134,7 @@ class Client:
     ) -> str:
         """Generate progress bar / loading animation."""
         from .effects_engine import mograph_progress
+
         return mograph_progress(duration, output, style, color, track_color, fps)
 
     # ------------------------------------------------------------------
@@ -1052,18 +1144,22 @@ class Client:
     def video_info_detailed(self, video: str) -> dict:
         """Get extended video metadata."""
         from .effects_engine import video_info_detailed
+
         return video_info_detailed(video)
 
     def auto_chapters(self, video: str, threshold: float = 0.3) -> list[tuple[float, str]]:
         """Auto-detect scene changes and create chapters."""
         from .effects_engine import auto_chapters
+
         return auto_chapters(video, threshold)
 
     # ------------------------------------------------------------------
     # Transitions (Wave 2)
     # ------------------------------------------------------------------
 
-    def transition_glitch(self, clip1: str, clip2: str, output: str, duration: float = 0.5, intensity: float = 0.3) -> str:
+    def transition_glitch(
+        self, clip1: str, clip2: str, output: str, duration: float = 0.5, intensity: float = 0.3
+    ) -> str:
         """Apply glitch transition between two video clips.
 
         Args:
@@ -1074,9 +1170,12 @@ class Client:
             intensity: Glitch intensity 0-1. CLI: -i/--intensity
         """
         from .transitions_engine import transition_glitch
+
         return transition_glitch(clip1, clip2, output, duration, intensity)
 
-    def transition_pixelate(self, clip1: str, clip2: str, output: str, duration: float = 0.4, pixel_size: int = 50) -> str:
+    def transition_pixelate(
+        self, clip1: str, clip2: str, output: str, duration: float = 0.4, pixel_size: int = 50
+    ) -> str:
         """Apply pixelate transition between two video clips.
 
         Args:
@@ -1087,6 +1186,7 @@ class Client:
             pixel_size: Maximum pixel size during transition. CLI: -p/--pixel-size
         """
         from .transitions_engine import transition_pixelate
+
         return transition_pixelate(clip1, clip2, output, duration, pixel_size)
 
     def transition_morph(self, clip1: str, clip2: str, output: str, duration: float = 0.6, mesh_size: int = 10) -> str:
@@ -1100,18 +1200,29 @@ class Client:
             mesh_size: Grid subdivisions. CLI: -m/--mesh-size
         """
         from .transitions_engine import transition_morph
+
         return transition_morph(clip1, clip2, output, duration, mesh_size)
 
     # ------------------------------------------------------------------
     # AI Features (Wave 3)
     # ------------------------------------------------------------------
 
-    def ai_remove_silence(self, video: str, output: str, silence_threshold: float = -50, min_silence_duration: float = 0.5, keep_margin: float = 0.1) -> str:
+    def ai_remove_silence(
+        self,
+        video: str,
+        output: str,
+        silence_threshold: float = -50,
+        min_silence_duration: float = 0.5,
+        keep_margin: float = 0.1,
+    ) -> str:
         """Remove silent sections from video."""
         from .ai_engine import ai_remove_silence
+
         return ai_remove_silence(video, output, silence_threshold, min_silence_duration, keep_margin)
 
-    def ai_transcribe(self, video: str, output_srt: str | None = None, model: str = "base", language: str | None = None) -> dict:
+    def ai_transcribe(
+        self, video: str, output_srt: str | None = None, model: str = "base", language: str | None = None
+    ) -> dict:
         """Transcribe speech to text using Whisper.
 
         Args:
@@ -1127,14 +1238,18 @@ class Client:
                 - language (str): Detected language
         """
         from .ai_engine import ai_transcribe
+
         return ai_transcribe(video, output_srt, model, language)
 
     def ai_scene_detect(self, video: str, threshold: float = 0.3, use_ai: bool = False) -> list[dict]:
         """Detect scene changes in video."""
         from .ai_engine import ai_scene_detect
+
         return ai_scene_detect(video, threshold, use_ai)
 
-    def ai_stem_separation(self, video: str, output_dir: str, stems: list[str] | None = None, model: str = "htdemucs") -> dict[str, str]:
+    def ai_stem_separation(
+        self, video: str, output_dir: str, stems: list[str] | None = None, model: str = "htdemucs"
+    ) -> dict[str, str]:
         """Separate audio into stems using Demucs.
 
         Args:
@@ -1149,6 +1264,7 @@ class Client:
             {"vocals": "/path/to/vocals.wav", "drums": "/path/to/drums.wav", ...}
         """
         from .ai_engine import ai_stem_separation
+
         return ai_stem_separation(video, output_dir, stems, model)
 
     def ai_upscale(self, video: str, output: str, scale: int = 2, model: str = "realesrgan") -> str:
@@ -1164,16 +1280,19 @@ class Client:
             ValueError: If scale is not 2 or 4
         """
         from .ai_engine import ai_upscale
+
         return ai_upscale(video, output, scale, model)
 
     def ai_color_grade(self, video: str, output: str, reference: str | None = None, style: str = "auto") -> str:
         """Auto color grade video."""
         from .ai_engine import ai_color_grade
+
         return ai_color_grade(video, output, reference, style)
 
     def audio_spatial(self, video: str, output: str, positions: list[dict], method: str = "hrtf") -> str:
         """Apply 3D spatial audio positioning."""
         from .ai_engine import audio_spatial
+
         return audio_spatial(video, output, positions, method)
 
     def quality_check(self, video: str, fail_on_warning: bool = False) -> dict:
@@ -1192,6 +1311,7 @@ class Client:
                 - recommendations (list[str]): improvement suggestions
         """
         from .quality_guardrails import quality_check
+
         return quality_check(video, fail_on_warning)
 
     def design_quality_check(
@@ -1224,6 +1344,7 @@ class Client:
                 - recommendations (list[str]): improvement suggestions
         """
         from .design_quality import design_quality_check
+
         return design_quality_check(video, auto_fix=auto_fix, strict=strict)
 
     def fix_design_issues(
@@ -1241,6 +1362,7 @@ class Client:
             Path to fixed video
         """
         from .design_quality import fix_design_issues
+
         return fix_design_issues(video, output=output)
 
 

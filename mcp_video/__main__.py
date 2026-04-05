@@ -56,11 +56,13 @@ def _format_thumbnail_text(result: Any) -> None:
     data = result.model_dump() if hasattr(result, "model_dump") else result
     frame_path = data.get("frame_path", "N/A")
     timestamp = data.get("timestamp", 0.0)
-    console.print(Panel(
-        f"[bold green]Frame extracted:[/bold green] {frame_path}\n[bold green]Timestamp:[/bold green] {timestamp:.2f}s",
-        border_style="green",
-        title="Done",
-    ))
+    console.print(
+        Panel(
+            f"[bold green]Frame extracted:[/bold green] {frame_path}\n[bold green]Timestamp:[/bold green] {timestamp:.2f}s",
+            border_style="green",
+            title="Done",
+        )
+    )
 
 
 def _format_storyboard_text(result: Any) -> None:
@@ -107,6 +109,7 @@ def _format_extract_audio_text(result: Any) -> None:
 def _format_error(e: Exception) -> None:
     """Display error in a styled panel."""
     from .errors import MCPVideoError
+
     if isinstance(e, MCPVideoError):
         try:
             data = e.to_dict()
@@ -131,10 +134,18 @@ def _parse_json_arg(value: str, arg_name: str = "argument", json_mode: bool = Fa
         return json.loads(value)
     except json.JSONDecodeError as e:
         if json_mode:
-            print(json.dumps({
-                "success": False,
-                "error": {"type": "input_error", "code": "invalid_json", "message": f"Invalid JSON in --{arg_name}: {e}"},
-            }))
+            print(
+                json.dumps(
+                    {
+                        "success": False,
+                        "error": {
+                            "type": "input_error",
+                            "code": "invalid_json",
+                            "message": f"Invalid JSON in --{arg_name}: {e}",
+                        },
+                    }
+                )
+            )
         else:
             console.print(f"[bold red]Invalid JSON in --{arg_name}: {e}[/bold red]")
         raise SystemExit(1) from None
@@ -183,7 +194,9 @@ def main() -> None:
     # extract-frame
     eframe_p = subparsers.add_parser("extract-frame", help="Extract a single frame from a video")
     eframe_p.add_argument("input", help="Input video file")
-    eframe_p.add_argument("-t", "--time", dest="timestamp", type=float, help="Time in seconds (default: 10 pct of duration)")
+    eframe_p.add_argument(
+        "-t", "--time", dest="timestamp", type=float, help="Time in seconds (default: 10 pct of duration)"
+    )
     eframe_p.add_argument("-o", "--output", help="Output image path")
 
     # trim
@@ -197,8 +210,18 @@ def main() -> None:
     # merge
     merge_p = subparsers.add_parser("merge", help="Merge multiple clips")
     merge_p.add_argument("inputs", nargs="+", help="Input video files")
-    merge_p.add_argument("-t", "--transition", default=None, choices=["fade", "dissolve", "wipe-left", "wipe-right", "wipe-up", "wipe-down"])
-    merge_p.add_argument("--transitions", nargs="+", choices=["fade", "dissolve", "wipe-left", "wipe-right", "wipe-up", "wipe-down"], help="Per-pair transition types (overrides --transition)")
+    merge_p.add_argument(
+        "-t",
+        "--transition",
+        default=None,
+        choices=["fade", "dissolve", "wipe-left", "wipe-right", "wipe-up", "wipe-down"],
+    )
+    merge_p.add_argument(
+        "--transitions",
+        nargs="+",
+        choices=["fade", "dissolve", "wipe-left", "wipe-right", "wipe-up", "wipe-down"],
+        help="Per-pair transition types (overrides --transition)",
+    )
     merge_p.add_argument("-td", "--transition-duration", type=float, default=1.0, help="Transition duration in seconds")
     merge_p.add_argument("-o", "--output", help="Output file path")
 
@@ -206,7 +229,22 @@ def main() -> None:
     text_p = subparsers.add_parser("add-text", help="Overlay text on a video")
     text_p.add_argument("input", help="Input video file")
     text_p.add_argument("text", help="Text to overlay")
-    text_p.add_argument("-p", "--position", default="top-center", choices=["top-left", "top-center", "top-right", "center-left", "center", "center-right", "bottom-left", "bottom-center", "bottom-right"])
+    text_p.add_argument(
+        "-p",
+        "--position",
+        default="top-center",
+        choices=[
+            "top-left",
+            "top-center",
+            "top-right",
+            "center-left",
+            "center",
+            "center-right",
+            "bottom-left",
+            "bottom-center",
+            "bottom-right",
+        ],
+    )
     text_p.add_argument("--font", help="Path to font file")
     text_p.add_argument("--size", type=int, default=48, help="Font size in pixels")
     text_p.add_argument("--color", default="white", help="Text color")
@@ -231,7 +269,9 @@ def main() -> None:
     resize_p.add_argument("input", help="Input video file")
     resize_p.add_argument("-w", "--width", type=int, help="Target width")
     resize_p.add_argument("--height", type=int, help="Target height")
-    resize_p.add_argument("-a", "--aspect-ratio", choices=["16:9", "9:16", "1:1", "4:3", "4:5", "21:9"], help="Preset aspect ratio")
+    resize_p.add_argument(
+        "-a", "--aspect-ratio", choices=["16:9", "9:16", "1:1", "4:3", "4:5", "21:9"], help="Preset aspect ratio"
+    )
     resize_p.add_argument("-q", "--quality", default="high", choices=["low", "medium", "high", "ultra"])
     resize_p.add_argument("-o", "--output", help="Output file path")
 
@@ -244,7 +284,15 @@ def main() -> None:
     # convert
     convert_p = subparsers.add_parser("convert", help="Convert video format")
     convert_p.add_argument("input", help="Input video file")
-    convert_p.add_argument("-f", "--format", "--fmt", dest="fmt", default="mp4", choices=["mp4", "webm", "gif", "mov"], help="Output format")
+    convert_p.add_argument(
+        "-f",
+        "--format",
+        "--fmt",
+        dest="fmt",
+        default="mp4",
+        choices=["mp4", "webm", "gif", "mov"],
+        help="Output format",
+    )
     convert_p.add_argument("-q", "--quality", default="high", choices=["low", "medium", "high", "ultra"])
     convert_p.add_argument("-o", "--output", help="Output file path")
 
@@ -276,7 +324,21 @@ def main() -> None:
     wm_p = subparsers.add_parser("watermark", help="Add image watermark")
     wm_p.add_argument("input", help="Input video file")
     wm_p.add_argument("image", help="Watermark image (PNG recommended)")
-    wm_p.add_argument("-p", "--position", default="bottom-right", choices=["top-left", "top-center", "top-right", "center-left", "center", "bottom-left", "bottom-center", "bottom-right"])
+    wm_p.add_argument(
+        "-p",
+        "--position",
+        default="bottom-right",
+        choices=[
+            "top-left",
+            "top-center",
+            "top-right",
+            "center-left",
+            "center",
+            "bottom-left",
+            "bottom-center",
+            "bottom-right",
+        ],
+    )
     wm_p.add_argument("--opacity", type=float, default=0.7, help="Watermark opacity (0.0-1.0)")
     wm_p.add_argument("--margin", type=int, default=20, help="Margin from edge in pixels")
     wm_p.add_argument("-o", "--output", help="Output file path")
@@ -293,7 +355,9 @@ def main() -> None:
     # rotate
     rotate_p = subparsers.add_parser("rotate", help="Rotate and/or flip a video")
     rotate_p.add_argument("input", help="Input video file")
-    rotate_p.add_argument("-a", "--angle", type=int, default=0, choices=[0, 90, 180, 270], help="Rotation angle in degrees")
+    rotate_p.add_argument(
+        "-a", "--angle", type=int, default=0, choices=[0, 90, 180, 270], help="Rotation angle in degrees"
+    )
     rotate_p.add_argument("--flip-h", action="store_true", help="Flip horizontally")
     rotate_p.add_argument("--flip-v", action="store_true", help="Flip vertically")
     rotate_p.add_argument("-o", "--output", help="Output file path")
@@ -309,13 +373,23 @@ def main() -> None:
     export_p = subparsers.add_parser("export", help="Export video with quality settings")
     export_p.add_argument("input", help="Input video file")
     export_p.add_argument("-q", "--quality", default="high", choices=["low", "medium", "high", "ultra"])
-    export_p.add_argument("-f", "--format", "--fmt", dest="fmt", default="mp4", choices=["mp4", "webm", "gif", "mov"], help="Output format")
+    export_p.add_argument(
+        "-f",
+        "--format",
+        "--fmt",
+        dest="fmt",
+        default="mp4",
+        choices=["mp4", "webm", "gif", "mov"],
+        help="Output format",
+    )
     export_p.add_argument("-o", "--output", help="Output file path")
 
     # extract_audio
     extract_p = subparsers.add_parser("extract-audio", help="Extract audio from video")
     extract_p.add_argument("input", help="Input video file")
-    extract_p.add_argument("-f", "--format", "--fmt", dest="audio_format", default="mp3", choices=["mp3", "aac", "wav", "ogg", "flac"])
+    extract_p.add_argument(
+        "-f", "--format", "--fmt", dest="audio_format", default="mp3", choices=["mp3", "aac", "wav", "ogg", "flac"]
+    )
     extract_p.add_argument("-o", "--output", help="Output audio file path")
 
     # edit (timeline)
@@ -326,7 +400,27 @@ def main() -> None:
     # filter
     filter_p = subparsers.add_parser("filter", help="Apply a visual filter")
     filter_p.add_argument("input", help="Input video file")
-    filter_p.add_argument("-t", "--type", dest="filter_type", required=True, choices=["blur", "sharpen", "brightness", "contrast", "saturation", "grayscale", "sepia", "invert", "vignette", "color_preset", "denoise", "deinterlace"], help="Filter type")
+    filter_p.add_argument(
+        "-t",
+        "--type",
+        dest="filter_type",
+        required=True,
+        choices=[
+            "blur",
+            "sharpen",
+            "brightness",
+            "contrast",
+            "saturation",
+            "grayscale",
+            "sepia",
+            "invert",
+            "vignette",
+            "color_preset",
+            "denoise",
+            "deinterlace",
+        ],
+        help="Filter type",
+    )
     filter_p.add_argument("--params", help="Filter parameters as JSON")
     filter_p.add_argument("-o", "--output", help="Output file path")
 
@@ -353,7 +447,9 @@ def main() -> None:
     # color-grade (convenience)
     grade_p = subparsers.add_parser("color-grade", help="Apply color grading preset")
     grade_p.add_argument("input", help="Input video file")
-    grade_p.add_argument("-p", "--preset", default="warm", choices=["warm", "cool", "vintage", "cinematic", "noir"], help="Color preset")
+    grade_p.add_argument(
+        "-p", "--preset", default="warm", choices=["warm", "cool", "vintage", "cinematic", "noir"], help="Color preset"
+    )
     grade_p.add_argument("-o", "--output", help="Output file path")
 
     # normalize-audio
@@ -366,7 +462,22 @@ def main() -> None:
     overlay_p = subparsers.add_parser("overlay-video", help="Picture-in-picture overlay")
     overlay_p.add_argument("background", help="Background video file")
     overlay_p.add_argument("overlay", help="Overlay video file")
-    overlay_p.add_argument("-p", "--position", default="top-right", choices=["top-left", "top-center", "top-right", "center-left", "center", "center-right", "bottom-left", "bottom-center", "bottom-right"])
+    overlay_p.add_argument(
+        "-p",
+        "--position",
+        default="top-right",
+        choices=[
+            "top-left",
+            "top-center",
+            "top-right",
+            "center-left",
+            "center",
+            "center-right",
+            "bottom-left",
+            "bottom-center",
+            "bottom-right",
+        ],
+    )
     overlay_p.add_argument("-w", "--width", type=int, help="Overlay width")
     overlay_p.add_argument("--height", type=int, help="Overlay height")
     overlay_p.add_argument("--opacity", type=float, default=0.8, help="Overlay opacity (0.0-1.0)")
@@ -378,21 +489,43 @@ def main() -> None:
     split_p = subparsers.add_parser("split-screen", help="Place two videos side by side or top/bottom")
     split_p.add_argument("left", help="First video file")
     split_p.add_argument("right", help="Second video file")
-    split_p.add_argument("-l", "--layout", default="side-by-side", choices=["side-by-side", "top-bottom"], help="Layout type")
+    split_p.add_argument(
+        "-l", "--layout", default="side-by-side", choices=["side-by-side", "top-bottom"], help="Layout type"
+    )
     split_p.add_argument("-o", "--output", help="Output file path")
 
     # batch
     batch_p = subparsers.add_parser("batch", help="Apply operation to multiple files")
     batch_p.add_argument("inputs", nargs="+", help="Input video files")
     batch_p.add_argument("-o", "--output-dir", help="Output directory for processed files")
-    batch_p.add_argument("--operation", required=True, choices=["trim", "resize", "convert", "filter", "blur", "color_grade", "watermark", "speed", "fade", "normalize_audio"], help="Operation to apply")
+    batch_p.add_argument(
+        "--operation",
+        required=True,
+        choices=[
+            "trim",
+            "resize",
+            "convert",
+            "filter",
+            "blur",
+            "color_grade",
+            "watermark",
+            "speed",
+            "fade",
+            "normalize_audio",
+        ],
+        help="Operation to apply",
+    )
     batch_p.add_argument("--params", help="Operation parameters as JSON")
 
     # detect-scenes
     scenes_p = subparsers.add_parser("detect-scenes", help="Detect scene changes in a video")
     scenes_p.add_argument("input", help="Input video file")
-    scenes_p.add_argument("-t", "--threshold", type=float, default=0.3, help="Detection sensitivity (0.0-1.0, default: 0.3)")
-    scenes_p.add_argument("--min-duration", type=float, default=1.0, help="Minimum scene duration in seconds (default: 1.0)")
+    scenes_p.add_argument(
+        "-t", "--threshold", type=float, default=0.3, help="Detection sensitivity (0.0-1.0, default: 0.3)"
+    )
+    scenes_p.add_argument(
+        "--min-duration", type=float, default=1.0, help="Minimum scene duration in seconds (default: 1.0)"
+    )
 
     # create-from-images
     imgseq_p = subparsers.add_parser("create-from-images", help="Create video from image sequence")
@@ -411,7 +544,9 @@ def main() -> None:
     quality_p = subparsers.add_parser("compare-quality", help="Compare video quality between two files")
     quality_p.add_argument("original", help="Original/reference video file")
     quality_p.add_argument("distorted", help="Processed/distorted video file")
-    quality_p.add_argument("--metrics", nargs="+", choices=["psnr", "ssim"], help="Metrics to compute (default: psnr ssim)")
+    quality_p.add_argument(
+        "--metrics", nargs="+", choices=["psnr", "ssim"], help="Metrics to compute (default: psnr ssim)"
+    )
 
     # read-metadata
     read_meta_p = subparsers.add_parser("read-metadata", help="Read metadata tags from a file")
@@ -420,7 +555,7 @@ def main() -> None:
     # write-metadata
     write_meta_p = subparsers.add_parser("write-metadata", help="Write metadata tags to a file")
     write_meta_p.add_argument("input", help="Input video/audio file")
-    write_meta_p.add_argument("--tags", required=True, help="Metadata as JSON, e.g. '{\"title\": \"My Video\"}'")
+    write_meta_p.add_argument("--tags", required=True, help='Metadata as JSON, e.g. \'{"title": "My Video"}\'')
     write_meta_p.add_argument("-o", "--output", help="Output file path")
 
     # stabilize
@@ -446,7 +581,9 @@ def main() -> None:
     # generate-subtitles
     gen_subs_p = subparsers.add_parser("generate-subtitles", help="Generate SRT subtitles from text entries")
     gen_subs_p.add_argument("input", help="Input video file")
-    gen_subs_p.add_argument("--entries", required=True, help="Subtitle entries as JSON: '[{\"start\":0,\"end\":2,\"text\":\"Hello\"}]'")
+    gen_subs_p.add_argument(
+        "--entries", required=True, help='Subtitle entries as JSON: \'[{"start":0,"end":2,"text":"Hello"}]\''
+    )
     gen_subs_p.add_argument("--burn", action="store_true", help="Burn subtitles into video")
     gen_subs_p.add_argument("-o", "--output", help="Output directory/path (default: auto-generated)")
 
@@ -455,7 +592,11 @@ def main() -> None:
 
     # template (apply a template)
     template_p = subparsers.add_parser("template", help="Apply a video template")
-    template_p.add_argument("name", choices=["tiktok", "youtube-shorts", "instagram-reel", "youtube", "instagram-post"], help="Template name")
+    template_p.add_argument(
+        "name",
+        choices=["tiktok", "youtube-shorts", "instagram-reel", "youtube", "instagram-post"],
+        help="Template name",
+    )
     template_p.add_argument("input", help="Input video file")
     template_p.add_argument("--caption", help="Caption text (for tiktok, instagram)")
     template_p.add_argument("--title", help="Title text (for youtube-shorts, youtube)")
@@ -472,7 +613,12 @@ def main() -> None:
     remotion_render_p.add_argument("project_path", help="Path to Remotion project")
     remotion_render_p.add_argument("composition_id", help="Composition ID to render")
     remotion_render_p.add_argument("-o", "--output", help="Output video file path")
-    remotion_render_p.add_argument("--codec", default="h264", choices=["h264", "h265", "vp8", "vp9", "prores", "gif"], help="Video codec (default: h264)")
+    remotion_render_p.add_argument(
+        "--codec",
+        default="h264",
+        choices=["h264", "h265", "vp8", "vp9", "prores", "gif"],
+        help="Video codec (default: h264)",
+    )
     remotion_render_p.add_argument("--crf", type=int, default=18, help="CRF quality (default: 18)")
     remotion_render_p.add_argument("--width", type=int, help="Output width in pixels")
     remotion_render_p.add_argument("--height", type=int, help="Output height in pixels")
@@ -501,13 +647,17 @@ def main() -> None:
     remotion_still_p.add_argument("composition_id", help="Composition ID to render")
     remotion_still_p.add_argument("-o", "--output", help="Output image file path")
     remotion_still_p.add_argument("--frame", type=int, default=0, help="Frame number to render (default: 0)")
-    remotion_still_p.add_argument("--image-format", default="png", choices=["png", "jpeg", "webp"], help="Image format (default: png)")
+    remotion_still_p.add_argument(
+        "--image-format", default="png", choices=["png", "jpeg", "webp"], help="Image format (default: png)"
+    )
 
     # remotion-create
     remotion_create_p = subparsers.add_parser("remotion-create", help="Scaffold a new Remotion project")
     remotion_create_p.add_argument("name", help="Project name")
     remotion_create_p.add_argument("-d", "--output-dir", help="Output directory (default: current directory)")
-    remotion_create_p.add_argument("-t", "--template", default="blank", choices=["blank", "hello-world"], help="Project template (default: blank)")
+    remotion_create_p.add_argument(
+        "-t", "--template", default="blank", choices=["blank", "hello-world"], help="Project template (default: blank)"
+    )
 
     # remotion-scaffold
     remotion_scaffold_p = subparsers.add_parser("remotion-scaffold", help="Generate composition from spec")
@@ -552,7 +702,9 @@ def main() -> None:
     noise_p.add_argument("input", help="Input video file")
     noise_p.add_argument("-o", "--output", help="Output file path")
     noise_p.add_argument("-i", "--intensity", type=float, default=0.05, help="Noise amount 0-1 (default: 0.05)")
-    noise_p.add_argument("-m", "--mode", default="film", choices=["film", "digital", "color"], help="Noise type (default: film)")
+    noise_p.add_argument(
+        "-m", "--mode", default="film", choices=["film", "digital", "color"], help="Noise type (default: film)"
+    )
     noise_p.add_argument("--static", action="store_true", help="Use static noise instead of animated")
 
     # effect-scanlines
@@ -579,7 +731,9 @@ def main() -> None:
     tglitch_p.add_argument("clip1", help="First video clip")
     tglitch_p.add_argument("clip2", help="Second video clip")
     tglitch_p.add_argument("-o", "--output", help="Output file path")
-    tglitch_p.add_argument("-d", "--duration", type=float, default=0.5, help="Transition duration in seconds (default: 0.5)")
+    tglitch_p.add_argument(
+        "-d", "--duration", type=float, default=0.5, help="Transition duration in seconds (default: 0.5)"
+    )
     tglitch_p.add_argument("-i", "--intensity", type=float, default=0.3, help="Glitch intensity 0-1 (default: 0.3)")
 
     # transition-morph
@@ -587,7 +741,9 @@ def main() -> None:
     tmorph_p.add_argument("clip1", help="First video clip")
     tmorph_p.add_argument("clip2", help="Second video clip")
     tmorph_p.add_argument("-o", "--output", help="Output file path")
-    tmorph_p.add_argument("-d", "--duration", type=float, default=0.6, help="Transition duration in seconds (default: 0.6)")
+    tmorph_p.add_argument(
+        "-d", "--duration", type=float, default=0.6, help="Transition duration in seconds (default: 0.6)"
+    )
     tmorph_p.add_argument("--mesh-size", type=int, default=10, help="Mesh warp intensity (default: 10)")
 
     # transition-pixelate
@@ -595,7 +751,9 @@ def main() -> None:
     tpxl_p.add_argument("clip1", help="First video clip")
     tpxl_p.add_argument("clip2", help="Second video clip")
     tpxl_p.add_argument("-o", "--output", help="Output file path")
-    tpxl_p.add_argument("-d", "--duration", type=float, default=0.4, help="Transition duration in seconds (default: 0.4)")
+    tpxl_p.add_argument(
+        "-d", "--duration", type=float, default=0.4, help="Transition duration in seconds (default: 0.4)"
+    )
     tpxl_p.add_argument("--pixel-size", type=int, default=50, help="Pixel size (default: 50)")
 
     # ------------------------------------------------------------------
@@ -606,7 +764,12 @@ def main() -> None:
     aitrans_p = subparsers.add_parser("video-ai-transcribe", help="Transcribe speech to text using Whisper")
     aitrans_p.add_argument("input", help="Input video file")
     aitrans_p.add_argument("-o", "--output", help="Output SRT file path")
-    aitrans_p.add_argument("--model", default="base", choices=["tiny", "base", "small", "medium", "large"], help="Whisper model (default: base)")
+    aitrans_p.add_argument(
+        "--model",
+        default="base",
+        choices=["tiny", "base", "small", "medium", "large"],
+        help="Whisper model (default: base)",
+    )
     aitrans_p.add_argument("--language", help="Language code (auto-detect if omitted)")
 
     # video-ai-upscale
@@ -634,15 +797,24 @@ def main() -> None:
     aigrade_p.add_argument("input", help="Input video file")
     aigrade_p.add_argument("-o", "--output", help="Output file path")
     aigrade_p.add_argument("--reference", help="Reference video for color matching")
-    aigrade_p.add_argument("--style", default="auto", choices=["auto", "cinematic", "vintage", "warm", "cool", "dramatic"], help="Color style (default: auto)")
+    aigrade_p.add_argument(
+        "--style",
+        default="auto",
+        choices=["auto", "cinematic", "vintage", "warm", "cool", "dramatic"],
+        help="Color style (default: auto)",
+    )
 
     # video-ai-remove-silence
     airms_p = subparsers.add_parser("video-ai-remove-silence", help="Remove silent sections from video")
     airms_p.add_argument("input", help="Input video file")
     airms_p.add_argument("-o", "--output", help="Output file path")
     airms_p.add_argument("--silence-threshold", type=float, default=-50, help="Silence threshold in dB (default: -50)")
-    airms_p.add_argument("--min-silence-duration", type=float, default=0.5, help="Min silence duration in seconds (default: 0.5)")
-    airms_p.add_argument("--keep-margin", type=float, default=0.1, help="Keep margin around silence in seconds (default: 0.1)")
+    airms_p.add_argument(
+        "--min-silence-duration", type=float, default=0.5, help="Min silence duration in seconds (default: 0.5)"
+    )
+    airms_p.add_argument(
+        "--keep-margin", type=float, default=0.1, help="Keep margin around silence in seconds (default: 0.1)"
+    )
 
     # ------------------------------------------------------------------
     # Audio synthesis commands
@@ -651,30 +823,45 @@ def main() -> None:
     # audio-synthesize
     asynth_p = subparsers.add_parser("audio-synthesize", help="Generate audio using waveform synthesis")
     asynth_p.add_argument("-o", "--output", required=True, help="Output WAV file path")
-    asynth_p.add_argument("-w", "--waveform", default="sine", choices=["sine", "square", "sawtooth", "triangle", "noise"], help="Waveform type (default: sine)")
+    asynth_p.add_argument(
+        "-w",
+        "--waveform",
+        default="sine",
+        choices=["sine", "square", "sawtooth", "triangle", "noise"],
+        help="Waveform type (default: sine)",
+    )
     asynth_p.add_argument("-f", "--frequency", type=float, default=440.0, help="Frequency in Hz (default: 440)")
     asynth_p.add_argument("-d", "--duration", type=float, default=1.0, help="Duration in seconds (default: 1.0)")
     asynth_p.add_argument("-v", "--volume", type=float, default=0.5, help="Volume 0-1 (default: 0.5)")
-    asynth_p.add_argument("--effects", help="Effects as JSON, e.g. '{\"reverb\": {\"room_size\": 0.5}}'")
+    asynth_p.add_argument("--effects", help='Effects as JSON, e.g. \'{"reverb": {"room_size": 0.5}}\'')
 
     # audio-compose
     acomp_p = subparsers.add_parser("audio-compose", help="Layer multiple audio tracks with mixing")
     acomp_p.add_argument("-o", "--output", required=True, help="Output WAV file path")
     acomp_p.add_argument("-d", "--duration", type=float, required=True, help="Total duration in seconds")
-    acomp_p.add_argument("--tracks", required=True, help="Tracks as JSON: [{'file': 'a.wav', 'volume': 0.5, 'start': 0}]")
+    acomp_p.add_argument(
+        "--tracks", required=True, help="Tracks as JSON: [{'file': 'a.wav', 'volume': 0.5, 'start': 0}]"
+    )
 
     # audio-preset
     apreset_p = subparsers.add_parser("audio-preset", help="Generate preset sound design elements")
-    apreset_p.add_argument("preset", help="Preset name: ui-blip, ui-click, ui-tap, ui-whoosh-up, ui-whoosh-down, drone-low, drone-mid, drone-tech, drone-ominous, chime-success, chime-error, chime-notification, typing, scan, processing, data-flow, upload, download")
+    apreset_p.add_argument(
+        "preset",
+        help="Preset name: ui-blip, ui-click, ui-tap, ui-whoosh-up, ui-whoosh-down, drone-low, drone-mid, drone-tech, drone-ominous, chime-success, chime-error, chime-notification, typing, scan, processing, data-flow, upload, download",
+    )
     apreset_p.add_argument("-o", "--output", required=True, help="Output WAV file path")
-    apreset_p.add_argument("--pitch", default="mid", choices=["low", "mid", "high"], help="Pitch variation (default: mid)")
+    apreset_p.add_argument(
+        "--pitch", default="mid", choices=["low", "mid", "high"], help="Pitch variation (default: mid)"
+    )
     apreset_p.add_argument("-d", "--duration", type=float, help="Override default duration (seconds)")
     apreset_p.add_argument("-i", "--intensity", type=float, default=0.5, help="Effect intensity 0-1 (default: 0.5)")
 
     # audio-sequence
     aseq_p = subparsers.add_parser("audio-sequence", help="Compose audio events into a timed sequence")
     aseq_p.add_argument("-o", "--output", required=True, help="Output WAV file path")
-    aseq_p.add_argument("--sequence", required=True, help="Sequence as JSON: [{'type': 'tone', 'at': 0, 'duration': 1, 'freq': 440}]")
+    aseq_p.add_argument(
+        "--sequence", required=True, help="Sequence as JSON: [{'type': 'tone', 'at': 0, 'duration': 1, 'freq': 440}]"
+    )
 
     # audio-effects
     aefx_p = subparsers.add_parser("audio-effects", help="Apply audio effects chain to a WAV file")
@@ -691,11 +878,23 @@ def main() -> None:
     tanim_p.add_argument("input", help="Input video file")
     tanim_p.add_argument("text", help="Text to display")
     tanim_p.add_argument("-o", "--output", help="Output file path")
-    tanim_p.add_argument("-a", "--animation", default="fade", choices=["fade", "slide-up", "typewriter", "glitch"], help="Animation type (default: fade)")
+    tanim_p.add_argument(
+        "-a",
+        "--animation",
+        default="fade",
+        choices=["fade", "slide-up", "typewriter", "glitch"],
+        help="Animation type (default: fade)",
+    )
     tanim_p.add_argument("--font", default="Arial", help="Font family (default: Arial)")
     tanim_p.add_argument("--size", type=int, default=48, help="Font size in pixels (default: 48)")
     tanim_p.add_argument("--color", default="white", help="Text color (default: white)")
-    tanim_p.add_argument("-p", "--position", default="center", choices=["center", "top", "bottom", "top-left", "top-right", "bottom-left", "bottom-right"], help="Text position (default: center)")
+    tanim_p.add_argument(
+        "-p",
+        "--position",
+        default="center",
+        choices=["center", "top", "bottom", "top-left", "top-right", "bottom-left", "bottom-right"],
+        help="Text position (default: center)",
+    )
     tanim_p.add_argument("--start", type=float, default=0, help="Start time in seconds (default: 0)")
     tanim_p.add_argument("--duration", type=float, default=3.0, help="Display duration in seconds (default: 3.0)")
 
@@ -705,14 +904,16 @@ def main() -> None:
     mcount_p.add_argument("end", type=int, help="Ending number")
     mcount_p.add_argument("-d", "--duration", type=float, required=True, help="Animation duration in seconds")
     mcount_p.add_argument("-o", "--output", required=True, help="Output video file path")
-    mcount_p.add_argument("--style", help="Style as JSON: {\"font\": \"Arial\", \"size\": 160, \"color\": \"white\"}")
+    mcount_p.add_argument("--style", help='Style as JSON: {"font": "Arial", "size": 160, "color": "white"}')
     mcount_p.add_argument("--fps", type=int, default=30, help="Frame rate (default: 30)")
 
     # video-mograph-progress
     mprog_p = subparsers.add_parser("video-mograph-progress", help="Generate progress bar / loading animation")
     mprog_p.add_argument("-d", "--duration", type=float, required=True, help="Animation duration in seconds")
     mprog_p.add_argument("-o", "--output", required=True, help="Output video file path")
-    mprog_p.add_argument("--style", default="bar", choices=["bar", "circle", "dots"], help="Progress style (default: bar)")
+    mprog_p.add_argument(
+        "--style", default="bar", choices=["bar", "circle", "dots"], help="Progress style (default: bar)"
+    )
     mprog_p.add_argument("--color", default="#CCFF00", help="Progress color hex (default: #CCFF00)")
     mprog_p.add_argument("--track-color", default="#333333", help="Track background color hex (default: #333333)")
     mprog_p.add_argument("--fps", type=int, default=30, help="Frame rate (default: 30)")
@@ -724,7 +925,9 @@ def main() -> None:
     # video-layout-grid
     lgrid_p = subparsers.add_parser("video-layout-grid", help="Arrange multiple videos in a grid")
     lgrid_p.add_argument("inputs", nargs="+", help="Input video files")
-    lgrid_p.add_argument("-l", "--layout", default="2x2", choices=["2x2", "3x1", "1x3", "2x3"], help="Grid layout (default: 2x2)")
+    lgrid_p.add_argument(
+        "-l", "--layout", default="2x2", choices=["2x2", "3x1", "1x3", "2x3"], help="Grid layout (default: 2x2)"
+    )
     lgrid_p.add_argument("-o", "--output", required=True, help="Output file path")
     lgrid_p.add_argument("--gap", type=int, default=10, help="Gap between clips in pixels (default: 10)")
     lgrid_p.add_argument("--padding", type=int, default=20, help="Padding around grid in pixels (default: 20)")
@@ -735,15 +938,27 @@ def main() -> None:
     lpip_p.add_argument("main", help="Main video file")
     lpip_p.add_argument("pip", help="Picture-in-picture video file")
     lpip_p.add_argument("-o", "--output", required=True, help="Output file path")
-    lpip_p.add_argument("-p", "--position", default="bottom-right", choices=["top-left", "top-right", "bottom-left", "bottom-right"], help="PIP position (default: bottom-right)")
-    lpip_p.add_argument("-s", "--size", type=float, default=0.25, help="PIP size as fraction of main 0-1 (default: 0.25)")
+    lpip_p.add_argument(
+        "-p",
+        "--position",
+        default="bottom-right",
+        choices=["top-left", "top-right", "bottom-left", "bottom-right"],
+        help="PIP position (default: bottom-right)",
+    )
+    lpip_p.add_argument(
+        "-s", "--size", type=float, default=0.25, help="PIP size as fraction of main 0-1 (default: 0.25)"
+    )
     lpip_p.add_argument("--margin", type=int, default=20, help="Margin from edges in pixels (default: 20)")
     lpip_p.add_argument("--border", action="store_true", default=True, help="Add border around PIP (default: True)")
     lpip_p.add_argument("--no-border", dest="border", action="store_false", help="Disable border around PIP")
     lpip_p.add_argument("--border-color", default="#CCFF00", help="Border color hex (default: #CCFF00)")
     lpip_p.add_argument("--border-width", type=int, default=2, help="Border width in pixels (default: 2)")
-    lpip_p.add_argument("--rounded-corners", action="store_true", default=True, help="Apply rounded corners to PIP (default: True)")
-    lpip_p.add_argument("--no-rounded-corners", dest="rounded_corners", action="store_false", help="Disable rounded corners")
+    lpip_p.add_argument(
+        "--rounded-corners", action="store_true", default=True, help="Apply rounded corners to PIP (default: True)"
+    )
+    lpip_p.add_argument(
+        "--no-rounded-corners", dest="rounded_corners", action="store_false", help="Disable rounded corners"
+    )
 
     # ------------------------------------------------------------------
     # Audio-Video commands
@@ -752,15 +967,21 @@ def main() -> None:
     # video-add-generated-audio
     addgen_p = subparsers.add_parser("video-add-generated-audio", help="Add procedurally generated audio to video")
     addgen_p.add_argument("input", help="Input video file")
-    addgen_p.add_argument("--audio-config", required=True, help="Audio config as JSON: {\"drone\": {\"frequency\": 100}, \"events\": [...]}")
+    addgen_p.add_argument(
+        "--audio-config", required=True, help='Audio config as JSON: {"drone": {"frequency": 100}, "events": [...]}'
+    )
     addgen_p.add_argument("-o", "--output", help="Output file path")
 
     # video-audio-spatial
     aspat_p = subparsers.add_parser("video-audio-spatial", help="Apply 3D spatial audio positioning")
     aspat_p.add_argument("input", help="Input video file")
     aspat_p.add_argument("-o", "--output", help="Output file path")
-    aspat_p.add_argument("--positions", required=True, help="Positions as JSON: [{\"time\": 0, \"azimuth\": 0, \"elevation\": 0}]")
-    aspat_p.add_argument("--method", default="hrtf", choices=["hrtf", "vbap", "simple"], help="Spatialization method (default: hrtf)")
+    aspat_p.add_argument(
+        "--positions", required=True, help='Positions as JSON: [{"time": 0, "azimuth": 0, "elevation": 0}]'
+    )
+    aspat_p.add_argument(
+        "--method", default="hrtf", choices=["hrtf", "vbap", "simple"], help="Spatialization method (default: hrtf)"
+    )
 
     # ------------------------------------------------------------------
     # Quality / Info commands
@@ -804,25 +1025,39 @@ def main() -> None:
     # image-extract-colors
     imgcol_p = subparsers.add_parser("image-extract-colors", help="Extract dominant colors from an image")
     imgcol_p.add_argument("input", help="Input image file")
-    imgcol_p.add_argument("-n", "--n-colors", type=int, default=5, help="Number of colors to extract (default: 5, max: 20)")
+    imgcol_p.add_argument(
+        "-n", "--n-colors", type=int, default=5, help="Number of colors to extract (default: 5, max: 20)"
+    )
 
     # image-generate-palette
     imgpal_p = subparsers.add_parser("image-generate-palette", help="Generate color harmony palette from image")
     imgpal_p.add_argument("input", help="Input image file")
-    imgpal_p.add_argument("--harmony", default="complementary", choices=["complementary", "analogous", "triadic", "split_complementary"], help="Harmony type (default: complementary)")
+    imgpal_p.add_argument(
+        "--harmony",
+        default="complementary",
+        choices=["complementary", "analogous", "triadic", "split_complementary"],
+        help="Harmony type (default: complementary)",
+    )
     imgpal_p.add_argument("-n", "--n-colors", type=int, default=5, help="Number of base colors (default: 5, max: 20)")
 
     # image-analyze-product
-    imgprod_p = subparsers.add_parser("image-analyze-product", help="Analyze a product image (colors + optional AI description)")
+    imgprod_p = subparsers.add_parser(
+        "image-analyze-product", help="Analyze a product image (colors + optional AI description)"
+    )
     imgprod_p.add_argument("input", help="Input image file")
-    imgprod_p.add_argument("--use-ai", action="store_true", help="Use Claude Vision for description (requires ANTHROPIC_API_KEY)")
-    imgprod_p.add_argument("-n", "--n-colors", type=int, default=5, help="Number of colors to extract (default: 5, max: 20)")
+    imgprod_p.add_argument(
+        "--use-ai", action="store_true", help="Use Claude Vision for description (requires ANTHROPIC_API_KEY)"
+    )
+    imgprod_p.add_argument(
+        "-n", "--n-colors", type=int, default=5, help="Number of colors to extract (default: 5, max: 20)"
+    )
 
     args = parser.parse_args()
 
     # --version
     if args.version:
         from . import __version__
+
         console.print(f"mcp-video [bold]{__version__}[/bold]")
         return
 
@@ -830,6 +1065,7 @@ def main() -> None:
     if args.mcp or args.command is None:
         try:
             from .server import mcp
+
             mcp.run()
         except ImportError:
             err_console.print(
@@ -844,6 +1080,7 @@ def main() -> None:
     def _auto_output(input_path: str, suffix: str) -> str:
         """Generate an output path next to the input file."""
         import os
+
         base, ext = os.path.splitext(input_path)
         return f"{base}_{suffix}{ext}"
 
@@ -857,6 +1094,7 @@ def main() -> None:
     try:
         if args.command == "info":
             from .engine import probe
+
             info = probe(args.input)
             if use_json:
                 info_dict = info.model_dump() if hasattr(info, "model_dump") else info
@@ -866,7 +1104,10 @@ def main() -> None:
 
         elif args.command == "extract-frame":
             from .engine import thumbnail
-            result = _with_spinner("Extracting frame...", thumbnail, args.input, timestamp=args.timestamp, output_path=args.output)
+
+            result = _with_spinner(
+                "Extracting frame...", thumbnail, args.input, timestamp=args.timestamp, output_path=args.output
+            )
             if use_json:
                 result_dict = result.model_dump() if hasattr(result, "model_dump") else result
                 output_json({"success": True, **result_dict})
@@ -875,7 +1116,16 @@ def main() -> None:
 
         elif args.command == "trim":
             from .engine import trim
-            result = _with_spinner("Trimming...", trim, args.input, start=args.start, duration=args.duration, end=args.end, output_path=args.output)
+
+            result = _with_spinner(
+                "Trimming...",
+                trim,
+                args.input,
+                start=args.start,
+                duration=args.duration,
+                end=args.end,
+                output_path=args.output,
+            )
             if use_json:
                 output_json(result)
             else:
@@ -883,7 +1133,16 @@ def main() -> None:
 
         elif args.command == "merge":
             from .engine import merge
-            result = _with_spinner("Merging...", merge, args.inputs, output_path=args.output, transition=args.transition, transitions=args.transitions, transition_duration=args.transition_duration)
+
+            result = _with_spinner(
+                "Merging...",
+                merge,
+                args.inputs,
+                output_path=args.output,
+                transition=args.transition,
+                transitions=args.transitions,
+                transition_duration=args.transition_duration,
+            )
             if use_json:
                 output_json(result)
             else:
@@ -891,11 +1150,19 @@ def main() -> None:
 
         elif args.command == "add-text":
             from .engine import add_text
-            result = _with_spinner("Adding text...", add_text,
-                args.input, text=args.text, position=args.position,
-                font=args.font, size=args.size, color=args.color,
+
+            result = _with_spinner(
+                "Adding text...",
+                add_text,
+                args.input,
+                text=args.text,
+                position=args.position,
+                font=args.font,
+                size=args.size,
+                color=args.color,
                 shadow=not args.no_shadow,
-                start_time=args.start_time, duration=args.duration,
+                start_time=args.start_time,
+                duration=args.duration,
                 output_path=args.output,
             )
             if use_json:
@@ -905,10 +1172,17 @@ def main() -> None:
 
         elif args.command == "add-audio":
             from .engine import add_audio
-            result = _with_spinner("Adding audio...", add_audio,
-                args.video, args.audio, volume=args.volume,
-                fade_in=args.fade_in, fade_out=args.fade_out,
-                mix=args.mix, start_time=args.start_time,
+
+            result = _with_spinner(
+                "Adding audio...",
+                add_audio,
+                args.video,
+                args.audio,
+                volume=args.volume,
+                fade_in=args.fade_in,
+                fade_out=args.fade_out,
+                mix=args.mix,
+                start_time=args.start_time,
                 output_path=args.output,
             )
             if use_json:
@@ -918,9 +1192,15 @@ def main() -> None:
 
         elif args.command == "resize":
             from .engine import resize
-            result = _with_spinner("Resizing...", resize,
-                args.input, width=args.width, height=args.height,
-                aspect_ratio=args.aspect_ratio, quality=args.quality,
+
+            result = _with_spinner(
+                "Resizing...",
+                resize,
+                args.input,
+                width=args.width,
+                height=args.height,
+                aspect_ratio=args.aspect_ratio,
+                quality=args.quality,
                 output_path=args.output,
             )
             if use_json:
@@ -930,6 +1210,7 @@ def main() -> None:
 
         elif args.command == "speed":
             from .engine import speed
+
             result = _with_spinner("Changing speed...", speed, args.input, factor=args.factor, output_path=args.output)
             if use_json:
                 output_json(result)
@@ -938,7 +1219,10 @@ def main() -> None:
 
         elif args.command == "convert":
             from .engine import convert
-            result = _with_spinner("Converting...", convert, args.input, format=args.fmt, quality=args.quality, output_path=args.output)
+
+            result = _with_spinner(
+                "Converting...", convert, args.input, format=args.fmt, quality=args.quality, output_path=args.output
+            )
             if use_json:
                 output_json(result)
             else:
@@ -946,6 +1230,7 @@ def main() -> None:
 
         elif args.command == "thumbnail":
             from .engine import thumbnail
+
             result = thumbnail(args.input, timestamp=args.timestamp, output_path=args.output)
             if use_json:
                 output_json(result)
@@ -954,7 +1239,10 @@ def main() -> None:
 
         elif args.command == "preview":
             from .engine import preview
-            result = _with_spinner("Generating preview...", preview, args.input, output_path=args.output, scale_factor=args.scale)
+
+            result = _with_spinner(
+                "Generating preview...", preview, args.input, output_path=args.output, scale_factor=args.scale
+            )
             if use_json:
                 output_json(result)
             else:
@@ -962,7 +1250,10 @@ def main() -> None:
 
         elif args.command == "storyboard":
             from .engine import storyboard
-            result = _with_spinner("Extracting storyboard...", storyboard, args.input, output_dir=args.output_dir, frame_count=args.frames)
+
+            result = _with_spinner(
+                "Extracting storyboard...", storyboard, args.input, output_dir=args.output_dir, frame_count=args.frames
+            )
             if use_json:
                 output_json(result)
             else:
@@ -970,7 +1261,10 @@ def main() -> None:
 
         elif args.command == "subtitles":
             from .engine import subtitles
-            result = _with_spinner("Burning subtitles...", subtitles, args.input, subtitle_path=args.subtitle, output_path=args.output)
+
+            result = _with_spinner(
+                "Burning subtitles...", subtitles, args.input, subtitle_path=args.subtitle, output_path=args.output
+            )
             if use_json:
                 output_json(result)
             else:
@@ -978,9 +1272,15 @@ def main() -> None:
 
         elif args.command == "watermark":
             from .engine import watermark
-            result = _with_spinner("Adding watermark...", watermark,
-                args.input, image_path=args.image, position=args.position,
-                opacity=args.opacity, margin=args.margin,
+
+            result = _with_spinner(
+                "Adding watermark...",
+                watermark,
+                args.input,
+                image_path=args.image,
+                position=args.position,
+                opacity=args.opacity,
+                margin=args.margin,
                 output_path=args.output,
             )
             if use_json:
@@ -990,7 +1290,17 @@ def main() -> None:
 
         elif args.command == "crop":
             from .engine import crop
-            result = _with_spinner("Cropping...", crop, args.input, width=args.width, height=args.height, x=args.x, y=args.y, output_path=args.output)
+
+            result = _with_spinner(
+                "Cropping...",
+                crop,
+                args.input,
+                width=args.width,
+                height=args.height,
+                x=args.x,
+                y=args.y,
+                output_path=args.output,
+            )
             if use_json:
                 output_json(result)
             else:
@@ -998,7 +1308,16 @@ def main() -> None:
 
         elif args.command == "rotate":
             from .engine import rotate
-            result = _with_spinner("Rotating...", rotate, args.input, angle=args.angle, flip_horizontal=args.flip_h, flip_vertical=args.flip_v, output_path=args.output)
+
+            result = _with_spinner(
+                "Rotating...",
+                rotate,
+                args.input,
+                angle=args.angle,
+                flip_horizontal=args.flip_h,
+                flip_vertical=args.flip_v,
+                output_path=args.output,
+            )
             if use_json:
                 output_json(result)
             else:
@@ -1006,7 +1325,15 @@ def main() -> None:
 
         elif args.command == "fade":
             from .engine import fade
-            result = _with_spinner("Applying fade...", fade, args.input, fade_in=args.fade_in, fade_out=args.fade_out, output_path=args.output)
+
+            result = _with_spinner(
+                "Applying fade...",
+                fade,
+                args.input,
+                fade_in=args.fade_in,
+                fade_out=args.fade_out,
+                output_path=args.output,
+            )
             if use_json:
                 output_json(result)
             else:
@@ -1014,7 +1341,10 @@ def main() -> None:
 
         elif args.command == "export":
             from .engine import export_video
-            result = _with_spinner("Exporting...", export_video, args.input, quality=args.quality, format=args.fmt, output_path=args.output)
+
+            result = _with_spinner(
+                "Exporting...", export_video, args.input, quality=args.quality, format=args.fmt, output_path=args.output
+            )
             if use_json:
                 output_json(result)
             else:
@@ -1022,7 +1352,10 @@ def main() -> None:
 
         elif args.command == "extract-audio":
             from .engine import extract_audio
-            result = _with_spinner("Extracting audio...", extract_audio, args.input, output_path=args.output, format=args.audio_format)
+
+            result = _with_spinner(
+                "Extracting audio...", extract_audio, args.input, output_path=args.output, format=args.audio_format
+            )
             if use_json:
                 output_json({"success": True, "output_path": result})
             else:
@@ -1030,6 +1363,7 @@ def main() -> None:
 
         elif args.command == "edit":
             from .models import Timeline
+
             timeline_arg = args.timeline.strip()
             if timeline_arg.startswith(("{", "[")):
                 tl = Timeline.model_validate(_parse_json_arg(timeline_arg, "timeline", json_mode=use_json))
@@ -1037,6 +1371,7 @@ def main() -> None:
                 with open(timeline_arg) as f:
                     tl = Timeline.model_validate(json.load(f))
             from .engine import edit_timeline
+
             result = _with_spinner("Editing timeline...", edit_timeline, tl, output_path=args.output)
             if use_json:
                 output_json(result)
@@ -1045,8 +1380,16 @@ def main() -> None:
 
         elif args.command == "filter":
             from .engine import apply_filter
+
             params = _parse_json_arg(args.params, "params", json_mode=use_json) if args.params else {}
-            result = _with_spinner("Applying filter...", apply_filter, args.input, filter_type=args.filter_type, params=params, output_path=args.output)
+            result = _with_spinner(
+                "Applying filter...",
+                apply_filter,
+                args.input,
+                filter_type=args.filter_type,
+                params=params,
+                output_path=args.output,
+            )
             if use_json:
                 output_json(result)
             else:
@@ -1054,7 +1397,15 @@ def main() -> None:
 
         elif args.command == "blur":
             from .engine import apply_filter
-            result = _with_spinner("Applying blur...", apply_filter, args.input, filter_type="blur", params={"radius": args.radius, "strength": args.strength}, output_path=args.output)
+
+            result = _with_spinner(
+                "Applying blur...",
+                apply_filter,
+                args.input,
+                filter_type="blur",
+                params={"radius": args.radius, "strength": args.strength},
+                output_path=args.output,
+            )
             if use_json:
                 output_json(result)
             else:
@@ -1062,6 +1413,7 @@ def main() -> None:
 
         elif args.command == "reverse":
             from .engine import reverse
+
             result = _with_spinner("Reversing...", reverse, args.input, output_path=args.output)
             if use_json:
                 output_json(result)
@@ -1070,7 +1422,16 @@ def main() -> None:
 
         elif args.command == "chroma-key":
             from .engine import chroma_key
-            result = _with_spinner("Removing green screen...", chroma_key, args.input, color=args.color, similarity=args.similarity, blend=args.blend, output_path=args.output)
+
+            result = _with_spinner(
+                "Removing green screen...",
+                chroma_key,
+                args.input,
+                color=args.color,
+                similarity=args.similarity,
+                blend=args.blend,
+                output_path=args.output,
+            )
             if use_json:
                 output_json(result)
             else:
@@ -1078,7 +1439,15 @@ def main() -> None:
 
         elif args.command == "color-grade":
             from .engine import apply_filter
-            result = _with_spinner("Applying color grade...", apply_filter, args.input, filter_type="color_preset", params={"preset": args.preset}, output_path=args.output)
+
+            result = _with_spinner(
+                "Applying color grade...",
+                apply_filter,
+                args.input,
+                filter_type="color_preset",
+                params={"preset": args.preset},
+                output_path=args.output,
+            )
             if use_json:
                 output_json(result)
             else:
@@ -1086,7 +1455,10 @@ def main() -> None:
 
         elif args.command == "normalize-audio":
             from .engine import normalize_audio
-            result = _with_spinner("Normalizing audio...", normalize_audio, args.input, target_lufs=args.lufs, output_path=args.output)
+
+            result = _with_spinner(
+                "Normalizing audio...", normalize_audio, args.input, target_lufs=args.lufs, output_path=args.output
+            )
             if use_json:
                 output_json(result)
             else:
@@ -1094,10 +1466,18 @@ def main() -> None:
 
         elif args.command == "overlay-video":
             from .engine import overlay_video
-            result = _with_spinner("Compositing overlay...", overlay_video,
-                args.background, overlay_path=args.overlay, position=args.position,
-                width=args.width, height=args.height, opacity=args.opacity,
-                start_time=args.start_time, duration=args.duration,
+
+            result = _with_spinner(
+                "Compositing overlay...",
+                overlay_video,
+                args.background,
+                overlay_path=args.overlay,
+                position=args.position,
+                width=args.width,
+                height=args.height,
+                opacity=args.opacity,
+                start_time=args.start_time,
+                duration=args.duration,
                 output_path=args.output,
             )
             if use_json:
@@ -1107,7 +1487,15 @@ def main() -> None:
 
         elif args.command == "split-screen":
             from .engine import split_screen
-            result = _with_spinner("Creating split screen...", split_screen, args.left, right_path=args.right, layout=args.layout, output_path=args.output)
+
+            result = _with_spinner(
+                "Creating split screen...",
+                split_screen,
+                args.left,
+                right_path=args.right,
+                layout=args.layout,
+                output_path=args.output,
+            )
             if use_json:
                 output_json(result)
             else:
@@ -1115,6 +1503,7 @@ def main() -> None:
 
         elif args.command == "batch":
             from .engine import video_batch
+
             params = _parse_json_arg(args.params, "params", json_mode=use_json) if args.params else {}
             result = video_batch(args.inputs, operation=args.operation, params=params, output_dir=args.output_dir)
             if use_json:
@@ -1124,7 +1513,14 @@ def main() -> None:
 
         elif args.command == "detect-scenes":
             from .engine import detect_scenes
-            result = _with_spinner("Detecting scenes...", detect_scenes, args.input, threshold=args.threshold, min_scene_duration=args.min_duration)
+
+            result = _with_spinner(
+                "Detecting scenes...",
+                detect_scenes,
+                args.input,
+                threshold=args.threshold,
+                min_scene_duration=args.min_duration,
+            )
             if use_json:
                 output_json(result)
             else:
@@ -1135,13 +1531,23 @@ def main() -> None:
                 table.add_column("End", style="cyan")
                 table.add_column("Frames")
                 for i, scene in enumerate(data.get("scenes", []), 1):
-                    table.add_row(str(i), f"{scene['start']:.2f}s", f"{scene['end']:.2f}s", f"{scene['start_frame']}-{scene['end_frame']}")
+                    table.add_row(
+                        str(i),
+                        f"{scene['start']:.2f}s",
+                        f"{scene['end']:.2f}s",
+                        f"{scene['start_frame']}-{scene['end_frame']}",
+                    )
                 console.print(table)
-                console.print(f"[bold]{data.get('scene_count', 0)} scenes detected[/bold] in {data.get('duration', 0):.2f}s")
+                console.print(
+                    f"[bold]{data.get('scene_count', 0)} scenes detected[/bold] in {data.get('duration', 0):.2f}s"
+                )
 
         elif args.command == "create-from-images":
             from .engine import create_from_images
-            result = _with_spinner("Creating video from images...", create_from_images, args.inputs, output_path=args.output, fps=args.fps)
+
+            result = _with_spinner(
+                "Creating video from images...", create_from_images, args.inputs, output_path=args.output, fps=args.fps
+            )
             if use_json:
                 output_json(result)
             else:
@@ -1149,8 +1555,11 @@ def main() -> None:
 
         elif args.command == "export-frames":
             from .engine import export_frames
+
             fmt = "mjpeg" if args.image_format == "jpg" else args.image_format
-            result = _with_spinner("Exporting frames...", export_frames, args.input, output_dir=args.output_dir, fps=args.fps, format=fmt)
+            result = _with_spinner(
+                "Exporting frames...", export_frames, args.input, output_dir=args.output_dir, fps=args.fps, format=fmt
+            )
             if use_json:
                 output_json(result)
             else:
@@ -1166,8 +1575,11 @@ def main() -> None:
 
         elif args.command == "compare-quality":
             from .engine import compare_quality
+
             metrics = args.metrics if args.metrics else None
-            result = _with_spinner("Comparing quality...", compare_quality, args.original, args.distorted, metrics=metrics)
+            result = _with_spinner(
+                "Comparing quality...", compare_quality, args.original, args.distorted, metrics=metrics
+            )
             if use_json:
                 output_json(result)
             else:
@@ -1184,6 +1596,7 @@ def main() -> None:
 
         elif args.command == "read-metadata":
             from .engine import read_metadata
+
             result = read_metadata(args.input)
             if use_json:
                 output_json(result)
@@ -1205,12 +1618,15 @@ def main() -> None:
 
         elif args.command == "write-metadata":
             from .engine import write_metadata
+
             try:
                 tags = json.loads(args.tags)
             except json.JSONDecodeError as e:
                 console.print(f"[bold red]Invalid JSON in --tags: {e}[/bold red]")
                 raise SystemExit(1) from None
-            result = _with_spinner("Writing metadata...", write_metadata, args.input, metadata=tags, output_path=args.output)
+            result = _with_spinner(
+                "Writing metadata...", write_metadata, args.input, metadata=tags, output_path=args.output
+            )
             if use_json:
                 output_json(result)
             else:
@@ -1218,7 +1634,15 @@ def main() -> None:
 
         elif args.command == "stabilize":
             from .engine import stabilize
-            result = _with_spinner("Stabilizing...", stabilize, args.input, smoothing=args.smoothing, zooming=args.zooming, output_path=args.output)
+
+            result = _with_spinner(
+                "Stabilizing...",
+                stabilize,
+                args.input,
+                smoothing=args.smoothing,
+                zooming=args.zooming,
+                output_path=args.output,
+            )
             if use_json:
                 output_json(result)
             else:
@@ -1226,7 +1650,15 @@ def main() -> None:
 
         elif args.command == "apply-mask":
             from .engine import apply_mask
-            result = _with_spinner("Applying mask...", apply_mask, args.input, mask_path=args.mask, feather=args.feather, output_path=args.output)
+
+            result = _with_spinner(
+                "Applying mask...",
+                apply_mask,
+                args.input,
+                mask_path=args.mask,
+                feather=args.feather,
+                output_path=args.output,
+            )
             if use_json:
                 output_json(result)
             else:
@@ -1234,6 +1666,7 @@ def main() -> None:
 
         elif args.command == "audio-waveform":
             from .engine import audio_waveform
+
             result = _with_spinner("Extracting waveform...", audio_waveform, args.input, bins=args.bins)
             if use_json:
                 output_json(result)
@@ -1246,14 +1679,22 @@ def main() -> None:
                 table.add_row("Mean Level", f"{data.get('mean_level', 0):.1f} dB")
                 table.add_row("Max Level", f"{data.get('max_level', 0):.1f} dB")
                 table.add_row("Min Level", f"{data.get('min_level', 0):.1f} dB")
-                silence_count = len(data.get('silence_regions', []))
+                silence_count = len(data.get("silence_regions", []))
                 table.add_row("Silence Regions", str(silence_count))
                 console.print(table)
 
         elif args.command == "generate-subtitles":
             from .engine import generate_subtitles
+
             entries = _parse_json_arg(args.entries, "entries", json_mode=use_json)
-            result = _with_spinner("Generating subtitles...", generate_subtitles, entries, args.input, burn=args.burn, output_path=args.output)
+            result = _with_spinner(
+                "Generating subtitles...",
+                generate_subtitles,
+                entries,
+                args.input,
+                burn=args.burn,
+                output_path=args.output,
+            )
             if use_json:
                 output_json(result)
             else:
@@ -1262,12 +1703,13 @@ def main() -> None:
                     f"[bold green]Entries:[/bold green] {data.get('entry_count', 0)}",
                     f"[bold green]SRT Path:[/bold green] {data.get('srt_path', 'N/A')}",
                 ]
-                if data.get('video_path'):
+                if data.get("video_path"):
                     lines.append(f"[bold green]Video Path:[/bold green] {data['video_path']}")
                 console.print(Panel("\n".join(lines), border_style="green", title="Subtitles Generated"))
 
         elif args.command == "templates":
             from .templates import TEMPLATES
+
             descriptions = {
                 "tiktok": "TikTok (9:16, 1080x1920) — vertical video with optional caption and music",
                 "youtube-shorts": "YouTube Shorts (9:16) — title at top, vertical video",
@@ -1288,6 +1730,7 @@ def main() -> None:
         elif args.command == "template":
             from .templates import TEMPLATES
             from .engine import edit_timeline
+
             template_fn = TEMPLATES[args.name]
             kwargs: dict[str, Any] = {"video_path": args.input, "output_path": args.output}
             if args.caption:
@@ -1299,7 +1742,9 @@ def main() -> None:
             if args.outro:
                 kwargs["outro_path"] = args.outro
             timeline = template_fn(**kwargs)
-            result = _with_spinner(f"Applying {args.name} template...", edit_timeline, timeline, output_path=args.output)
+            result = _with_spinner(
+                f"Applying {args.name} template...", edit_timeline, timeline, output_path=args.output
+            )
             if use_json:
                 output_json(result)
             else:
@@ -1310,16 +1755,24 @@ def main() -> None:
         # ------------------------------------------------------------------
 
         elif args.command == "remotion-render":
-            from .remotion_engine import render
+            from .remotion_engine import render_composition
+
             props = _parse_json_arg(args.props, "props", json_mode=use_json) if args.props else None
             result = _with_spinner(
                 f"Rendering {args.composition_id}...",
-                render,
-                args.project_path, args.composition_id,
-                output_path=args.output, codec=args.codec, crf=args.crf,
-                width=args.width, height=args.height, fps=args.fps,
-                concurrency=args.concurrency, frames=args.frames,
-                props=props, scale=args.scale,
+                render_composition,
+                args.project_path,
+                args.composition_id,
+                output_path=args.output,
+                codec=args.codec,
+                crf=args.crf,
+                width=args.width,
+                height=args.height,
+                fps=args.fps,
+                concurrency=args.concurrency,
+                frames=args.frames,
+                props=props,
+                scale=args.scale,
             )
             if use_json:
                 output_json(result)
@@ -1340,10 +1793,11 @@ def main() -> None:
                 console.print(Panel("\n".join(lines), border_style="green", title="Remotion Render"))
 
         elif args.command == "remotion-compositions":
-            from .remotion_engine import compositions
+            from .remotion_engine import list_compositions
+
             result = _with_spinner(
                 "Listing compositions...",
-                compositions,
+                list_compositions,
                 args.project_path,
                 composition_id=args.composition_id,
             )
@@ -1368,32 +1822,42 @@ def main() -> None:
                 console.print(table)
 
         elif args.command == "remotion-studio":
-            from .remotion_engine import studio
+            from .remotion_engine import launch_studio
+
             result = _with_spinner(
                 "Launching Remotion Studio...",
-                studio,
+                launch_studio,
                 args.project_path,
                 port=args.port,
             )
             if use_json or args.json:
                 output_json(result)
             else:
-                data = result.model_dump() if hasattr(result, "model_dump") else (result if isinstance(result, dict) else {})
-                console.print(Panel(
-                    f"[bold green]Studio running:[/bold green] {data.get('url', 'N/A')}\n"
-                    f"[bold green]Port:[/bold green] {data.get('port', 'N/A')}\n"
-                    f"[bold green]Project:[/bold green] {data.get('project_path', 'N/A')}",
-                    border_style="green",
-                    title="Remotion Studio",
-                ))
+                data = (
+                    result.model_dump()
+                    if hasattr(result, "model_dump")
+                    else (result if isinstance(result, dict) else {})
+                )
+                console.print(
+                    Panel(
+                        f"[bold green]Studio running:[/bold green] {data.get('url', 'N/A')}\n"
+                        f"[bold green]Port:[/bold green] {data.get('port', 'N/A')}\n"
+                        f"[bold green]Project:[/bold green] {data.get('project_path', 'N/A')}",
+                        border_style="green",
+                        title="Remotion Studio",
+                    )
+                )
 
         elif args.command == "remotion-still":
-            from .remotion_engine import still
+            from .remotion_engine import render_still
+
             result = _with_spinner(
                 f"Rendering still frame {args.frame}...",
-                still,
-                args.project_path, args.composition_id,
-                output_path=args.output, frame=args.frame,
+                render_still,
+                args.project_path,
+                args.composition_id,
+                output_path=args.output,
+                frame=args.frame,
                 image_format=args.image_format,
             )
             if use_json:
@@ -1411,6 +1875,7 @@ def main() -> None:
 
         elif args.command == "remotion-create":
             from .remotion_engine import create_project
+
             result = _with_spinner(
                 f"Creating project '{args.name}'...",
                 create_project,
@@ -1431,11 +1896,12 @@ def main() -> None:
                 console.print(Panel("\n".join(lines), border_style="green", title="Remotion Project Created"))
 
         elif args.command == "remotion-scaffold":
-            from .remotion_engine import scaffold_template
+            from .remotion_engine import scaffold_composition
+
             spec = _parse_json_arg(args.spec, "spec", json_mode=use_json)
             result = _with_spinner(
                 f"Scaffolding '{args.slug}'...",
-                scaffold_template,
+                scaffold_composition,
                 args.project_path,
                 spec=spec,
                 slug=args.slug,
@@ -1453,10 +1919,11 @@ def main() -> None:
                 console.print(Panel("\n".join(lines), border_style="green", title="Remotion Scaffold"))
 
         elif args.command == "remotion-validate":
-            from .remotion_engine import validate
+            from .remotion_engine import validate_project
+
             result = _with_spinner(
                 "Validating project...",
-                validate,
+                validate_project,
                 args.project_path,
                 composition_id=args.composition_id,
             )
@@ -1477,15 +1944,23 @@ def main() -> None:
                     lines.append(f"[yellow]Warnings ({len(data['warnings'])}):[/yellow]")
                     for warning in data["warnings"]:
                         lines.append(f"  - {warning}")
-                console.print(Panel("\n".join(lines), border_style="green" if data.get("valid") else "red", title="Remotion Validate"))
+                console.print(
+                    Panel(
+                        "\n".join(lines),
+                        border_style="green" if data.get("valid") else "red",
+                        title="Remotion Validate",
+                    )
+                )
 
         elif args.command == "remotion-pipeline":
-            from .remotion_engine import render_and_post
+            from .remotion_engine import render_pipeline
+
             post_process = _parse_json_arg(args.post_process, "post-process", json_mode=use_json)
             result = _with_spinner(
                 f"Running pipeline for {args.composition_id}...",
-                render_and_post,
-                args.project_path, args.composition_id,
+                render_pipeline,
+                args.project_path,
+                args.composition_id,
                 post_process=post_process,
                 output_path=args.output,
             )
@@ -1508,53 +1983,106 @@ def main() -> None:
 
         elif args.command == "effect-vignette":
             from .effects_engine import effect_vignette
+
             out = args.output or _auto_output(args.input, "vignette")
-            result = _with_spinner("Applying vignette...", effect_vignette, args.input, out,
-                                   intensity=args.intensity, radius=args.radius, smoothness=args.smoothness)
+            result = _with_spinner(
+                "Applying vignette...",
+                effect_vignette,
+                args.input,
+                out,
+                intensity=args.intensity,
+                radius=args.radius,
+                smoothness=args.smoothness,
+            )
             if use_json:
                 output_json({"success": True, "output_path": result})
             else:
-                console.print(Panel(f"[bold green]Vignette applied:[/bold green] {result}", border_style="green", title="Done"))
+                console.print(
+                    Panel(f"[bold green]Vignette applied:[/bold green] {result}", border_style="green", title="Done")
+                )
 
         elif args.command == "effect-glow":
             from .effects_engine import effect_glow
+
             out = args.output or _auto_output(args.input, "glow")
-            result = _with_spinner("Applying glow...", effect_glow, args.input, out,
-                                   intensity=args.intensity, radius=args.radius, threshold=args.threshold)
+            result = _with_spinner(
+                "Applying glow...",
+                effect_glow,
+                args.input,
+                out,
+                intensity=args.intensity,
+                radius=args.radius,
+                threshold=args.threshold,
+            )
             if use_json:
                 output_json({"success": True, "output_path": result})
             else:
-                console.print(Panel(f"[bold green]Glow applied:[/bold green] {result}", border_style="green", title="Done"))
+                console.print(
+                    Panel(f"[bold green]Glow applied:[/bold green] {result}", border_style="green", title="Done")
+                )
 
         elif args.command == "effect-noise":
             from .effects_engine import effect_noise
+
             out = args.output or _auto_output(args.input, "noise")
-            result = _with_spinner("Applying noise...", effect_noise, args.input, out,
-                                   intensity=args.intensity, mode=args.mode, animated=not args.static)
+            result = _with_spinner(
+                "Applying noise...",
+                effect_noise,
+                args.input,
+                out,
+                intensity=args.intensity,
+                mode=args.mode,
+                animated=not args.static,
+            )
             if use_json:
                 output_json({"success": True, "output_path": result})
             else:
-                console.print(Panel(f"[bold green]Noise applied:[/bold green] {result}", border_style="green", title="Done"))
+                console.print(
+                    Panel(f"[bold green]Noise applied:[/bold green] {result}", border_style="green", title="Done")
+                )
 
         elif args.command == "effect-scanlines":
             from .effects_engine import effect_scanlines
+
             out = args.output or _auto_output(args.input, "scanlines")
-            result = _with_spinner("Applying scanlines...", effect_scanlines, args.input, out,
-                                   line_height=args.line_height, opacity=args.opacity, flicker=args.flicker)
+            result = _with_spinner(
+                "Applying scanlines...",
+                effect_scanlines,
+                args.input,
+                out,
+                line_height=args.line_height,
+                opacity=args.opacity,
+                flicker=args.flicker,
+            )
             if use_json:
                 output_json({"success": True, "output_path": result})
             else:
-                console.print(Panel(f"[bold green]Scanlines applied:[/bold green] {result}", border_style="green", title="Done"))
+                console.print(
+                    Panel(f"[bold green]Scanlines applied:[/bold green] {result}", border_style="green", title="Done")
+                )
 
         elif args.command == "effect-chromatic-aberration":
             from .effects_engine import effect_chromatic_aberration
+
             out = args.output or _auto_output(args.input, "chromatic")
-            result = _with_spinner("Applying chromatic aberration...", effect_chromatic_aberration,
-                                   args.input, out, intensity=args.intensity, angle=args.angle)
+            result = _with_spinner(
+                "Applying chromatic aberration...",
+                effect_chromatic_aberration,
+                args.input,
+                out,
+                intensity=args.intensity,
+                angle=args.angle,
+            )
             if use_json:
                 output_json({"success": True, "output_path": result})
             else:
-                console.print(Panel(f"[bold green]Chromatic aberration applied:[/bold green] {result}", border_style="green", title="Done"))
+                console.print(
+                    Panel(
+                        f"[bold green]Chromatic aberration applied:[/bold green] {result}",
+                        border_style="green",
+                        title="Done",
+                    )
+                )
 
         # ------------------------------------------------------------------
         # Transition commands
@@ -1562,33 +2090,60 @@ def main() -> None:
 
         elif args.command == "transition-glitch":
             from .transitions_engine import transition_glitch
-            result = _with_spinner("Applying glitch transition...", transition_glitch,
-                                   args.clip1, args.clip2, args.output,
-                                   duration=args.duration, intensity=args.intensity)
+
+            result = _with_spinner(
+                "Applying glitch transition...",
+                transition_glitch,
+                args.clip1,
+                args.clip2,
+                args.output,
+                duration=args.duration,
+                intensity=args.intensity,
+            )
             if use_json:
                 output_json({"success": True, "output_path": result})
             else:
-                console.print(Panel(f"[bold green]Glitch transition:[/bold green] {result}", border_style="green", title="Done"))
+                console.print(
+                    Panel(f"[bold green]Glitch transition:[/bold green] {result}", border_style="green", title="Done")
+                )
 
         elif args.command == "transition-morph":
             from .transitions_engine import transition_morph
-            result = _with_spinner("Applying morph transition...", transition_morph,
-                                   args.clip1, args.clip2, args.output,
-                                   duration=args.duration, mesh_size=args.mesh_size)
+
+            result = _with_spinner(
+                "Applying morph transition...",
+                transition_morph,
+                args.clip1,
+                args.clip2,
+                args.output,
+                duration=args.duration,
+                mesh_size=args.mesh_size,
+            )
             if use_json:
                 output_json({"success": True, "output_path": result})
             else:
-                console.print(Panel(f"[bold green]Morph transition:[/bold green] {result}", border_style="green", title="Done"))
+                console.print(
+                    Panel(f"[bold green]Morph transition:[/bold green] {result}", border_style="green", title="Done")
+                )
 
         elif args.command == "transition-pixelate":
             from .transitions_engine import transition_pixelate
-            result = _with_spinner("Applying pixelate transition...", transition_pixelate,
-                                   args.clip1, args.clip2, args.output,
-                                   duration=args.duration, pixel_size=args.pixel_size)
+
+            result = _with_spinner(
+                "Applying pixelate transition...",
+                transition_pixelate,
+                args.clip1,
+                args.clip2,
+                args.output,
+                duration=args.duration,
+                pixel_size=args.pixel_size,
+            )
             if use_json:
                 output_json({"success": True, "output_path": result})
             else:
-                console.print(Panel(f"[bold green]Pixelate transition:[/bold green] {result}", border_style="green", title="Done"))
+                console.print(
+                    Panel(f"[bold green]Pixelate transition:[/bold green] {result}", border_style="green", title="Done")
+                )
 
         # ------------------------------------------------------------------
         # AI commands
@@ -1596,8 +2151,15 @@ def main() -> None:
 
         elif args.command == "video-ai-transcribe":
             from .ai_engine import ai_transcribe
-            result = _with_spinner("Transcribing...", ai_transcribe, args.input,
-                                   output_srt=args.output, model=args.model, language=args.language)
+
+            result = _with_spinner(
+                "Transcribing...",
+                ai_transcribe,
+                args.input,
+                output_srt=args.output,
+                model=args.model,
+                language=args.language,
+            )
             if use_json:
                 output_json(result)
             else:
@@ -1611,17 +2173,32 @@ def main() -> None:
 
         elif args.command == "video-ai-upscale":
             from .ai_engine import ai_upscale
-            result = _with_spinner("Upscaling...", ai_upscale, args.input, args.output,
-                                   scale=args.scale, model=args.model)
+
+            result = _with_spinner(
+                "Upscaling...", ai_upscale, args.input, args.output, scale=args.scale, model=args.model
+            )
             if use_json:
                 output_json({"success": True, "output_path": result})
             else:
-                console.print(Panel(f"[bold green]Upscaled ({args.scale}x):[/bold green] {result}", border_style="green", title="Done"))
+                console.print(
+                    Panel(
+                        f"[bold green]Upscaled ({args.scale}x):[/bold green] {result}",
+                        border_style="green",
+                        title="Done",
+                    )
+                )
 
         elif args.command == "video-ai-stem-separation":
             from .ai_engine import ai_stem_separation
-            result = _with_spinner("Separating stems...", ai_stem_separation, args.input,
-                                   args.output_dir, stems=args.stems, model=args.model)
+
+            result = _with_spinner(
+                "Separating stems...",
+                ai_stem_separation,
+                args.input,
+                args.output_dir,
+                stems=args.stems,
+                model=args.model,
+            )
             if use_json:
                 output_json(result)
             else:
@@ -1636,8 +2213,10 @@ def main() -> None:
 
         elif args.command == "video-ai-scene-detect":
             from .ai_engine import ai_scene_detect
-            result = _with_spinner("Detecting scenes (AI)...", ai_scene_detect, args.input,
-                                   threshold=args.threshold, use_ai=args.use_ai)
+
+            result = _with_spinner(
+                "Detecting scenes (AI)...", ai_scene_detect, args.input, threshold=args.threshold, use_ai=args.use_ai
+            )
             if use_json:
                 output_json(result if isinstance(result, dict) else {"scenes": result})
             else:
@@ -1649,7 +2228,12 @@ def main() -> None:
                 table.add_column("Confidence")
                 for i, scene in enumerate(scenes, 1):
                     if isinstance(scene, dict):
-                        table.add_row(str(i), f"{scene.get('start', 0):.2f}s", f"{scene.get('end', 0):.2f}s", f"{scene.get('confidence', 0):.2f}")
+                        table.add_row(
+                            str(i),
+                            f"{scene.get('start', 0):.2f}s",
+                            f"{scene.get('end', 0):.2f}s",
+                            f"{scene.get('confidence', 0):.2f}",
+                        )
                     else:
                         table.add_row(str(i), str(scene))
                 console.print(table)
@@ -1657,23 +2241,39 @@ def main() -> None:
 
         elif args.command == "video-ai-color-grade":
             from .ai_engine import ai_color_grade
-            result = _with_spinner("Color grading...", ai_color_grade, args.input, args.output,
-                                   reference=args.reference, style=args.style)
+
+            result = _with_spinner(
+                "Color grading...", ai_color_grade, args.input, args.output, reference=args.reference, style=args.style
+            )
             if use_json:
                 output_json({"success": True, "output_path": result})
             else:
-                console.print(Panel(f"[bold green]Color graded ({args.style}):[/bold green] {result}", border_style="green", title="Done"))
+                console.print(
+                    Panel(
+                        f"[bold green]Color graded ({args.style}):[/bold green] {result}",
+                        border_style="green",
+                        title="Done",
+                    )
+                )
 
         elif args.command == "video-ai-remove-silence":
             from .ai_engine import ai_remove_silence
-            result = _with_spinner("Removing silence...", ai_remove_silence, args.input, args.output,
-                                   silence_threshold=args.silence_threshold,
-                                   min_silence_duration=args.min_silence_duration,
-                                   keep_margin=args.keep_margin)
+
+            result = _with_spinner(
+                "Removing silence...",
+                ai_remove_silence,
+                args.input,
+                args.output,
+                silence_threshold=args.silence_threshold,
+                min_silence_duration=args.min_silence_duration,
+                keep_margin=args.keep_margin,
+            )
             if use_json:
                 output_json({"success": True, "output_path": result})
             else:
-                console.print(Panel(f"[bold green]Silence removed:[/bold green] {result}", border_style="green", title="Done"))
+                console.print(
+                    Panel(f"[bold green]Silence removed:[/bold green] {result}", border_style="green", title="Done")
+                )
 
         # ------------------------------------------------------------------
         # Audio synthesis commands
@@ -1681,51 +2281,83 @@ def main() -> None:
 
         elif args.command == "audio-synthesize":
             from .audio_engine import audio_synthesize
+
             effects = _parse_json_arg(args.effects, "effects", json_mode=use_json) if args.effects else None
-            result = _with_spinner("Synthesizing audio...", audio_synthesize, args.output,
-                                   waveform=args.waveform, frequency=args.frequency,
-                                   duration=args.duration, volume=args.volume, effects=effects)
+            result = _with_spinner(
+                "Synthesizing audio...",
+                audio_synthesize,
+                args.output,
+                waveform=args.waveform,
+                frequency=args.frequency,
+                duration=args.duration,
+                volume=args.volume,
+                effects=effects,
+            )
             if use_json:
                 output_json({"success": True, "output_path": result})
             else:
-                console.print(Panel(f"[bold green]Audio synthesized:[/bold green] {result}", border_style="green", title="Done"))
+                console.print(
+                    Panel(f"[bold green]Audio synthesized:[/bold green] {result}", border_style="green", title="Done")
+                )
 
         elif args.command == "audio-compose":
             from .audio_engine import audio_compose
+
             tracks = _parse_json_arg(args.tracks, "tracks", json_mode=use_json)
             result = _with_spinner("Composing audio...", audio_compose, tracks, args.duration, args.output)
             if use_json:
                 output_json({"success": True, "output_path": result})
             else:
-                console.print(Panel(f"[bold green]Audio composed:[/bold green] {result}", border_style="green", title="Done"))
+                console.print(
+                    Panel(f"[bold green]Audio composed:[/bold green] {result}", border_style="green", title="Done")
+                )
 
         elif args.command == "audio-preset":
             from .audio_engine import audio_preset
-            result = _with_spinner(f"Generating preset '{args.preset}'...", audio_preset,
-                                   args.preset, args.output, pitch=args.pitch,
-                                   duration=args.duration, intensity=args.intensity)
+
+            result = _with_spinner(
+                f"Generating preset '{args.preset}'...",
+                audio_preset,
+                args.preset,
+                args.output,
+                pitch=args.pitch,
+                duration=args.duration,
+                intensity=args.intensity,
+            )
             if use_json:
                 output_json({"success": True, "output_path": result})
             else:
-                console.print(Panel(f"[bold green]Preset '{args.preset}':[/bold green] {result}", border_style="green", title="Done"))
+                console.print(
+                    Panel(
+                        f"[bold green]Preset '{args.preset}':[/bold green] {result}", border_style="green", title="Done"
+                    )
+                )
 
         elif args.command == "audio-sequence":
             from .audio_engine import audio_sequence
+
             sequence = _parse_json_arg(args.sequence, "sequence", json_mode=use_json)
             result = _with_spinner("Composing audio sequence...", audio_sequence, sequence, args.output)
             if use_json:
                 output_json({"success": True, "output_path": result})
             else:
-                console.print(Panel(f"[bold green]Audio sequence:[/bold green] {result}", border_style="green", title="Done"))
+                console.print(
+                    Panel(f"[bold green]Audio sequence:[/bold green] {result}", border_style="green", title="Done")
+                )
 
         elif args.command == "audio-effects":
             from .audio_engine import audio_effects
+
             effects = _parse_json_arg(args.effects, "effects", json_mode=use_json)
             result = _with_spinner("Applying audio effects...", audio_effects, args.input, args.output, effects)
             if use_json:
                 output_json({"success": True, "output_path": result})
             else:
-                console.print(Panel(f"[bold green]Audio effects applied:[/bold green] {result}", border_style="green", title="Done"))
+                console.print(
+                    Panel(
+                        f"[bold green]Audio effects applied:[/bold green] {result}", border_style="green", title="Done"
+                    )
+                )
 
         # ------------------------------------------------------------------
         # Motion graphics commands
@@ -1733,36 +2365,80 @@ def main() -> None:
 
         elif args.command == "video-text-animated":
             from .effects_engine import text_animated
-            result = _with_spinner("Adding animated text...", text_animated,
-                                   args.input, args.text, args.output,
-                                   animation=args.animation, font=args.font, size=args.size,
-                                   color=args.color, position=args.position,
-                                   start=args.start, duration=args.duration)
+
+            result = _with_spinner(
+                "Adding animated text...",
+                text_animated,
+                args.input,
+                args.text,
+                args.output,
+                animation=args.animation,
+                font=args.font,
+                size=args.size,
+                color=args.color,
+                position=args.position,
+                start=args.start,
+                duration=args.duration,
+            )
             if use_json:
                 output_json({"success": True, "output_path": result})
             else:
-                console.print(Panel(f"[bold green]Animated text ({args.animation}):[/bold green] {result}", border_style="green", title="Done"))
+                console.print(
+                    Panel(
+                        f"[bold green]Animated text ({args.animation}):[/bold green] {result}",
+                        border_style="green",
+                        title="Done",
+                    )
+                )
 
         elif args.command == "video-mograph-count":
             from .effects_engine import mograph_count
+
             style = _parse_json_arg(args.style, "style", json_mode=use_json) if args.style else None
-            result = _with_spinner("Generating counter...", mograph_count,
-                                   args.start, args.end, args.duration, args.output,
-                                   style=style, fps=args.fps)
+            result = _with_spinner(
+                "Generating counter...",
+                mograph_count,
+                args.start,
+                args.end,
+                args.duration,
+                args.output,
+                style=style,
+                fps=args.fps,
+            )
             if use_json:
                 output_json({"success": True, "output_path": result})
             else:
-                console.print(Panel(f"[bold green]Counter ({args.start}-{args.end}):[/bold green] {result}", border_style="green", title="Done"))
+                console.print(
+                    Panel(
+                        f"[bold green]Counter ({args.start}-{args.end}):[/bold green] {result}",
+                        border_style="green",
+                        title="Done",
+                    )
+                )
 
         elif args.command == "video-mograph-progress":
             from .effects_engine import mograph_progress
-            result = _with_spinner("Generating progress animation...", mograph_progress,
-                                   args.duration, args.output, style=args.style,
-                                   color=args.color, track_color=args.track_color, fps=args.fps)
+
+            result = _with_spinner(
+                "Generating progress animation...",
+                mograph_progress,
+                args.duration,
+                args.output,
+                style=args.style,
+                color=args.color,
+                track_color=args.track_color,
+                fps=args.fps,
+            )
             if use_json:
                 output_json({"success": True, "output_path": result})
             else:
-                console.print(Panel(f"[bold green]Progress bar ({args.style}):[/bold green] {result}", border_style="green", title="Done"))
+                console.print(
+                    Panel(
+                        f"[bold green]Progress bar ({args.style}):[/bold green] {result}",
+                        border_style="green",
+                        title="Done",
+                    )
+                )
 
         # ------------------------------------------------------------------
         # Layout commands
@@ -1770,26 +2446,53 @@ def main() -> None:
 
         elif args.command == "video-layout-grid":
             from .effects_engine import layout_grid
-            result = _with_spinner("Creating grid layout...", layout_grid,
-                                   args.inputs, args.layout, args.output,
-                                   gap=args.gap, padding=args.padding, background=args.background)
+
+            result = _with_spinner(
+                "Creating grid layout...",
+                layout_grid,
+                args.inputs,
+                args.layout,
+                args.output,
+                gap=args.gap,
+                padding=args.padding,
+                background=args.background,
+            )
             if use_json:
                 output_json({"success": True, "output_path": result})
             else:
-                console.print(Panel(f"[bold green]Grid layout ({args.layout}):[/bold green] {result}", border_style="green", title="Done"))
+                console.print(
+                    Panel(
+                        f"[bold green]Grid layout ({args.layout}):[/bold green] {result}",
+                        border_style="green",
+                        title="Done",
+                    )
+                )
 
         elif args.command == "video-layout-pip":
             from .effects_engine import layout_pip
-            result = _with_spinner("Creating PIP layout...", layout_pip,
-                                   args.main, args.pip, args.output,
-                                   position=args.position, size=args.size,
-                                   margin=args.margin, border=args.border,
-                                   border_color=args.border_color, border_width=args.border_width,
-                                   rounded_corners=args.rounded_corners)
+
+            result = _with_spinner(
+                "Creating PIP layout...",
+                layout_pip,
+                args.main,
+                args.pip,
+                args.output,
+                position=args.position,
+                size=args.size,
+                margin=args.margin,
+                border=args.border,
+                border_color=args.border_color,
+                border_width=args.border_width,
+                rounded_corners=args.rounded_corners,
+            )
             if use_json:
                 output_json({"success": True, "output_path": result})
             else:
-                console.print(Panel(f"[bold green]PIP ({args.position}):[/bold green] {result}", border_style="green", title="Done"))
+                console.print(
+                    Panel(
+                        f"[bold green]PIP ({args.position}):[/bold green] {result}", border_style="green", title="Done"
+                    )
+                )
 
         # ------------------------------------------------------------------
         # Audio-Video commands
@@ -1797,23 +2500,42 @@ def main() -> None:
 
         elif args.command == "video-add-generated-audio":
             from .audio_engine import add_generated_audio
+
             audio_config = _parse_json_arg(args.audio_config, "audio-config", json_mode=use_json)
-            result = _with_spinner("Adding generated audio...", add_generated_audio,
-                                   args.input, audio_config, args.output)
+            result = _with_spinner(
+                "Adding generated audio...", add_generated_audio, args.input, audio_config, args.output
+            )
             if use_json:
                 output_json({"success": True, "output_path": result})
             else:
-                console.print(Panel(f"[bold green]Generated audio added:[/bold green] {result}", border_style="green", title="Done"))
+                console.print(
+                    Panel(
+                        f"[bold green]Generated audio added:[/bold green] {result}", border_style="green", title="Done"
+                    )
+                )
 
         elif args.command == "video-audio-spatial":
             from .ai_engine import audio_spatial
+
             positions = _parse_json_arg(args.positions, "positions", json_mode=use_json)
-            result = _with_spinner("Applying spatial audio...", audio_spatial,
-                                   args.input, args.output, positions=positions, method=args.method)
+            result = _with_spinner(
+                "Applying spatial audio...",
+                audio_spatial,
+                args.input,
+                args.output,
+                positions=positions,
+                method=args.method,
+            )
             if use_json:
                 output_json({"success": True, "output_path": result})
             else:
-                console.print(Panel(f"[bold green]Spatial audio ({args.method}):[/bold green] {result}", border_style="green", title="Done"))
+                console.print(
+                    Panel(
+                        f"[bold green]Spatial audio ({args.method}):[/bold green] {result}",
+                        border_style="green",
+                        title="Done",
+                    )
+                )
 
         # ------------------------------------------------------------------
         # Quality / Info commands
@@ -1821,9 +2543,20 @@ def main() -> None:
 
         elif args.command == "video-auto-chapters":
             from .effects_engine import auto_chapters
+
             result = _with_spinner("Detecting chapters...", auto_chapters, args.input, threshold=args.threshold)
             if use_json:
-                output_json({"chapters": [{"timestamp": (c[0] if isinstance(c, (list, tuple)) else c.get("timestamp", "")), "description": (c[1] if isinstance(c, (list, tuple)) else c.get("description", ""))} for c in result]})
+                output_json(
+                    {
+                        "chapters": [
+                            {
+                                "timestamp": (c[0] if isinstance(c, (list, tuple)) else c.get("timestamp", "")),
+                                "description": (c[1] if isinstance(c, (list, tuple)) else c.get("description", "")),
+                            }
+                            for c in result
+                        ]
+                    }
+                )
             else:
                 table = Table(title="Auto Chapters")
                 table.add_column("#", style="bold", justify="right")
@@ -1841,7 +2574,10 @@ def main() -> None:
 
         elif args.command == "video-extract-frame":
             from .engine import thumbnail
-            result = _with_spinner("Extracting frame...", thumbnail, args.input, timestamp=args.timestamp, output_path=args.output)
+
+            result = _with_spinner(
+                "Extracting frame...", thumbnail, args.input, timestamp=args.timestamp, output_path=args.output
+            )
             if use_json:
                 output_json(result)
             else:
@@ -1849,6 +2585,7 @@ def main() -> None:
 
         elif args.command == "video-info-detailed":
             from .effects_engine import video_info_detailed
+
             result = _with_spinner("Getting detailed info...", video_info_detailed, args.input)
             if use_json:
                 output_json(result)
@@ -1868,7 +2605,10 @@ def main() -> None:
 
         elif args.command == "video-quality-check":
             from .quality_guardrails import quality_check
-            result = _with_spinner("Running quality check...", quality_check, args.input, fail_on_warning=args.fail_on_warning)
+
+            result = _with_spinner(
+                "Running quality check...", quality_check, args.input, fail_on_warning=args.fail_on_warning
+            )
             if use_json:
                 output_json(result)
             else:
@@ -1888,8 +2628,14 @@ def main() -> None:
 
         elif args.command == "video-design-quality-check":
             from .design_quality import design_quality_check
-            result = _with_spinner("Running design quality check...", design_quality_check,
-                                   args.input, auto_fix=args.auto_fix, strict=args.strict)
+
+            result = _with_spinner(
+                "Running design quality check...",
+                design_quality_check,
+                args.input,
+                auto_fix=args.auto_fix,
+                strict=args.strict,
+            )
             if use_json:
                 output_json(result.model_dump() if hasattr(result, "model_dump") else result)
             else:
@@ -1910,11 +2656,14 @@ def main() -> None:
 
         elif args.command == "video-fix-design-issues":
             from .design_quality import fix_design_issues
+
             result = _with_spinner("Fixing design issues...", fix_design_issues, args.input, args.output)
             if use_json:
                 output_json({"success": True, "output_path": result})
             else:
-                console.print(Panel(f"[bold green]Design fixed:[/bold green] {result}", border_style="green", title="Done"))
+                console.print(
+                    Panel(f"[bold green]Design fixed:[/bold green] {result}", border_style="green", title="Done")
+                )
 
         # ------------------------------------------------------------------
         # Image analysis commands
@@ -1922,6 +2671,7 @@ def main() -> None:
 
         elif args.command == "image-extract-colors":
             from .image_engine import extract_colors
+
             result = _with_spinner("Extracting colors...", extract_colors, args.input, n_colors=args.n_colors)
             if use_json:
                 output_json(result.model_dump() if hasattr(result, "model_dump") else result)
@@ -1945,8 +2695,10 @@ def main() -> None:
 
         elif args.command == "image-generate-palette":
             from .image_engine import generate_palette
-            result = _with_spinner("Generating palette...", generate_palette, args.input,
-                                   harmony=args.harmony, n_colors=args.n_colors)
+
+            result = _with_spinner(
+                "Generating palette...", generate_palette, args.input, harmony=args.harmony, n_colors=args.n_colors
+            )
             if use_json:
                 output_json(result.model_dump() if hasattr(result, "model_dump") else result)
             else:
@@ -1963,8 +2715,10 @@ def main() -> None:
 
         elif args.command == "image-analyze-product":
             from .image_engine import analyze_product
-            result = _with_spinner("Analyzing product...", analyze_product, args.input,
-                                   use_ai=args.use_ai, n_colors=args.n_colors)
+
+            result = _with_spinner(
+                "Analyzing product...", analyze_product, args.input, use_ai=args.use_ai, n_colors=args.n_colors
+            )
             if use_json:
                 output_json(result.model_dump() if hasattr(result, "model_dump") else result)
             else:
@@ -1974,7 +2728,9 @@ def main() -> None:
                 if colors:
                     lines.append("[bold green]Colors:[/bold green]")
                     for c in colors[:5]:
-                        lines.append(f"  {c.get('hex', '')} ({c.get('css_name', '')}) - {c.get('coverage_pct', 0):.1f}%")
+                        lines.append(
+                            f"  {c.get('hex', '')} ({c.get('css_name', '')}) - {c.get('coverage_pct', 0):.1f}%"
+                        )
                 desc = data.get("description")
                 if desc:
                     lines.append(f"\n[bold green]AI Description:[/bold green] {desc}")
@@ -1983,6 +2739,7 @@ def main() -> None:
     except Exception as e:
         if use_json:
             from .errors import MCPVideoError
+
             if isinstance(e, MCPVideoError):
                 try:
                     err_data = e.to_dict()
@@ -1990,7 +2747,10 @@ def main() -> None:
                     err_data = {"type": "internal_error", "code": "to_dict_failed", "message": str(e)}
                 print(json.dumps({"success": False, "error": err_data}, indent=2), file=sys.stderr)
             else:
-                print(json.dumps({"success": False, "error": {"type": "unknown", "message": str(e)}}, indent=2), file=sys.stderr)
+                print(
+                    json.dumps({"success": False, "error": {"type": "unknown", "message": str(e)}}, indent=2),
+                    file=sys.stderr,
+                )
         else:
             _format_error(e)
         sys.exit(1)
