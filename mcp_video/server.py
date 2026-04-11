@@ -1079,8 +1079,19 @@ def video_chroma_key(
         blend: How much to blend the keyed color (default 0.0).
         output_path: Where to save the output. Auto-generated if omitted.
     """
+    # Validate color format matches expected hex pattern
+    if not re.match(r'^0x[0-9A-Fa-f]+$', color):
+        return _error_result(
+            MCPVideoError(
+                f"Invalid color format: {color}. Expected hex format (e.g., 0x00FF00)",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
     # Validate color doesn't contain FFmpeg filter injection characters
-    if any(c in color for c in (":", "]", "[", ";", "\x00")):
+    # Expanded blacklist includes all FFmpeg filter metacharacters
+    forbidden_chars = (":", "]", "[", ";", "\x00", "}", "{", "|", "&", "$", "`", "\n", "\r")
+    if any(c in color for c in forbidden_chars):
         return _error_result(
             MCPVideoError(
                 f"Invalid color value containing forbidden characters: {color}",
