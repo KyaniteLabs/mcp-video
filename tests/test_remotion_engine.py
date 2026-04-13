@@ -213,10 +213,12 @@ class TestRender:
             stderr="Something went wrong",
         )
 
-        with _mock_deps_ok(), \
-             patch("mcp_video.remotion_engine.subprocess.run", return_value=fake_cp):
-            with pytest.raises(RemotionRenderError, match="exit code 1"):
-                render(project, composition_id="Comp", output_path="/tmp/out.mp4")
+        with (
+            _mock_deps_ok(),
+            patch("mcp_video.remotion_engine.subprocess.run", return_value=fake_cp),
+            pytest.raises(RemotionRenderError, match="exit code 1"),
+        ):
+            render(project, composition_id="Comp", output_path="/tmp/out.mp4")
 
     def test_sets_resolution_when_both_width_and_height(self, sample_remotion_project):
         """render() should set resolution when width and height are provided."""
@@ -346,10 +348,12 @@ class TestCompositions:
         project = str(sample_remotion_project)
         fake_cp = _make_completed_process(returncode=1, stderr="error")
 
-        with _mock_deps_ok(), \
-             patch("mcp_video.remotion_engine.subprocess.run", return_value=fake_cp):
-            with pytest.raises(RemotionRenderError):
-                compositions(project)
+        with (
+            _mock_deps_ok(),
+            patch("mcp_video.remotion_engine.subprocess.run", return_value=fake_cp),
+            pytest.raises(RemotionRenderError),
+        ):
+            compositions(project)
 
     def test_passes_composition_id_filter(self, sample_remotion_project):
         """compositions() should pass --composition when composition_id is given."""
@@ -501,10 +505,12 @@ class TestStill:
         project = str(sample_remotion_project)
         fake_cp = _make_completed_process(returncode=1, stderr="still failed")
 
-        with _mock_deps_ok(), \
-             patch("mcp_video.remotion_engine.subprocess.run", return_value=fake_cp):
-            with pytest.raises(RemotionRenderError, match="still failed"):
-                still(project, composition_id="Comp", output_path="/tmp/out.png")
+        with (
+            _mock_deps_ok(),
+            patch("mcp_video.remotion_engine.subprocess.run", return_value=fake_cp),
+            pytest.raises(RemotionRenderError, match="still failed"),
+        ):
+            still(project, composition_id="Comp", output_path="/tmp/out.png")
 
 
 # ---------------------------------------------------------------------------
@@ -689,13 +695,15 @@ class TestScaffoldTemplate:
 
     def test_raises_when_directory_missing(self, tmp_path):
         """scaffold_template() should raise RemotionProjectError for missing dir."""
-        with _mock_deps_ok():
-            with pytest.raises(RemotionProjectError, match="Directory does not exist"):
-                scaffold_template(
-                    str(tmp_path / "nonexistent"),
-                    spec={},
-                    slug="test",
-                )
+        with (
+            _mock_deps_ok(),
+            pytest.raises(RemotionProjectError, match="Directory does not exist"),
+        ):
+            scaffold_template(
+                str(tmp_path / "nonexistent"),
+                spec={},
+                slug="test",
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -882,18 +890,19 @@ class TestRenderAndPost:
         project = str(sample_remotion_project)
         fake_cp = _make_completed_process(stdout="ok")
 
-        with patch("mcp_video.remotion_engine.subprocess.run", return_value=fake_cp), \
-             patch("os.path.isfile", return_value=True), \
-             patch("os.path.getsize", return_value=1024):
-
-            with pytest.raises(ValueError, match=r"Unknown post-processing operation.*nonexistent_op"):
-                render_and_post(
-                    project,
-                    composition_id="Comp",
-                    post_process=[
-                        {"op": "nonexistent_op", "params": {}},
-                    ],
-                )
+        with (
+            patch("mcp_video.remotion_engine.subprocess.run", return_value=fake_cp),
+            patch("os.path.isfile", return_value=True),
+            patch("os.path.getsize", return_value=1024),
+            pytest.raises(ValueError, match=r"Unknown post-processing operation.*nonexistent_op"),
+        ):
+            render_and_post(
+                project,
+                composition_id="Comp",
+                post_process=[
+                    {"op": "nonexistent_op", "params": {}},
+                ],
+            )
 
     @patch("mcp_video.remotion_engine.shutil.which")
     def test_type_alias_for_op(self, mock_which, sample_remotion_project):
@@ -985,34 +994,44 @@ class TestErrorHandling:
 
     def test_missing_deps_before_project_validation(self):
         """All public functions should check deps before project validation."""
-        with patch("mcp_video.remotion_engine.shutil.which", return_value=None):
-            with pytest.raises(RemotionNotFoundError):
-                render("/some/project", composition_id="C")
+        with (
+            patch("mcp_video.remotion_engine.shutil.which", return_value=None),
+            pytest.raises(RemotionNotFoundError),
+        ):
+            render("/some/project", composition_id="C")
 
     def test_studio_missing_deps(self):
         """studio() should raise RemotionNotFoundError when deps are missing."""
-        with patch("mcp_video.remotion_engine.shutil.which", return_value=None):
-            with pytest.raises(RemotionNotFoundError):
-                studio("/some/project")
+        with (
+            patch("mcp_video.remotion_engine.shutil.which", return_value=None),
+            pytest.raises(RemotionNotFoundError),
+        ):
+            studio("/some/project")
 
     def test_still_missing_deps(self):
         """still() should raise RemotionNotFoundError when deps are missing."""
-        with patch("mcp_video.remotion_engine.shutil.which", return_value=None):
-            with pytest.raises(RemotionNotFoundError):
-                still("/some/project", composition_id="C")
+        with (
+            patch("mcp_video.remotion_engine.shutil.which", return_value=None),
+            pytest.raises(RemotionNotFoundError),
+        ):
+            still("/some/project", composition_id="C")
 
     def test_create_project_missing_deps(self):
         """create_project() should raise RemotionNotFoundError when deps are missing."""
-        with patch("mcp_video.remotion_engine.shutil.which", return_value=None):
-            with pytest.raises(RemotionNotFoundError):
-                create_project("test")
+        with (
+            patch("mcp_video.remotion_engine.shutil.which", return_value=None),
+            pytest.raises(RemotionNotFoundError),
+        ):
+            create_project("test")
 
     def test_scaffold_template_missing_deps(self, tmp_path):
         """scaffold_template() should raise RemotionNotFoundError when deps are missing."""
         (tmp_path / "src").mkdir()
-        with patch("mcp_video.remotion_engine.shutil.which", return_value=None):
-            with pytest.raises(RemotionNotFoundError):
-                scaffold_template(str(tmp_path), spec={}, slug="test")
+        with (
+            patch("mcp_video.remotion_engine.shutil.which", return_value=None),
+            pytest.raises(RemotionNotFoundError),
+        ):
+            scaffold_template(str(tmp_path), spec={}, slug="test")
 
 
 # ---------------------------------------------------------------------------
