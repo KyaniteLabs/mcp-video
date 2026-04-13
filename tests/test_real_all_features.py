@@ -34,6 +34,17 @@ skip_no_video = pytest.mark.skipif(
 )
 
 
+def has_ai_upscale_backend() -> bool:
+    """Check whether at least one AI upscale backend is available."""
+    if importlib.util.find_spec("realesrgan"):
+        return True
+    try:
+        import cv2
+    except ImportError:
+        return False
+    return hasattr(cv2, "dnn_superres")
+
+
 # =============================================================================
 # FIXTURES
 # =============================================================================
@@ -671,6 +682,10 @@ class TestAIFeatures:
         assert isinstance(result, dict)
         print(f"✓ Stems separated: {list(result.keys())}")
     
+    @pytest.mark.skipif(
+        not has_ai_upscale_backend(),
+        reason="AI upscale backend not installed",
+    )
     def test_44_ai_upscale(self, client, sample_clips, output_dir):
         """Upscale video using AI (OpenCV DNN fallback if Real-ESRGAN not available)."""
         output = os.path.join(output_dir, 'upscaled.mp4')
