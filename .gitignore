@@ -34,3 +34,5 @@ venv/
 .playwright-mcp/
 .stitch/
 out/
+
+.omc/
