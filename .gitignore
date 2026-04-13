@@ -28,3 +28,11 @@ venv/
 !index.html
 .DS_Store
 .worktrees/
+.omx/
+
+# trust-rail artifact quarantine
+.playwright-mcp/
+.stitch/
+out/
+
+.omc/

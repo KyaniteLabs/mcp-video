@@ -36,6 +36,8 @@ ai = [
     "demucs>=4.0",
     "realesrgan>=0.3",
     "basicsr>=1.4",
+    "numpy>=1.26",
+    "opencv-contrib-python>=4.10",
     "torch>=2.0",
     "torchaudio>=2.0",
     "imagehash>=4.3",
@@ -51,6 +53,9 @@ line-length = 120
 select = ["E", "F", "W", "S", "UP", "B", "SIM", "RUF"]
 ignore = ["E501", "S603", "S607", "S311", "S310", "S112", "S110"]
 
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101", "S108", "B017"]
+
 [project.scripts]
 mcp-video = "mcp_video.__main__:main"
 
@@ -63,9 +68,16 @@ Repository = "https://github.com/pastorsimon1798/mcp-video"
 exclude = [
     ".venv/",
     ".venv-build/",
+    ".playwright-mcp/",
+    ".stitch/",
     "tests/",
+    "manual/",
+    "out/",
+    "explainer-video/",
     "dist/",
     "build/",
+    "test_comprehensive.py",
+    "test_real_video.py",
     "*.egg-info/",
 ]
 

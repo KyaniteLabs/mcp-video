@@ -9,8 +9,17 @@ permissions:
   id-token: write  # Required for OIDC trusted publishing
 
 jobs:
+  surface-audit:
+    name: Check tracked release surface
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check forbidden tracked artifacts
+        run: python3 .github/scripts/check-forbidden-artifacts.py
+
   build:
     name: Build package
+    needs: surface-audit
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,9 +29,13 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install build dependencies
-        run: pip install build
+        run: pip install build twine
       - name: Build package
         run: python -m build
+      - name: Check built artifact contents
+        run: python3 .github/scripts/check-built-artifacts.py dist
+      - name: Validate distribution metadata
+        run: python -m twine check dist/*
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:

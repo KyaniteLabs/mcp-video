@@ -31,7 +31,7 @@ from mcp_video.engine import (
     watermark,
 )
 from mcp_video.models import Timeline, TimelineClip, TimelineTrack
-from mcp_video.errors import InputFileError, MCPVideoError, ProcessingError
+from mcp_video.errors import InputFileError, MCPVideoError
 
 
 def requires_filter(name: str, feature: str):
@@ -689,7 +689,7 @@ class TestGenerateSubtitles:
     def test_invalid_time_range_raises(self, sample_video):
         from mcp_video.engine import generate_subtitles
         entries = [{"start": 2.0, "end": 1.0, "text": "Bad range"}]
-        with pytest.raises(MCPVideoError, match="start.*end"):
+        with pytest.raises(MCPVideoError, match=r"start.*end"):
             generate_subtitles(entries, sample_video)
 
 
@@ -741,7 +741,7 @@ class TestTwoPassEncoding:
 
     def test_convert_two_pass_webm_raises(self, sample_video):
         """Two-pass encoding only supports mp4 and mov formats."""
-        with pytest.raises(MCPVideoError, match="[Tt]wo.pass"):
+        with pytest.raises(MCPVideoError, match=r"[Tt]wo.pass"):
             convert(sample_video, format="webm", two_pass=True, target_bitrate=1000)
 
 
@@ -969,4 +969,3 @@ class TestApplyMask:
         from mcp_video.engine import apply_mask
         with pytest.raises(InputFileError):
             apply_mask("/nonexistent/video.mp4", mask_path=sample_watermark_png)
-

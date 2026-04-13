@@ -21,7 +21,6 @@ from mcp_video.server import (
     video_apply_mask,
     video_batch,
     video_blur,
-    video_chroma_key,
     video_color_grade,
     video_compare_quality,
     video_convert,
@@ -42,7 +41,6 @@ from mcp_video.server import (
     video_preview,
     video_read_metadata,
     video_resize,
-    video_reverse,
     video_rotate,
     video_speed,
     video_split_screen,
@@ -53,7 +51,7 @@ from mcp_video.server import (
     video_watermark,
     video_write_metadata,
 )
-from mcp_video.errors import MCPVideoError, InputFileError
+from mcp_video.errors import InputFileError
 
 
 def requires_filter(name: str, feature: str):

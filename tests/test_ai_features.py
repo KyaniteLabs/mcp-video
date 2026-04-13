@@ -3,6 +3,7 @@
 These tests use optional dependencies and gracefully skip if not installed.
 """
 
+import importlib.util
 import os
 import shutil
 import subprocess
@@ -41,7 +42,7 @@ requires_ffprobe = pytest.mark.skipif(
 
 def create_video_with_silence(output_path: str, duration: float = 5) -> str:
     """Create test video with silent audio section.
-    
+
     Creates a video with:
     - 2 seconds of sine wave audio
     - 1 second of silence
@@ -79,32 +80,32 @@ def get_video_duration(video_path: str) -> float:
 def test_remove_silence():
     """Test that ai_remove_silence correctly removes silent sections."""
     from mcp_video.ai_engine import ai_remove_silence
-    
+
     with tempfile.TemporaryDirectory() as tmpdir:
         input_video = os.path.join(tmpdir, "input.mp4")
         output_video = os.path.join(tmpdir, "output.mp4")
-        
+
         create_video_with_silence(input_video)
-        
+
         # Get input duration
         input_duration = get_video_duration(input_video)
-        
+
         result = ai_remove_silence(
-            input_video, 
-            output_video, 
-            silence_threshold=-50, 
+            input_video,
+            output_video,
+            silence_threshold=-50,
             min_silence_duration=0.3
         )
-        
+
         assert os.path.exists(result), "Output not created"
-        
+
         # Get output duration
         output_duration = get_video_duration(result)
-        
+
         # Output should be shorter than input (silence removed)
         print(f"Input: {input_duration:.2f}s, Output: {output_duration:.2f}s")
         print(f"✓ Removed {input_duration - output_duration:.2f}s of silence")
-        
+
         # Assert that some silence was removed
         assert output_duration < input_duration, "Output should be shorter than input"
 
@@ -114,11 +115,11 @@ def test_remove_silence():
 def test_remove_silence_no_silence():
     """Test that ai_remove_silence handles videos without silence."""
     from mcp_video.ai_engine import ai_remove_silence
-    
+
     with tempfile.TemporaryDirectory() as tmpdir:
         input_video = os.path.join(tmpdir, "input.mp4")
         output_video = os.path.join(tmpdir, "output.mp4")
-        
+
         # Create video with continuous audio (no silence)
         cmd = [
             "ffmpeg", "-y",
@@ -128,15 +129,15 @@ def test_remove_silence_no_silence():
             input_video
         ]
         subprocess.run(cmd, capture_output=True, check=True)
-        
+
         input_duration = get_video_duration(input_video)
-        
+
         result = ai_remove_silence(input_video, output_video)
-        
+
         assert os.path.exists(result), "Output not created"
-        
+
         output_duration = get_video_duration(result)
-        
+
         # Duration should be approximately the same
         assert abs(output_duration - input_duration) < 0.5, \
             "Duration should remain similar when no silence to remove"
@@ -147,13 +148,13 @@ def test_remove_silence_no_silence():
 def test_remove_silence_custom_threshold():
     """Test ai_remove_silence with different silence thresholds."""
     from mcp_video.ai_engine import ai_remove_silence
-    
+
     with tempfile.TemporaryDirectory() as tmpdir:
         input_video = os.path.join(tmpdir, "input.mp4")
         output_video = os.path.join(tmpdir, "output.mp4")
-        
+
         create_video_with_silence(input_video)
-        
+
         # Use stricter threshold (more negative = quieter sounds considered silence)
         result = ai_remove_silence(
             input_video,
@@ -161,9 +162,9 @@ def test_remove_silence_custom_threshold():
             silence_threshold=-60,
             min_silence_duration=0.3
         )
-        
+
         assert os.path.exists(result), "Output not created"
-        
+
         output_duration = get_video_duration(result)
         assert output_duration > 0, "Output should have positive duration"
 
@@ -173,15 +174,15 @@ def test_remove_silence_custom_threshold():
 def test_remove_silence_with_margin():
     """Test ai_remove_silence with keep_margin parameter."""
     from mcp_video.ai_engine import ai_remove_silence
-    
+
     with tempfile.TemporaryDirectory() as tmpdir:
         input_video = os.path.join(tmpdir, "input.mp4")
         output_video = os.path.join(tmpdir, "output.mp4")
-        
+
         create_video_with_silence(input_video)
-        
+
         input_duration = get_video_duration(input_video)
-        
+
         # Use larger margin
         result = ai_remove_silence(
             input_video,
@@ -190,11 +191,11 @@ def test_remove_silence_with_margin():
             min_silence_duration=0.3,
             keep_margin=0.5  # Larger margin
         )
-        
+
         assert os.path.exists(result), "Output not created"
-        
+
         output_duration = get_video_duration(result)
-        
+
         # With larger margin, less should be removed
         assert output_duration < input_duration, "Should still remove some silence"
 
@@ -204,11 +205,11 @@ def test_remove_silence_with_margin():
 def test_remove_silence_missing_file():
     """Test that ai_remove_silence raises InputFileError for missing video."""
     from mcp_video.ai_engine import ai_remove_silence
-    
+
     with tempfile.TemporaryDirectory() as tmpdir:
         nonexistent_video = os.path.join(tmpdir, "nonexistent.mp4")
         output_video = os.path.join(tmpdir, "output.mp4")
-        
+
         with pytest.raises(InputFileError, match="Input file error"):
             ai_remove_silence(nonexistent_video, output_video)
 
@@ -235,9 +236,7 @@ def create_video_with_speech(output_path: str) -> str:
 @pytest.fixture
 def skip_if_no_whisper():
     """Skip test if whisper is not installed."""
-    try:
-        import whisper  # noqa: F401
-    except ImportError:
+    if importlib.util.find_spec("whisper") is None:
         pytest.skip("Whisper not installed, skipping test")
 
 
@@ -289,7 +288,7 @@ class TestTranscription:
         with tempfile.TemporaryDirectory() as tmpdir:
             output_srt = os.path.join(tmpdir, "output.srt")
 
-            result = ai_transcribe(
+            ai_transcribe(
                 sample_speech_video,
                 output_srt=output_srt,
                 model="tiny",
@@ -399,7 +398,7 @@ class TestColorGrade:
         with tempfile.TemporaryDirectory() as tmpdir:
             input_video = os.path.join(tmpdir, "input.mp4")
             output_video = os.path.join(tmpdir, "output.mp4")
-            
+
             # Create test video with blue color
             cmd = [
                 "ffmpeg", "-y",
@@ -409,7 +408,7 @@ class TestColorGrade:
                 input_video,
             ]
             subprocess.run(cmd, capture_output=True, check=True)
-            
+
             # Test cinematic style
             from mcp_video.ai_engine import ai_color_grade
             result = ai_color_grade(input_video, output_video, style="cinematic")
@@ -420,10 +419,10 @@ class TestColorGrade:
     def test_color_grade_all_styles(self):
         """Test that all style presets work."""
         from mcp_video.ai_engine import ai_color_grade
-        
+
         with tempfile.TemporaryDirectory() as tmpdir:
             input_video = os.path.join(tmpdir, "input.mp4")
-            
+
             # Create test video
             cmd = [
                 "ffmpeg", "-y",
@@ -433,7 +432,7 @@ class TestColorGrade:
                 input_video,
             ]
             subprocess.run(cmd, capture_output=True, check=True)
-            
+
             # Test each style preset
             for style in ["cinematic", "vintage", "warm", "cool", "dramatic", "auto"]:
                 output_video = os.path.join(tmpdir, f"output_{style}.mp4")
@@ -445,12 +444,12 @@ class TestColorGrade:
     def test_color_grade_with_reference(self):
         """Test color grading with reference video."""
         from mcp_video.ai_engine import ai_color_grade
-        
+
         with tempfile.TemporaryDirectory() as tmpdir:
             input_video = os.path.join(tmpdir, "input.mp4")
             reference_video = os.path.join(tmpdir, "reference.mp4")
             output_video = os.path.join(tmpdir, "output.mp4")
-            
+
             # Create input video (blue)
             cmd = [
                 "ffmpeg", "-y",
@@ -460,7 +459,7 @@ class TestColorGrade:
                 input_video,
             ]
             subprocess.run(cmd, capture_output=True, check=True)
-            
+
             # Create reference video (red)
             cmd = [
                 "ffmpeg", "-y",
@@ -470,7 +469,7 @@ class TestColorGrade:
                 reference_video,
             ]
             subprocess.run(cmd, capture_output=True, check=True)
-            
+
             result = ai_color_grade(input_video, output_video, reference=reference_video)
             assert os.path.exists(result), "Output should be created with reference"
 
@@ -478,11 +477,11 @@ class TestColorGrade:
     def test_color_grade_invalid_style(self):
         """Test that invalid style defaults to auto."""
         from mcp_video.ai_engine import ai_color_grade
-        
+
         with tempfile.TemporaryDirectory() as tmpdir:
             input_video = os.path.join(tmpdir, "input.mp4")
             output_video = os.path.join(tmpdir, "output.mp4")
-            
+
             # Create test video
             cmd = [
                 "ffmpeg", "-y",
@@ -492,7 +491,7 @@ class TestColorGrade:
                 input_video,
             ]
             subprocess.run(cmd, capture_output=True, check=True)
-            
+
             # Invalid style should fall back to auto
             result = ai_color_grade(input_video, output_video, style="invalid_style")
             assert os.path.exists(result), "Output should be created even with invalid style"
@@ -500,7 +499,7 @@ class TestColorGrade:
     def test_color_grade_file_not_found(self):
         """Test that InputFileError is raised for missing input."""
         from mcp_video.ai_engine import ai_color_grade
-        
+
         with pytest.raises(InputFileError, match="Input file error"):
             ai_color_grade("/nonexistent/video.mp4", "/tmp/output.mp4")
 
@@ -508,36 +507,36 @@ class TestColorGrade:
 if __name__ == "__main__":
     # Run tests when executed directly
     print("Running AI feature tests...")
-    
+
     # Test ai_remove_silence
     if has_ffmpeg() and has_ffprobe():
         print("\n=== Testing ai_remove_silence ===")
         print("✓ FFmpeg and FFprobe are installed")
-        
+
         try:
             test_remove_silence()
             print("✓ test_remove_silence passed")
         except Exception as e:
             print(f"✗ test_remove_silence failed: {e}")
-        
+
         try:
             test_remove_silence_no_silence()
             print("✓ test_remove_silence_no_silence passed")
         except Exception as e:
             print(f"✗ test_remove_silence_no_silence failed: {e}")
-        
+
         try:
             test_remove_silence_custom_threshold()
             print("✓ test_remove_silence_custom_threshold passed")
         except Exception as e:
             print(f"✗ test_remove_silence_custom_threshold failed: {e}")
-        
+
         try:
             test_remove_silence_with_margin()
             print("✓ test_remove_silence_with_margin passed")
         except Exception as e:
             print(f"✗ test_remove_silence_with_margin failed: {e}")
-        
+
         try:
             test_remove_silence_missing_file()
             print("✓ test_remove_silence_missing_file passed")
@@ -545,41 +544,41 @@ if __name__ == "__main__":
             print(f"✗ test_remove_silence_missing_file failed: {e}")
     else:
         print("⚠ FFmpeg or FFprobe not installed, skipping silence removal tests")
-    
+
     # Test SRT formatting (no dependencies)
     print("\n=== Testing SRT formatting ===")
-    
+
     test_srt = TestSRTFormatting()
     try:
         test_srt.test_seconds_to_srt_time()
         print("✓ test_seconds_to_srt_time passed")
     except Exception as e:
         print(f"✗ test_seconds_to_srt_time failed: {e}")
-    
+
     try:
         test_srt.test_format_srt_empty_segments()
         print("✓ test_format_srt_empty_segments passed")
     except Exception as e:
         print(f"✗ test_format_srt_empty_segments failed: {e}")
-    
+
     try:
         test_srt.test_format_srt_single_segment()
         print("✓ test_format_srt_single_segment passed")
     except Exception as e:
         print(f"✗ test_format_srt_single_segment failed: {e}")
-    
+
     try:
         test_srt.test_format_srt_multiple_segments()
         print("✓ test_format_srt_formatting_multiple_segments passed")
     except Exception as e:
         print(f"✗ test_format_srt_multiple_segments failed: {e}")
-    
+
     try:
         test_srt.test_format_srt_skips_empty_text()
         print("✓ test_format_srt_skips_empty_text passed")
     except Exception as e:
         print(f"✗ test_format_srt_skips_empty_text failed: {e}")
-    
+
     print("\nTests complete!")
 
 
@@ -620,22 +619,22 @@ def get_audio_channels(video_path):
 def test_spatial_audio():
     """Test 3D spatial audio positioning."""
     from mcp_video.ai_engine import audio_spatial
-    
+
     with tempfile.TemporaryDirectory() as tmpdir:
         input_video = os.path.join(tmpdir, "input.mp4")
         output_video = os.path.join(tmpdir, "output.mp4")
-        
+
         create_stereo_video(input_video)
-        
+
         # Test simple spatial positioning
         positions = [
             {"time": 0, "azimuth": -45, "elevation": 0},   # left
             {"time": 2.5, "azimuth": 0, "elevation": 30},  # center, up
             {"time": 5, "azimuth": 45, "elevation": 0},    # right
         ]
-        
+
         result = audio_spatial(input_video, output_video, positions, method="simple")
-        
+
         assert os.path.exists(result), "Output not created"
         channels = get_audio_channels(result)
         print(f"✓ Spatial audio created: {channels} channels")
@@ -645,13 +644,13 @@ def test_spatial_audio():
 def test_spatial_audio_missing_video():
     """Test that spatial audio raises InputFileError for missing video."""
     from mcp_video.ai_engine import audio_spatial
-    
+
     with tempfile.TemporaryDirectory() as tmpdir:
         nonexistent_video = os.path.join(tmpdir, "nonexistent.mp4")
         output_video = os.path.join(tmpdir, "output.mp4")
-        
+
         positions = [{"time": 0, "azimuth": 0, "elevation": 0}]
-        
+
         with pytest.raises(InputFileError, match="Input file error"):
             audio_spatial(nonexistent_video, output_video, positions)
 
@@ -660,15 +659,15 @@ def test_spatial_audio_missing_video():
 def test_spatial_audio_invalid_method():
     """Test that spatial audio raises ValueError for invalid method."""
     from mcp_video.ai_engine import audio_spatial
-    
+
     with tempfile.TemporaryDirectory() as tmpdir:
         input_video = os.path.join(tmpdir, "input.mp4")
         output_video = os.path.join(tmpdir, "output.mp4")
-        
+
         create_stereo_video(input_video)
-        
+
         positions = [{"time": 0, "azimuth": 0, "elevation": 0}]
-        
+
         with pytest.raises(MCPVideoError, match="Method must be one of"):
             audio_spatial(input_video, output_video, positions, method="invalid")
 
@@ -677,13 +676,13 @@ def test_spatial_audio_invalid_method():
 def test_spatial_audio_empty_positions():
     """Test that spatial audio raises ValueError for empty positions."""
     from mcp_video.ai_engine import audio_spatial
-    
+
     with tempfile.TemporaryDirectory() as tmpdir:
         input_video = os.path.join(tmpdir, "input.mp4")
         output_video = os.path.join(tmpdir, "output.mp4")
-        
+
         create_stereo_video(input_video)
-        
+
         with pytest.raises(MCPVideoError, match="At least one position must be provided"):
             audio_spatial(input_video, output_video, [])
 
@@ -691,7 +690,7 @@ def test_spatial_audio_empty_positions():
 def test_azimuth_to_pan():
     """Test azimuth to pan conversion."""
     from mcp_video.ai_engine import _azimuth_to_pan
-    
+
     assert _azimuth_to_pan(-90) == -1.0, "Left should be -1.0"
     assert _azimuth_to_pan(0) == 0.0, "Center should be 0.0"
     assert _azimuth_to_pan(90) == 1.0, "Right should be 1.0"
@@ -704,7 +703,7 @@ def test_azimuth_to_pan():
 def test_elevation_to_volume():
     """Test elevation to volume conversion."""
     from mcp_video.ai_engine import _elevation_to_volume
-    
+
     assert _elevation_to_volume(0) == 1.0, "Level should be 1.0"
     assert _elevation_to_volume(90) == 0.7, "Above should be 0.7"
     assert _elevation_to_volume(45) == 0.85, "Half up should be 0.85"
@@ -714,37 +713,37 @@ def test_elevation_to_volume():
 if __name__ == "__main__":
     # Also run spatial audio tests when module run directly
     print("\n=== Testing Spatial Audio ===")
-    
+
     try:
         test_spatial_audio()
         print("✓ test_spatial_audio passed")
     except Exception as e:
         print(f"✗ test_spatial_audio failed: {e}")
-    
+
     try:
         test_spatial_audio_missing_video()
         print("✓ test_spatial_audio_missing_video passed")
     except Exception as e:
         print(f"✗ test_spatial_audio_missing_video failed: {e}")
-    
+
     try:
         test_spatial_audio_invalid_method()
         print("✓ test_spatial_audio_invalid_method passed")
     except Exception as e:
         print(f"✗ test_spatial_audio_invalid_method failed: {e}")
-    
+
     try:
         test_spatial_audio_empty_positions()
         print("✓ test_spatial_audio_empty_positions passed")
     except Exception as e:
         print(f"✗ test_spatial_audio_empty_positions failed: {e}")
-    
+
     try:
         test_azimuth_to_pan()
         print("✓ test_azimuth_to_pan passed")
     except Exception as e:
         print(f"✗ test_azimuth_to_pan failed: {e}")
-    
+
     try:
         test_elevation_to_volume()
         print("✓ test_elevation_to_volume passed")
@@ -785,11 +784,7 @@ def get_video_resolution(video_path):
 
 def realesrgan_installed():
     """Check if realesrgan is installed."""
-    try:
-        from realesrgan import RealESRGANer  # noqa: F401
-        return True
-    except ImportError:
-        return False
+    return importlib.util.find_spec("realesrgan") is not None
 
 
 requires_realesrgan = pytest.mark.skipif(
@@ -803,21 +798,21 @@ requires_realesrgan = pytest.mark.skipif(
 def test_ai_upscale():
     """Test AI video upscaling with Real-ESRGAN."""
     from mcp_video.ai_engine import ai_upscale
-    
+
     with tempfile.TemporaryDirectory() as tmpdir:
         input_video = os.path.join(tmpdir, "input.mp4")
         output_video = os.path.join(tmpdir, "output.mp4")
-        
+
         create_low_res_video(input_video, "160x120")
         input_res = get_video_resolution(input_video)
         print(f"Input resolution: {input_res}")
-        
+
         result = ai_upscale(input_video, output_video, scale=2)
-        
+
         output_res = get_video_resolution(output_video)
         print(f"Output resolution: {output_res}")
         print(f"✓ Upscaled from {input_res} to {output_res}")
-        
+
         # Verify output file exists
         assert os.path.exists(result), "Output file should exist"
         assert os.path.exists(output_video), "Output video should exist"
@@ -832,7 +827,7 @@ def test_ai_upscale_missing_dependency():
 
     # Also skip if OpenCV is not available (fallback path requires it)
     try:
-        import cv2  # noqa: F401
+        import cv2
     except ImportError:
         pytest.skip("OpenCV not available, cannot test fallback path")
 
@@ -857,15 +852,15 @@ def test_ai_upscale_missing_dependency():
 def test_ai_upscale_invalid_scale():
     """Test ai_upscale with invalid scale parameter."""
     from mcp_video.ai_engine import ai_upscale
-    
+
     with tempfile.TemporaryDirectory() as tmpdir:
         input_video = os.path.join(tmpdir, "input.mp4")
         create_low_res_video(input_video, "160x120")
         output_video = os.path.join(tmpdir, "output.mp4")
-        
+
         with pytest.raises(ValueError) as exc_info:
             ai_upscale(input_video, output_video, scale=3)  # Invalid scale
-        
+
         assert "scale" in str(exc_info.value).lower()
         print(f"✓ Correctly raised ValueError for invalid scale: {exc_info.value}")
 
@@ -875,14 +870,14 @@ def test_ai_upscale_invalid_scale():
 def test_ai_upscale_missing_file():
     """Test ai_upscale with non-existent input file."""
     from mcp_video.ai_engine import ai_upscale
-    
+
     with tempfile.TemporaryDirectory() as tmpdir:
         input_video = os.path.join(tmpdir, "nonexistent.mp4")
         output_video = os.path.join(tmpdir, "output.mp4")
-        
+
         with pytest.raises(InputFileError) as exc_info:
             ai_upscale(input_video, output_video, scale=2)
-        
+
         assert "not found" in str(exc_info.value).lower()
         print(f"✓ Correctly raised InputFileError: {exc_info.value}")
 
@@ -1169,101 +1164,102 @@ if __name__ == "__main__":
     print("=" * 60)
     print("Testing AI Transcription")
     print("=" * 60)
-    
+
     test_transcription = TestTranscription()
-    
+
     # Test file not found
     try:
         test_transcription.test_transcribe_file_not_found()
         print("✓ test_transcribe_file_not_found passed")
     except Exception as e:
         print(f"✗ test_transcribe_file_not_found failed: {e}")
-    
+
     # Check if whisper is installed for other tests
     try:
-        import whisper  # noqa: F401
+        if importlib.util.find_spec("whisper") is None:
+            raise ImportError
         print("\n✓ Whisper is installed, running transcription tests...")
-        
+
         try:
             test_transcription.test_transcribe_basic()
             print("✓ test_transcribe_basic passed")
         except Exception as e:
             print(f"✗ test_transcribe_basic failed: {e}")
-        
+
         try:
             test_transcription.test_transcribe_with_srt_output()
             print("✓ test_transcribe_with_srt_output passed")
         except Exception as e:
             print(f"✗ test_transcribe_with_srt_output failed: {e}")
-        
+
         try:
             test_transcription.test_transcribe_language_detection()
             print("✓ test_transcribe_language_detection passed")
         except Exception as e:
             print(f"✗ test_transcribe_language_detection failed: {e}")
-            
+
     except ImportError:
         print("\n⚠ Whisper not installed, skipping transcription tests")
         print("  Install with: pip install openai-whisper")
-    
+
     # Run SRT formatting tests
     print("\n" + "=" * 60)
     print("Testing SRT Formatting")
     print("=" * 60)
-    
+
     test_srt = TestSRTFormatting()
-    
+
     try:
         test_srt.test_seconds_to_srt_time()
         print("✓ test_seconds_to_srt_time passed")
     except Exception as e:
         print(f"✗ test_seconds_to_srt_time failed: {e}")
-    
+
     try:
         test_srt.test_format_srt_empty_segments()
         print("✓ test_format_srt_empty_segments passed")
     except Exception as e:
         print(f"✗ test_format_srt_empty_segments failed: {e}")
-    
+
     try:
         test_srt.test_format_srt_single_segment()
         print("✓ test_format_srt_single_segment passed")
     except Exception as e:
         print(f"✗ test_format_srt_single_segment failed: {e}")
-    
+
     try:
         test_srt.test_format_srt_multiple_segments()
         print("✓ test_format_srt_formatting_multiple_segments passed")
     except Exception as e:
         print(f"✗ test_format_srt_multiple_segments failed: {e}")
-    
+
     try:
         test_srt.test_format_srt_skips_empty_text()
         print("✓ test_format_srt_skips_empty_text passed")
     except Exception as e:
         print(f"✗ test_format_srt_skips_empty_text failed: {e}")
-    
+
     # Run AI upscale tests
     print("\n" + "=" * 60)
     print("Testing AI Upscale")
     print("=" * 60)
-    
+
     if realesrgan_installed():
         print("✓ Real-ESRGAN is installed")
-        
+
         if has_ffmpeg() and has_ffprobe():
             try:
                 test_ai_upscale()
                 print("✓ test_ai_upscale passed")
             except Exception as e:
                 print(f"✗ test_ai_upscale failed: {e}")
-            
+
             try:
                 test_ai_upscale_invalid_scale()
                 print("✓ test_ai_upscale_invalid_scale passed")
             except Exception as e:
                 print(f"✗ test_ai_upscale_invalid_scale failed: {e}")
-            
+
             try:
                 test_ai_upscale_missing_file()
                 print("✓ test_ai_upscale_missing_file passed")
@@ -1273,7 +1269,7 @@ if __name__ == "__main__":
             print("⚠ FFmpeg/ffprobe not available, skipping upscale tests")
     else:
         print("⚠ Real-ESRGAN not installed, testing error handling...")
-        
+
         if has_ffmpeg():
             try:
                 test_ai_upscale_missing_dependency()
@@ -1282,5 +1278,5 @@ if __name__ == "__main__":
                 print(f"✗ test_ai_upscale_missing_dependency failed: {e}")
         else:
             print("⚠ FFmpeg not available, skipping tests")
-    
+
     print("\nTests complete!")

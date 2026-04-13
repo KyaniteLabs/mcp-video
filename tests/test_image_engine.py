@@ -36,33 +36,33 @@ class TestRgbToHex:
 class TestRgbToHsl:
     def test_red(self):
         from mcp_video.image_engine import _rgb_to_hsl
-        h, l, s = _rgb_to_hsl(255, 0, 0)
+        h, lightness, s = _rgb_to_hsl(255, 0, 0)
         assert h == pytest.approx(0.0, abs=0.01)
         assert s == pytest.approx(1.0, abs=0.01)
-        assert l == pytest.approx(0.5, abs=0.01)
+        assert lightness == pytest.approx(0.5, abs=0.01)
 
     def test_white(self):
         from mcp_video.image_engine import _rgb_to_hsl
-        h, l, s = _rgb_to_hsl(255, 255, 255)
-        assert l == pytest.approx(1.0, abs=0.01)
+        _, lightness, _ = _rgb_to_hsl(255, 255, 255)
+        assert lightness == pytest.approx(1.0, abs=0.01)
 
     def test_black(self):
         from mcp_video.image_engine import _rgb_to_hsl
-        h, l, s = _rgb_to_hsl(0, 0, 0)
-        assert l == pytest.approx(0.0, abs=0.01)
+        _, lightness, _ = _rgb_to_hsl(0, 0, 0)
+        assert lightness == pytest.approx(0.0, abs=0.01)
 
 
 class TestHslToRgb:
     def test_roundtrip_red(self):
         from mcp_video.image_engine import _hsl_to_rgb, _rgb_to_hsl
-        h, l, s = _rgb_to_hsl(255, 0, 0)
-        r, g, b = _hsl_to_rgb(h, s, l)
+        h, lightness, s = _rgb_to_hsl(255, 0, 0)
+        r, g, b = _hsl_to_rgb(h, s, lightness)
         assert (r, g, b) == (255, 0, 0)
 
     def test_roundtrip_blue(self):
         from mcp_video.image_engine import _hsl_to_rgb, _rgb_to_hsl
-        h, l, s = _rgb_to_hsl(0, 0, 255)
-        r, g, b = _hsl_to_rgb(h, s, l)
+        h, lightness, s = _rgb_to_hsl(0, 0, 255)
+        r, g, b = _hsl_to_rgb(h, s, lightness)
         assert (r, g, b) == (0, 0, 255)
 
 
@@ -120,10 +120,13 @@ class TestValidateImage:
 # ---------------------------------------------------------------------------
 
 try:
-    import PIL.Image  # noqa: F401
-    import numpy  # noqa: F401
-    from sklearn.cluster import MiniBatchKMeans  # noqa: F401
-    HAS_IMAGE_DEPS = True
+    import PIL.Image
+    import importlib.util
+
+    HAS_IMAGE_DEPS = all(
+        importlib.util.find_spec(module) is not None
+        for module in ("numpy", "sklearn")
+    )
 except ImportError:
     HAS_IMAGE_DEPS = False
 
@@ -134,10 +137,10 @@ def _create_solid_image(color: tuple[int, int, int], size: tuple[int, int] = (10
     """Create a temporary solid-color image for testing."""
     img = PIL.Image.new("RGB", size, color)
     ext = ".jpg" if fmt == "JPEG" else ".png"
-    f = tempfile.NamedTemporaryFile(suffix=ext, delete=False)
-    img.save(f.name, format=fmt)
-    f.close()
-    return f.name
+    with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
+        path = tmp.name
+    img.save(path, format=fmt)
+    return path
 
 
 def _create_two_color_image(
@@ -149,10 +152,10 @@ def _create_two_color_image(
     img = PIL.Image.new("RGB", size, color1)
     right_half = PIL.Image.new("RGB", (size[0] // 2, size[1]), color2)
     img.paste(right_half, (size[0] // 2, 0))
-    f = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
-    img.save(f.name, format="PNG")
-    f.close()
-    return f.name
+    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+        path = tmp.name
+    img.save(path, format="PNG")
+    return path
 
 
 class TestExtractColors:
