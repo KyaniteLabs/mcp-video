@@ -137,10 +137,10 @@ def _create_solid_image(color: tuple[int, int, int], size: tuple[int, int] = (10
     """Create a temporary solid-color image for testing."""
     img = PIL.Image.new("RGB", size, color)
     ext = ".jpg" if fmt == "JPEG" else ".png"
-    f = tempfile.NamedTemporaryFile(suffix=ext, delete=False)
-    img.save(f.name, format=fmt)
-    f.close()
-    return f.name
+    with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
+        path = tmp.name
+    img.save(path, format=fmt)
+    return path
 
 
 def _create_two_color_image(
@@ -152,10 +152,10 @@ def _create_two_color_image(
     img = PIL.Image.new("RGB", size, color1)
     right_half = PIL.Image.new("RGB", (size[0] // 2, size[1]), color2)
     img.paste(right_half, (size[0] // 2, 0))
-    f = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
-    img.save(f.name, format="PNG")
-    f.close()
-    return f.name
+    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+        path = tmp.name
+    img.save(path, format="PNG")
+    return path
 
 
 class TestExtractColors:
