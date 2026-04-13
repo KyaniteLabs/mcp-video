@@ -63,9 +63,16 @@ Repository = "https://github.com/pastorsimon1798/mcp-video"
 exclude = [
     ".venv/",
     ".venv-build/",
+    ".playwright-mcp/",
+    ".stitch/",
     "tests/",
+    "manual/",
+    "out/",
+    "explainer-video/",
     "dist/",
     "build/",
+    "test_comprehensive.py",
+    "test_real_video.py",
     "*.egg-info/",
 ]
 
