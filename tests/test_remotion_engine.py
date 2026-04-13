@@ -136,7 +136,7 @@ class TestValidateProject:
             'import { registerRoot } from "remotion";\nregisterRoot();'
         )
 
-        project_dir, entry_point = _validate_project(str(tmp_path))
+        project_dir, _entry_point = _validate_project(str(tmp_path))
         assert project_dir == tmp_path.resolve()
         assert isinstance(project_dir, Path)
 

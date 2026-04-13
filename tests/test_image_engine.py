@@ -43,12 +43,12 @@ class TestRgbToHsl:
 
     def test_white(self):
         from mcp_video.image_engine import _rgb_to_hsl
-        h, lightness, s = _rgb_to_hsl(255, 255, 255)
+        _, lightness, _ = _rgb_to_hsl(255, 255, 255)
         assert lightness == pytest.approx(1.0, abs=0.01)
 
     def test_black(self):
         from mcp_video.image_engine import _rgb_to_hsl
-        h, lightness, s = _rgb_to_hsl(0, 0, 0)
+        _, lightness, _ = _rgb_to_hsl(0, 0, 0)
         assert lightness == pytest.approx(0.0, abs=0.01)
 
 
