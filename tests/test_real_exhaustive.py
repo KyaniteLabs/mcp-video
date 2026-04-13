@@ -156,7 +156,7 @@ class TestRealEffects:
         result = client.transition_glitch(clip1, clip2, output, duration=0.5)
 
         assert os.path.exists(result)
-        print(f"  ✓ Glitch transition applied")
+        print("  ✓ Glitch transition applied")
 
     def test_06_transition_pixelate(self, client, output_dir):
         """Apply pixelate transition."""
@@ -178,7 +178,7 @@ class TestRealEffects:
         result = client.transition_pixelate(clip1, clip2, output, duration=0.4)
 
         assert os.path.exists(result)
-        print(f"  ✓ Pixelate transition applied")
+        print("  ✓ Pixelate transition applied")
 
     def test_07_transition_morph(self, client, output_dir):
         """Apply morph transition."""
@@ -200,7 +200,7 @@ class TestRealEffects:
         result = client.transition_morph(clip1, clip2, output, duration=0.6)
 
         assert os.path.exists(result)
-        print(f"  ✓ Morph transition applied")
+        print("  ✓ Morph transition applied")
 
 
 class TestRealQualityGuardrails:
@@ -254,7 +254,7 @@ def run_all_tests():
     print("=" * 70)
     print("EXHAUSTIVE REAL MEDIA TEST SUITE")
     print("=" * 70)
-    print(f"\nTest videos:")
+    print("\nTest videos:")
     for name, path in TEST_VIDEOS.items():
         exists = "✓" if os.path.exists(path) else "✗"
         print(f"  {exists} {name}: {path}")

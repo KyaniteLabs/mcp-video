@@ -191,7 +191,7 @@ class TestCoreVideoEditing:
 
         assert result.success
         assert os.path.exists(result.output_path)
-        print(f"✓ Fade applied")
+        print("✓ Fade applied")
 
     def test_08_crop_video(self, client, test_video, output_dir):
         """Crop video to region."""
@@ -226,7 +226,7 @@ class TestCoreVideoEditing:
 
         assert result.success
         assert os.path.exists(result.output_path)
-        print(f"✓ Horizontal flip applied")
+        print("✓ Horizontal flip applied")
 
     def test_11_reverse_video(self, client, sample_clips, output_dir):
         """Reverse video playback."""
@@ -236,7 +236,7 @@ class TestCoreVideoEditing:
 
         assert result.success
         assert os.path.exists(result.output_path)
-        print(f"✓ Video reversed")
+        print("✓ Video reversed")
 
     @pytest.mark.skipif(
         subprocess.run(
@@ -255,7 +255,7 @@ class TestCoreVideoEditing:
 
         assert result.success
         assert os.path.exists(result.output_path)
-        print(f"✓ Stabilization applied")
+        print("✓ Stabilization applied")
 
     def test_13_chroma_key(self, client, sample_clips, output_dir):
         """Remove green screen background."""
@@ -266,7 +266,7 @@ class TestCoreVideoEditing:
 
         assert result.success
         assert os.path.exists(result.output_path)
-        print(f"✓ Chroma key applied")
+        print("✓ Chroma key applied")
 
     def test_14_blur_video(self, client, sample_clips, output_dir):
         """Apply blur effect."""
@@ -276,7 +276,7 @@ class TestCoreVideoEditing:
 
         assert result.success
         assert os.path.exists(result.output_path)
-        print(f"✓ Blur applied")
+        print("✓ Blur applied")
 
     def test_15_watermark_video(self, client, sample_clips, output_dir):
         """Add image watermark."""
@@ -294,7 +294,7 @@ class TestCoreVideoEditing:
 
         assert result.success
         assert os.path.exists(result.output_path)
-        print(f"✓ Watermark added")
+        print("✓ Watermark added")
 
     def test_16_add_text(self, client, sample_clips, output_dir):
         """Burn text overlay."""
@@ -310,7 +310,7 @@ class TestCoreVideoEditing:
 
         assert result.success
         assert os.path.exists(result.output_path)
-        print(f"✓ Text overlay added")
+        print("✓ Text overlay added")
 
     def test_17_overlay_video(self, client, sample_clips, output_dir):
         """Picture-in-picture overlay."""
@@ -327,7 +327,7 @@ class TestCoreVideoEditing:
 
         assert result.success
         assert os.path.exists(result.output_path)
-        print(f"✓ PiP overlay applied")
+        print("✓ PiP overlay applied")
 
     def test_18_split_screen(self, client, sample_clips, output_dir):
         """Side-by-side split screen."""
@@ -342,7 +342,7 @@ class TestCoreVideoEditing:
 
         assert result.success
         assert os.path.exists(result.output_path)
-        print(f"✓ Split screen created")
+        print("✓ Split screen created")
 
 
 # =============================================================================
@@ -372,7 +372,7 @@ class TestAudioFeatures:
 
         assert result.success
         assert os.path.exists(result.output_path)
-        print(f"✓ Audio normalized to -16 LUFS")
+        print("✓ Audio normalized to -16 LUFS")
 
     def test_21_audio_synthesize(self, client, output_dir):
         """Generate synthetic audio."""
@@ -387,7 +387,7 @@ class TestAudioFeatures:
         )
 
         assert os.path.exists(result)
-        print(f"✓ Synthesized 1s sine wave at 440Hz")
+        print("✓ Synthesized 1s sine wave at 440Hz")
 
     def test_22_audio_preset(self, client, output_dir):
         """Generate preset sound."""
@@ -396,7 +396,7 @@ class TestAudioFeatures:
         result = client.audio_preset('ui-blip', output=output)
 
         assert os.path.exists(result)
-        print(f"✓ Generated 'ui-blip' preset")
+        print("✓ Generated 'ui-blip' preset")
 
     def test_23_audio_sequence(self, client, output_dir):
         """Create timed audio sequence."""
@@ -411,7 +411,7 @@ class TestAudioFeatures:
         result = client.audio_sequence(sequence, output=output)
 
         assert os.path.exists(result)
-        print(f"✓ Audio sequence created")
+        print("✓ Audio sequence created")
 
     def test_24_audio_compose(self, client, output_dir):
         """Layer multiple audio tracks."""
@@ -449,7 +449,7 @@ class TestAudioFeatures:
         result = client.audio_effects(input_audio, output=output, effects=effects)
 
         assert os.path.exists(result)
-        print(f"✓ Audio effects applied")
+        print("✓ Audio effects applied")
 
     def test_26_add_audio(self, client, sample_clips, output_dir):
         """Add audio to video."""
@@ -463,7 +463,7 @@ class TestAudioFeatures:
 
         assert result.success
         assert os.path.exists(result.output_path)
-        print(f"✓ Audio added to video")
+        print("✓ Audio added to video")
 
     def test_27_audio_waveform(self, client, sample_clips):
         """Extract waveform data."""
@@ -485,7 +485,7 @@ class TestAudioFeatures:
         result = client.add_generated_audio(sample_clips[0], audio_config, output=output)
 
         assert os.path.exists(result)
-        print(f"✓ Generated audio added")
+        print("✓ Generated audio added")
 
 
 # =============================================================================
@@ -503,7 +503,7 @@ class TestVisualEffects:
         result = client.effect_vignette(sample_clips[0], output, intensity=0.5)
 
         assert os.path.exists(result)
-        print(f"✓ Vignette applied")
+        print("✓ Vignette applied")
 
     def test_30_effect_chromatic_aberration(self, client, sample_clips, output_dir):
         """Apply RGB chromatic aberration."""
@@ -512,7 +512,7 @@ class TestVisualEffects:
         result = client.effect_chromatic_aberration(sample_clips[0], output, intensity=3.0)
 
         assert os.path.exists(result)
-        print(f"✓ Chromatic aberration applied")
+        print("✓ Chromatic aberration applied")
 
     def test_31_effect_scanlines(self, client, sample_clips, output_dir):
         """Apply CRT scanlines."""
@@ -521,7 +521,7 @@ class TestVisualEffects:
         result = client.effect_scanlines(sample_clips[0], output, line_height=2, opacity=0.5)
 
         assert os.path.exists(result)
-        print(f"✓ Scanlines applied")
+        print("✓ Scanlines applied")
 
     def test_32_effect_noise(self, client, sample_clips, output_dir):
         """Apply film grain noise."""
@@ -530,7 +530,7 @@ class TestVisualEffects:
         result = client.effect_noise(sample_clips[0], output, intensity=0.05, mode='film')
 
         assert os.path.exists(result)
-        print(f"✓ Film noise applied")
+        print("✓ Film noise applied")
 
     def test_33_effect_glow(self, client, sample_clips, output_dir):
         """Apply bloom/glow effect."""
@@ -539,7 +539,7 @@ class TestVisualEffects:
         result = client.effect_glow(sample_clips[0], output, intensity=0.6, radius=15)
 
         assert os.path.exists(result)
-        print(f"✓ Glow effect applied")
+        print("✓ Glow effect applied")
 
     def test_34_color_grade(self, client, sample_clips, output_dir):
         """Apply color grading preset."""
@@ -549,7 +549,7 @@ class TestVisualEffects:
 
         assert result.success
         assert os.path.exists(result.output_path)
-        print(f"✓ Color grading applied")
+        print("✓ Color grading applied")
 
     def test_35_apply_filter(self, client, sample_clips, output_dir):
         """Apply custom FFmpeg filter."""
@@ -563,7 +563,7 @@ class TestVisualEffects:
 
         assert result.success
         assert os.path.exists(result.output_path)
-        print(f"✓ Custom filter applied")
+        print("✓ Custom filter applied")
 
     def test_36_apply_mask(self, client, sample_clips, output_dir):
         """Apply image mask."""
@@ -581,7 +581,7 @@ class TestVisualEffects:
 
         assert result.success
         assert os.path.exists(result.output_path)
-        print(f"✓ Mask applied")
+        print("✓ Mask applied")
 
 
 # =============================================================================
@@ -602,7 +602,7 @@ class TestTransitions:
         )
 
         assert os.path.exists(result)
-        print(f"✓ Glitch transition applied")
+        print("✓ Glitch transition applied")
 
     def test_38_transition_pixelate(self, client, sample_clips, output_dir):
         """Apply pixelate transition."""
@@ -614,7 +614,7 @@ class TestTransitions:
         )
 
         assert os.path.exists(result)
-        print(f"✓ Pixelate transition applied")
+        print("✓ Pixelate transition applied")
 
     def test_39_transition_morph(self, client, sample_clips, output_dir):
         """Apply morph transition."""
@@ -626,7 +626,7 @@ class TestTransitions:
         )
 
         assert os.path.exists(result)
-        print(f"✓ Morph transition applied")
+        print("✓ Morph transition applied")
 
 
 # =============================================================================
@@ -655,7 +655,7 @@ class TestAIFeatures:
         )
 
         assert os.path.exists(result)
-        print(f"✓ Silence removed")
+        print("✓ Silence removed")
 
     @pytest.mark.skipif(
         not importlib.util.find_spec("whisper"),
@@ -668,7 +668,7 @@ class TestAIFeatures:
         result = client.ai_transcribe(test_video, output_srt=output_srt, model='tiny')
 
         assert 'transcript' in result
-        print(f"✓ Transcription complete")
+        print("✓ Transcription complete")
 
     @pytest.mark.skipif(
         not importlib.util.find_spec("demucs"),
@@ -705,7 +705,7 @@ class TestAIFeatures:
         result = client.ai_color_grade(sample_clips[0], output, style='cinematic')
 
         assert os.path.exists(result)
-        print(f"✓ AI color grading applied")
+        print("✓ AI color grading applied")
 
     def test_46_audio_spatial(self, client, sample_clips, output_dir):
         """Apply 3D spatial audio."""
@@ -719,7 +719,7 @@ class TestAIFeatures:
         result = client.audio_spatial(sample_clips[0], output, positions)
 
         assert os.path.exists(result)
-        print(f"✓ Spatial audio applied")
+        print("✓ Spatial audio applied")
 
     def test_47_extract_colors(self, client, sample_clips, output_dir):
         """Extract dominant colors from frame."""
@@ -731,7 +731,7 @@ class TestAIFeatures:
         result = client.extract_colors(actual_path, n_colors=5)
 
         assert hasattr(result, 'colors') or isinstance(result, dict)
-        print(f"✓ Colors extracted")
+        print("✓ Colors extracted")
 
 
 # =============================================================================
@@ -753,7 +753,7 @@ class TestLayoutComposition:
         )
 
         assert os.path.exists(result)
-        print(f"✓ 2x2 grid layout created")
+        print("✓ 2x2 grid layout created")
 
     def test_49_layout_pip(self, client, sample_clips, output_dir):
         """Picture-in-picture layout."""
@@ -768,7 +768,7 @@ class TestLayoutComposition:
         )
 
         assert os.path.exists(result)
-        print(f"✓ PiP layout created")
+        print("✓ PiP layout created")
 
     def test_50_text_animated(self, client, sample_clips, output_dir):
         """Add animated text."""
@@ -784,7 +784,7 @@ class TestLayoutComposition:
         )
 
         assert os.path.exists(result)
-        print(f"✓ Animated text added")
+        print("✓ Animated text added")
 
     def test_51_text_subtitles(self, client, sample_clips, output_dir):
         """Burn SRT subtitles."""
@@ -804,7 +804,7 @@ Test Subtitle
         result = client.text_subtitles(sample_clips[0], srt_path, output)
 
         assert os.path.exists(result)
-        print(f"✓ Subtitles burned")
+        print("✓ Subtitles burned")
 
     def test_52_mograph_count(self, client, output_dir):
         """Generate animated counter."""
@@ -818,7 +818,7 @@ Test Subtitle
         )
 
         assert os.path.exists(result)
-        print(f"✓ Counter animation created")
+        print("✓ Counter animation created")
 
     def test_53_mograph_progress(self, client, output_dir):
         """Generate progress bar."""
@@ -832,7 +832,7 @@ Test Subtitle
         )
 
         assert os.path.exists(result)
-        print(f"✓ Progress bar animation created")
+        print("✓ Progress bar animation created")
 
     def test_54_create_from_images(self, client, sample_clips, output_dir):
         """Create video from image sequence."""
@@ -883,7 +883,7 @@ class TestQualityMetadata:
         else:
             # QualityReport object has all_passed attribute
             assert hasattr(result, 'all_passed')
-        print(f"✓ Quality check completed")
+        print("✓ Quality check completed")
 
     def test_57_design_quality_check(self, client, short_test_clip):
         """Run design quality analysis."""
@@ -906,7 +906,7 @@ class TestQualityMetadata:
         result = client.fix_design_issues(sample_clips[0], output=output)
 
         assert os.path.exists(result)
-        print(f"✓ Design issues auto-fixed")
+        print("✓ Design issues auto-fixed")
 
     def test_59_compare_quality(self, client, short_test_clip, output_dir):
         """Compare video quality."""
@@ -921,7 +921,7 @@ class TestQualityMetadata:
         result = client.compare_quality(short_test_clip, distorted)
 
         assert isinstance(result, dict) or hasattr(result, 'metrics')
-        print(f"✓ Quality comparison complete")
+        print("✓ Quality comparison complete")
 
     def test_60_auto_chapters(self, client, test_video):
         """Auto-detect chapters."""
@@ -962,7 +962,7 @@ class TestQualityMetadata:
         assert result.success
         # Verify by reading back
         read_result = client.read_metadata(result.output_path)
-        print(f"✓ Metadata written and verified")
+        print("✓ Metadata written and verified")
 
 
 # =============================================================================
@@ -982,7 +982,7 @@ class TestUtility:
         assert result.success
         assert os.path.exists(result.output_path)
         assert result.output_path.endswith('.webm')
-        print(f"✓ Converted to WebM")
+        print("✓ Converted to WebM")
 
     def test_65_preview(self, client, test_video, output_dir):
         """Generate low-res preview."""
@@ -1018,7 +1018,7 @@ class TestUtility:
         # ThumbnailResult uses frame_path not output_path
         frame_path = result.frame_path if hasattr(result, 'frame_path') else output
         assert os.path.exists(frame_path)
-        print(f"✓ Thumbnail extracted")
+        print("✓ Thumbnail extracted")
 
     def test_68_batch_process(self, client, sample_clips, output_dir):
         """Batch process multiple files."""
@@ -1047,7 +1047,7 @@ class TestUtility:
 
         assert result.success
         assert os.path.exists(result.output_path)
-        print(f"✓ Timeline edit complete")
+        print("✓ Timeline edit complete")
 
     def test_70_generate_subtitles(self, client, sample_clips, output_dir):
         """Generate subtitles from entries."""
@@ -1062,7 +1062,7 @@ class TestUtility:
         # SubtitleResult uses srt_path not subtitle_path
         srt_path = result.srt_path if hasattr(result, 'srt_path') else None
         assert srt_path and os.path.exists(srt_path)
-        print(f"✓ Subtitles generated")
+        print("✓ Subtitles generated")
 
 
 # =============================================================================
@@ -1074,7 +1074,7 @@ def run_all_tests():
     print("=" * 70)
     print("EXHAUSTIVE REAL MEDIA TEST SUITE - mcp-video v1.0")
     print("=" * 70)
-    print(f"\nTest videos:")
+    print("\nTest videos:")
     for name, path in TEST_VIDEOS.items():
         exists = "✓" if os.path.exists(path) else "✗"
         print(f"  {exists} {name}: {path}")
