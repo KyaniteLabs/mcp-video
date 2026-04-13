@@ -15,6 +15,13 @@ import contextlib
 logger = logging.getLogger(__name__)
 
 
+def _diagnostic(stage: str, message: str, **extra: Any) -> dict[str, Any]:
+    """Create a structured diagnostic payload for guardrail analysis fallbacks."""
+    payload: dict[str, Any] = {"stage": stage, "message": message}
+    payload.update(extra)
+    return payload
+
+
 def _escape_lavfi_path(path: str) -> str:
     """Escape special characters in a file path for FFmpeg lavfi movie= filter.
 
@@ -74,11 +81,29 @@ class VisualQualityGuardrails:
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
             if result.returncode != 0:
-                return {}
+                diagnostic = _diagnostic(
+                    "ffprobe_signalstats",
+                    "ffprobe returned nonzero exit",
+                    stderr_excerpt=result.stderr.strip()[:200],
+                    filter_name=filter_name,
+                )
+                logger.warning(
+                    "ffprobe signalstats returned nonzero exit for %s (filter=%s): %s",
+                    video,
+                    filter_name,
+                    result.stderr.strip()[:200],
+                )
+                return {"_error": diagnostic}
             data = json.loads(result.stdout)
             frames = data.get("frames", [])
             if not frames:
-                return {}
+                diagnostic = _diagnostic(
+                    "ffprobe_signalstats",
+                    "ffprobe returned no frames",
+                    filter_name=filter_name,
+                )
+                logger.warning("ffprobe signalstats returned no frames for %s (filter=%s)", video, filter_name)
+                return {"_error": diagnostic}
             # Average across all frames
             values = []
             for frame in frames:
@@ -89,19 +114,33 @@ class VisualQualityGuardrails:
                     except (ValueError, TypeError):
                         continue
             if not values:
-                return {}
+                diagnostic = _diagnostic(
+                    "ffprobe_signalstats",
+                    "ffprobe returned no usable values",
+                    filter_name=filter_name,
+                )
+                logger.warning("ffprobe signalstats returned no usable values for %s (filter=%s)", video, filter_name)
+                return {"_error": diagnostic}
             return {"mean": sum(values) / len(values), "values": values}
         except subprocess.TimeoutExpired:
+            diagnostic = _diagnostic("ffprobe_signalstats", "ffprobe timed out", filter_name=filter_name)
             logger.warning("ffprobe signalstats timed out for %s (filter=%s)", video, filter_name)
-            return {}
+            return {"_error": diagnostic}
         except json.JSONDecodeError:
+            diagnostic = _diagnostic("ffprobe_signalstats", "ffprobe returned invalid JSON", filter_name=filter_name)
             logger.warning("ffprobe signalstats returned invalid JSON for %s (filter=%s)", video, filter_name)
-            return {}
+            return {"_error": diagnostic}
         except Exception as exc:
+            diagnostic = _diagnostic(
+                "ffprobe_signalstats",
+                "ffprobe signalstats failed",
+                filter_name=filter_name,
+                error_type=type(exc).__name__,
+            )
             logger.warning(
                 "ffprobe signalstats failed for %s (filter=%s): %s: %s", video, filter_name, type(exc).__name__, exc
             )
-            return {}
+            return {"_error": diagnostic}
 
     def _run_ffmpeg_signalstats(self, video: str) -> dict[str, Any]:
         """Run ffmpeg with signalstats filter to get video statistics."""
@@ -168,18 +207,27 @@ class VisualQualityGuardrails:
             if json_start >= 0 and json_end > json_start:
                 json_str = stderr[json_start:json_end]
                 return json.loads(json_str)
-            return {}
+            diagnostic = _diagnostic("ffmpeg_loudnorm", "ffmpeg loudnorm returned no JSON payload")
+            logger.warning("ffmpeg loudnorm returned no JSON payload for %s", video)
+            return {"_error": diagnostic}
         except subprocess.TimeoutExpired:
+            diagnostic = _diagnostic("ffmpeg_loudnorm", "ffmpeg loudnorm timed out")
             logger.warning("ffmpeg loudnorm timed out for %s", video)
-            return {}
+            return {"_error": diagnostic}
         except json.JSONDecodeError:
+            diagnostic = _diagnostic("ffmpeg_loudnorm", "ffmpeg loudnorm returned invalid JSON")
             logger.warning("ffmpeg loudnorm returned invalid JSON for %s", video)
-            return {}
+            return {"_error": diagnostic}
         except Exception as exc:
+            diagnostic = _diagnostic(
+                "ffmpeg_loudnorm",
+                "ffmpeg loudnorm failed",
+                error_type=type(exc).__name__,
+            )
             logger.warning("ffmpeg loudnorm failed for %s: %s: %s", video, type(exc).__name__, exc)
-            return {}
+            return {"_error": diagnostic}
 
-    def _get_rgb_means(self, video: str) -> dict[str, float] | None:
+    def _get_rgb_means(self, video: str) -> dict[str, Any] | None:
         """Get mean RGB values for color balance analysis."""
         cmd = [
             "ffprobe",
@@ -188,7 +236,7 @@ class VisualQualityGuardrails:
             "-f",
             "lavfi",
             "-i",
-            f"movie={video},signalstats",
+            f"movie={_escape_lavfi_path(video)},signalstats",
             "-show_entries",
             "frame_tags=lavfi.signalstats.RAVG,lavfi.signalstats.GAVG,lavfi.signalstats.BAVG",
             "-of",
@@ -197,12 +245,20 @@ class VisualQualityGuardrails:
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
             if result.returncode != 0:
-                return None
+                diagnostic = _diagnostic(
+                    "ffprobe_rgb_means",
+                    "ffprobe returned nonzero exit",
+                    stderr_excerpt=result.stderr.strip()[:200],
+                )
+                logger.warning("ffprobe RGB means returned nonzero exit for %s: %s", video, result.stderr.strip()[:200])
+                return {"_error": diagnostic}
 
             data = json.loads(result.stdout)
             frames = data.get("frames", [])
             if not frames:
-                return None
+                diagnostic = _diagnostic("ffprobe_rgb_means", "ffprobe returned no frames")
+                logger.warning("ffprobe RGB means returned no frames for %s", video)
+                return {"_error": diagnostic}
 
             # Average RGB across frames
             r_vals, g_vals, b_vals = [], [], []
@@ -219,7 +275,9 @@ class VisualQualityGuardrails:
                         b_vals.append(float(tags["lavfi.signalstats.BAVG"]))
 
             if not (r_vals and g_vals and b_vals):
-                return None
+                diagnostic = _diagnostic("ffprobe_rgb_means", "ffprobe returned incomplete RGB values")
+                logger.warning("ffprobe RGB means returned incomplete RGB values for %s", video)
+                return {"_error": diagnostic}
 
             return {
                 "r": sum(r_vals) / len(r_vals),
@@ -227,14 +285,17 @@ class VisualQualityGuardrails:
                 "b": sum(b_vals) / len(b_vals),
             }
         except subprocess.TimeoutExpired:
+            diagnostic = _diagnostic("ffprobe_rgb_means", "ffprobe timed out")
             logger.warning("ffprobe RGB means timed out for %s", video)
-            return None
+            return {"_error": diagnostic}
         except json.JSONDecodeError:
+            diagnostic = _diagnostic("ffprobe_rgb_means", "ffprobe returned invalid JSON")
             logger.warning("ffprobe RGB means returned invalid JSON for %s", video)
-            return None
+            return {"_error": diagnostic}
         except Exception as exc:
+            diagnostic = _diagnostic("ffprobe_rgb_means", "ffprobe RGB means failed", error_type=type(exc).__name__)
             logger.warning("ffprobe RGB means failed for %s: %s: %s", video, type(exc).__name__, exc)
-            return None
+            return {"_error": diagnostic}
 
     def check_brightness(self, video: str) -> QualityReport:
         """Check video brightness is in acceptable range."""
@@ -249,7 +310,7 @@ class VisualQualityGuardrails:
                     passed=False,
                     score=0.0,
                     message="Could not analyze brightness (no video stream or analysis failed)",
-                    details={},
+                    details={"diagnostic": stats.get("_error")} if stats else {},
                 )
             y_avg = stats["yavg"]
         else:
@@ -292,7 +353,7 @@ class VisualQualityGuardrails:
                 passed=False,
                 score=0.0,
                 message="Could not analyze contrast (analysis failed)",
-                details={},
+                details={"diagnostic": stats.get("_error")} if stats else {},
             )
 
         y_std = stats["mean"]  # Standard deviation of luminance
@@ -329,12 +390,15 @@ class VisualQualityGuardrails:
         v_stats = self._run_ffprobe(video, "lavfi.signalstats.VAVG")
 
         if not u_stats or not v_stats:
+            diagnostics = [
+                stats.get("_error") for stats in (u_stats, v_stats) if isinstance(stats, dict) and stats.get("_error")
+            ]
             return QualityReport(
                 check_name="saturation",
                 passed=False,
                 score=0.0,
                 message="Could not analyze saturation (analysis failed)",
-                details={},
+                details={"diagnostics": diagnostics} if diagnostics else {},
             )
 
         u_mean = u_stats.get("mean", 128)
@@ -405,7 +469,7 @@ class VisualQualityGuardrails:
                 passed=False,
                 score=0.0,
                 message="Could not analyze audio levels (analysis failed)",
-                details={},
+                details={"diagnostic": loudness_data.get("_error")} if loudness_data else {},
             )
 
         # Parse loudnorm output
@@ -455,13 +519,13 @@ class VisualQualityGuardrails:
         """Check for color casts (RGB balance)."""
         rgb = self._get_rgb_means(video)
 
-        if rgb is None:
+        if not rgb or "r" not in rgb:
             return QualityReport(
                 check_name="color_balance",
                 passed=False,
                 score=0.0,
                 message="Could not analyze color balance (analysis failed)",
-                details={},
+                details={"diagnostic": rgb.get("_error")} if isinstance(rgb, dict) and rgb.get("_error") else {},
             )
 
         r, g, b = rgb["r"], rgb["g"], rgb["b"]

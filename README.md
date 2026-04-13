@@ -1,6 +1,6 @@
 <p align="center">
   <img src="https://img.shields.io/badge/version-1.2.0-blue.svg" alt="Version">
-  <img src="https://img.shields.io/badge/tests-832-brightgreen.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/tests-extensive-brightgreen.svg" alt="Tests">
   <a href="https://github.com/pastorsimon1798/mcp-video/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/pastorsimon1798/mcp-video/.github/workflows/ci.yml?branch=master&label=CI" alt="CI"></a>
   <img src="https://img.shields.io/badge/tools-82%20MCP%20tools-orange.svg" alt="Tools">
   <img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="License">
@@ -12,7 +12,7 @@
 <p align="center">
   <strong>Video editing and creation for AI agents.</strong><br>
   Edit existing video with FFmpeg. Create new video from code with Remotion.<br>
-  82 tools. 3 interfaces. 832 tests (707 fast, 116 slow/remotion).
+  82 tools. 3 interfaces. Extensive automated and real-media test coverage.
 </p>
 
 <p align="center">
@@ -704,7 +704,7 @@ mcp_video/
   engine.py              # Core FFmpeg engine (40 video operations)
   models.py              # Pydantic models (VideoInfo, EditResult, Timeline DSL)
   errors.py              # Error hierarchy + FFmpeg stderr parser
-  validation.py          # Centralized validation constants & helpers (v1.2.0)
+  validation.py          # Shared validation constants / allowed values
   templates.py           # Social media templates (TikTok, YouTube, Instagram)
   audio_engine.py        # Procedural audio synthesis (pure NumPy)
   effects_engine.py      # Visual effects + motion graphics (FFmpeg filters)
@@ -731,7 +731,7 @@ mcp_video/
 
 ## Testing
 
-832 tests across 22 test files. 707 run by default (fast unit + integration tests). 116 marked `@slow` (real media) or `@remotion` (Node.js) — run with `pytest tests/ -v`. Includes an adversarial security audit.
+mcp-video includes a broad automated test suite covering unit, integration, CLI, MCP server, security, and real-media workflows. The default CI path focuses on the non-slow Python test surface, while additional real-media and environment-sensitive tests can be run locally when the required tooling is available.
 
 ```bash
 # Install dev dependencies
@@ -803,3 +803,12 @@ pytest tests/ -v -m "not slow and not remotion"
 Apache 2.0 — see [LICENSE](LICENSE).
 
 Built on [FFmpeg](https://ffmpeg.org/), [Remotion](https://www.remotion.dev/), and the [Model Context Protocol](https://modelcontextprotocol.io/).
+
+### Important dependency licensing note
+
+The Python package itself is released under Apache 2.0, but some optional tooling has its own terms:
+
+- **FFmpeg** licensing depends on how FFmpeg is built and distributed.
+- **Remotion** uses its own commercial/free license model and may require a paid company license depending on your organization and usage.
+
+See [LEGAL_REVIEW.md](LEGAL_REVIEW.md) for a practical project-specific licensing and commercial-use summary.

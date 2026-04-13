@@ -11,6 +11,7 @@ from mcp_video.server import (
     _result,
     mcp,
     templates_resource,
+    video_audio_resource,
     transition_glitch,
     transition_pixelate,
     video_add_audio,
@@ -24,6 +25,7 @@ from mcp_video.server import (
     video_color_grade,
     video_compare_quality,
     video_convert,
+    video_chroma_key,
     video_create_from_images,
     video_crop,
     video_detect_scenes,
@@ -34,11 +36,13 @@ from mcp_video.server import (
     video_fade,
     video_filter,
     video_info,
+    video_info_resource,
     video_merge,
     video_mograph_progress,
     video_normalize_audio,
     video_overlay,
     video_preview,
+    video_preview_resource,
     video_read_metadata,
     video_resize,
     video_rotate,
@@ -301,6 +305,26 @@ class TestTemplatesResource:
         assert "mov" in formats
 
 
+class TestResourceErrorSerialization:
+    def test_video_info_resource_returns_json_error(self):
+        result = video_info_resource("/nonexistent/video.mp4")
+        data = json.loads(result)
+        assert data["success"] is False
+        assert "error" in data
+
+    def test_video_preview_resource_returns_json_error(self):
+        result = video_preview_resource("/nonexistent/video.mp4")
+        data = json.loads(result)
+        assert data["success"] is False
+        assert "error" in data
+
+    def test_video_audio_resource_returns_json_error(self):
+        result = video_audio_resource("/nonexistent/video.mp4")
+        data = json.loads(result)
+        assert data["success"] is False
+        assert "error" in data
+
+
 class TestVideoCropTool:
     def test_returns_success(self, sample_video):
         result = video_crop(sample_video, width=320, height=240)
@@ -318,6 +342,13 @@ class TestVideoRotateTool:
         result = video_rotate(sample_video, angle=90)
         assert result["success"] is True
         assert os.path.isfile(result["output_path"])
+
+
+class TestVideoChromaKeyTool:
+    def test_invalid_color_rejected(self, sample_video):
+        result = video_chroma_key(sample_video, color="invalid_color_name")
+        assert result["success"] is False
+        assert result["error"]["code"] == "invalid_parameter"
 
     def test_flip_horizontal(self, sample_video):
         result = video_rotate(sample_video, flip_horizontal=True)

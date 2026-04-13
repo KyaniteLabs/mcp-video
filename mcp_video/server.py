@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import re
@@ -10,6 +11,7 @@ from typing import Any
 from mcp.server.fastmcp import FastMCP
 
 from .engine import (
+    _validate_chroma_color,
     add_audio,
     add_text,
     apply_filter,
@@ -138,7 +140,7 @@ def video_info_resource(path: str) -> str:
         info = probe(path)
         return info.model_dump_json(indent=2)
     except MCPVideoError as e:
-        return _error_result(e).__str__()
+        return json.dumps(_error_result(e), indent=2)
 
 
 @mcp.resource("mcp-video://video/{path}/preview")
@@ -154,7 +156,7 @@ def video_preview_resource(path: str) -> str:
             frames.append(f"Frame {i + 1}: {ts:.1f}s")
         return "\n".join(frames)
     except MCPVideoError as e:
-        return _error_result(e).__str__()
+        return json.dumps(_error_result(e), indent=2)
 
 
 @mcp.resource("mcp-video://video/{path}/audio")
@@ -170,7 +172,7 @@ def video_audio_resource(path: str) -> str:
             )
         return "No audio track found."
     except MCPVideoError as e:
-        return _error_result(e).__str__()
+        return json.dumps(_error_result(e), indent=2)
 
 
 @mcp.resource("mcp-video://templates")
@@ -1079,15 +1081,10 @@ def video_chroma_key(
         blend: How much to blend the keyed color (default 0.0).
         output_path: Where to save the output. Auto-generated if omitted.
     """
-    # Validate color doesn't contain FFmpeg filter injection characters
-    if any(c in color for c in (":", "]", "[", ";", "\x00")):
-        return _error_result(
-            MCPVideoError(
-                f"Invalid color value containing forbidden characters: {color}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
+    try:
+        _validate_chroma_color(color)
+    except MCPVideoError as e:
+        return _error_result(e)
     if not 0 <= similarity <= 1:
         return _error_result(
             MCPVideoError(

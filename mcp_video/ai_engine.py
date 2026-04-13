@@ -50,7 +50,15 @@ def ai_transcribe(
     try:
         import whisper
     except ImportError:
-        raise RuntimeError("Whisper not installed. Install with: pip install openai-whisper") from None
+        raise MCPVideoError(
+            "Whisper not installed. Install with: pip install openai-whisper",
+            error_type="dependency_error",
+            code="missing_whisper",
+            suggested_action={
+                "auto_fix": False,
+                "description": "Install openai-whisper to enable transcription",
+            },
+        ) from None
 
     # Validate input file
     video_path = Path(video)
@@ -82,7 +90,7 @@ def ai_transcribe(
         except subprocess.TimeoutExpired:
             raise ProcessingError("Operation timed out after 600 seconds") from None
         if result.returncode != 0:
-            raise RuntimeError(f"FFmpeg audio extraction failed: {result.stderr}")
+            raise ProcessingError(" ".join(cmd), result.returncode, result.stderr)
 
         # Step 2: Load whisper model
         whisper_model = whisper.load_model(model)
@@ -878,7 +886,15 @@ def ai_stem_separation(
     try:
         import demucs.separate
     except ImportError:
-        raise RuntimeError("Demucs not installed. Install with: pip install demucs") from None
+        raise MCPVideoError(
+            "Demucs not installed. Install with: pip install demucs",
+            error_type="dependency_error",
+            code="missing_demucs",
+            suggested_action={
+                "auto_fix": False,
+                "description": "Install demucs to enable stem separation",
+            },
+        ) from None
 
     # Validate input file
     video_path = Path(video)
@@ -917,7 +933,7 @@ def ai_stem_separation(
         except subprocess.TimeoutExpired:
             raise ProcessingError("Operation timed out after 600 seconds") from None
         if result.returncode != 0:
-            raise RuntimeError(f"FFmpeg audio extraction failed: {result.stderr}")
+            raise ProcessingError(" ".join(cmd), result.returncode, result.stderr)
 
         # Step 2: Run Demucs separation
         # Demucs outputs to: output_dir/model_name/audio_name/stem.wav
@@ -1340,8 +1356,8 @@ def ai_upscale(
             return _ai_upscale_opencv(str(video_path), str(output_path), scale)
         except ImportError:
             raise RuntimeError(
-                "AI upscaling requires either realesrgan or opencv-python (cv2). "
-                "Install with: pip install realesrgan or pip install opencv-python"
+                "AI upscaling requires either realesrgan or opencv-contrib-python (cv2). "
+                "Install with: pip install realesrgan or pip install opencv-contrib-python"
             ) from None
 
     # Map model names to RRDBNet configurations

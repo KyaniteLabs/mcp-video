@@ -10,6 +10,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 # Add parent directory to path for direct execution
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -252,12 +253,43 @@ def sample_speech_video():
 class TestTranscription:
     """Tests for ai_transcribe function."""
 
+    def test_transcribe_missing_whisper_dependency(self, monkeypatch):
+        """Missing Whisper should raise a structured dependency error."""
+        import builtins
+
+        real_import = builtins.__import__
+
+        def mock_import(name, *args, **kwargs):
+            if name == "whisper":
+                raise ImportError("No module named 'whisper'")
+            return real_import(name, *args, **kwargs)
+
+        monkeypatch.setattr(builtins, "__import__", mock_import)
+
+        from mcp_video.ai_engine import ai_transcribe
+
+        with pytest.raises(MCPVideoError, match="Whisper not installed") as exc_info:
+            ai_transcribe("video.mp4")
+
+        assert exc_info.value.error_type == "dependency_error"
+        assert exc_info.value.code == "missing_whisper"
+
     def test_transcribe_file_not_found(self, skip_if_no_whisper):
         """Test that InputFileError is raised for missing video."""
         from mcp_video.ai_engine import ai_transcribe
 
         with pytest.raises(InputFileError, match="Input file error"):
             ai_transcribe("/nonexistent/video.mp4")
+
+    def test_transcribe_ffmpeg_extraction_failure(self, monkeypatch, skip_if_no_whisper, sample_video):
+        """FFmpeg extraction failure should surface as ProcessingError."""
+        from mcp_video.ai_engine import ai_transcribe
+        from mcp_video.errors import ProcessingError
+
+        monkeypatch.setattr("mcp_video.ai_engine.subprocess.run", lambda *a, **k: type("R", (), {"returncode": 1, "stderr": "boom"})())
+
+        with pytest.raises(ProcessingError, match="FFmpeg processing failed"):
+            ai_transcribe(sample_video)
 
     def test_transcribe_basic(self, skip_if_no_whisper, sample_speech_video):
         """Test basic transcription returns expected structure."""
@@ -845,6 +877,60 @@ def test_ai_upscale_missing_dependency():
 
         with pytest.raises(MCPVideoError, match="dnn_superres"):
             ai_upscale(input_video, output_video, scale=2)
+
+
+@requires_ffmpeg
+def test_ai_upscale_import_error_message_mentions_opencv_contrib(sample_video, tmp_path):
+    """ImportError fallback should point users to the supported OpenCV package."""
+    from mcp_video.ai_engine import ai_upscale
+
+    output_video = str(tmp_path / "output.mp4")
+
+    with (
+        patch("mcp_video.ai_engine._ai_upscale_opencv", side_effect=ImportError),
+        pytest.raises(RuntimeError, match="opencv-contrib-python"),
+    ):
+        ai_upscale(sample_video, output_video, scale=2)
+
+
+@requires_ffmpeg
+def test_ai_stem_separation_missing_demucs_dependency(monkeypatch, sample_video, tmp_path):
+    """Missing Demucs should raise a structured dependency error."""
+    import builtins
+
+    real_import = builtins.__import__
+
+    def mock_import(name, *args, **kwargs):
+        if name.startswith("demucs"):
+            raise ImportError("No module named 'demucs'")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", mock_import)
+
+    from mcp_video.ai_engine import ai_stem_separation
+
+    with pytest.raises(MCPVideoError, match="Demucs not installed") as exc_info:
+        ai_stem_separation(sample_video, str(tmp_path))
+
+    assert exc_info.value.error_type == "dependency_error"
+    assert exc_info.value.code == "missing_demucs"
+
+
+@requires_ffmpeg
+@pytest.mark.skipif(importlib.util.find_spec("demucs") is None, reason="Demucs not installed")
+def test_ai_stem_separation_ffmpeg_extraction_failure(monkeypatch, sample_video, tmp_path):
+    """Stem separation extraction failures should surface as ProcessingError."""
+    from mcp_video.ai_engine import ai_stem_separation
+    from mcp_video.errors import ProcessingError
+
+    class FakeRun:
+        returncode = 1
+        stderr = "boom"
+
+    monkeypatch.setattr("mcp_video.ai_engine.subprocess.run", lambda *a, **k: FakeRun())
+
+    with pytest.raises(ProcessingError, match="FFmpeg processing failed"):
+        ai_stem_separation(sample_video, str(tmp_path))
 
 
 @requires_ffmpeg
