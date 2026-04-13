@@ -704,7 +704,7 @@ mcp_video/
   engine.py              # Core FFmpeg engine (40 video operations)
   models.py              # Pydantic models (VideoInfo, EditResult, Timeline DSL)
   errors.py              # Error hierarchy + FFmpeg stderr parser
-  validation.py          # Centralized validation constants & helpers (v1.2.0)
+  validation.py          # Shared validation constants / allowed values
   templates.py           # Social media templates (TikTok, YouTube, Instagram)
   audio_engine.py        # Procedural audio synthesis (pure NumPy)
   effects_engine.py      # Visual effects + motion graphics (FFmpeg filters)

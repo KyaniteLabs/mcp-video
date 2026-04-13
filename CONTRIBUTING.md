@@ -30,7 +30,7 @@ mcp_video/
 ├── engine.py              # Core FFmpeg engine (40 video operations)
 ├── models.py              # Pydantic models (VideoInfo, EditResult, Timeline DSL)
 ├── errors.py              # Error hierarchy + FFmpeg stderr parser
-├── validation.py          # Centralized validation helpers & constants (v1.2.0)
+├── validation.py          # Shared validation constants / allowed values
 ├── ffmpeg_helpers.py      # Shared FFmpeg utilities (escape, validate, run) (v1.2.0)
 ├── templates.py           # Social media templates (TikTok, YouTube, Instagram)
 ├── audio_engine.py        # Procedural audio synthesis (pure NumPy)
@@ -100,7 +100,7 @@ tests/
 - **Validate in the server** — Parameter validation belongs in `server.py` (before calling the engine), not just in the engine. Use `_error_result(MCPVideoError(...))` for validation failures.
 - **Probe after processing** — Every operation that produces a video file should call `probe(output)` and return duration/resolution in the `EditResult`.
 - **Escape FFmpeg special chars** — Use `_escape_ffmpeg_filter_value()` from `ffmpeg_helpers.py` for paths/values going into FFmpeg filter strings.
-- **Validate paths** — Use `_validate_input()` (engine) or `_validate_input_path()` (effects/transitions) to reject null bytes and verify file existence. Use helpers from `validation.py` for parameter validation.
+- **Validate paths** — Use `_validate_input()` (engine) or `_validate_input_path()` (effects/transitions) to reject null bytes and verify file existence. Treat `validation.py` as the shared source of allowed-value constants, not a hidden catch-all helper layer.
 - **Sanitize output paths** — `_auto_output` replaces colons with underscores to prevent FFmpeg filter breakage.
 - **No shell=True** — All subprocess calls use list args, never shell strings.
 - **Keep it simple** — One function per operation. No classes for engines. No abstractions for one-time use.
