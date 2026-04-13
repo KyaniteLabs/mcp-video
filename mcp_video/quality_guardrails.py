@@ -74,10 +74,17 @@ class VisualQualityGuardrails:
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
             if result.returncode != 0:
+                logger.warning(
+                    "ffprobe signalstats returned nonzero exit for %s (filter=%s): %s",
+                    video,
+                    filter_name,
+                    result.stderr.strip()[:200],
+                )
                 return {}
             data = json.loads(result.stdout)
             frames = data.get("frames", [])
             if not frames:
+                logger.warning("ffprobe signalstats returned no frames for %s (filter=%s)", video, filter_name)
                 return {}
             # Average across all frames
             values = []
@@ -89,6 +96,7 @@ class VisualQualityGuardrails:
                     except (ValueError, TypeError):
                         continue
             if not values:
+                logger.warning("ffprobe signalstats returned no usable values for %s (filter=%s)", video, filter_name)
                 return {}
             return {"mean": sum(values) / len(values), "values": values}
         except subprocess.TimeoutExpired:
@@ -168,6 +176,7 @@ class VisualQualityGuardrails:
             if json_start >= 0 and json_end > json_start:
                 json_str = stderr[json_start:json_end]
                 return json.loads(json_str)
+            logger.warning("ffmpeg loudnorm returned no JSON payload for %s", video)
             return {}
         except subprocess.TimeoutExpired:
             logger.warning("ffmpeg loudnorm timed out for %s", video)
@@ -197,11 +206,13 @@ class VisualQualityGuardrails:
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
             if result.returncode != 0:
+                logger.warning("ffprobe RGB means returned nonzero exit for %s: %s", video, result.stderr.strip()[:200])
                 return None
 
             data = json.loads(result.stdout)
             frames = data.get("frames", [])
             if not frames:
+                logger.warning("ffprobe RGB means returned no frames for %s", video)
                 return None
 
             # Average RGB across frames
@@ -219,6 +230,7 @@ class VisualQualityGuardrails:
                         b_vals.append(float(tags["lavfi.signalstats.BAVG"]))
 
             if not (r_vals and g_vals and b_vals):
+                logger.warning("ffprobe RGB means returned incomplete RGB values for %s", video)
                 return None
 
             return {

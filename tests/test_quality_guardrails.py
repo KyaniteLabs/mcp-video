@@ -199,6 +199,30 @@ class TestVisualQualityGuardrails:
         lavfi_arg = cmd[cmd.index("-i") + 1]
         assert lavfi_arg.startswith("movie=/tmp/with\\:comma\\,\\[brackets\\].mp4")
 
+    def test_run_ffprobe_logs_nonzero_exit(self, guardrails):
+        fake = Mock(return_value=Mock(returncode=1, stdout="", stderr="ffprobe failed"))
+        with patch("mcp_video.quality_guardrails.subprocess.run", fake), patch(
+            "mcp_video.quality_guardrails.logger.warning"
+        ) as mock_warning:
+            assert guardrails._run_ffprobe("/tmp/test.mp4", "lavfi.signalstats.YAVG") == {}
+        mock_warning.assert_called()
+
+    def test_get_rgb_means_logs_nonzero_exit(self, guardrails):
+        fake = Mock(return_value=Mock(returncode=1, stdout="", stderr="ffprobe failed"))
+        with patch("mcp_video.quality_guardrails.subprocess.run", fake), patch(
+            "mcp_video.quality_guardrails.logger.warning"
+        ) as mock_warning:
+            assert guardrails._get_rgb_means("/tmp/test.mp4") is None
+        mock_warning.assert_called()
+
+    def test_analyze_loudnorm_logs_missing_json(self, guardrails):
+        fake = Mock(return_value=Mock(returncode=0, stdout="", stderr="no structured data"))
+        with patch("mcp_video.quality_guardrails.subprocess.run", fake), patch(
+            "mcp_video.quality_guardrails.logger.warning"
+        ) as mock_warning:
+            assert guardrails._analyze_loudnorm("/tmp/test.mp4") == {}
+        mock_warning.assert_called()
+
     def test_check_audio_levels_with_audio(self, guardrails, tmp_path):
         """Test audio levels check on video with audio."""
         video_path = str(tmp_path / "test.mp4")
