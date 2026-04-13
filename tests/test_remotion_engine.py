@@ -118,13 +118,13 @@ class TestValidateProject:
 
     def test_raises_when_no_package_json(self, tmp_path):
         """Should raise RemotionProjectError when package.json is missing."""
-        with pytest.raises(RemotionProjectError, match="Missing package.json"):
+        with pytest.raises(RemotionProjectError, match=r"Missing package\.json"):
             _validate_project(str(tmp_path))
 
     def test_raises_when_no_root_tsx(self, tmp_path):
         """Should raise RemotionProjectError when src/Root.tsx is missing."""
         (tmp_path / "package.json").write_text("{}")
-        with pytest.raises(RemotionProjectError, match="Missing src/Root.tsx"):
+        with pytest.raises(RemotionProjectError, match=r"Missing src/Root\.tsx"):
             _validate_project(str(tmp_path))
 
     def test_returns_resolved_path_on_success(self, tmp_path):
@@ -886,7 +886,7 @@ class TestRenderAndPost:
              patch("os.path.isfile", return_value=True), \
              patch("os.path.getsize", return_value=1024):
 
-            with pytest.raises(ValueError, match="Unknown post-processing operation.*nonexistent_op"):
+            with pytest.raises(ValueError, match=r"Unknown post-processing operation.*nonexistent_op"):
                 render_and_post(
                     project,
                     composition_id="Comp",

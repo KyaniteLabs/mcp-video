@@ -248,43 +248,43 @@ class TestParameterBounds:
     def test_audio_frequency_too_low(self) -> None:
         """Frequency below 20 Hz is rejected."""
         from mcp_video.audio_engine import audio_synthesize
-        with pytest.raises(MCPVideoError, match="[Ff]requency"):
+        with pytest.raises(MCPVideoError, match=r"[Ff]requency"):
             audio_synthesize("/tmp/test.wav", frequency=5)
 
     def test_audio_frequency_too_high(self) -> None:
         """Frequency above 20000 Hz is rejected."""
         from mcp_video.audio_engine import audio_synthesize
-        with pytest.raises(MCPVideoError, match="[Ff]requency"):
+        with pytest.raises(MCPVideoError, match=r"[Ff]requency"):
             audio_synthesize("/tmp/test.wav", frequency=50000)
 
     def test_audio_frequency_zero(self) -> None:
         """Frequency of 0 Hz is rejected."""
         from mcp_video.audio_engine import audio_synthesize
-        with pytest.raises(MCPVideoError, match="[Ff]requency"):
+        with pytest.raises(MCPVideoError, match=r"[Ff]requency"):
             audio_synthesize("/tmp/test.wav", frequency=0)
 
     def test_audio_duration_too_short(self) -> None:
         """Duration below 0.01s is rejected."""
         from mcp_video.audio_engine import audio_synthesize
-        with pytest.raises(MCPVideoError, match="[Dd]uration"):
+        with pytest.raises(MCPVideoError, match=r"[Dd]uration"):
             audio_synthesize("/tmp/test.wav", duration=0.001)
 
     def test_audio_duration_too_long(self) -> None:
         """Duration above MAX_AUDIO_DURATION is rejected."""
         from mcp_video.audio_engine import audio_synthesize
-        with pytest.raises(MCPVideoError, match="[Dd]uration"):
+        with pytest.raises(MCPVideoError, match=r"[Dd]uration"):
             audio_synthesize("/tmp/test.wav", duration=100000)
 
     def test_audio_volume_negative(self) -> None:
         """Negative volume is rejected."""
         from mcp_video.audio_engine import audio_synthesize
-        with pytest.raises(MCPVideoError, match="[Vv]olume"):
+        with pytest.raises(MCPVideoError, match=r"[Vv]olume"):
             audio_synthesize("/tmp/test.wav", volume=-0.5)
 
     def test_audio_volume_over_one(self) -> None:
         """Volume > 1.0 is rejected."""
         from mcp_video.audio_engine import audio_synthesize
-        with pytest.raises(MCPVideoError, match="[Vv]olume"):
+        with pytest.raises(MCPVideoError, match=r"[Vv]olume"):
             audio_synthesize("/tmp/test.wav", volume=1.5)
 
     def test_audio_valid_bounds(self) -> None:
