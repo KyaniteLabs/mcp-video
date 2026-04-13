@@ -281,6 +281,16 @@ class TestTranscription:
         with pytest.raises(InputFileError, match="Input file error"):
             ai_transcribe("/nonexistent/video.mp4")
 
+    def test_transcribe_ffmpeg_extraction_failure(self, monkeypatch, skip_if_no_whisper, sample_video):
+        """FFmpeg extraction failure should surface as ProcessingError."""
+        from mcp_video.ai_engine import ai_transcribe
+        from mcp_video.errors import ProcessingError
+
+        monkeypatch.setattr("mcp_video.ai_engine.subprocess.run", lambda *a, **k: type("R", (), {"returncode": 1, "stderr": "boom"})())
+
+        with pytest.raises(ProcessingError, match="FFmpeg processing failed"):
+            ai_transcribe(sample_video)
+
     def test_transcribe_basic(self, skip_if_no_whisper, sample_speech_video):
         """Test basic transcription returns expected structure."""
         from mcp_video.ai_engine import ai_transcribe
@@ -904,6 +914,23 @@ def test_ai_stem_separation_missing_demucs_dependency(monkeypatch, sample_video,
 
     assert exc_info.value.error_type == "dependency_error"
     assert exc_info.value.code == "missing_demucs"
+
+
+@requires_ffmpeg
+@pytest.mark.skipif(importlib.util.find_spec("demucs") is None, reason="Demucs not installed")
+def test_ai_stem_separation_ffmpeg_extraction_failure(monkeypatch, sample_video, tmp_path):
+    """Stem separation extraction failures should surface as ProcessingError."""
+    from mcp_video.ai_engine import ai_stem_separation
+    from mcp_video.errors import ProcessingError
+
+    class FakeRun:
+        returncode = 1
+        stderr = "boom"
+
+    monkeypatch.setattr("mcp_video.ai_engine.subprocess.run", lambda *a, **k: FakeRun())
+
+    with pytest.raises(ProcessingError, match="FFmpeg processing failed"):
+        ai_stem_separation(sample_video, str(tmp_path))
 
 
 @requires_ffmpeg

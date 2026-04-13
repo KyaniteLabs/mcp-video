@@ -90,7 +90,7 @@ def ai_transcribe(
         except subprocess.TimeoutExpired:
             raise ProcessingError("Operation timed out after 600 seconds") from None
         if result.returncode != 0:
-            raise RuntimeError(f"FFmpeg audio extraction failed: {result.stderr}")
+            raise ProcessingError(" ".join(cmd), result.returncode, result.stderr)
 
         # Step 2: Load whisper model
         whisper_model = whisper.load_model(model)
@@ -933,7 +933,7 @@ def ai_stem_separation(
         except subprocess.TimeoutExpired:
             raise ProcessingError("Operation timed out after 600 seconds") from None
         if result.returncode != 0:
-            raise RuntimeError(f"FFmpeg audio extraction failed: {result.stderr}")
+            raise ProcessingError(" ".join(cmd), result.returncode, result.stderr)
 
         # Step 2: Run Demucs separation
         # Demucs outputs to: output_dir/model_name/audio_name/stem.wav
