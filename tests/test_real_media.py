@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import os
 import shutil
-import subprocess
 
 import pytest
 
@@ -23,7 +22,6 @@ from mcp_video.engine import (
     probe,
 )
 from mcp_video.server import video_batch
-from mcp_video.models import EditResult
 
 
 # ---------------------------------------------------------------------------

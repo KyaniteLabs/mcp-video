@@ -53,13 +53,13 @@ python -m pytest tests/test_real_all_features.py -v -m "not slow"
 ### 4. AI Stem Separation (`test_43_ai_stem_separation`)
 - Uses Facebook Demucs
 - Separates vocals, drums, bass, other
-- Requires: `demucs`, `torchcodec`
+- Provided by the `mcp-video[ai]` extra (`demucs`, `torch`, `torchaudio`)
 
 ### 5. AI Upscale (`test_44_ai_upscale`)
 - OpenCV DNN with FSRCNN model (57KB, fast)
 - Real-ESRGAN fallback (if basicsr fixed)
 - 2x and 4x upscaling
-- Requires: `opencv-contrib-python`
+- Provided by the `mcp-video[ai]` extra (`opencv-contrib-python`, `numpy`)
 
 ### 6. AI Color Grade (`test_45_ai_color_grade`)
 - Auto color grading
@@ -86,14 +86,11 @@ ffmpeg -filters | grep vidstab
 
 ### Python Packages
 ```bash
-# AI stem separation
-pip install demucs torchcodec
+# Install the optional AI stack
+pip install "mcp-video[ai]"
 
-# AI upscaling  
-pip install opencv-contrib-python
-
-# Transcription
-pip install openai-whisper
+# Or install individual packages if you only need a subset
+pip install demucs torch torchaudio openai-whisper realesrgan basicsr imagehash numpy opencv-contrib-python
 ```
 
 ## Test Fixtures

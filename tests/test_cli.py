@@ -11,7 +11,7 @@ from mcp_video import __version__
 
 def run_cli(*args: str, expect_fail: bool = False) -> subprocess.CompletedProcess:
     """Run mcp-video CLI and return result."""
-    cmd = [sys.executable, "-m", "mcp_video"] + list(args)
+    cmd = [sys.executable, "-m", "mcp_video", *list(args)]
     result = subprocess.run(
         cmd,
         capture_output=True,
@@ -199,10 +199,7 @@ class TestCLICreateFromImages:
         result = run_cli_json("create-from-images", sample_watermark_png, sample_watermark_png, expect_fail=True)
         # May fail if FFmpeg can't process the single-frame image
         # Check stderr for JSON error response
-        if result.returncode != 0:
-            data = json.loads(result.stderr)
-        else:
-            data = json.loads(result.stdout)
+        data = json.loads(result.stderr) if result.returncode != 0 else json.loads(result.stdout)
         # Just check that we get a valid response
         assert "success" in data
 
