@@ -115,6 +115,20 @@ tests/
 - Run the full suite before pushing: `pytest tests/ -v -m "not slow" --tb=short`
 - Target: 832 tests, 0 failures (707 fast, 116 slow/remotion)
 
+### Automated tests vs manual scripts
+
+- Files under pytest discovery must be **hermetic automated tests** only.
+- Manual experiments, local-media scripts, and research sweeps must **not** live in `test_*.py` names that pytest will auto-collect.
+- If a script depends on author-local files, machine-specific paths, or exploratory output review, place it under a non-pytest path such as `manual/` or `research/`.
+- Before adding a new test file, verify its name and location are appropriate for CI collection.
+
+### Repository artifact policy
+
+- Do **not** commit generated logs, browser captures, temporary research extracts, or render outputs unless they are explicitly curated release assets.
+- Generated media belongs outside source control by default.
+- Research/reference material derived from third-party sites must be provenance-reviewed before it is tracked or published.
+- If an artifact should never reach GitHub Pages or release archives, it should not remain in the tracked product surface.
+
 ## Commit Messages
 
 Keep them short and descriptive:
