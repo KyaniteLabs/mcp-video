@@ -1340,8 +1340,8 @@ def ai_upscale(
             return _ai_upscale_opencv(str(video_path), str(output_path), scale)
         except ImportError:
             raise RuntimeError(
-                "AI upscaling requires either realesrgan or opencv-python (cv2). "
-                "Install with: pip install realesrgan or pip install opencv-python"
+                "AI upscaling requires either realesrgan or opencv-contrib-python (cv2). "
+                "Install with: pip install realesrgan or pip install opencv-contrib-python"
             ) from None
 
     # Map model names to RRDBNet configurations

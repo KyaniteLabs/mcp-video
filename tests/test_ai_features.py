@@ -10,6 +10,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 # Add parent directory to path for direct execution
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -845,6 +846,20 @@ def test_ai_upscale_missing_dependency():
 
         with pytest.raises(MCPVideoError, match="dnn_superres"):
             ai_upscale(input_video, output_video, scale=2)
+
+
+@requires_ffmpeg
+def test_ai_upscale_import_error_message_mentions_opencv_contrib(sample_video, tmp_path):
+    """ImportError fallback should point users to the supported OpenCV package."""
+    from mcp_video.ai_engine import ai_upscale
+
+    output_video = str(tmp_path / "output.mp4")
+
+    with (
+        patch("mcp_video.ai_engine._ai_upscale_opencv", side_effect=ImportError),
+        pytest.raises(RuntimeError, match="opencv-contrib-python"),
+    ):
+        ai_upscale(sample_video, output_video, scale=2)
 
 
 @requires_ffmpeg
