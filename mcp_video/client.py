@@ -180,6 +180,11 @@ class Client:
     _VALID_FORMATS: ClassVar[set[str]] = {"mp4", "webm", "gif", "mov"}
     _VALID_QUALITIES: ClassVar[set[str]] = {"low", "medium", "high", "ultra"}
 
+    @staticmethod
+    def _validate_choice(name: str, value: str, valid_values: set[str]) -> None:
+        if value not in valid_values:
+            raise ValueError(f"{name} must be one of {sorted(valid_values)}, got {value}")
+
     def convert(
         self,
         video: str,
@@ -202,10 +207,8 @@ class Client:
         Raises:
             ValueError: If format or quality is invalid
         """
-        if format not in self._VALID_FORMATS:
-            raise ValueError(f"format must be one of {sorted(self._VALID_FORMATS)}, got {format}")
-        if quality not in self._VALID_QUALITIES:
-            raise ValueError(f"quality must be one of {sorted(self._VALID_QUALITIES)}, got {quality}")
+        self._validate_choice("format", format, self._VALID_FORMATS)
+        self._validate_choice("quality", quality, self._VALID_QUALITIES)
         return _convert(
             video, format=format, quality=quality, output_path=output, two_pass=two_pass, target_bitrate=target_bitrate
         )
@@ -349,10 +352,8 @@ class Client:
         Raises:
             ValueError: If quality is invalid
         """
-        if quality not in self._VALID_QUALITIES:
-            raise ValueError(f"quality must be one of {sorted(self._VALID_QUALITIES)}, got {quality}")
-        if format not in self._VALID_FORMATS:
-            raise ValueError(f"format must be one of {sorted(self._VALID_FORMATS)}, got {format}")
+        self._validate_choice("quality", quality, self._VALID_QUALITIES)
+        self._validate_choice("format", format, self._VALID_FORMATS)
         return _export_video(video, output_path=output, quality=quality, format=format)
 
     def edit(self, timeline: dict[str, Any], output: str | None = None) -> EditResult:
@@ -1014,8 +1015,7 @@ class Client:
         Raises:
             ValueError: If layout is invalid
         """
-        if layout not in self._VALID_LAYOUTS:
-            raise ValueError(f"layout must be one of {sorted(self._VALID_LAYOUTS)}, got {layout}")
+        self._validate_choice("layout", layout, self._VALID_LAYOUTS)
         from .effects_engine import layout_grid
 
         return layout_grid(clips, layout, output, gap, padding, background)
@@ -1050,8 +1050,7 @@ class Client:
         Raises:
             ValueError: If position is invalid
         """
-        if position not in self._VALID_PIP_POSITIONS:
-            raise ValueError(f"position must be one of {sorted(self._VALID_PIP_POSITIONS)}, got {position}")
+        self._validate_choice("position", position, self._VALID_PIP_POSITIONS)
         from .effects_engine import layout_pip
 
         return layout_pip(
