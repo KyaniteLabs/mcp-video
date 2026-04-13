@@ -267,7 +267,7 @@ class TestTranscription:
         with tempfile.TemporaryDirectory() as tmpdir:
             output_srt = os.path.join(tmpdir, "output.srt")
 
-            ai_transcribe(
+            result = ai_transcribe(
                 sample_speech_video,
                 output_srt=output_srt,
                 model="tiny",
