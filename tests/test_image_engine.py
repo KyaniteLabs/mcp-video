@@ -36,33 +36,33 @@ class TestRgbToHex:
 class TestRgbToHsl:
     def test_red(self):
         from mcp_video.image_engine import _rgb_to_hsl
-        h, l, s = _rgb_to_hsl(255, 0, 0)
+        h, lightness, s = _rgb_to_hsl(255, 0, 0)
         assert h == pytest.approx(0.0, abs=0.01)
         assert s == pytest.approx(1.0, abs=0.01)
-        assert l == pytest.approx(0.5, abs=0.01)
+        assert lightness == pytest.approx(0.5, abs=0.01)
 
     def test_white(self):
         from mcp_video.image_engine import _rgb_to_hsl
-        h, l, s = _rgb_to_hsl(255, 255, 255)
-        assert l == pytest.approx(1.0, abs=0.01)
+        h, lightness, s = _rgb_to_hsl(255, 255, 255)
+        assert lightness == pytest.approx(1.0, abs=0.01)
 
     def test_black(self):
         from mcp_video.image_engine import _rgb_to_hsl
-        h, l, s = _rgb_to_hsl(0, 0, 0)
-        assert l == pytest.approx(0.0, abs=0.01)
+        h, lightness, s = _rgb_to_hsl(0, 0, 0)
+        assert lightness == pytest.approx(0.0, abs=0.01)
 
 
 class TestHslToRgb:
     def test_roundtrip_red(self):
         from mcp_video.image_engine import _hsl_to_rgb, _rgb_to_hsl
-        h, l, s = _rgb_to_hsl(255, 0, 0)
-        r, g, b = _hsl_to_rgb(h, s, l)
+        h, lightness, s = _rgb_to_hsl(255, 0, 0)
+        r, g, b = _hsl_to_rgb(h, s, lightness)
         assert (r, g, b) == (255, 0, 0)
 
     def test_roundtrip_blue(self):
         from mcp_video.image_engine import _hsl_to_rgb, _rgb_to_hsl
-        h, l, s = _rgb_to_hsl(0, 0, 255)
-        r, g, b = _hsl_to_rgb(h, s, l)
+        h, lightness, s = _rgb_to_hsl(0, 0, 255)
+        r, g, b = _hsl_to_rgb(h, s, lightness)
         assert (r, g, b) == (0, 0, 255)
 
 
