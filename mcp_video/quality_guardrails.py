@@ -390,7 +390,9 @@ class VisualQualityGuardrails:
         v_stats = self._run_ffprobe(video, "lavfi.signalstats.VAVG")
 
         if not u_stats or not v_stats:
-            diagnostics = [stats.get("_error") for stats in (u_stats, v_stats) if isinstance(stats, dict) and stats.get("_error")]
+            diagnostics = [
+                stats.get("_error") for stats in (u_stats, v_stats) if isinstance(stats, dict) and stats.get("_error")
+            ]
             return QualityReport(
                 check_name="saturation",
                 passed=False,
