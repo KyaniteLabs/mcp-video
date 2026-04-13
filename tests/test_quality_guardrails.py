@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import subprocess
 import tempfile
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -185,6 +186,18 @@ class TestVisualQualityGuardrails:
             details = report.details
             if details.get("color_cast"):
                 assert "red" in details["color_cast"] or report.score < 70
+
+    def test_get_rgb_means_escapes_lavfi_path(self, guardrails):
+        """RGB analysis should escape lavfi movie paths the same way as other ffprobe helpers."""
+        special_path = "/tmp/with:comma,[brackets].mp4"
+        fake = Mock(return_value=Mock(returncode=1, stdout="", stderr="bad path"))
+
+        with patch("mcp_video.quality_guardrails.subprocess.run", fake):
+            guardrails._get_rgb_means(special_path)
+
+        cmd = fake.call_args.args[0]
+        lavfi_arg = cmd[cmd.index("-i") + 1]
+        assert lavfi_arg.startswith("movie=/tmp/with\\:comma\\,\\[brackets\\].mp4")
 
     def test_check_audio_levels_with_audio(self, guardrails, tmp_path):
         """Test audio levels check on video with audio."""

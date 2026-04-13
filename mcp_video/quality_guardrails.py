@@ -188,7 +188,7 @@ class VisualQualityGuardrails:
             "-f",
             "lavfi",
             "-i",
-            f"movie={video},signalstats",
+            f"movie={_escape_lavfi_path(video)},signalstats",
             "-show_entries",
             "frame_tags=lavfi.signalstats.RAVG,lavfi.signalstats.GAVG,lavfi.signalstats.BAVG",
             "-of",
