@@ -1084,9 +1084,7 @@ def video_chroma_key(
     try:
         _validate_chroma_color(color)
     except MCPVideoError as e:
-        return _error_result(
-            e
-        )
+        return _error_result(e)
     if not 0 <= similarity <= 1:
         return _error_result(
             MCPVideoError(
