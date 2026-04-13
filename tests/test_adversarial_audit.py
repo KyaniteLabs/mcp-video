@@ -6,7 +6,6 @@ parameter bounds, and consistency across all engines.
 
 from __future__ import annotations
 
-import os
 
 import pytest
 
@@ -199,7 +198,7 @@ class TestTimeoutProtection:
     def test_effects_engine_has_timeout(self) -> None:
         """effects_engine subprocess.run calls include timeout parameter."""
         import inspect
-        from mcp_video import effects_engine, ffmpeg_helpers
+        from mcp_video import ffmpeg_helpers
         # Timeout lives in the shared ffmpeg_helpers module used by effects_engine
         source = inspect.getsource(ffmpeg_helpers)
         assert "timeout=" in source or "timeout =" in source
@@ -207,7 +206,7 @@ class TestTimeoutProtection:
     def test_transitions_engine_has_timeout(self) -> None:
         """transitions_engine subprocess.run calls include timeout parameter."""
         import inspect
-        from mcp_video import transitions_engine, ffmpeg_helpers
+        from mcp_video import ffmpeg_helpers
         # Timeout lives in the shared ffmpeg_helpers module used by transitions_engine
         source = inspect.getsource(ffmpeg_helpers)
         assert "timeout=" in source or "timeout =" in source
@@ -291,7 +290,7 @@ class TestParameterBounds:
     def test_audio_valid_bounds(self) -> None:
         """Valid bounds at edges are accepted."""
         from mcp_video.audio_engine import audio_synthesize
-        from mcp_video.limits import MIN_FREQUENCY, MAX_FREQUENCY
+        from mcp_video.limits import MIN_FREQUENCY
         # These should NOT raise - just validate params, don't actually run
         # We can't easily test without creating a file, so just test validation
         # by checking the function doesn't raise at boundary values

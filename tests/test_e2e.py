@@ -7,12 +7,8 @@ import pytest
 from mcp_video import Client
 from mcp_video.engine import (
     _check_filter_available,
-    convert,
-    extract_audio,
     get_duration,
     probe,
-    storyboard,
-    thumbnail,
 )
 from mcp_video.templates import tiktok_template
 

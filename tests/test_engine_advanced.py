@@ -31,7 +31,7 @@ from mcp_video.engine import (
     watermark,
 )
 from mcp_video.models import Timeline, TimelineClip, TimelineTrack
-from mcp_video.errors import InputFileError, MCPVideoError, ProcessingError
+from mcp_video.errors import InputFileError, MCPVideoError
 
 
 def requires_filter(name: str, feature: str):

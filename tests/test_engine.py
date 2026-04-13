@@ -1,6 +1,5 @@
 """Tests for the FFmpeg engine."""
 
-import json
 import os
 
 import pytest
@@ -24,9 +23,8 @@ from mcp_video.engine import (
     subtitles,
     thumbnail,
     trim,
-    watermark,
 )
-from mcp_video.errors import MCPVideoError, InputFileError
+from mcp_video.errors import InputFileError
 from mcp_video.models import VideoInfo
 
 

@@ -1,8 +1,6 @@
 """Red team: adversarial edge-case tests for mcp-video."""
-import json
 import os
 import subprocess
-import tempfile
 
 import pytest
 
@@ -10,7 +8,7 @@ from mcp_video.engine import (
     add_text, apply_filter, audio_waveform, chroma_key, compare_quality,
     convert, crop, create_from_images, detect_scenes, edit_timeline,
     export_frames, extract_audio, fade, generate_subtitles, merge,
-    normalize_audio, overlay_video, probe, read_metadata, reverse,
+    normalize_audio, overlay_video, probe, reverse,
     rotate, speed, split_screen, stabilize, storyboard, thumbnail,
     trim, watermark, write_metadata, apply_mask
 )

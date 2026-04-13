@@ -12,7 +12,6 @@ import sys
 import pytest
 import tempfile
 import subprocess
-import json
 import importlib.util
 from pathlib import Path
 

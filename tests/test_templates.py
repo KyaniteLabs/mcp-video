@@ -1,6 +1,5 @@
 """Tests for editing templates — no FFmpeg needed (validate JSON output)."""
 
-import pytest
 
 from mcp_video.templates import (
     TEMPLATES,
