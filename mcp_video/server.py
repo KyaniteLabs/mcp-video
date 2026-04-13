@@ -11,6 +11,7 @@ from typing import Any
 from mcp.server.fastmcp import FastMCP
 
 from .engine import (
+    _validate_chroma_color,
     add_audio,
     add_text,
     apply_filter,
@@ -1080,14 +1081,11 @@ def video_chroma_key(
         blend: How much to blend the keyed color (default 0.0).
         output_path: Where to save the output. Auto-generated if omitted.
     """
-    # Validate color doesn't contain FFmpeg filter injection characters
-    if any(c in color for c in (":", "]", "[", ";", "\x00")):
+    try:
+        _validate_chroma_color(color)
+    except MCPVideoError as e:
         return _error_result(
-            MCPVideoError(
-                f"Invalid color value containing forbidden characters: {color}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
+            e
         )
     if not 0 <= similarity <= 1:
         return _error_result(

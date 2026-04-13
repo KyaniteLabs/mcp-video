@@ -25,6 +25,7 @@ from mcp_video.server import (
     video_color_grade,
     video_compare_quality,
     video_convert,
+    video_chroma_key,
     video_create_from_images,
     video_crop,
     video_detect_scenes,
@@ -341,6 +342,13 @@ class TestVideoRotateTool:
         result = video_rotate(sample_video, angle=90)
         assert result["success"] is True
         assert os.path.isfile(result["output_path"])
+
+
+class TestVideoChromaKeyTool:
+    def test_invalid_color_rejected(self, sample_video):
+        result = video_chroma_key(sample_video, color="invalid_color_name")
+        assert result["success"] is False
+        assert result["error"]["code"] == "invalid_parameter"
 
     def test_flip_horizontal(self, sample_video):
         result = video_rotate(sample_video, flip_horizontal=True)
