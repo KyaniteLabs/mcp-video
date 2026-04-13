@@ -253,6 +253,27 @@ def sample_speech_video():
 class TestTranscription:
     """Tests for ai_transcribe function."""
 
+    def test_transcribe_missing_whisper_dependency(self, monkeypatch):
+        """Missing Whisper should raise a structured dependency error."""
+        import builtins
+
+        real_import = builtins.__import__
+
+        def mock_import(name, *args, **kwargs):
+            if name == "whisper":
+                raise ImportError("No module named 'whisper'")
+            return real_import(name, *args, **kwargs)
+
+        monkeypatch.setattr(builtins, "__import__", mock_import)
+
+        from mcp_video.ai_engine import ai_transcribe
+
+        with pytest.raises(MCPVideoError, match="Whisper not installed") as exc_info:
+            ai_transcribe("video.mp4")
+
+        assert exc_info.value.error_type == "dependency_error"
+        assert exc_info.value.code == "missing_whisper"
+
     def test_transcribe_file_not_found(self, skip_if_no_whisper):
         """Test that InputFileError is raised for missing video."""
         from mcp_video.ai_engine import ai_transcribe
@@ -860,6 +881,29 @@ def test_ai_upscale_import_error_message_mentions_opencv_contrib(sample_video, t
         pytest.raises(RuntimeError, match="opencv-contrib-python"),
     ):
         ai_upscale(sample_video, output_video, scale=2)
+
+
+@requires_ffmpeg
+def test_ai_stem_separation_missing_demucs_dependency(monkeypatch, sample_video, tmp_path):
+    """Missing Demucs should raise a structured dependency error."""
+    import builtins
+
+    real_import = builtins.__import__
+
+    def mock_import(name, *args, **kwargs):
+        if name.startswith("demucs"):
+            raise ImportError("No module named 'demucs'")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", mock_import)
+
+    from mcp_video.ai_engine import ai_stem_separation
+
+    with pytest.raises(MCPVideoError, match="Demucs not installed") as exc_info:
+        ai_stem_separation(sample_video, str(tmp_path))
+
+    assert exc_info.value.error_type == "dependency_error"
+    assert exc_info.value.code == "missing_demucs"
 
 
 @requires_ffmpeg
