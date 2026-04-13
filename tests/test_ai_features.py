@@ -3,6 +3,7 @@
 These tests use optional dependencies and gracefully skip if not installed.
 """
 
+import importlib.util
 import os
 import shutil
 import subprocess
@@ -235,9 +236,7 @@ def create_video_with_speech(output_path: str) -> str:
 @pytest.fixture
 def skip_if_no_whisper():
     """Skip test if whisper is not installed."""
-    try:
-        import whisper
-    except ImportError:
+    if importlib.util.find_spec("whisper") is None:
         pytest.skip("Whisper not installed, skipping test")
 
 
@@ -785,11 +784,7 @@ def get_video_resolution(video_path):
 
 def realesrgan_installed():
     """Check if realesrgan is installed."""
-    try:
-        from realesrgan import RealESRGANer
-        return True
-    except ImportError:
-        return False
+    return importlib.util.find_spec("realesrgan") is not None
 
 
 requires_realesrgan = pytest.mark.skipif(
@@ -905,7 +900,8 @@ if __name__ == "__main__":
 
     # Check if whisper is installed for other tests
     try:
-        import whisper
+        if importlib.util.find_spec("whisper") is None:
+            raise ImportError
         print("\n✓ Whisper is installed, running transcription tests...")
 
         try:

@@ -121,9 +121,12 @@ class TestValidateImage:
 
 try:
     import PIL.Image
-    import numpy
-    from sklearn.cluster import MiniBatchKMeans
-    HAS_IMAGE_DEPS = True
+    import importlib.util
+
+    HAS_IMAGE_DEPS = all(
+        importlib.util.find_spec(module) is not None
+        for module in ("numpy", "sklearn")
+    )
 except ImportError:
     HAS_IMAGE_DEPS = False
 
