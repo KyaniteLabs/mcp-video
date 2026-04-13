@@ -120,9 +120,9 @@ class TestValidateImage:
 # ---------------------------------------------------------------------------
 
 try:
-    import PIL.Image  # noqa: F401
-    import numpy  # noqa: F401
-    from sklearn.cluster import MiniBatchKMeans  # noqa: F401
+    import PIL.Image
+    import numpy
+    from sklearn.cluster import MiniBatchKMeans
     HAS_IMAGE_DEPS = True
 except ImportError:
     HAS_IMAGE_DEPS = False

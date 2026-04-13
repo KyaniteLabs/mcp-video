@@ -236,7 +236,7 @@ def create_video_with_speech(output_path: str) -> str:
 def skip_if_no_whisper():
     """Skip test if whisper is not installed."""
     try:
-        import whisper  # noqa: F401
+        import whisper
     except ImportError:
         pytest.skip("Whisper not installed, skipping test")
 
@@ -786,7 +786,7 @@ def get_video_resolution(video_path):
 def realesrgan_installed():
     """Check if realesrgan is installed."""
     try:
-        from realesrgan import RealESRGANer  # noqa: F401
+        from realesrgan import RealESRGANer
         return True
     except ImportError:
         return False
@@ -832,7 +832,7 @@ def test_ai_upscale_missing_dependency():
 
     # Also skip if OpenCV is not available (fallback path requires it)
     try:
-        import cv2  # noqa: F401
+        import cv2
     except ImportError:
         pytest.skip("OpenCV not available, cannot test fallback path")
 
@@ -905,7 +905,7 @@ if __name__ == "__main__":
 
     # Check if whisper is installed for other tests
     try:
-        import whisper  # noqa: F401
+        import whisper
         print("\n✓ Whisper is installed, running transcription tests...")
 
         try:
