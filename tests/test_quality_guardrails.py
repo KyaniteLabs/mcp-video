@@ -204,7 +204,8 @@ class TestVisualQualityGuardrails:
         with patch("mcp_video.quality_guardrails.subprocess.run", fake), patch(
             "mcp_video.quality_guardrails.logger.warning"
         ) as mock_warning:
-            assert guardrails._run_ffprobe("/tmp/test.mp4", "lavfi.signalstats.YAVG") == {}
+            result = guardrails._run_ffprobe("/tmp/test.mp4", "lavfi.signalstats.YAVG")
+            assert result["_error"]["stage"] == "ffprobe_signalstats"
         mock_warning.assert_called()
 
     def test_get_rgb_means_logs_nonzero_exit(self, guardrails):
@@ -212,7 +213,8 @@ class TestVisualQualityGuardrails:
         with patch("mcp_video.quality_guardrails.subprocess.run", fake), patch(
             "mcp_video.quality_guardrails.logger.warning"
         ) as mock_warning:
-            assert guardrails._get_rgb_means("/tmp/test.mp4") is None
+            result = guardrails._get_rgb_means("/tmp/test.mp4")
+            assert result["_error"]["stage"] == "ffprobe_rgb_means"
         mock_warning.assert_called()
 
     def test_analyze_loudnorm_logs_missing_json(self, guardrails):
@@ -220,8 +222,24 @@ class TestVisualQualityGuardrails:
         with patch("mcp_video.quality_guardrails.subprocess.run", fake), patch(
             "mcp_video.quality_guardrails.logger.warning"
         ) as mock_warning:
-            assert guardrails._analyze_loudnorm("/tmp/test.mp4") == {}
+            result = guardrails._analyze_loudnorm("/tmp/test.mp4")
+            assert result["_error"]["stage"] == "ffmpeg_loudnorm"
         mock_warning.assert_called()
+
+    def test_check_color_balance_exposes_diagnostic_details(self, guardrails):
+        with patch.object(guardrails, "_get_rgb_means", return_value={"_error": {"stage": "ffprobe_rgb_means"}}):
+            report = guardrails.check_color_balance("/tmp/test.mp4")
+        assert report.passed is False
+        assert report.details["diagnostic"]["stage"] == "ffprobe_rgb_means"
+
+    def test_check_brightness_exposes_fallback_diagnostic_details(self, guardrails):
+        with (
+            patch.object(guardrails, "_run_ffprobe", return_value={"_error": {"stage": "ffprobe_signalstats"}}),
+            patch.object(guardrails, "_run_ffmpeg_signalstats", return_value={"_error": {"stage": "ffmpeg_signalstats"}}),
+        ):
+            report = guardrails.check_brightness("/tmp/test.mp4")
+        assert report.passed is False
+        assert report.details["diagnostic"]["stage"] == "ffmpeg_signalstats"
 
     def test_check_audio_levels_with_audio(self, guardrails, tmp_path):
         """Test audio levels check on video with audio."""
