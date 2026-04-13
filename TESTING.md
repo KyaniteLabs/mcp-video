@@ -2,7 +2,7 @@
 
 ## Overview
 
-mcp-video has a **comprehensive real media test suite** with **70/70 tests passing**. All tests use actual FFmpeg operations on real video files — no mocks, no stubs.
+mcp-video has a **comprehensive real media test suite** for exercising the project against actual FFmpeg/media operations. Some tests are environment-sensitive and may skip when optional dependencies or system capabilities are unavailable.
 
 ## Test Suite: `tests/test_real_all_features.py`
 
@@ -156,7 +156,7 @@ def test_new_feature(self, client, sample_clips):
 ## Test Coverage
 
 Every MCP tool has a corresponding test:
-- All 79 tools tested through client interface
+- Public MCP, client, CLI, and real-media workflows are covered across the test suite
 - Real FFmpeg operations validated
 - Error handling verified
 - Edge cases covered (silent videos, different codecs, etc.)

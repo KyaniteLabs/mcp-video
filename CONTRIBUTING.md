@@ -113,7 +113,7 @@ tests/
 - Add adversarial tests in `test_adversarial_audit.py` for any new validation
 - E2E tests chain multiple operations together
 - Run the full suite before pushing: `pytest tests/ -v -m "not slow" --tb=short`
-- Target: 832 tests, 0 failures (707 fast, 116 slow/remotion)
+- Keep the default non-slow suite green, and run slower or environment-sensitive coverage when your change touches those surfaces
 
 ### Automated tests vs manual scripts
 
