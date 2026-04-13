@@ -11,6 +11,7 @@ from mcp_video.server import (
     _result,
     mcp,
     templates_resource,
+    video_audio_resource,
     transition_glitch,
     transition_pixelate,
     video_add_audio,
@@ -34,11 +35,13 @@ from mcp_video.server import (
     video_fade,
     video_filter,
     video_info,
+    video_info_resource,
     video_merge,
     video_mograph_progress,
     video_normalize_audio,
     video_overlay,
     video_preview,
+    video_preview_resource,
     video_read_metadata,
     video_resize,
     video_rotate,
@@ -299,6 +302,26 @@ class TestTemplatesResource:
         assert "webm" in formats
         assert "gif" in formats
         assert "mov" in formats
+
+
+class TestResourceErrorSerialization:
+    def test_video_info_resource_returns_json_error(self):
+        result = video_info_resource("/nonexistent/video.mp4")
+        data = json.loads(result)
+        assert data["success"] is False
+        assert "error" in data
+
+    def test_video_preview_resource_returns_json_error(self):
+        result = video_preview_resource("/nonexistent/video.mp4")
+        data = json.loads(result)
+        assert data["success"] is False
+        assert "error" in data
+
+    def test_video_audio_resource_returns_json_error(self):
+        result = video_audio_resource("/nonexistent/video.mp4")
+        data = json.loads(result)
+        assert data["success"] is False
+        assert "error" in data
 
 
 class TestVideoCropTool:
