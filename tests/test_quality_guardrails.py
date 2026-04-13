@@ -322,8 +322,8 @@ class TestClientIntegration:
 
 
 @pytest.mark.skipif(
-    not subprocess.run(["which", "ffmpeg"], capture_output=True).returncode == 0,
-    reason="FFmpeg not installed"
+    subprocess.run(["which", "ffmpeg"], capture_output=True).returncode != 0,
+    reason="FFmpeg not installed",
 )
 class TestFFmpegAvailability:
     """Tests that require FFmpeg to be installed."""

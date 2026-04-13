@@ -73,7 +73,7 @@ def sample_clips(output_dir):
     clips = []
     colors = ['red', 'blue', 'green', 'yellow']
 
-    for i, color in enumerate(colors):
+    for color in colors:
         clip_path = os.path.join(output_dir, f'sample_{color}.mp4')
         subprocess.run([
             'ffmpeg', '-y', '-f', 'lavfi',

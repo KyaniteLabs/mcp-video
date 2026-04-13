@@ -6,7 +6,7 @@ parameter bounds, and consistency across all engines.
 
 from __future__ import annotations
 
-
+import contextlib
 import pytest
 
 from mcp_video.engine import (
@@ -294,15 +294,13 @@ class TestParameterBounds:
         # These should NOT raise - just validate params, don't actually run
         # We can't easily test without creating a file, so just test validation
         # by checking the function doesn't raise at boundary values
-        try:
+        with contextlib.suppress(ProcessingError, FileNotFoundError, OSError):
             audio_synthesize(
                 "/tmp/test.wav",
                 frequency=MIN_FREQUENCY,
                 duration=0.01,
                 volume=0.0,
             )
-        except (ProcessingError, FileNotFoundError, OSError):
-            pass  # File system errors are OK, we're just testing param validation
 
 
 # ---------------------------------------------------------------------------

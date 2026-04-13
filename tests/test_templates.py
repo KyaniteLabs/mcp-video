@@ -42,7 +42,7 @@ class TestTikTokTemplate:
 
     def test_caption_style(self):
         tl = tiktok_template("/tmp/video.mp4", caption="Test")
-        text_track = [t for t in tl["tracks"] if t["type"] == "text"][0]
+        text_track = next(t for t in tl["tracks"] if t["type"] == "text")
         style = text_track["elements"][0]["style"]
         assert style["size"] == 36
         assert style["color"] == "white"
