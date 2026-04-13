@@ -857,7 +857,7 @@ Test Subtitle
         output_dir = os.path.join(output_dir, 'exported_frames')
         os.makedirs(output_dir, exist_ok=True)
 
-        result = client.export_frames(sample_clips[0], output_dir=output_dir, fps=2)
+        client.export_frames(sample_clips[0], output_dir=output_dir, fps=2)
 
         assert os.path.exists(output_dir)
         frames = [f for f in os.listdir(output_dir) if f.endswith('.jpg')]
@@ -961,7 +961,7 @@ class TestQualityMetadata:
 
         assert result.success
         # Verify by reading back
-        read_result = client.read_metadata(result.output_path)
+        client.read_metadata(result.output_path)
         print("✓ Metadata written and verified")
 
 
@@ -1001,7 +1001,7 @@ class TestUtility:
         output_dir = os.path.join(output_dir, 'storyboard')
         os.makedirs(output_dir, exist_ok=True)
 
-        result = client.storyboard(test_video, output_dir=output_dir, frame_count=8)
+        client.storyboard(test_video, output_dir=output_dir, frame_count=8)
 
         assert os.path.exists(output_dir)
         frames = [f for f in os.listdir(output_dir) if f.endswith('.jpg')]

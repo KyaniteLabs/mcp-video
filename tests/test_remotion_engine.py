@@ -158,7 +158,7 @@ class TestRender:
              patch("os.path.isfile", return_value=True), \
              patch("os.path.getsize", return_value=1024 * 1024):
 
-            result = render(
+            render(
                 project,
                 composition_id="MyComp",
                 codec="h264",
@@ -521,7 +521,7 @@ class TestCreateProject:
             # Let npm install succeed (or be skipped)
             mock_run.return_value = _make_completed_process(stdout="installed")
 
-            result = create_project("test-project", output_dir=str(tmp_path))
+            create_project("test-project", output_dir=str(tmp_path))
 
             project_dir = tmp_path / "test-project"
             assert project_dir.is_dir()

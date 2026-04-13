@@ -24,7 +24,7 @@ def _get_output_path(result):
 def unicode_video(tmp_path):
     """Create a video with unicode characters in filename."""
     video_path = tmp_path / "测试视频🎬.mp4"
-    result = subprocess.run(
+    subprocess.run(
         [
             "ffmpeg", "-y",
             "-f", "lavfi",
@@ -45,7 +45,7 @@ def unicode_video(tmp_path):
 def tiny_video(tmp_path):
     """Create a tiny 1x1 video for boundary testing."""
     video_path = tmp_path / "tiny.mp4"
-    result = subprocess.run(
+    subprocess.run(
         [
             "ffmpeg", "-y",
             "-f", "lavfi",
