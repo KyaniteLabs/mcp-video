@@ -233,7 +233,7 @@ mcp-video template tiktok video.mp4 --caption "Check this out!"
 | `video_ai_transcribe` | Speech-to-text with timestamp alignment | [openai-whisper](https://pypi.org/project/openai-whisper/) |
 | `video_ai_scene_detect` | ML-enhanced scene change detection (perceptual hashing) | [imagehash](https://pypi.org/project/imagehash/), Pillow |
 | `video_ai_stem_separation` | Isolate vocals, drums, bass, other instruments | [demucs](https://pypi.org/project/demucs/) |
-| `video_ai_upscale` | AI super-resolution upscaling (2x or 4x) | [realesrgan](https://pypi.org/project/realesrgan/) or [opencv-python](https://pypi.org/project/opencv-python/) |
+| `video_ai_upscale` | AI super-resolution upscaling (2x or 4x) | [realesrgan](https://pypi.org/project/realesrgan/) or [opencv-contrib-python](https://pypi.org/project/opencv-contrib-python/) |
 | `video_ai_color_grade` | Auto color grading with style presets or reference matching | FFmpeg |
 | `video_audio_spatial` | 3D spatial audio positioning (azimuth + elevation) | FFmpeg |
 
