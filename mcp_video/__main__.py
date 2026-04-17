@@ -9,7 +9,7 @@ from typing import Any
 from rich.panel import Panel
 from rich.table import Table
 
-from .cli.common import _parse_json_arg, _with_spinner
+from .cli.common import _auto_output, _parse_json_arg, _with_spinner, output_json
 from .cli.parser import build_parser
 from .cli.formatting import (
     _format_batch_text,
@@ -51,19 +51,6 @@ def main() -> None:
         return
 
     use_json = args.format == "json"
-
-    def _auto_output(input_path: str, suffix: str) -> str:
-        """Generate an output path next to the input file."""
-        import os
-
-        base, ext = os.path.splitext(input_path)
-        return f"{base}_{suffix}{ext}"
-
-    # Helper to output result
-    def output_json(data: Any) -> None:
-        if hasattr(data, "model_dump"):
-            data = data.model_dump()
-        print(json.dumps(data, indent=2))
 
     # CLI commands
     try:
