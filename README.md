@@ -65,7 +65,7 @@ Think of it as **FFmpeg + Remotion with an API that AI agents can actually use**
 - [Agent Discovery](#agent-discovery)
 - [MCP Tools](#mcp-tools)
   - [Core Video](#core-video-40-tools)
-  - [AI-Powered](#ai-powered-7-tools)
+  - [AI-Powered](#ai-powered-8-tools)
   - [Remotion & Motion Graphics](#remotion--motion-graphics-8-tools)
   - [Audio Synthesis](#audio-synthesis-6-tools)
   - [Visual Effects](#visual-effects-5-tools)
@@ -243,10 +243,11 @@ mcp-video template tiktok video.mp4 --caption "Check this out!"
 | `video_batch` | Apply same operation to multiple files |
 | `video_export` | Render final video with quality presets |
 
-### AI-Powered (7 tools)
+### AI-Powered (8 tools)
 
 | Tool | Description | Dependencies |
 |------|-------------|--------------|
+| `video_analyze` | Comprehensive video analysis: transcript, metadata, scenes, audio, quality, chapters, and colors | FFmpeg; optional Whisper/image extras |
 | `video_ai_remove_silence` | Auto-remove silent sections with configurable threshold | FFmpeg |
 | `video_ai_transcribe` | Speech-to-text with timestamp alignment | [openai-whisper](https://pypi.org/project/openai-whisper/) |
 | `video_ai_scene_detect` | ML-enhanced scene change detection (perceptual hashing) | [imagehash](https://pypi.org/project/imagehash/), Pillow |

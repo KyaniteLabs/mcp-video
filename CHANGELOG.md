@@ -21,21 +21,13 @@ This project follows a simple release-note style:
 
 - Updated public tool count messaging from 82 to the current 83 MCP tools.
 - Updated the landing page with crawl metadata and structured software/source metadata.
-
-### Fixed
-
-- Aligned `mcp_video.__version__` with the package version in `pyproject.toml`.
-
-## 1.2.1 - 2026-04-13
-
-### Changed
-
-- Cut the 1.2.1 release version and public badge.
+- Bumped the package metadata and public badge toward the pending 1.2.1 release.
 - Improved runtime error contracts and diagnostics.
 - Repaired repository trust rails for deploys, packages, tests, and AI extras.
 
 ### Fixed
 
+- Aligned `mcp_video.__version__` with the package version in `pyproject.toml`.
 - Moved optional dependency metadata out of Ruff configuration.
 - Centralized chroma-key color validation for safer FFmpeg filter construction.
 
