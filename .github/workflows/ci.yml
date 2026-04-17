@@ -39,7 +39,7 @@ jobs:
           else
             echo "code=false" >> "$GITHUB_OUTPUT"
           fi
-          if printf '%s\n' "$changed" | grep -Eq '^(Dockerfile|mcp_video/|pyproject\.toml|uv\.lock|\.dockerignore)'; then
+          if printf '%s\n' "$changed" | grep -Eq '^(Dockerfile|mcp_video/|pyproject\.toml|uv\.lock|\.dockerignore|\.github/workflows/ci\.yml)'; then
             echo "docker=true" >> "$GITHUB_OUTPUT"
           else
             echo "docker=false" >> "$GITHUB_OUTPUT"
