@@ -2,8 +2,10 @@
 
 ## Where to ask for help
 
-- **Usage questions / troubleshooting**: GitHub Issues (use the appropriate template).
-- **Feature ideas**: GitHub Issues using the feature request template.
+- **Usage questions and workflow help**: GitHub Discussions.
+- **Reproducible bugs**: GitHub Issues using the bug report template.
+- **Scoped feature requests**: GitHub Issues using the feature request template.
+- **Early ideas and proposals**: GitHub Discussions.
 - **Security reports**: Follow the private reporting path in `SECURITY.md`.
 
 ## What to include in support requests

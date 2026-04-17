@@ -1,0 +1,23 @@
+title: "[Show and tell]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Share demos, workflows, agent prompts, videos, and integrations built with mcp-video.
+  - type: textarea
+    id: demo
+    attributes:
+      label: What did you build?
+    validations:
+      required: true
+  - type: textarea
+    id: workflow
+    attributes:
+      label: Workflow
+      description: Which tools, prompts, or commands did you use?
+  - type: textarea
+    id: links
+    attributes:
+      label: Links or media
+      description: Add screenshots, videos, repos, or writeups.
+

@@ -1,0 +1,19 @@
+title: "[Q&A]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ask usage questions here. For reproducible bugs, open an issue instead.
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: What are you trying to do with mcp-video?
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Include commands, MCP client, OS, Python version, FFmpeg version, and logs if relevant.
+

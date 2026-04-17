@@ -4,6 +4,44 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>mcp-video — Video Editing for AI Agents and Humans</title>
+    <meta name="description" content="Open source MCP server, Python client, and CLI for AI-agent video editing with FFmpeg and Remotion. Trim, merge, subtitle, resize, transcribe, stabilize, and create videos locally.">
+    <meta name="author" content="Simon Gonzalez De Cruz">
+    <meta name="robots" content="index, follow, max-image-preview:large">
+    <meta name="keywords" content="MCP server, video editing, FFmpeg, Remotion, AI agents, Claude Code, Cursor, Python video editing">
+    <link rel="canonical" href="https://pastorsimon1798.github.io/mcp-video/">
+    <link rel="sitemap" type="application/xml" href="https://pastorsimon1798.github.io/mcp-video/sitemap.xml">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://pastorsimon1798.github.io/mcp-video/">
+    <meta property="og:title" content="mcp-video - Video Editing for AI Agents">
+    <meta property="og:description" content="An open source MCP server, Python client, and CLI that wraps FFmpeg and Remotion for agent-assisted video editing.">
+    <meta property="og:site_name" content="mcp-video">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="mcp-video - Video Editing for AI Agents">
+    <meta name="twitter:description" content="Structured FFmpeg and Remotion tools for Claude Code, Cursor, and any MCP-compatible agent.">
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": ["SoftwareSourceCode", "SoftwareApplication"],
+      "name": "mcp-video",
+      "description": "Open source MCP server, Python client, and CLI for AI-agent video editing with FFmpeg and Remotion.",
+      "url": "https://pastorsimon1798.github.io/mcp-video/",
+      "codeRepository": "https://github.com/Pastorsimon1798/mcp-video",
+      "programmingLanguage": ["Python", "TypeScript"],
+      "runtimePlatform": ["Python 3.11+", "FFmpeg", "Model Context Protocol", "Remotion"],
+      "applicationCategory": "MultimediaApplication",
+      "operatingSystem": "macOS, Linux, Windows",
+      "license": "https://www.apache.org/licenses/LICENSE-2.0",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "sameAs": [
+        "https://pypi.org/project/mcp-video/",
+        "https://github.com/Pastorsimon1798/mcp-video"
+      ]
+    }
+    </script>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -262,6 +300,7 @@
         <a href="#tools">Tools</a>
         <a href="#interfaces">Interfaces</a>
         <a href="#testing">Testing</a>
+        <a href="llms.txt">llms.txt</a>
         <a href="https://github.com/pastorsimon1798/mcp-video">GitHub</a>
     </div>
 </nav>
@@ -273,11 +312,11 @@
         <span class="gradient">for AI agents and humans.</span>
     </h1>
     <p class="subtitle">
-        82 MCP tools that give Claude Code, Cursor, and any AI agent the ability to trim, merge, overlay text, sync audio, apply filters, stabilize video, detect scenes, generate subtitles, extract waveforms, upscale with AI, separate audio stems, and more. Plus a rich CLI with templates for humans. Local, fast, free. All 690+ features tested with real media.
+        83 MCP tools that give Claude Code, Cursor, and any AI agent the ability to trim, merge, overlay text, sync audio, apply filters, stabilize video, detect scenes, generate subtitles, extract waveforms, upscale with AI, separate audio stems, and more. Plus a rich CLI with templates for humans. Local, fast, free. 850+ automated tests collected.
     </p>
     <div class="badges">
-        <div class="badge"><div class="dot green"></div> 690+ tests passing</div>
-        <div class="badge"><div class="dot blue"></div> 82 MCP tools</div>
+        <div class="badge"><div class="dot green"></div> 730+ non-slow tests passing</div>
+        <div class="badge"><div class="dot blue"></div> 83 MCP tools</div>
         <div class="badge"><div class="dot orange"></div> 3 interfaces</div>
     </div>
     <div class="cta-row">
@@ -322,7 +361,7 @@
             <div class="icon">
                 <svg viewBox="0 0 24 24"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
             </div>
-            <h3>82 Video Editing Tools</h3>
+            <h3>83 Video Editing Tools</h3>
             <p>Trim, merge, add text, sync audio, resize, convert, speed change, watermarks, subtitles, storyboards, crop, rotate, fade, filters, color grading, audio processing, stabilization, scene detection, AI-powered editing, transitions, and more.</p>
         </div>
         <div class="feature-card">
@@ -595,13 +634,13 @@
                 </tr>
                 <tr>
                     <td style="color: var(--text); font-family: inherit;">Discovery</td>
-                    <td style="color: var(--green);">82 self-documenting tools</td>
+                    <td style="color: var(--green);">83 self-documenting tools</td>
                     <td style="color: var(--orange);">Must know hundreds of flags</td>
                     <td style="color: var(--text2);">API docs</td>
                 </tr>
                 <tr>
                     <td style="color: var(--text); font-family: inherit;">Testing</td>
-                    <td style="color: var(--green);">690+ real media tests</td>
+                    <td style="color: var(--green);">850+ automated tests</td>
                     <td style="color: var(--orange);">None (ad-hoc)</td>
                     <td style="color: var(--text2);">Provider's tests</td>
                 </tr>
@@ -648,7 +687,7 @@
 <!-- TOOLS -->
 <section id="tools">
     <div class="section-label">Capabilities</div>
-    <div class="section-title">82 tools. Every operation you need.</div>
+    <div class="section-title">83 tools. Every operation you need.</div>
     <p class="section-desc">
         Every tool returns structured JSON. On success, you get output paths, duration, resolution. On failure, you get error types with auto-fix suggestions.
     </p>
@@ -851,15 +890,15 @@ $ mcp-video templates</pre></div>
 <!-- TESTING -->
 <section id="testing">
     <div class="section-label">Quality</div>
-    <div class="section-title">690+ tests passing. Real media, no mocks.</div>
+    <div class="section-title">850+ tests collected. Real media where it matters.</div>
     <p class="section-desc">
-        Every feature tested with actual FFmpeg operations on real video files. No mocks, no stubs — just genuine video processing validation. From AI upscaling to video stabilization, all 690+ features verified with real media.
+        Core video paths use actual FFmpeg operations, while dependency-heavy AI and Remotion paths are isolated with targeted mocks. The non-slow suite currently passes with 733 tests.
     </p>
     <div class="grid-3">
         <div class="card" style="text-align: center;">
-            <div style="font-size: 2rem; font-weight: 800; color: var(--green);">690+</div>
-            <div style="font-size: 0.85rem; color: var(--text2);">Comprehensive real media tests</div>
-            <div style="font-size: 0.75rem; color: var(--text3); margin-top: 0.5rem;">All 690+ features tested with real media</div>
+            <div style="font-size: 2rem; font-weight: 800; color: var(--green);">858</div>
+            <div style="font-size: 0.85rem; color: var(--text2);">Automated tests collected</div>
+            <div style="font-size: 0.75rem; color: var(--text3); margin-top: 0.5rem;">733 non-slow tests passed locally</div>
         </div>
         <div class="card" style="text-align: center;">
             <div style="font-size: 2rem; font-weight: 800; color: var(--accent2);">8</div>
@@ -959,6 +998,8 @@ pip install mcp-video
     <div>
         <a href="https://github.com/pastorsimon1798/mcp-video">GitHub</a> &bull;
         <a href="https://github.com/pastorsimon1798/mcp-video/issues">Issues</a> &bull;
+        <a href="https://github.com/pastorsimon1798/mcp-video/discussions">Discussions</a> &bull;
+        <a href="llms.txt">llms.txt</a> &bull;
         Built with FFmpeg + MCP
     </div>
 </footer>

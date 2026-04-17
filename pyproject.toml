@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "mcp-video"
 version = "1.2.1"
-description = "Video editing MCP server for AI agents. 82 tools, 3 interfaces, rich CLI. Local, fast, free."
+description = "Video editing MCP server for AI agents. 83 tools, 3 interfaces, rich CLI. Local, fast, free."
 readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.11"
@@ -71,6 +71,9 @@ mcp-video = "mcp_video.__main__:main"
 Homepage = "https://github.com/pastorsimon1798/mcp-video"
 Documentation = "https://github.com/pastorsimon1798/mcp-video#readme"
 Repository = "https://github.com/pastorsimon1798/mcp-video"
+"Bug Tracker" = "https://github.com/pastorsimon1798/mcp-video/issues"
+Changelog = "https://github.com/pastorsimon1798/mcp-video/blob/master/CHANGELOG.md"
+Discussions = "https://github.com/pastorsimon1798/mcp-video/discussions"
 
 [tool.hatch.build]
 exclude = [
