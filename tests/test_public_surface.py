@@ -1,5 +1,6 @@
 """Characterization tests for public import and command surfaces."""
 
+import re
 import subprocess
 import sys
 
@@ -189,8 +190,11 @@ def test_cli_help_lists_all_commands():
     )
 
     assert result.returncode == 0
-    missing = sorted(command for command in EXPECTED_CLI_COMMANDS if command not in result.stdout)
-    assert not missing
+    command_lists = re.findall(r"\{([^}]+)\}", result.stdout)
+    command_list = max(command_lists, key=lambda value: len(value.split(",")))
+    help_commands = set(command_list.split(","))
+
+    assert help_commands == EXPECTED_CLI_COMMANDS
     assert len(EXPECTED_CLI_COMMANDS) == 86
 
 
