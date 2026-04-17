@@ -5,8 +5,46 @@ on:
     branches: [master]
   pull_request:
     branches: [master]
+  workflow_dispatch:
 
 jobs:
+  changes:
+    name: Change detection
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.classify.outputs.code }}
+      docker: ${{ steps.classify.outputs.docker }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - id: classify
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            base="${{ github.event.pull_request.base.sha }}"
+            head="${{ github.event.pull_request.head.sha }}"
+          else
+            base="${{ github.event.before }}"
+            head="${{ github.sha }}"
+          fi
+          if [[ -z "$base" || "$base" == "0000000000000000000000000000000000000000" ]]; then
+            base="$(git rev-parse "$head^" 2>/dev/null || true)"
+          fi
+          changed="$(git diff --name-only "$base" "$head" 2>/dev/null || git diff --name-only HEAD^ HEAD)"
+          printf '%s\n' "$changed"
+          if printf '%s\n' "$changed" | grep -Eq '^(mcp_video/|tests/|pyproject\.toml|uv\.lock|Dockerfile|\.github/workflows/ci\.yml)'; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "code=false" >> "$GITHUB_OUTPUT"
+          fi
+          if printf '%s\n' "$changed" | grep -Eq '^(Dockerfile|mcp_video/|pyproject\.toml|uv\.lock|\.dockerignore|\.github/workflows/ci\.yml)'; then
+            echo "docker=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "docker=false" >> "$GITHUB_OUTPUT"
+          fi
+
   repository-readiness:
     name: Repository readiness
     runs-on: ubuntu-latest
@@ -49,12 +87,32 @@ jobs:
         run: python3 .github/scripts/check-built-artifacts.py dist
 
   test:
-    name: Test (Python ${{ matrix.python-version }})
+    name: Test (Python 3.12)
+    needs: changes
+    if: github.event_name != 'pull_request' || needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install FFmpeg
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+      - name: Run tests
+        run: pytest tests/ -q -m "not slow" --tb=short
+
+  compatibility:
+    name: Compatibility (Python ${{ matrix.python-version }})
+    needs: changes
+    if: github.event_name != 'pull_request' || needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.11", "3.12", "3.13"]
+        python-version: ["3.11", "3.13"]
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
@@ -70,8 +128,13 @@ jobs:
 
   docker:
     name: Docker build
+    needs: changes
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+      - name: Skip Docker build
+        if: github.event_name == 'pull_request' && needs.changes.outputs.docker != 'true'
+        run: echo "Docker inputs unchanged; marking Docker check successful."
       - name: Build Docker image
+        if: github.event_name != 'pull_request' || needs.changes.outputs.docker == 'true'
         run: docker build -t mcp-video:test .
