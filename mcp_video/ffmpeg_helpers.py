@@ -11,6 +11,7 @@ import subprocess
 from typing import Any
 
 from .errors import InputFileError, ProcessingError
+from .limits import DEFAULT_FFMPEG_TIMEOUT, FFPROBE_TIMEOUT
 
 
 def _validate_input_path(path: str) -> str:
@@ -23,7 +24,7 @@ def _validate_input_path(path: str) -> str:
     return resolved
 
 
-def _run_ffmpeg(cmd: list[str], timeout: int = 600) -> subprocess.CompletedProcess[str]:
+def _run_ffmpeg(cmd: list[str], timeout: int = DEFAULT_FFMPEG_TIMEOUT) -> subprocess.CompletedProcess[str]:
     """Run an FFmpeg/FFprobe command with timeout and error handling."""
     # Ensure output directory exists — find the last non-flag argument (the output file)
     for arg in reversed(cmd):
@@ -85,7 +86,7 @@ def _run_ffprobe_json(path: str) -> dict[str, Any]:
         "-show_streams",
         path,
     ]
-    result = _run_ffmpeg(cmd, timeout=30)
+    result = _run_ffmpeg(cmd, timeout=FFPROBE_TIMEOUT)
     return _json.loads(result.stdout)
 
 
