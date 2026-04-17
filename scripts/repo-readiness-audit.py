@@ -62,17 +62,37 @@ def git_stdout(*args: str) -> str:
 
 
 def dependabot_groups_by_ecosystem() -> dict[tuple[str, str], set[str]]:
-    """Return Dependabot group names keyed by package ecosystem and directory."""
-    try:
-        import yaml
-    except ImportError:
-        return {}
+    """Return Dependabot group names keyed by package ecosystem and directory.
 
-    data = yaml.safe_load(read(".github/dependabot.yml")) or {}
+    This intentionally uses a tiny parser for the limited Dependabot shape used
+    in this repo so the readiness audit has no extra CI dependencies.
+    """
     grouped: dict[tuple[str, str], set[str]] = {}
-    for update in data.get("updates", []):
-        key = (str(update.get("package-ecosystem", "")), str(update.get("directory", "")))
-        grouped[key] = set((update.get("groups") or {}).keys())
+    current_key: tuple[str, str] | None = None
+    in_groups = False
+    ecosystem = ""
+    directory = ""
+    for raw_line in read(".github/dependabot.yml").splitlines():
+        line = raw_line.strip()
+        if line.startswith("- package-ecosystem:"):
+            ecosystem = line.split(":", 1)[1].strip().strip('"')
+            directory = ""
+            current_key = None
+            in_groups = False
+            continue
+        if line.startswith("directory:"):
+            directory = line.split(":", 1)[1].strip().strip('"')
+            current_key = (ecosystem, directory)
+            grouped.setdefault(current_key, set())
+            continue
+        if line == "groups:" and current_key is not None:
+            in_groups = True
+            continue
+        if in_groups and raw_line.startswith("      ") and line.endswith(":"):
+            grouped.setdefault(current_key, set()).add(line[:-1])
+            continue
+        if line and not raw_line.startswith("      ") and not line.startswith("-"):
+            in_groups = False
     return grouped
 
 
