@@ -21,7 +21,12 @@ This project follows a simple release-note style:
 
 - Updated public tool count messaging from 82 to the current 83 MCP tools.
 - Updated the landing page with crawl metadata and structured software/source metadata.
-- Bumped the package metadata and public badge toward the pending 1.2.1 release.
+
+## 1.2.1 - 2026-04-13
+
+### Changed
+
+- Prepared the 1.2.1 package metadata and public badge.
 - Improved runtime error contracts and diagnostics.
 - Repaired repository trust rails for deploys, packages, tests, and AI extras.
 

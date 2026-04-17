@@ -72,7 +72,7 @@ Files added:
 
 - `.github/CODEOWNERS`
 - `.github/DISCUSSION_TEMPLATE/ideas.yml`
-- `.github/DISCUSSION_TEMPLATE/q-and-a.yml`
+- `.github/DISCUSSION_TEMPLATE/q-a.yml`
 - `.github/DISCUSSION_TEMPLATE/show-and-tell.yml`
 - `.github/dependabot.yml`
 - `CHANGELOG.md`
@@ -101,7 +101,7 @@ GitHub settings updated:
 - Secret scanning enabled.
 - Secret scanning push protection enabled.
 - Topics expanded to the GitHub maximum of 20.
-- Repo description updated from 82 tools / 690+ tests to 83 tools / 850+ tests collected.
+- Repo description updated from 82 tools / 690+ tests to 83 tools / 858 tests collected.
 - Routing labels added for areas, cleanup, performance, reproduction, blocked state, and low priority.
 
 ## ROI-Ordered Remediation
@@ -543,4 +543,3 @@ When someone searches "video editing MCP server" or asks an agent "what should I
 - listed in MCP directories,
 - backed by tests,
 - small enough internally that contributors can reason about it.
-
