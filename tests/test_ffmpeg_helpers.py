@@ -1,0 +1,28 @@
+"""Tests for shared FFmpeg helper contracts."""
+
+
+def test_ffprobe_timeout_constant_exists():
+    from mcp_video import limits
+
+    assert hasattr(limits, "FFPROBE_TIMEOUT")
+    assert limits.FFPROBE_TIMEOUT > 0
+    assert limits.FFPROBE_TIMEOUT < limits.DEFAULT_FFMPEG_TIMEOUT
+
+
+def test_run_ffprobe_json_uses_named_timeout(monkeypatch):
+    from mcp_video import ffmpeg_helpers
+    from mcp_video.limits import FFPROBE_TIMEOUT
+
+    captured = {}
+
+    class Result:
+        stdout = '{"format": {}, "streams": []}'
+
+    def fake_run_ffmpeg(cmd, timeout=0):
+        captured["timeout"] = timeout
+        return Result()
+
+    monkeypatch.setattr(ffmpeg_helpers, "_run_ffmpeg", fake_run_ffmpeg)
+
+    assert ffmpeg_helpers._run_ffprobe_json("/tmp/video.mp4") == {"format": {}, "streams": []}
+    assert captured["timeout"] == FFPROBE_TIMEOUT
