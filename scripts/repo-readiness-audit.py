@@ -61,6 +61,21 @@ def git_stdout(*args: str) -> str:
     return result.stdout.strip()
 
 
+def dependabot_groups_by_ecosystem() -> dict[tuple[str, str], set[str]]:
+    """Return Dependabot group names keyed by package ecosystem and directory."""
+    try:
+        import yaml
+    except ImportError:
+        return {}
+
+    data = yaml.safe_load(read(".github/dependabot.yml")) or {}
+    grouped: dict[tuple[str, str], set[str]] = {}
+    for update in data.get("updates", []):
+        key = (str(update.get("package-ecosystem", "")), str(update.get("directory", "")))
+        grouped[key] = set((update.get("groups") or {}).keys())
+    return grouped
+
+
 def main() -> int:
     failures: list[str] = []
     warnings: list[str] = []
@@ -199,12 +214,16 @@ def main() -> int:
     )
 
     print("\n== Dependabot checks ==")
-    dependabot = read(".github/dependabot.yml")
-    for group_name in ["python-runtime", "explainer-video", "github-actions"]:
+    dependabot_groups = dependabot_groups_by_ecosystem()
+    for ecosystem, directory, group_name in [
+        ("uv", "/", "python-runtime"),
+        ("npm", "/explainer-video", "explainer-video"),
+        ("github-actions", "/", "github-actions"),
+    ]:
         check(
-            f"{group_name}:" in dependabot,
-            f"Dependabot groups {group_name}",
-            f"Dependabot should group {group_name} updates",
+            group_name in dependabot_groups.get((ecosystem, directory), set()),
+            f"Dependabot groups {ecosystem} updates in {directory} as {group_name}",
+            f"Dependabot should group {ecosystem} updates in {directory} as {group_name}",
             failures=failures,
             warnings=warnings,
         )
