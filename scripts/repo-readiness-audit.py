@@ -198,6 +198,17 @@ def main() -> int:
         warnings=warnings,
     )
 
+    print("\n== Dependabot checks ==")
+    dependabot = read(".github/dependabot.yml")
+    for group_name in ["python-runtime", "explainer-video", "github-actions"]:
+        check(
+            f"{group_name}:" in dependabot,
+            f"Dependabot groups {group_name}",
+            f"Dependabot should group {group_name} updates",
+            failures=failures,
+            warnings=warnings,
+        )
+
     print("\n== Release/tag visibility checks ==")
     tags = git_stdout("tag", "--list")
     check(
