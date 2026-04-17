@@ -8,6 +8,7 @@ MAX_FILE_SIZE_MB = 4096  # 4 GB
 # Processing limits
 MAX_CONCURRENT_PROCESSES = 4
 DEFAULT_FFMPEG_TIMEOUT = 600  # 10 minutes
+DOCTOR_COMMAND_TIMEOUT = 10  # Short version/probe commands should not hang
 MAX_BATCH_SIZE = 50
 MAX_EXPORT_FRAMES_FPS = 60
 

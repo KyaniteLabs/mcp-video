@@ -8,6 +8,7 @@ import sys
 from typing import Any
 
 from rich.console import Console
+from rich.markup import escape
 from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 from rich.table import Table
@@ -106,6 +107,24 @@ def _format_extract_audio_text(result: Any) -> None:
     console.print(Panel(f"[bold green]Audio extracted:[/bold green] {result}", border_style="green", title="Done"))
 
 
+def _format_doctor_text(report: dict[str, Any]) -> None:
+    """Display diagnostics as a compact table."""
+    summary = report["summary"]
+    status = "OK" if summary["required_ok"] else "Missing required dependencies"
+    console.print(f"[bold]mcp-video doctor[/bold] — {status}")
+    table = Table(title="Environment Checks")
+    table.add_column("Name", style="cyan")
+    table.add_column("Category")
+    table.add_column("Required")
+    table.add_column("Status")
+    table.add_column("Version / Hint")
+    for check in report["checks"]:
+        state = "[green]OK[/green]" if check["ok"] else "[yellow]Missing[/yellow]"
+        detail = check.get("version") or check.get("install_hint") or "-"
+        table.add_row(check["name"], check["category"], "yes" if check["required"] else "no", state, escape(detail))
+    console.print(table)
+
+
 def _format_error(e: Exception) -> None:
     """Display error in a styled panel."""
     from .errors import MCPVideoError
@@ -186,6 +205,10 @@ def main() -> None:
         help="Show version and exit",
     )
     subparsers = parser.add_subparsers(dest="command", help="CLI commands")
+
+    # doctor
+    doctor_p = subparsers.add_parser("doctor", help="Diagnose core and optional integration dependencies")
+    doctor_p.add_argument("--json", action="store_true", help="Output diagnostics as JSON")
 
     # info
     info_p = subparsers.add_parser("info", help="Get video metadata")
@@ -1119,7 +1142,16 @@ def main() -> None:
 
     # CLI commands
     try:
-        if args.command == "info":
+        if args.command == "doctor":
+            from .doctor import run_diagnostics
+
+            report = run_diagnostics()
+            if use_json or args.json:
+                output_json(report)
+            else:
+                _format_doctor_text(report)
+
+        elif args.command == "info":
             from .engine import probe
 
             info = probe(args.input)

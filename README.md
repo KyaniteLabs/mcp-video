@@ -117,6 +117,13 @@ Or run without installing:
 uvx mcp-video
 ```
 
+Check your local integration surface:
+
+```bash
+mcp-video doctor
+mcp-video doctor --json
+```
+
 ---
 
 ## Quick Start
@@ -487,6 +494,9 @@ ProductAnalysisResult(success=True, colors=[...], description="...")
 
 ```
 mcp-video [command] [options]
+
+Diagnostics:
+  doctor              Check FFmpeg, Remotion, image, and AI dependencies
 
 Core Editing:
   info                 Get video metadata
