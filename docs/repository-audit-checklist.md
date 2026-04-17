@@ -42,6 +42,10 @@ Run:
 This validates:
 - core community files exist
 - issue/PR templates exist
+- discussion templates exist
+- CODEOWNERS and Dependabot config exist
+- AI/search discovery files exist
+- MCP Registry metadata exists
 - workflow files exist
 - README has key user onboarding sections
 - package metadata URLs exist
@@ -53,6 +57,9 @@ This validates:
 - Changelog/release notes: user-facing changes clearly summarized.
 - Security/support docs: present and linked from README.
 - Contributing docs: match real CI expectations.
+- `llms.txt`: install commands, key files, safety rules, and canonical links stay current.
+- `docs/AI_AGENT_DISCOVERY.md`: query targets and directory targets stay current.
+- `server.json`: version and PyPI package metadata match `pyproject.toml`.
 
 ## 5) GitHub setup (monthly)
 
@@ -61,6 +68,8 @@ This validates:
 - Signed tags are used for releases when possible.
 - Discussions/Issues templates route users to the right channel.
 - GitHub Pages deployment remains intentional and artifact-safe.
+- Dependabot is grouped so dependency churn does not bury human work.
+- CODEOWNERS routes review responsibility clearly.
 
 ## 6) Growth and accessibility (monthly)
 
@@ -68,6 +77,9 @@ This validates:
 - Maintain a clear support path for questions.
 - Ensure docs are scannable (headings, short paragraphs, command blocks).
 - Prioritize fast “time to first success” in README.
+- Keep `robots.txt`, `sitemap.xml`, and structured homepage metadata aligned with the GitHub Pages URL.
+- Submit or update listings in MCP directories after meaningful releases.
+- Publish/update the official MCP Registry entry after package releases.
 
 ## 7) Success metrics to track
 

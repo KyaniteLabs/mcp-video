@@ -1,0 +1,26 @@
+title: "[Idea]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this for product ideas, integration requests, and early proposals.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user pain or workflow gap should this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: shape
+    attributes:
+      label: Proposed shape
+      description: What would the ideal tool, API, or workflow look like?
+    validations:
+      required: true
+  - type: textarea
+    id: audience
+    attributes:
+      label: Who benefits?
+      description: Agents, creators, developers, maintainers, or another audience?
+

@@ -2,17 +2,19 @@
   <img src="https://img.shields.io/badge/version-1.2.1-blue.svg" alt="Version">
   <img src="https://img.shields.io/badge/tests-extensive-brightgreen.svg" alt="Tests">
   <a href="https://github.com/pastorsimon1798/mcp-video/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/pastorsimon1798/mcp-video/.github/workflows/ci.yml?branch=master&label=CI" alt="CI"></a>
-  <img src="https://img.shields.io/badge/tools-82%20MCP%20tools-orange.svg" alt="Tools">
+  <img src="https://img.shields.io/badge/tools-83%20MCP%20tools-orange.svg" alt="Tools">
   <img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="License">
   <img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python">
 </p>
+
+<!-- mcp-name: io.github.pastorsimon1798/mcp-video -->
 
 <h1 align="center">mcp-video</h1>
 
 <p align="center">
   <strong>Video editing and creation for AI agents.</strong><br>
   Edit existing video with FFmpeg. Create new video from code with Remotion.<br>
-  82 tools. 3 interfaces. Extensive automated and real-media test coverage.
+  83 tools. 3 interfaces. Extensive automated and real-media test coverage.
 </p>
 
 <p align="center">
@@ -23,9 +25,11 @@
   <a href="#python-client">Python</a> &bull;
   <a href="#cli-reference">CLI</a> &bull;
   <a href="#templates">Templates</a> &bull;
+  <a href="docs/AI_AGENT_DISCOVERY.md">Agent Discovery</a> &bull;
   <a href="CONTRIBUTING.md">Contributing</a> &bull;
   <a href="SECURITY.md">Security</a> &bull;
   <a href="SUPPORT.md">Support</a> &bull;
+  <a href="CHANGELOG.md">Changelog</a> &bull;
   <a href="ROADMAP.md">Roadmap</a>
 </p>
 
@@ -37,7 +41,7 @@ mcp-video is an open-source video editing server built on the [Model Context Pro
 
 **Two modes of operation:**
 
-1. **Edit existing video** with FFmpeg — trim, merge, overlay text, add audio, apply filters, stabilize, detect scenes, transcribe, and more. 82 tools covering the full editing pipeline.
+1. **Edit existing video** with FFmpeg — trim, merge, overlay text, add audio, apply filters, stabilize, detect scenes, transcribe, and more. 83 tools covering the full editing pipeline.
 
 2. **Create new video from code** with [Remotion](https://www.remotion.dev/) — scaffold React-based video compositions, preview them live, render to MP4, then post-process with mcp-video. 8 dedicated tools for programmatic video generation.
 
@@ -58,9 +62,10 @@ Think of it as **FFmpeg + Remotion with an API that AI agents can actually use**
 - [What is mcp-video?](#what-is-mcp-video)
 - [Installation](#installation)
 - [Quick Start](#quick-start)
+- [Agent Discovery](#agent-discovery)
 - [MCP Tools](#mcp-tools)
   - [Core Video](#core-video-40-tools)
-  - [AI-Powered](#ai-powered-7-tools)
+  - [AI-Powered](#ai-powered-8-tools)
   - [Remotion & Motion Graphics](#remotion--motion-graphics-8-tools)
   - [Audio Synthesis](#audio-synthesis-6-tools)
   - [Visual Effects](#visual-effects-5-tools)
@@ -149,6 +154,16 @@ claude mcp add mcp-video -- uvx mcp-video
 
 Then just ask your agent: *"Trim this video from 0:30 to 1:00, add a title card, and resize for TikTok."*
 
+## Agent Discovery
+
+Machine-readable discovery files are published for agents and answer engines:
+
+- [`llms.txt`](llms.txt) gives agents a compact project map with install snippets, entry points, and safety rules.
+- [`docs/AI_AGENT_DISCOVERY.md`](docs/AI_AGENT_DISCOVERY.md) gives richer positioning, query targets, integration snippets, and directory targets.
+- [`robots.txt`](robots.txt) and [`sitemap.xml`](sitemap.xml) keep the GitHub Pages surface crawlable.
+
+The canonical positioning is: **an open source MCP server, Python client, and CLI for video editing and creation workflows, wrapping FFmpeg and Remotion for AI agents.**
+
 ### 2. As a Python Library
 
 ```python
@@ -181,7 +196,7 @@ mcp-video template tiktok video.mp4 --caption "Check this out!"
 
 ## MCP Tools
 
-82 tools across 9 categories. All return structured JSON with `success`, `output_path`, and operation metadata. On failure, they return `{"success": false, "error": {...}}` with auto-fix suggestions.
+83 tools across 9 categories. All return structured JSON with `success`, `output_path`, and operation metadata. On failure, they return `{"success": false, "error": {...}}` with auto-fix suggestions.
 
 ### Core Video (40 tools)
 
@@ -228,10 +243,11 @@ mcp-video template tiktok video.mp4 --caption "Check this out!"
 | `video_batch` | Apply same operation to multiple files |
 | `video_export` | Render final video with quality presets |
 
-### AI-Powered (7 tools)
+### AI-Powered (8 tools)
 
 | Tool | Description | Dependencies |
 |------|-------------|--------------|
+| `video_analyze` | Comprehensive video analysis: transcript, metadata, scenes, audio, quality, chapters, and colors | FFmpeg; optional Whisper/image extras |
 | `video_ai_remove_silence` | Auto-remove silent sections with configurable threshold | FFmpeg |
 | `video_ai_transcribe` | Speech-to-text with timestamp alignment | [openai-whisper](https://pypi.org/project/openai-whisper/) |
 | `video_ai_scene_detect` | ML-enhanced scene change detection (perceptual hashing) | [imagehash](https://pypi.org/project/imagehash/), Pillow |
@@ -703,7 +719,7 @@ mcp_video/
   __init__.py            # Exports Client
   __main__.py            # CLI entry point (argparse + Rich)
   client.py              # Python Client API (wraps all engines)
-  server.py              # MCP server (82 tools + 4 resources)
+  server.py              # MCP server (83 tools + 4 resources)
   engine.py              # Core FFmpeg engine (40 video operations)
   models.py              # Pydantic models (VideoInfo, EditResult, Timeline DSL)
   errors.py              # Error hierarchy + FFmpeg stderr parser
@@ -807,6 +823,9 @@ pytest tests/ -v -m "not slow and not remotion"
 - Security reports: see [SECURITY.md](SECURITY.md) (private reporting path).
 - Need help or want to request a feature? Start with [SUPPORT.md](SUPPORT.md).
 - Expected behavior in community spaces: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
+- Discussions: ask questions, share demos, and float ideas in [GitHub Discussions](https://github.com/Pastorsimon1798/mcp-video/discussions).
+- Governance and maintainer expectations: [GOVERNANCE.md](GOVERNANCE.md) and [MAINTAINERS.md](MAINTAINERS.md).
+- Release history: [CHANGELOG.md](CHANGELOG.md).
 
 ---
 
