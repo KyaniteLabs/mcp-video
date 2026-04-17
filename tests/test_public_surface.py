@@ -3,6 +3,7 @@
 import re
 import subprocess
 import sys
+import asyncio
 
 
 EXPECTED_CLI_COMMANDS = {
@@ -201,7 +202,7 @@ def test_cli_help_lists_all_commands():
 def test_server_tool_registry_keeps_public_tool_names():
     from mcp_video.server import mcp
 
-    tool_names = {tool.name for tool in mcp._tool_manager.list_tools()}
+    tool_names = {tool.name for tool in asyncio.run(mcp.list_tools())}
 
     assert tool_names >= EXPECTED_SERVER_TOOLS
     assert len(tool_names) == 83
