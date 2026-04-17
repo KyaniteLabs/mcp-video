@@ -13,7 +13,7 @@ jobs:
     name: Check tracked release surface
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Check forbidden tracked artifacts
         run: python3 .github/scripts/check-forbidden-artifacts.py
 
@@ -22,7 +22,7 @@ jobs:
     needs: surface-audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0  # Needed for hatch-vcs if ever adopted
       - uses: actions/setup-python@v5
