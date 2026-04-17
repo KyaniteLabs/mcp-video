@@ -22,7 +22,7 @@ jobs:
       - uses: actions/checkout@v6
       - name: Check forbidden tracked artifacts
         run: python3 .github/scripts/check-forbidden-artifacts.py
-      - uses: actions/configure-pages@v5
+      - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:
           path: "."
