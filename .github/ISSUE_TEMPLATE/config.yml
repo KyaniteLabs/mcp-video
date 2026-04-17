@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerabilities
+    url: https://github.com/pastorsimon1798/mcp-video/security/advisories/new
+    about: Please report vulnerabilities privately via GitHub Security Advisories.
+  - name: Support guidance
+    url: https://github.com/pastorsimon1798/mcp-video/blob/master/SUPPORT.md
+    about: Read support expectations and what details to include.
