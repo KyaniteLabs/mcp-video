@@ -26,7 +26,7 @@ REQUIRED_FILES = [
     ".github/dependabot.yml",
     ".github/pull_request_template.md",
     ".github/DISCUSSION_TEMPLATE/ideas.yml",
-    ".github/DISCUSSION_TEMPLATE/q-and-a.yml",
+    ".github/DISCUSSION_TEMPLATE/q-a.yml",
     ".github/DISCUSSION_TEMPLATE/show-and-tell.yml",
     ".github/ISSUE_TEMPLATE/bug_report.yml",
     ".github/ISSUE_TEMPLATE/feature_request.yml",

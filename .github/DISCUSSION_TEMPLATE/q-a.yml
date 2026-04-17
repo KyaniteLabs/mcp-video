@@ -16,4 +16,3 @@ body:
     attributes:
       label: Context
       description: Include commands, MCP client, OS, Python version, FFmpeg version, and logs if relevant.
-
