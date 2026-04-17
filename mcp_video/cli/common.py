@@ -3,11 +3,25 @@
 from __future__ import annotations
 
 import json
+import os
 from typing import Any
 
 from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 
 from .formatting import console
+
+
+def _auto_output(input_path: str, suffix: str) -> str:
+    """Generate an output path next to the input file."""
+    base, ext = os.path.splitext(input_path)
+    return f"{base}_{suffix}{ext}"
+
+
+def output_json(data: Any) -> None:
+    """Print a JSON response, converting Pydantic models first."""
+    if hasattr(data, "model_dump"):
+        data = data.model_dump()
+    print(json.dumps(data, indent=2))
 
 
 def _parse_json_arg(value: str, arg_name: str = "argument", json_mode: bool = False) -> Any:
