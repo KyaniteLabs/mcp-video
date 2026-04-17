@@ -61,6 +61,41 @@ def git_stdout(*args: str) -> str:
     return result.stdout.strip()
 
 
+def dependabot_groups_by_ecosystem() -> dict[tuple[str, str], set[str]]:
+    """Return Dependabot group names keyed by package ecosystem and directory.
+
+    This intentionally uses a tiny parser for the limited Dependabot shape used
+    in this repo so the readiness audit has no extra CI dependencies.
+    """
+    grouped: dict[tuple[str, str], set[str]] = {}
+    current_key: tuple[str, str] | None = None
+    in_groups = False
+    ecosystem = ""
+    directory = ""
+    for raw_line in read(".github/dependabot.yml").splitlines():
+        line = raw_line.strip()
+        if line.startswith("- package-ecosystem:"):
+            ecosystem = line.split(":", 1)[1].strip().strip('"')
+            directory = ""
+            current_key = None
+            in_groups = False
+            continue
+        if line.startswith("directory:"):
+            directory = line.split(":", 1)[1].strip().strip('"')
+            current_key = (ecosystem, directory)
+            grouped.setdefault(current_key, set())
+            continue
+        if line == "groups:" and current_key is not None:
+            in_groups = True
+            continue
+        if in_groups and raw_line.startswith("      ") and line.endswith(":"):
+            grouped.setdefault(current_key, set()).add(line[:-1])
+            continue
+        if line and not raw_line.startswith("      ") and not line.startswith("-"):
+            in_groups = False
+    return grouped
+
+
 def main() -> int:
     failures: list[str] = []
     warnings: list[str] = []
@@ -197,6 +232,21 @@ def main() -> int:
         failures=failures,
         warnings=warnings,
     )
+
+    print("\n== Dependabot checks ==")
+    dependabot_groups = dependabot_groups_by_ecosystem()
+    for ecosystem, directory, group_name in [
+        ("uv", "/", "python-runtime"),
+        ("npm", "/explainer-video", "explainer-video"),
+        ("github-actions", "/", "github-actions"),
+    ]:
+        check(
+            group_name in dependabot_groups.get((ecosystem, directory), set()),
+            f"Dependabot groups {ecosystem} updates in {directory} as {group_name}",
+            f"Dependabot should group {ecosystem} updates in {directory} as {group_name}",
+            failures=failures,
+            warnings=warnings,
+        )
 
     print("\n== Release/tag visibility checks ==")
     tags = git_stdout("tag", "--list")

@@ -7,6 +7,17 @@ on:
     branches: [master]
 
 jobs:
+  repository-readiness:
+    name: Repository readiness
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Run repository readiness audit
+        run: ./scripts/repo-readiness-audit.py
+
   lint:
     name: Lint
     runs-on: ubuntu-latest
