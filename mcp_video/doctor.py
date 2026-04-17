@@ -16,6 +16,7 @@ from .limits import DOCTOR_COMMAND_TIMEOUT
 WhichFn = Callable[[str], str | None]
 VersionRunner = Callable[[list[str]], str | None]
 FindSpecFn = Callable[[str], Any]
+PackageVersionFn = Callable[[str], str | None]
 
 COMMAND_CHECKS = (
     {
@@ -95,7 +96,7 @@ def _package_version(distribution_name: str) -> str | None:
 def _check_command(definition: dict[str, Any], which: WhichFn, version_runner: VersionRunner) -> dict[str, Any]:
     path = which(definition["name"])
     version = version_runner(definition["command"]) if path else None
-    ok = path is not None
+    ok = path is not None and version is not None
     return {
         "name": definition["name"],
         "category": definition["category"],
@@ -114,15 +115,18 @@ def _check_package(
     required: bool,
     install_hint: str,
     find_spec: FindSpecFn,
+    package_version: PackageVersionFn,
 ) -> dict[str, Any]:
-    ok = find_spec(import_name) is not None
+    found = find_spec(import_name) is not None
+    version = package_version(distribution_name) if found else None
+    ok = found and version is not None
     return {
         "name": distribution_name,
         "category": category,
         "required": required,
         "ok": ok,
         "path": None,
-        "version": _package_version(distribution_name) if ok else None,
+        "version": version if ok else None,
         "install_hint": None if ok else install_hint,
     }
 
@@ -147,10 +151,14 @@ def run_diagnostics(
     which: WhichFn = shutil.which,
     version_runner: VersionRunner = _command_version,
     find_spec: FindSpecFn = importlib.util.find_spec,
+    package_version: PackageVersionFn = _package_version,
 ) -> dict[str, Any]:
     """Return a structured report for core and optional integration dependencies."""
     checks = [_check_command(definition, which, version_runner) for definition in COMMAND_CHECKS]
-    checks.extend(_check_package(*definition, find_spec=find_spec) for definition in PACKAGE_CHECKS)
+    checks.extend(
+        _check_package(*definition, find_spec=find_spec, package_version=package_version)
+        for definition in PACKAGE_CHECKS
+    )
     return {
         "success": True,
         "platform": {

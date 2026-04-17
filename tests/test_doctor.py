@@ -20,7 +20,12 @@ def test_run_diagnostics_marks_required_tools_ok_when_present():
     def fake_find_spec(name: str) -> ModuleSpec | None:
         return ModuleSpec(name, loader=None) if name in present_packages else None
 
-    report = run_diagnostics(which=fake_which, version_runner=fake_version, find_spec=fake_find_spec)
+    report = run_diagnostics(
+        which=fake_which,
+        version_runner=fake_version,
+        find_spec=fake_find_spec,
+        package_version=lambda name: "1.0.0" if name in present_packages else None,
+    )
 
     checks = {check["name"]: check for check in report["checks"]}
     assert report["success"] is True
@@ -44,6 +49,26 @@ def test_run_diagnostics_marks_required_tools_missing():
     assert "Install FFmpeg" in checks["ffmpeg"]["install_hint"]
 
 
+def test_run_diagnostics_marks_command_probe_failures_missing():
+    from mcp_video.doctor import run_diagnostics
+
+    present_packages = {"mcp", "pydantic", "rich"}
+
+    def fake_find_spec(name: str) -> ModuleSpec | None:
+        return ModuleSpec(name, loader=None) if name in present_packages else None
+
+    report = run_diagnostics(
+        which=lambda name: f"/usr/bin/{name}",
+        version_runner=lambda command: None,
+        find_spec=fake_find_spec,
+    )
+
+    checks = {check["name"]: check for check in report["checks"]}
+    assert report["summary"]["required_ok"] is False
+    assert checks["ffmpeg"]["ok"] is False
+    assert checks["ffmpeg"]["path"] == "/usr/bin/ffmpeg"
+
+
 def test_run_diagnostics_checks_optional_packages_without_importing_them():
     from mcp_video.doctor import run_diagnostics
 
@@ -52,13 +77,42 @@ def test_run_diagnostics_checks_optional_packages_without_importing_them():
     def fake_find_spec(name: str) -> ModuleSpec | None:
         return ModuleSpec(name, loader=None) if name in present else None
 
-    report = run_diagnostics(which=lambda name: None, version_runner=lambda command: None, find_spec=fake_find_spec)
+    report = run_diagnostics(
+        which=lambda name: None,
+        version_runner=lambda command: None,
+        find_spec=fake_find_spec,
+        package_version=lambda name: "1.0.0" if name in {"pillow", "scikit-learn", "webcolors"} else None,
+    )
 
     checks = {check["name"]: check for check in report["checks"]}
     assert checks["pillow"]["ok"] is True
     assert checks["scikit-learn"]["ok"] is True
     assert checks["openai-whisper"]["ok"] is False
     assert checks["openai-whisper"]["required"] is False
+
+
+def test_run_diagnostics_requires_matching_distribution_for_package_checks():
+    from mcp_video.doctor import run_diagnostics
+
+    present = {"mcp", "pydantic", "rich", "cv2"}
+
+    def fake_find_spec(name: str) -> ModuleSpec | None:
+        return ModuleSpec(name, loader=None) if name in present else None
+
+    def fake_package_version(name: str) -> str | None:
+        return "1.0.0" if name in {"mcp", "pydantic", "rich"} else None
+
+    report = run_diagnostics(
+        which=lambda name: f"/usr/bin/{name}" if name in {"ffmpeg", "ffprobe"} else None,
+        version_runner=lambda command: f"{command[0]} version test",
+        find_spec=fake_find_spec,
+        package_version=fake_package_version,
+    )
+
+    checks = {check["name"]: check for check in report["checks"]}
+    assert report["summary"]["required_ok"] is True
+    assert checks["opencv-contrib-python"]["ok"] is False
+    assert checks["opencv-contrib-python"]["version"] is None
 
 
 def test_cli_doctor_json_outputs_structured_report():
