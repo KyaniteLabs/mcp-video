@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Any
 
 from .errors import InputFileError, MCPVideoError, ProcessingError
+from .ffmpeg_helpers import _seconds_to_srt_time
 
 
 def ai_transcribe(
@@ -150,15 +151,6 @@ def _format_srt(segments: list[dict[str, Any]]) -> str:
         index += 1
 
     return "\n".join(srt_lines)
-
-
-def _seconds_to_srt_time(seconds: float) -> str:
-    """Convert seconds to SRT time format HH:MM:SS,mmm"""
-    hours = int(seconds // 3600)
-    minutes = int((seconds % 3600) // 60)
-    secs = int(seconds % 60)
-    millis = int((seconds % 1) * 1000)
-    return f"{hours:02d}:{minutes:02d}:{secs:02d},{millis:03d}"
 
 
 def _format_txt(segments: list[dict[str, Any]]) -> str:
