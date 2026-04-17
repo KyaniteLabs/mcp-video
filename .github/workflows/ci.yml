@@ -129,9 +129,12 @@ jobs:
   docker:
     name: Docker build
     needs: changes
-    if: github.event_name != 'pull_request' || needs.changes.outputs.docker == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+      - name: Skip Docker build
+        if: github.event_name == 'pull_request' && needs.changes.outputs.docker != 'true'
+        run: echo "Docker inputs unchanged; marking Docker check successful."
       - name: Build Docker image
+        if: github.event_name != 'pull_request' || needs.changes.outputs.docker == 'true'
         run: docker build -t mcp-video:test .
