@@ -24,6 +24,8 @@
   <a href="#cli-reference">CLI</a> &bull;
   <a href="#templates">Templates</a> &bull;
   <a href="CONTRIBUTING.md">Contributing</a> &bull;
+  <a href="SECURITY.md">Security</a> &bull;
+  <a href="SUPPORT.md">Support</a> &bull;
   <a href="ROADMAP.md">Roadmap</a>
 </p>
 
@@ -74,6 +76,7 @@ Think of it as **FFmpeg + Remotion with an API that AI agents can actually use**
 - [Error Handling](#error-handling)
 - [Architecture](#architecture)
 - [Testing](#testing)
+- [Community & Support](#community--support)
 - [License](#license)
 
 ---
@@ -795,6 +798,15 @@ pip install -e ".[dev]"
 
 pytest tests/ -v -m "not slow and not remotion"
 ```
+
+---
+
+## Community & Support
+
+- Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a PR.
+- Security reports: see [SECURITY.md](SECURITY.md) (private reporting path).
+- Need help or want to request a feature? Start with [SUPPORT.md](SUPPORT.md).
+- Expected behavior in community spaces: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 
 ---
 

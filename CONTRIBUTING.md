@@ -138,6 +138,38 @@ Fix colon escaping in drawtext filter strings
 Bump version to 1.2.0
 ```
 
+## Git Hygiene & Branch Management
+
+To keep branch history clean and reviewable, follow the governance guide in `docs/git-branch-governance.md`.
+
+Before opening a PR, run:
+
+```bash
+./scripts/git-professional-audit.sh
+```
+
+Address all `FAIL` results, and resolve `WARN` results when practical.
+
+For broader repository health (docs + templates + metadata), run:
+
+```bash
+./scripts/repo-readiness-audit.py
+```
+
+For workspace cleanup (stale worktrees/branches), run:
+
+```bash
+./scripts/git-workspace-cleanup.sh
+```
+
+To monitor GitHub CI and review comments on open PRs, run:
+
+```bash
+./scripts/github-pr-monitor.py --owner Pastorsimon1798 --repo mcp-video
+# optional: target a specific PR
+./scripts/github-pr-monitor.py --owner Pastorsimon1798 --repo mcp-video --pr 17
+```
+
 ## Pull Request Process
 
 1. Fork the repo
