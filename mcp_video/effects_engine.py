@@ -129,17 +129,14 @@ def effect_chromatic_aberration(
         output,
     ]
 
-    # Run first attempt, capture error for fallback check
-    result = _run_ffmpeg(cmd)
-
-    # Fallback if chromashift not available
-    if result.returncode != 0 and "chromashift" in result.stderr:
-        filters = f"colorbalance=rs={intensity / 100}:bs=-{intensity / 100}"
-        cmd[4] = filters
+    try:
         _run_ffmpeg(cmd)
-    elif result.returncode != 0:
-        cmd_str = " ".join(cmd)
-        raise ProcessingError(cmd_str, result.returncode, result.stderr)
+    except ProcessingError as e:
+        if "chromashift" not in e.full_stderr:
+            raise
+        filters = f"colorbalance=rs={intensity / 100}:bs=-{intensity / 100}"
+        cmd[5] = filters
+        _run_ffmpeg(cmd)
 
     return output
 
@@ -301,22 +298,19 @@ def effect_glow(
         output,
     ]
 
-    # Run first attempt, capture error for fallback check
-    result = _run_ffmpeg(cmd)
-
-    # Fallback if gblur not available
-    if result.returncode != 0 and "gblur" in result.stderr:
+    try:
+        _run_ffmpeg(cmd)
+    except ProcessingError as e:
+        if "gblur" not in e.full_stderr:
+            raise
         filters = (
             f"split[original][highlights];"
             f"[highlights]geq=lum='if(lt(lum(X,Y),{threshold_8bit}),0,lum(X,Y))',"
             f"boxblur={radius}:{radius}[glow];"
             f"[original][glow]blend=all_mode='addition':all_opacity={intensity}"
         )
-        cmd[4] = filters
+        cmd[5] = filters
         _run_ffmpeg(cmd)
-    elif result.returncode != 0:
-        cmd_str = " ".join(cmd)
-        raise ProcessingError(cmd_str, result.returncode, result.stderr)
 
     return output
 
