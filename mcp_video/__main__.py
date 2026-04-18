@@ -11,6 +11,7 @@ from rich.table import Table
 
 from .cli.common import _auto_output, _parse_json_arg, _with_spinner, output_json
 from .cli.handlers_core import handle_initial_command
+from .cli.handlers_transitions import handle_transition_command
 from .cli.parser import build_parser
 from .cli.formatting import (
     _format_batch_text,
@@ -52,6 +53,8 @@ def main() -> None:
     # CLI commands
     try:
         if handle_initial_command(args, use_json=use_json):
+            return
+        if handle_transition_command(args, use_json=use_json):
             return
 
         # Remaining command families are still handled here until their batches move.
@@ -759,67 +762,6 @@ def main() -> None:
                         border_style="green",
                         title="Done",
                     )
-                )
-
-        # ------------------------------------------------------------------
-        # Transition commands
-        # ------------------------------------------------------------------
-
-        elif args.command == "transition-glitch":
-            from .transitions_engine import transition_glitch
-
-            result = _with_spinner(
-                "Applying glitch transition...",
-                transition_glitch,
-                args.clip1,
-                args.clip2,
-                args.output,
-                duration=args.duration,
-                intensity=args.intensity,
-            )
-            if use_json:
-                output_json({"success": True, "output_path": result})
-            else:
-                console.print(
-                    Panel(f"[bold green]Glitch transition:[/bold green] {result}", border_style="green", title="Done")
-                )
-
-        elif args.command == "transition-morph":
-            from .transitions_engine import transition_morph
-
-            result = _with_spinner(
-                "Applying morph transition...",
-                transition_morph,
-                args.clip1,
-                args.clip2,
-                args.output,
-                duration=args.duration,
-                mesh_size=args.mesh_size,
-            )
-            if use_json:
-                output_json({"success": True, "output_path": result})
-            else:
-                console.print(
-                    Panel(f"[bold green]Morph transition:[/bold green] {result}", border_style="green", title="Done")
-                )
-
-        elif args.command == "transition-pixelate":
-            from .transitions_engine import transition_pixelate
-
-            result = _with_spinner(
-                "Applying pixelate transition...",
-                transition_pixelate,
-                args.clip1,
-                args.clip2,
-                args.output,
-                duration=args.duration,
-                pixel_size=args.pixel_size,
-            )
-            if use_json:
-                output_json({"success": True, "output_path": result})
-            else:
-                console.print(
-                    Panel(f"[bold green]Pixelate transition:[/bold green] {result}", border_style="green", title="Done")
                 )
 
         # ------------------------------------------------------------------
