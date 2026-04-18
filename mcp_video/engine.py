@@ -77,6 +77,7 @@ from .engine_text import add_text as add_text
 from .engine_thumbnail import thumbnail as thumbnail
 from .engine_transcode import normalize as normalize
 from .engine_watermark import watermark as watermark
+from .engine_crop import crop as crop
 
 
 # ---------------------------------------------------------------------------
@@ -284,63 +285,6 @@ def convert(
         operation="convert",
         progress=100.0,
         thumbnail_base64=thumb_b64,
-    )
-
-
-def crop(
-    input_path: str,
-    width: int,
-    height: int,
-    x: int | None = None,
-    y: int | None = None,
-    output_path: str | None = None,
-) -> EditResult:
-    """Crop a video to a rectangular region."""
-    _validate_input(input_path)
-    if width <= 0 or height <= 0:
-        raise MCPVideoError("Crop dimensions must be positive", code="invalid_crop")
-
-    info = probe(input_path)
-    if width > info.width or height > info.height:
-        raise MCPVideoError(
-            f"Crop size ({width}x{height}) larger than video ({info.width}x{info.height})",
-            code="crop_too_large",
-        )
-
-    if x is None:
-        x = (info.width - width) // 2
-    if y is None:
-        y = (info.height - height) // 2
-
-    output = output_path or _auto_output(input_path, f"crop_{width}x{height}")
-
-    _run_ffmpeg(
-        [
-            "-i",
-            input_path,
-            "-vf",
-            f"crop={width}:{height}:{x}:{y}",
-            "-c:v",
-            "libx264",
-            "-preset",
-            "fast",
-            "-crf",
-            "23",
-            "-c:a",
-            "copy",
-            *_movflags_args(output),
-            output,
-        ]
-    )
-
-    result_info = probe(output)
-    return EditResult(
-        output_path=output,
-        duration=result_info.duration,
-        resolution=result_info.resolution,
-        size_mb=result_info.size_mb,
-        format="mp4",
-        operation="crop",
     )
 
 
