@@ -569,6 +569,99 @@ class TestCLITransitions:
         assert data["output_path"] == str(output)
         assert output.exists()
 
+
+class TestCLICompositionHandlers:
+    @pytest.mark.parametrize(
+        ("command", "output_name", "label", "extra_args"),
+        [
+            (
+                "video-text-animated",
+                "text.mp4",
+                "Animated text",
+                {
+                    "input": "in.mp4",
+                    "text": "Hello",
+                    "animation": "fade",
+                    "font": "Arial",
+                    "size": 48,
+                    "color": "white",
+                    "position": "center",
+                    "start": 0,
+                    "duration": 3.0,
+                },
+            ),
+            (
+                "video-mograph-count",
+                "count.mp4",
+                "Counter",
+                {"start": 1, "end": 10, "duration": 2.0, "style": '{"font": "Arial"}', "fps": 30},
+            ),
+            (
+                "video-mograph-progress",
+                "progress.mp4",
+                "Progress bar",
+                {"duration": 2.0, "style": "bar", "color": "#CCFF00", "track_color": "#333333", "fps": 30},
+            ),
+            (
+                "video-layout-grid",
+                "grid.mp4",
+                "Grid layout",
+                {"inputs": ["a.mp4", "b.mp4"], "layout": "2x2", "gap": 10, "padding": 20, "background": "#141414"},
+            ),
+            (
+                "video-layout-pip",
+                "pip.mp4",
+                "PIP",
+                {
+                    "main": "main.mp4",
+                    "pip": "pip.mp4",
+                    "position": "bottom-right",
+                    "size": 0.25,
+                    "margin": 20,
+                    "border": True,
+                    "border_color": "#CCFF00",
+                    "border_width": 2,
+                    "rounded_corners": True,
+                },
+            ),
+        ],
+    )
+    def test_composition_handler_outputs_json(self, command, output_name, label, extra_args, tmp_path, monkeypatch, capsys):
+        output = tmp_path / output_name
+        from mcp_video.cli import handlers_composition
+
+        monkeypatch.setattr(handlers_composition, "_with_spinner", lambda *args, **kwargs: str(output))
+        args = SimpleNamespace(command=command, output=str(output), **extra_args)
+
+        handled = handlers_composition.handle_composition_command(args, use_json=True)
+        data = json.loads(capsys.readouterr().out)
+
+        assert handled is True
+        assert data["success"] is True
+        assert data["output_path"] == str(output)
+
+    def test_composition_handler_outputs_text(self, tmp_path, monkeypatch, capsys):
+        output = tmp_path / "progress.mp4"
+        from mcp_video.cli import handlers_composition
+
+        monkeypatch.setattr(handlers_composition, "_with_spinner", lambda *args, **kwargs: str(output))
+        args = SimpleNamespace(
+            command="video-mograph-progress",
+            output=str(output),
+            duration=2.0,
+            style="bar",
+            color="#CCFF00",
+            track_color="#333333",
+            fps=30,
+        )
+
+        handled = handlers_composition.handle_composition_command(args, use_json=False)
+        stdout = capsys.readouterr().out
+
+        assert handled is True
+        assert "Progress bar" in stdout
+        assert output.name in stdout
+
     def test_transition_morph_outputs_text(self, sample_video, tmp_path):
         output = tmp_path / "morph.mp4"
         result = run_cli("transition-morph", sample_video, sample_video, "-o", str(output), "-d", "0.2")
