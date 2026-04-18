@@ -48,6 +48,7 @@ from .engine_merge import merge as merge
 from .engine_text import add_text as add_text
 from .engine_audio_ops import add_audio as add_audio
 from .engine_resize import resize as resize
+from .engine_speed import speed as speed
 from .engine_runtime_utils import (
     _auto_output as _auto_output,
     _auto_output_dir as _auto_output_dir,
@@ -280,108 +281,6 @@ def convert(
         operation="convert",
         progress=100.0,
         thumbnail_base64=thumb_b64,
-    )
-
-
-def speed(
-    input_path: str,
-    factor: float = 1.0,
-    output_path: str | None = None,
-) -> EditResult:
-    """Change playback speed. factor > 1 = faster, < 1 = slower."""
-    _validate_input(input_path)
-    if factor <= 0:
-        raise MCPVideoError("Speed factor must be positive")
-
-    output = output_path or _auto_output(input_path, f"speed_{factor}x")
-
-    # Use setpts for video, atempo for audio
-    video_filter = f"setpts={1 / factor}*PTS"
-    audio_filter = f"atempo={factor}"
-
-    # atempo only supports 0.5 to 100.0; chain if needed
-    MAX_SPEED_CHAIN_COUNT = 20
-    if factor < 0.5:
-        chain_count = 2
-        while factor ** (1 / chain_count) < 0.5:
-            chain_count += 1
-            if chain_count > MAX_SPEED_CHAIN_COUNT:
-                raise MCPVideoError(
-                    "Speed factor too extreme: would require more than 20 atempo filters",
-                    error_type="validation_error",
-                    code="invalid_parameter",
-                )
-        tempo_val = factor ** (1 / chain_count)
-        audio_filter = ",".join([f"atempo={tempo_val}"] * chain_count)
-    elif factor > 100:
-        chain_count = 2
-        while factor ** (1 / chain_count) > 100:
-            chain_count += 1
-            if chain_count > MAX_SPEED_CHAIN_COUNT:
-                raise MCPVideoError(
-                    "Speed factor too extreme: would require more than 20 atempo filters",
-                    error_type="validation_error",
-                    code="invalid_parameter",
-                )
-        tempo_val = factor ** (1 / chain_count)
-        audio_filter = ",".join([f"atempo={tempo_val}"] * chain_count)
-
-    # Check if input has audio
-    info = probe(input_path)
-    has_audio = info.audio_codec is not None
-
-    if has_audio:
-        _run_ffmpeg(
-            [
-                "-i",
-                input_path,
-                "-filter_complex",
-                f"[0:v]{video_filter}[v];[0:a]{audio_filter}[a]",
-                "-map",
-                "[v]",
-                "-map",
-                "[a]",
-                "-c:v",
-                "libx264",
-                "-preset",
-                "fast",
-                "-crf",
-                "23",
-                "-c:a",
-                "aac",
-                "-b:a",
-                "128k",
-                *_movflags_args(output),
-                output,
-            ]
-        )
-    else:
-        _run_ffmpeg(
-            [
-                "-i",
-                input_path,
-                "-vf",
-                video_filter,
-                "-an",
-                "-c:v",
-                "libx264",
-                "-preset",
-                "fast",
-                "-crf",
-                "23",
-                *_movflags_args(output),
-                output,
-            ]
-        )
-
-    info = probe(output)
-    return EditResult(
-        output_path=output,
-        duration=info.duration,
-        resolution=info.resolution,
-        size_mb=info.size_mb,
-        format="mp4",
-        operation="speed",
     )
 
 
