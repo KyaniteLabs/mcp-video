@@ -4,7 +4,7 @@ mcp-video shells out to FFmpeg and handles local media paths, so security report
 
 ## Supported Versions
 
-Security fixes target the current `master` branch and the latest published package version. Older versions may receive guidance, but fixes are not backported unless a maintainer explicitly announces that support window.
+Security fixes target the repository's default branch and the latest published package version. Older versions may receive guidance, but fixes are not backported unless a maintainer explicitly announces that support window.
 
 ## Reporting a Vulnerability
 
