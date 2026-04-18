@@ -47,6 +47,7 @@ from .engine_edit import trim as trim
 from .engine_merge import _merge_with_transitions as _merge_with_transitions
 from .engine_merge import merge as merge
 from .engine_text import add_text as add_text
+from .engine_audio_ops import add_audio as add_audio
 from .engine_runtime_utils import (
     _auto_output as _auto_output,
     _auto_output_dir as _auto_output_dir,
@@ -77,98 +78,6 @@ from .engine_runtime_utils import (
 # ---------------------------------------------------------------------------
 # Core operations
 # ---------------------------------------------------------------------------
-
-
-def add_audio(
-    video_path: str,
-    audio_path: str,
-    volume: float = 1.0,
-    fade_in: float = 0.0,
-    fade_out: float = 0.0,
-    mix: bool = False,
-    start_time: float | None = None,
-    output_path: str | None = None,
-) -> EditResult:
-    """Add or replace audio track on a video."""
-    _validate_input(video_path)
-    _validate_input(audio_path)
-    output = output_path or _auto_output(video_path, "audio")
-
-    video_info = probe(video_path)
-
-    if mix and _has_audio(_run_ffprobe_json(video_path)):
-        # Mix new audio with existing audio
-        audio_filters: list[str] = []
-        if volume != 1.0:
-            audio_filters.append(f"volume={volume}")
-        if fade_in > 0:
-            audio_filters.append(f"afade=t=in:st=0:d={fade_in}")
-        if fade_out > 0:
-            audio_filters.append(f"afade=t=out:st={video_info.duration - fade_out}:d={fade_out}")
-
-        af = ",".join(audio_filters) if audio_filters else "anull"
-
-        delay = ""
-        if start_time:
-            delay = f"[1:a]adelay={int(start_time * 1000)}|{int(start_time * 1000)},"
-
-        filter_complex = f"[0:a]anull[a0];{delay}[1:a]{af}[a1];[a0][a1]amix=inputs=2:duration=longest[aout]"
-
-        _run_ffmpeg(
-            [
-                "-i",
-                video_path,
-                "-i",
-                audio_path,
-                "-filter_complex",
-                filter_complex,
-                "-map",
-                "0:v",
-                "-map",
-                "[aout]",
-                "-c:v",
-                "copy",
-                "-c:a",
-                "aac",
-                "-b:a",
-                "128k",
-                *_movflags_args(output),
-                output,
-            ]
-        )
-    else:
-        # Replace audio (or add if no existing audio)
-        args = ["-i", video_path, "-i", audio_path]
-
-        if start_time:
-            args.extend(["-filter_complex", f"[1:a]adelay={int(start_time * 1000)}|{int(start_time * 1000)}[a]"])
-            args.extend(["-map", "0:v:0", "-map", "[a]"])
-        else:
-            args.extend(["-map", "0:v:0", "-map", "1:a:0"])
-
-        audio_filters = []
-        if volume != 1.0:
-            audio_filters.append(f"volume={volume}")
-        if fade_in > 0:
-            audio_filters.append(f"afade=t=in:st=0:d={fade_in}")
-        if fade_out > 0:
-            audio_filters.append(f"afade=t=out:st={video_info.duration - fade_out}:d={fade_out}")
-
-        if audio_filters:
-            args.extend(["-af", ",".join(audio_filters)])
-
-        args.extend(["-c:v", "copy", "-c:a", "aac", "-b:a", "128k", "-shortest", *_movflags_args(output), output])
-        _run_ffmpeg(args)
-
-    info = probe(output)
-    return EditResult(
-        output_path=output,
-        duration=info.duration,
-        resolution=info.resolution,
-        size_mb=info.size_mb,
-        format="mp4",
-        operation="add_audio",
-    )
 
 
 def resize(
