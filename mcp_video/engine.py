@@ -46,6 +46,7 @@ from .engine_transcode import normalize as normalize
 from .engine_edit import trim as trim
 from .engine_merge import _merge_with_transitions as _merge_with_transitions
 from .engine_merge import merge as merge
+from .engine_text import add_text as add_text
 from .engine_runtime_utils import (
     _auto_output as _auto_output,
     _auto_output_dir as _auto_output_dir,
@@ -76,95 +77,6 @@ from .engine_runtime_utils import (
 # ---------------------------------------------------------------------------
 # Core operations
 # ---------------------------------------------------------------------------
-
-
-def add_text(
-    input_path: str,
-    text: str,
-    position: Position = "top-center",
-    font: str | None = None,
-    size: int = 48,
-    color: str = "white",
-    shadow: bool = True,
-    start_time: float | None = None,
-    duration: float | None = None,
-    output_path: str | None = None,
-    crf: int | None = None,
-    preset: str | None = None,
-) -> EditResult:
-    """Overlay text on a video."""
-    _validate_input(input_path)
-    _require_filter("drawtext", "Text overlay")
-    _validate_color(color)
-    output = output_path or _auto_output(input_path, "titled")
-
-    coords = _position_coords(position)
-    fontfile = font or _default_font()
-
-    # Validate font file exists when explicitly provided
-    if font is not None and not os.path.isfile(fontfile):
-        raise FileNotFoundError(f"Font file not found: {fontfile}")
-
-    # Escape font path for FFmpeg filter syntax
-    escaped_fontfile = _escape_ffmpeg_filter_value(fontfile)
-
-    # Escape FFmpeg drawtext special characters
-    # Colons and backslashes must be escaped even inside single quotes
-    # because FFmpeg parses filter options as key=value pairs with : delimiters
-    escaped_text = (
-        text.replace("\\", "\\\\")
-        .replace("'", "'\\''")
-        .replace(":", "\\:")
-        .replace("[", "\\[")
-        .replace("]", "\\]")
-        .replace(";", "\\;")
-    )
-
-    filter_parts = [
-        f"drawtext=text='{escaped_text}'",
-        f"fontsize={size}",
-        f"fontcolor={color}",
-        f"fontfile={escaped_fontfile}",
-        coords,
-    ]
-
-    if shadow:
-        filter_parts.append("shadowcolor=black@0.5")
-        filter_parts.append("shadowx=2")
-        filter_parts.append("shadowy=2")
-
-    if start_time is not None and duration is not None:
-        filter_parts.append(f"enable='between(t\\,{start_time}\\,{start_time + duration})'")
-    elif start_time is not None:
-        filter_parts.append(f"enable='gte(t\\,{start_time})'")
-
-    vf = ":".join(filter_parts)
-
-    _run_ffmpeg(
-        [
-            "-i",
-            input_path,
-            "-vf",
-            vf,
-            "-c:v",
-            "libx264",
-            *_quality_args(crf=crf, preset=preset),
-            "-c:a",
-            "copy",
-            *_movflags_args(output),
-            output,
-        ]
-    )
-
-    info = probe(output)
-    return EditResult(
-        output_path=output,
-        duration=info.duration,
-        resolution=info.resolution,
-        size_mb=info.size_mb,
-        format="mp4",
-        operation="add_text",
-    )
 
 
 def add_audio(
