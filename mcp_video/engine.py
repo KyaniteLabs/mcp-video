@@ -17,7 +17,6 @@ from .errors import (
     parse_ffmpeg_error,
 )
 from .models import (
-    PREVIEW_PRESETS,
     QUALITY_PRESETS,
     ColorPreset,
     EditResult,
@@ -49,6 +48,7 @@ from .engine_audio_ops import add_audio as add_audio
 from .engine_resize import resize as resize
 from .engine_speed import speed as speed
 from .engine_thumbnail import thumbnail as thumbnail
+from .engine_preview import preview as preview
 from .engine_runtime_utils import (
     _auto_output as _auto_output,
     _auto_output_dir as _auto_output_dir,
@@ -281,56 +281,6 @@ def convert(
         operation="convert",
         progress=100.0,
         thumbnail_base64=thumb_b64,
-    )
-
-
-def preview(
-    input_path: str,
-    output_path: str | None = None,
-    scale_factor: int = 4,
-) -> EditResult:
-    """Generate a fast low-resolution preview for quick review."""
-    _validate_input(input_path)
-    if scale_factor < 1:
-        raise MCPVideoError("scale_factor must be at least 1", code="invalid_scale_factor")
-    info = probe(input_path)
-
-    w = max(info.width // scale_factor, 320)
-    h = max(info.height // scale_factor, 240)
-
-    output = output_path or _auto_output(input_path, "preview")
-
-    _run_ffmpeg(
-        [
-            "-i",
-            input_path,
-            "-vf",
-            f"scale={w}:{h}",
-            "-c:v",
-            "libx264",
-            "-crf",
-            str(PREVIEW_PRESETS["crf"]),
-            "-preset",
-            PREVIEW_PRESETS["preset"],
-            "-c:a",
-            "aac",
-            "-b:a",
-            "64k",
-            "-ac",
-            "2",
-            *_movflags_args(output),
-            output,
-        ]
-    )
-
-    result_info = probe(output)
-    return EditResult(
-        output_path=output,
-        duration=result_info.duration,
-        resolution=result_info.resolution,
-        size_mb=result_info.size_mb,
-        format="mp4",
-        operation="preview",
     )
 
 
