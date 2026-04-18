@@ -30,25 +30,21 @@ from .models import (
     QualityMetricsResult,
     SceneDetectionResult,
     SplitLayout,
-    StoryboardResult,
     SubtitleResult,
     Timeline,
     TimelineImageOverlay,
     WaveformResult,
 )
 from .ffmpeg_helpers import _escape_ffmpeg_filter_value, _run_ffprobe_json, _seconds_to_srt_time
+from .engine_audio_ops import add_audio as add_audio
+from .engine_edit import trim as trim
+from .engine_merge import merge as merge
+from .engine_preview import preview as preview
+
+# Compatibility re-export: callers still import get_duration from mcp_video.engine.
 from .engine_probe import get_duration as get_duration
 from .engine_probe import probe as probe
-from .engine_transcode import normalize as normalize
-from .engine_edit import trim as trim
-from .engine_merge import _merge_with_transitions as _merge_with_transitions
-from .engine_merge import merge as merge
-from .engine_text import add_text as add_text
-from .engine_audio_ops import add_audio as add_audio
 from .engine_resize import resize as resize
-from .engine_speed import speed as speed
-from .engine_thumbnail import thumbnail as thumbnail
-from .engine_preview import preview as preview
 from .engine_runtime_utils import (
     _auto_output as _auto_output,
     _auto_output_dir as _auto_output_dir,
@@ -74,6 +70,11 @@ from .engine_runtime_utils import (
     _validate_input as _validate_input,
     _validate_position as _validate_position,
 )
+from .engine_speed import speed as speed
+from .engine_storyboard import storyboard as storyboard
+from .engine_text import add_text as add_text
+from .engine_thumbnail import thumbnail as thumbnail
+from .engine_transcode import normalize as normalize
 
 
 # ---------------------------------------------------------------------------
@@ -281,101 +282,6 @@ def convert(
         operation="convert",
         progress=100.0,
         thumbnail_base64=thumb_b64,
-    )
-
-
-def storyboard(
-    input_path: str,
-    output_dir: str | None = None,
-    frame_count: int = 8,
-) -> StoryboardResult:
-    """Extract key frames and create a storyboard grid for human review."""
-    _validate_input(input_path)
-    if frame_count < 1:
-        raise MCPVideoError("frame_count must be at least 1", code="invalid_frame_count")
-    dur = get_duration(input_path)
-
-    out_dir = output_dir or _auto_output_dir(input_path, "storyboard")
-    os.makedirs(out_dir, exist_ok=True)
-
-    frame_paths: list[str] = []
-    interval = dur / (frame_count + 1)
-
-    for i in range(frame_count):
-        ts = interval * (i + 1)
-        frame_name = f"frame_{i + 1:02d}_{ts:.1f}s.jpg"
-        frame_path = os.path.join(out_dir, frame_name)
-
-        _run_ffmpeg(
-            [
-                "-ss",
-                str(ts),
-                "-i",
-                input_path,
-                "-vframes",
-                "1",
-                "-q:v",
-                "2",
-                "-y",
-                frame_path,
-            ]
-        )
-        frame_paths.append(frame_path)
-
-    # Create storyboard grid using FFmpeg
-    grid_path = os.path.join(out_dir, "storyboard_grid.jpg")
-    if len(frame_paths) >= 2:
-        # Create a grid of frames
-        cols = min(4, len(frame_paths))
-        rows = (len(frame_paths) + cols - 1) // cols
-
-        # Use FFmpeg to tile the images
-        # Build a complex filter for the grid
-        inputs = []
-        for fp in frame_paths:
-            inputs.extend(["-i", fp])
-
-        # Normalize all frames to same size
-        filter_parts = []
-        for i, _fp in enumerate(frame_paths):
-            filter_parts.append(
-                f"[{i}:v]scale=480:270:force_original_aspect_ratio=decrease,pad=480:270:(ow-iw)/2:(oh-ih)/2[s{i}]"
-            )
-
-        # Stack horizontally first, then vertically
-        # Row 0: [s0][s1][s2][s3]hstack=inputs=4[r0]
-        # Row 1: [s4][s5][s6][s7]hstack=inputs=4[r1]
-        # Final: [r0][r1]vstack=inputs=2[vout]
-
-        row_labels: list[str] = []
-        for row in range(rows):
-            start = row * cols
-            end = min(start + cols, len(frame_paths))
-            actual_cols = end - start
-            input_labels = "".join(f"[s{j}]" for j in range(start, end))
-            row_label = f"r{row}"
-            filter_parts.append(f"{input_labels}hstack=inputs={actual_cols}[{row_label}]")
-            row_labels.append(f"[{row_label}]")
-
-        vstack_inputs = "".join(row_labels)
-        filter_parts.append(f"{vstack_inputs}vstack=inputs={rows}[vout]")
-
-        filter_str = ";".join(filter_parts)
-
-        try:
-            _run_ffmpeg([*inputs, "-filter_complex", filter_str, "-map", "[vout]", "-q:v", "2", "-y", grid_path])
-        except ProcessingError:
-            # Grid creation failed — frames are still useful individually
-            grid_path = None
-    elif len(frame_paths) == 1:
-        shutil.copy2(frame_paths[0], grid_path)
-    else:
-        grid_path = None
-
-    return StoryboardResult(
-        frames=frame_paths,
-        grid=grid_path,
-        count=len(frame_paths),
     )
 
 
