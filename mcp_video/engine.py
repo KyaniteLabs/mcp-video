@@ -37,6 +37,7 @@ from .models import (
 )
 from .ffmpeg_helpers import _escape_ffmpeg_filter_value, _run_ffprobe_json, _seconds_to_srt_time
 from .engine_audio_ops import add_audio as add_audio
+from .engine_crop import crop as crop
 from .engine_edit import trim as trim
 from .engine_merge import merge as merge
 from .engine_preview import preview as preview
@@ -45,6 +46,7 @@ from .engine_preview import preview as preview
 from .engine_probe import get_duration as get_duration
 from .engine_probe import probe as probe
 from .engine_resize import resize as resize
+from .engine_rotate import rotate as rotate
 from .engine_runtime_utils import (
     _auto_output as _auto_output,
     _auto_output_dir as _auto_output_dir,
@@ -77,7 +79,6 @@ from .engine_text import add_text as add_text
 from .engine_thumbnail import thumbnail as thumbnail
 from .engine_transcode import normalize as normalize
 from .engine_watermark import watermark as watermark
-from .engine_crop import crop as crop
 
 
 # ---------------------------------------------------------------------------
@@ -285,74 +286,6 @@ def convert(
         operation="convert",
         progress=100.0,
         thumbnail_base64=thumb_b64,
-    )
-
-
-def rotate(
-    input_path: str,
-    angle: int = 0,
-    flip_horizontal: bool = False,
-    flip_vertical: bool = False,
-    output_path: str | None = None,
-) -> EditResult:
-    """Rotate and/or flip a video.
-
-    Args:
-        angle: Rotation angle (0, 90, 180, 270).
-        flip_horizontal: Mirror horizontally.
-        flip_vertical: Mirror vertically.
-    """
-    _validate_input(input_path)
-
-    if angle not in (0, 90, 180, 270):
-        raise MCPVideoError("angle must be 0, 90, 180, or 270", code="invalid_angle")
-    if angle == 0 and not flip_horizontal and not flip_vertical:
-        raise MCPVideoError("No rotation or flip specified", code="no_transform")
-
-    filters: list[str] = []
-    if flip_horizontal:
-        filters.append("hflip")
-    if flip_vertical:
-        filters.append("vflip")
-    if angle == 90:
-        filters.append("transpose=1")
-    elif angle == 180:
-        filters.append("transpose=1,transpose=1")
-    elif angle == 270:
-        filters.append("transpose=2")
-
-    vf = ",".join(filters)
-    output = output_path or _auto_output(input_path, f"rotated_{angle}")
-
-    _run_ffmpeg(
-        [
-            "-i",
-            input_path,
-            "-vf",
-            vf,
-            "-c:v",
-            "libx264",
-            "-preset",
-            "fast",
-            "-crf",
-            "23",
-            "-c:a",
-            "aac",
-            "-b:a",
-            "128k",
-            *_movflags_args(output),
-            output,
-        ]
-    )
-
-    result_info = probe(output)
-    return EditResult(
-        output_path=output,
-        duration=result_info.duration,
-        resolution=result_info.resolution,
-        size_mb=result_info.size_mb,
-        format="mp4",
-        operation="rotate",
     )
 
 

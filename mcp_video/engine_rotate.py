@@ -1,0 +1,73 @@
+"""Rotate and flip operation for the FFmpeg engine."""
+
+from __future__ import annotations
+
+from .engine_probe import probe
+from .engine_runtime_utils import _auto_output, _movflags_args, _quality_args, _run_ffmpeg, _validate_input
+from .errors import MCPVideoError
+from .models import EditResult
+
+
+def rotate(
+    input_path: str,
+    angle: int = 0,
+    flip_horizontal: bool = False,
+    flip_vertical: bool = False,
+    output_path: str | None = None,
+) -> EditResult:
+    """Rotate and/or flip a video.
+
+    Args:
+        angle: Rotation angle (0, 90, 180, 270).
+        flip_horizontal: Mirror horizontally.
+        flip_vertical: Mirror vertically.
+    """
+    _validate_input(input_path)
+
+    if angle not in (0, 90, 180, 270):
+        raise MCPVideoError("angle must be 0, 90, 180, or 270", code="invalid_angle")
+    if angle == 0 and not flip_horizontal and not flip_vertical:
+        raise MCPVideoError("No rotation or flip specified", code="no_transform")
+
+    filters: list[str] = []
+    if flip_horizontal:
+        filters.append("hflip")
+    if flip_vertical:
+        filters.append("vflip")
+    if angle == 90:
+        filters.append("transpose=1")
+    elif angle == 180:
+        filters.append("transpose=1,transpose=1")
+    elif angle == 270:
+        filters.append("transpose=2")
+
+    vf = ",".join(filters)
+    output = output_path or _auto_output(input_path, f"rotated_{angle}")
+
+    _run_ffmpeg(
+        [
+            "-i",
+            input_path,
+            "-vf",
+            vf,
+            "-c:v",
+            "libx264",
+            *_quality_args(),
+            "-c:a",
+            "aac",
+            "-b:a",
+            "128k",
+            *_movflags_args(output),
+            output,
+        ]
+    )
+
+    result_info = probe(output)
+    return EditResult(
+        output_path=output,
+        duration=result_info.duration,
+        resolution=result_info.resolution,
+        size_mb=result_info.size_mb,
+        format="mp4",
+        operation="rotate",
+    )
