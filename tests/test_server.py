@@ -6,6 +6,7 @@ import os
 import pytest
 
 from mcp_video.engine import _check_filter_available
+from mcp_video import server_resources
 from mcp_video.server import (
     _error_result,
     _result,
@@ -111,6 +112,20 @@ class TestServerInitialization:
         assert templates_resource is not None
         result = templates_resource()
         assert len(result) > 0
+
+    def test_resource_split_preserves_exports_without_duplicate_registration(self):
+        assert video_info_resource is server_resources.video_info_resource
+        assert video_preview_resource is server_resources.video_preview_resource
+        assert video_audio_resource is server_resources.video_audio_resource
+        assert templates_resource is server_resources.templates_resource
+
+        resource_manager = mcp._resource_manager
+        assert set(resource_manager._resources) == {"mcp-video://templates"}
+        assert set(resource_manager._templates) == {
+            "mcp-video://video/{path}/info",
+            "mcp-video://video/{path}/preview",
+            "mcp-video://video/{path}/audio",
+        }
 
 
 class TestVideoInfoTool:
