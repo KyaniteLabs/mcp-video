@@ -504,8 +504,14 @@ def ai_scene_detect(
         # Fall back to standard detection
         return _standard_scene_detect(video, threshold)
 
+    if "\x00" in video:
+        raise InputFileError(video, "Invalid path: contains null bytes")
+    video_path = Path(video)
+    if not video_path.exists():
+        raise InputFileError(video)
+
     # Step 1: Get video duration and frame rate
-    info = _run_ffprobe_json(video)
+    info = _run_ffprobe_json(str(video_path))
     duration = float(info.get("format", {}).get("duration", 0))
 
     if duration == 0:
