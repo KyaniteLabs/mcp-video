@@ -22,7 +22,6 @@ from .models import (
     EditResult,
     ExportFormat,
     FilterType,
-    ImageSequenceResult,
     NamedPosition,
     Position,
     QualityLevel,
@@ -41,6 +40,7 @@ from .engine_crop import crop as crop
 from .engine_edit import trim as trim
 from .engine_export import export_video as export_video
 from .engine_extract_audio import extract_audio as extract_audio
+from .engine_frames import export_frames as export_frames
 from .engine_merge import merge as merge
 from .engine_metadata import read_metadata as read_metadata
 from .engine_metadata import write_metadata as write_metadata
@@ -1455,62 +1455,6 @@ def create_from_images(
         size_mb=result_info.size_mb,
         format="mp4",
         operation="create_from_images",
-    )
-
-
-def export_frames(
-    input_path: str,
-    output_dir: str | None = None,
-    fps: float = 1.0,
-    format: str = "jpg",
-) -> ImageSequenceResult:
-    """Export frames from a video as individual images.
-
-    Args:
-        input_path: Path to the input video.
-        output_dir: Directory for extracted frames.
-        fps: Frames per second to extract (1.0 = 1 frame per second).
-        format: Output image format (jpg, png).
-    """
-    _validate_input(input_path)
-    if format == "mjpeg":
-        format = "jpg"
-    if format not in ("jpg", "png"):
-        raise MCPVideoError(
-            f"Invalid format '{format}': must be 'jpg', 'mjpeg' or 'png'",
-            error_type="validation_error",
-            code="invalid_format",
-        )
-    probe(input_path)
-
-    out_dir = output_dir or _auto_output_dir(input_path, "frames")
-    os.makedirs(out_dir, exist_ok=True)
-
-    ext = format if format.startswith(".") else f".{format}"
-    pattern = os.path.join(out_dir, f"frame_%04d{ext}")
-
-    _run_ffmpeg(
-        [
-            "-i",
-            input_path,
-            "-vf",
-            f"fps={fps}",
-            "-q:v",
-            "2",
-            "-y",
-            pattern,
-        ]
-    )
-
-    # Collect generated frame paths
-    frame_paths = sorted(
-        [os.path.join(out_dir, f) for f in os.listdir(out_dir) if f.startswith("frame_") and f.endswith(ext)]
-    )
-
-    return ImageSequenceResult(
-        frame_paths=frame_paths,
-        frame_count=len(frame_paths),
-        fps=fps,
     )
 
 
