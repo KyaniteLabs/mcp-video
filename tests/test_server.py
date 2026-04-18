@@ -282,6 +282,7 @@ class TestErrorHandling:
 
     def test_result_helper_with_model(self):
         from mcp_video.models import EditResult
+
         edit = EditResult(output_path="/tmp/out.mp4", operation="trim")
         result = _result(edit)
         assert result["success"] is True

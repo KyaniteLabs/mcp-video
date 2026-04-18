@@ -59,8 +59,7 @@ def templates_resource() -> str:
     data = {
         "aspect_ratios": {k: f"{v[0]}x{v[1]}" for k, v in ASPECT_RATIOS.items()},
         "quality_presets": {
-            k: f"CRF {v['crf']}, preset={v['preset']}, max_height={v['max_height']}"
-            for k, v in QUALITY_PRESETS.items()
+            k: f"CRF {v['crf']}, preset={v['preset']}, max_height={v['max_height']}" for k, v in QUALITY_PRESETS.items()
         },
         "transition_types": ["fade", "dissolve", "wipe-left", "wipe-right", "wipe-up", "wipe-down"],
         "export_formats": ["mp4", "webm", "gif", "mov"],
