@@ -1,48 +1,78 @@
 name: Bug report
-description: Report a reproducible problem in mcp-video
-title: "[Bug]: "
-labels:
-  - bug
+description: Report a reproducible mcp-video bug.
+title: "Bug: "
+labels: ["bug", "needs-triage"]
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for filing a bug. Please provide a minimal reproducible report.
+        Thanks for helping make mcp-video more reliable. Please include enough detail for a maintainer or agent to reproduce the failure locally.
   - type: textarea
     id: summary
     attributes:
-      label: Summary
-      description: What went wrong?
-      placeholder: A concise description of the bug.
+      label: What happened?
+      description: Describe the failure and what you expected instead.
+      placeholder: "I called video_trim with ... and got ..."
     validations:
       required: true
   - type: textarea
-    id: steps
+    id: reproduce
     attributes:
-      label: Steps to reproduce
-      description: Exact commands/tool calls and files used.
+      label: Reproduction steps
+      description: Include the exact MCP tool call, Python snippet, or CLI command.
       placeholder: |
-        1. Run ...
-        2. Call ...
-        3. Observe ...
+        1. Run `mcp-video ...`
+        2. Use input media with ...
+        3. See error ...
     validations:
       required: true
   - type: textarea
-    id: expected
+    id: media
     attributes:
-      label: Expected behavior
+      label: Input media details
+      description: Share codec, resolution, duration, and whether the file contains audio. Do not upload private media.
+      placeholder: "mp4, H.264/AAC, 1920x1080, 34s, has audio"
+    validations:
+      required: false
+  - type: textarea
+    id: error
+    attributes:
+      label: Error output
+      description: Paste the relevant error or JSON result. Trim secrets and private paths.
+      render: shell
+    validations:
+      required: false
+  - type: input
+    id: version
+    attributes:
+      label: mcp-video version
+      placeholder: "python -c 'import mcp_video; print(mcp_video.__version__)'"
+    validations:
+      required: false
+  - type: input
+    id: ffmpeg
+    attributes:
+      label: FFmpeg version
+      placeholder: "ffmpeg -version"
+    validations:
+      required: false
+  - type: dropdown
+    id: interface
+    attributes:
+      label: Interface
+      options:
+        - MCP server
+        - CLI
+        - Python client
+        - Tests
+        - Other
     validations:
       required: true
   - type: textarea
-    id: env
+    id: environment
     attributes:
       label: Environment
-      description: Include OS, Python version, FFmpeg version.
-      placeholder: Ubuntu 24.04, Python 3.12, ffmpeg 6.x
+      description: Include OS, Python version, and anything unusual about the runtime.
+      placeholder: "macOS 15, Python 3.12, Homebrew FFmpeg"
     validations:
-      required: true
-  - type: textarea
-    id: logs
-    attributes:
-      label: Logs / error output
-      render: shell
+      required: false
