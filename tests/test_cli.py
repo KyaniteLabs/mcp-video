@@ -3,6 +3,7 @@
 import json
 import subprocess
 import sys
+from types import SimpleNamespace
 
 import pytest
 
@@ -507,3 +508,42 @@ class TestCLIFade:
     def test_fade_outputs_text(self, sample_video):
         result = run_cli("fade", sample_video, "--fade-in", "0.5", "--fade-out", "0.5")
         assert "Done" in result.stdout
+
+
+class TestCLITransitions:
+    def test_transition_glitch_outputs_json(self, sample_video, tmp_path):
+        output = tmp_path / "glitch.mp4"
+        result = run_cli_json("transition-glitch", sample_video, sample_video, "-o", str(output), "-d", "0.2")
+        data = json.loads(result.stdout)
+        assert data["success"] is True
+        assert data["output_path"] == str(output)
+        assert output.exists()
+
+    def test_transition_morph_outputs_text(self, sample_video, tmp_path):
+        output = tmp_path / "morph.mp4"
+        result = run_cli("transition-morph", sample_video, sample_video, "-o", str(output), "-d", "0.2")
+        assert "Morph transition" in result.stdout
+        assert output.name in result.stdout
+        assert output.exists()
+
+    def test_transition_pixelate_handler_outputs_json(self, sample_video, tmp_path, monkeypatch, capsys):
+        output = tmp_path / "pixelate.mp4"
+        from mcp_video.cli import handlers_transitions
+
+        output.write_bytes(b"fake video")
+        monkeypatch.setattr(handlers_transitions, "_with_spinner", lambda *args, **kwargs: str(output))
+
+        args = SimpleNamespace(
+            command="transition-pixelate",
+            clip1=sample_video,
+            clip2=sample_video,
+            output=str(output),
+            duration=0.2,
+            pixel_size=50,
+        )
+        handled = handlers_transitions.handle_transition_command(args, use_json=True)
+        data = json.loads(capsys.readouterr().out)
+        assert handled is True
+        assert data["success"] is True
+        assert data["output_path"] == str(output)
+        assert output.exists()
