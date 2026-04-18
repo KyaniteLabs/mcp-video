@@ -40,6 +40,7 @@ from .engine_audio_ops import add_audio as add_audio
 from .engine_chroma_key import chroma_key as chroma_key
 from .engine_crop import crop as crop
 from .engine_edit import trim as trim
+from .engine_export import export_video as export_video
 from .engine_merge import merge as merge
 from .engine_preview import preview as preview
 
@@ -290,30 +291,6 @@ def convert(
         progress=100.0,
         thumbnail_base64=thumb_b64,
     )
-
-
-def export_video(
-    input_path: str,
-    output_path: str | None = None,
-    quality: QualityLevel = "high",
-    format: ExportFormat = "mp4",
-    on_progress: Callable[[float], None] | None = None,
-    two_pass: bool = False,
-    target_bitrate: int | None = None,
-) -> EditResult:
-    """Export a video with specified quality and format settings."""
-    _validate_input(input_path)
-    result = convert(
-        input_path,
-        format=format,
-        quality=quality,
-        output_path=output_path,
-        on_progress=on_progress,
-        two_pass=two_pass,
-        target_bitrate=target_bitrate,
-    )
-    result.operation = "export"
-    return result
 
 
 # ---------------------------------------------------------------------------
