@@ -31,6 +31,7 @@ skip_no_video = pytest.mark.skipif(
     not os.path.exists(TEST_VIDEOS['explainer']),
     reason="Test video not found"
 )
+pytestmark = [skip_no_video]
 
 
 def has_ai_upscale_backend() -> bool:
