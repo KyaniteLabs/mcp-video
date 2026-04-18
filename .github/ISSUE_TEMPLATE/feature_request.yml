@@ -1,29 +1,63 @@
 name: Feature request
-description: Suggest an idea to improve mcp-video
-title: "[Feature]: "
-labels:
-  - enhancement
+description: Suggest a new video, audio, image, MCP, or CLI capability.
+title: "Feature: "
+labels: ["enhancement", "needs-triage"]
 body:
+  - type: markdown
+    attributes:
+      value: |
+        Good feature requests explain the editing job, the agent workflow, and the smallest useful version.
   - type: textarea
     id: problem
     attributes:
-      label: Problem statement
-      description: What user pain/problem does this solve?
+      label: Editing job
+      description: What should a user or AI agent be able to do?
+      placeholder: "As an agent, I want to ... so that ..."
     validations:
       required: true
   - type: textarea
-    id: proposal
+    id: current
     attributes:
-      label: Proposed solution
-      description: What should happen?
+      label: Current workaround
+      description: How would someone do this today with mcp-video, FFmpeg, or another tool?
+    validations:
+      required: false
+  - type: textarea
+    id: proposed
+    attributes:
+      label: Proposed API
+      description: Sketch the MCP tool, CLI command, or Python function shape if you have one.
+      placeholder: |
+        MCP: video_example(input_path, ...)
+        CLI: mcp-video example input.mp4 --option ...
+        Python: client.example(...)
+    validations:
+      required: false
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Primary surface
+      options:
+        - MCP tool
+        - CLI command
+        - Python client
+        - Documentation
+        - Test/CI
+        - Not sure
     validations:
       required: true
   - type: textarea
-    id: alternatives
+    id: examples
     attributes:
-      label: Alternatives considered
-  - type: textarea
-    id: impact
+      label: Example inputs and outputs
+      description: Include sample media traits, expected result, or links to public examples.
+    validations:
+      required: false
+  - type: checkboxes
+    id: checks
     attributes:
-      label: User impact
-      description: Who benefits and how?
+      label: Fit check
+      options:
+        - label: This can be implemented with local processing and does not require a hosted service.
+        - label: This would help AI agents complete a video workflow with less guessing.
+        - label: I checked the README and roadmap for an existing equivalent.

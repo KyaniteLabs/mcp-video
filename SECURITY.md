@@ -1,23 +1,43 @@
 # Security Policy
 
+mcp-video shells out to FFmpeg and handles local media paths, so security reports are taken seriously.
+
 ## Supported Versions
 
-The latest released version is supported for security updates. Older versions may receive fixes at maintainer discretion.
+Security fixes target the current `master` branch and the latest published package version. Older versions may receive guidance, but fixes are not backported unless a maintainer explicitly announces that support window.
 
 ## Reporting a Vulnerability
 
-Please do **not** open public GitHub issues for security vulnerabilities.
+Please do not open a public GitHub issue for vulnerabilities.
 
-Instead, report privately by opening a GitHub Security Advisory draft for this repository (preferred), or by contacting maintainers through the support channels in `SUPPORT.md` and clearly marking the report as security-sensitive.
+Use GitHub Security Advisories for this repository. If that is unavailable, follow the private support path in `SUPPORT.md` and include only the minimum detail needed to establish contact.
 
-Include:
-- affected version
-- reproduction steps
-- potential impact
-- suggested mitigation (if known)
+Helpful reports include:
+
+- The affected MCP tool, CLI command, or Python API.
+- A minimal reproduction using non-sensitive media.
+- The expected impact, such as command injection, path traversal, unsafe file overwrite, denial of service, dependency compromise, or secret exposure.
+- Your OS, Python version, FFmpeg version, and mcp-video version.
 
 ## Response Expectations
 
 - Initial acknowledgment target: within 3 business days.
 - Triage/update target: within 7 business days.
 - Fix timeline depends on severity and complexity.
+
+Confirmed vulnerabilities will be fixed in a private branch when possible, then disclosed after a patched release or clear mitigation is available.
+
+## Security Scope
+
+In scope:
+
+- FFmpeg filter injection or unsafe command construction.
+- Path validation bypasses, null-byte handling, and unsafe overwrites.
+- Server-side validation gaps that allow resource exhaustion or unexpected local file access.
+- Dependency or packaging issues that affect normal installation or runtime.
+
+Out of scope:
+
+- Reports requiring malicious local code execution before using mcp-video.
+- Issues only affecting third-party FFmpeg builds outside this project.
+- Denial-of-service reports that require unrealistic media sizes beyond documented limits.
