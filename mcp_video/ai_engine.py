@@ -21,6 +21,7 @@ from typing import Any
 
 from .errors import InputFileError, MCPVideoError, ProcessingError
 from .ffmpeg_helpers import _seconds_to_srt_time
+from .ffmpeg_helpers import _run_ffprobe_json
 
 
 def ai_transcribe(
@@ -204,29 +205,6 @@ def _format_json_transcript(
             for i, seg in enumerate(segments)
         ],
     }
-
-
-def _run_ffprobe(video: str) -> dict[str, Any]:
-    """Get video info using ffprobe."""
-    cmd = [
-        "ffprobe",
-        "-v",
-        "error",
-        "-show_entries",
-        "format=duration",
-        "-show_entries",
-        "stream=codec_type",
-        "-of",
-        "json",
-        video,
-    ]
-    try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
-    except subprocess.TimeoutExpired:
-        raise ProcessingError("Operation timed out after 600 seconds") from None
-    if result.returncode != 0:
-        raise RuntimeError(f"ffprobe error: {result.stderr}")
-    return json.loads(result.stdout)
 
 
 def _standard_scene_detect(video: str, threshold: float) -> list[dict]:
@@ -526,8 +504,14 @@ def ai_scene_detect(
         # Fall back to standard detection
         return _standard_scene_detect(video, threshold)
 
+    if "\x00" in video:
+        raise InputFileError(video, "Invalid path: contains null bytes")
+    video_path = Path(video)
+    if not video_path.exists():
+        raise InputFileError(video)
+
     # Step 1: Get video duration and frame rate
-    info = _run_ffprobe(video)
+    info = _run_ffprobe_json(str(video_path))
     duration = float(info.get("format", {}).get("duration", 0))
 
     if duration == 0:
@@ -639,7 +623,7 @@ def _detect_silence_regions(
         else:
             # Silence extends to end of video
             # Get video duration
-            info = _run_ffprobe(video)
+            info = _run_ffprobe_json(video)
             duration = float(info.get("format", {}).get("duration", 0))
             silence_regions.append((float(start), duration))
 
@@ -821,7 +805,7 @@ def ai_remove_silence(
         raise InputFileError(video)
 
     # Step 1: Get video duration
-    info = _run_ffprobe(str(video_path))
+    info = _run_ffprobe_json(str(video_path))
     video_duration = float(info.get("format", {}).get("duration", 0))
 
     if video_duration == 0:

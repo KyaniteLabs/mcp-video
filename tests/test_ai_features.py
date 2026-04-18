@@ -9,6 +9,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import types
 from pathlib import Path
 from unittest.mock import patch
 
@@ -414,6 +415,26 @@ class TestSRTFormatting:
         assert result.count("More text") == 1
         # Second segment should be skipped, so only 2 entries total
         assert result.count("-->") == 2
+
+
+def test_ai_scene_detect_missing_file_does_not_create_parent_dir(tmp_path, monkeypatch):
+    """AI scene detection validates input before shared ffprobe helper can touch paths."""
+    from mcp_video.ai_engine import ai_scene_detect
+
+    missing_video = tmp_path / "missing" / "video.mp4"
+    monkeypatch.setattr("mcp_video.ai_engine._standard_scene_detect", lambda *_args, **_kwargs: [])
+    imagehash_module = types.ModuleType("imagehash")
+    pil_module = types.ModuleType("PIL")
+    image_module = types.ModuleType("PIL.Image")
+    pil_module.Image = image_module
+    monkeypatch.setitem(sys.modules, "imagehash", imagehash_module)
+    monkeypatch.setitem(sys.modules, "PIL", pil_module)
+    monkeypatch.setitem(sys.modules, "PIL.Image", image_module)
+
+    with pytest.raises(InputFileError):
+        ai_scene_detect(str(missing_video), use_ai=True)
+
+    assert not missing_video.parent.exists()
 
 
 # ---------------------------------------------------------------------------
