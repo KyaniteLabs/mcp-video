@@ -1,0 +1,704 @@
+"""Advanced MCP video tool registrations."""
+
+from __future__ import annotations
+
+from typing import Any
+
+from .engine import (
+    _validate_chroma_color,
+    apply_filter,
+    apply_mask,
+    audio_waveform,
+    chroma_key,
+    compare_quality,
+    create_from_images,
+    detect_scenes,
+    export_frames,
+    generate_subtitles,
+    normalize_audio,
+    overlay_video,
+    read_metadata,
+    reverse,
+    split_screen,
+    stabilize,
+    thumbnail,
+    write_metadata,
+)
+from .engine import video_batch as _video_batch
+from .errors import MCPVideoError
+from .limits import MAX_BATCH_SIZE, MAX_EXPORT_FRAMES_FPS
+from .server_app import _error_result, _result, mcp
+from .validation import VALID_LAYOUTS, VALID_PRESETS
+
+
+@mcp.tool()
+def video_filter(
+    input_path: str,
+    filter_type: str,
+    params: dict[str, Any] | None = None,
+    output_path: str | None = None,
+    crf: int | None = None,
+    preset: str | None = None,
+) -> dict[str, Any]:
+    """Apply a visual filter to a video.
+
+    Args:
+        input_path: Absolute path to the input video.
+        filter_type: Filter type (blur, sharpen, brightness, contrast, saturation, grayscale, sepia, invert, vignette, color_preset).
+        params: Optional filter parameters (e.g. radius for blur, preset for color_preset).
+        output_path: Where to save the output. Auto-generated if omitted.
+        crf: Override CRF value (0-51, lower = better quality). Default 23.
+        preset: Override FFmpeg encoding preset (ultrafast, fast, medium, slow, veryslow).
+    """
+    if crf is not None and not (0 <= crf <= 51):
+        return _error_result(
+            MCPVideoError(f"crf must be 0-51, got {crf}", error_type="validation_error", code="invalid_parameter")
+        )
+    if preset is not None and preset not in VALID_PRESETS:
+        return _error_result(
+            MCPVideoError(f"Invalid preset: {preset}", error_type="validation_error", code="invalid_parameter")
+        )
+    try:
+        return _result(
+            apply_filter(
+                input_path,
+                filter_type=filter_type,
+                params=params,
+                output_path=output_path,
+                crf=crf,
+                preset=preset,
+            )
+        )
+    except MCPVideoError as e:
+        return _error_result(e)
+    except Exception as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_reverse(
+    input_path: str,
+    output_path: str | None = None,
+) -> dict[str, Any]:
+    """Reverse video and audio playback so it plays backwards.
+
+    Args:
+        input_path: Absolute path to the input video.
+        output_path: Where to save the output. Auto-generated if omitted.
+    """
+    try:
+        return _result(reverse(input_path, output_path=output_path))
+    except MCPVideoError as e:
+        return _error_result(e)
+    except Exception as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_chroma_key(
+    input_path: str,
+    color: str = "0x00FF00",
+    similarity: float = 0.01,
+    blend: float = 0.0,
+    output_path: str | None = None,
+) -> dict[str, Any]:
+    """Remove a solid color background (green screen / chroma key).
+
+    Args:
+        input_path: Absolute path to the input video.
+        color: Color to make transparent in hex format (default green: 0x00FF00).
+        similarity: How similar colors need to be to be keyed out (0.0-1.0, default 0.01).
+        blend: How much to blend the keyed color (default 0.0).
+        output_path: Where to save the output. Auto-generated if omitted.
+    """
+    try:
+        _validate_chroma_color(color)
+    except MCPVideoError as e:
+        return _error_result(e)
+    if not 0 <= similarity <= 1:
+        return _error_result(
+            MCPVideoError(
+                f"similarity must be between 0 and 1, got {similarity}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
+    if not 0 <= blend <= 1:
+        return _error_result(
+            MCPVideoError(
+                f"blend must be between 0 and 1, got {blend}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
+    try:
+        return _result(chroma_key(input_path, color=color, similarity=similarity, blend=blend, output_path=output_path))
+    except MCPVideoError as e:
+        return _error_result(e)
+    except Exception as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_blur(
+    input_path: str,
+    radius: int = 5,
+    strength: int = 1,
+    output_path: str | None = None,
+) -> dict[str, Any]:
+    """Apply blur effect to a video.
+
+    Args:
+        input_path: Absolute path to the input video.
+        radius: Blur radius in pixels (default 5).
+        strength: Blur strength (default 1).
+        output_path: Where to save the output. Auto-generated if omitted.
+    """
+    try:
+        return _result(
+            apply_filter(
+                input_path,
+                filter_type="blur",
+                params={"radius": radius, "strength": strength},
+                output_path=output_path,
+            )
+        )
+    except MCPVideoError as e:
+        return _error_result(e)
+    except Exception as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_color_grade(
+    input_path: str,
+    preset: str = "warm",
+    output_path: str | None = None,
+) -> dict[str, Any]:
+    """Apply a color grading preset to a video.
+
+    Args:
+        input_path: Absolute path to the input video.
+        preset: Color preset (warm, cool, vintage, cinematic, noir).
+        output_path: Where to save the output. Auto-generated if omitted.
+    """
+    try:
+        return _result(
+            apply_filter(
+                input_path,
+                filter_type="color_preset",
+                params={"preset": preset},
+                output_path=output_path,
+            )
+        )
+    except MCPVideoError as e:
+        return _error_result(e)
+    except Exception as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_normalize_audio(
+    input_path: str,
+    target_lufs: float = -16.0,
+    output_path: str | None = None,
+) -> dict[str, Any]:
+    """Normalize audio loudness to a target LUFS level.
+
+    Common presets: -16 (YouTube), -23 (EBU R128/broadcast), -14 (Apple/Spotify).
+
+    Args:
+        input_path: Absolute path to the input video.
+        target_lufs: Target integrated loudness in LUFS (default -16 for YouTube).
+        output_path: Where to save the output. Auto-generated if omitted.
+    """
+    try:
+        if not -70 <= target_lufs <= -5:
+            return _error_result(
+                MCPVideoError(
+                    f"target_lufs must be between -70 and -5, got {target_lufs}",
+                    error_type="validation_error",
+                    code="invalid_parameter",
+                )
+            )
+        return _result(normalize_audio(input_path, target_lufs=target_lufs, output_path=output_path))
+    except MCPVideoError as e:
+        return _error_result(e)
+    except Exception as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_overlay(
+    background_path: str,
+    overlay_path: str,
+    position: str | dict = "top-right",
+    width: int | None = None,
+    height: int | None = None,
+    opacity: float = 0.8,
+    start_time: float | None = None,
+    duration: float | None = None,
+    output_path: str | None = None,
+    crf: int | None = None,
+    preset: str | None = None,
+) -> dict[str, Any]:
+    """Picture-in-picture: overlay a video on top of another.
+
+    Args:
+        background_path: Absolute path to the background video.
+        overlay_path: Absolute path to the overlay video.
+        position: Position on screen. Named (top-left, etc.), pixel {"x": 100, "y": 50}, or percentage {"x_pct": 0.5, "y_pct": 0.5}.
+        width: Width to scale the overlay to (pixels).
+        height: Height to scale the overlay to (pixels).
+        opacity: Overlay opacity (0.0 to 1.0).
+        start_time: When the overlay appears (seconds).
+        duration: How long the overlay is visible (seconds).
+        output_path: Where to save the output. Auto-generated if omitted.
+        crf: Override CRF value (0-51, lower = better quality). Default 23.
+        preset: Override FFmpeg encoding preset (ultrafast, fast, medium, slow, veryslow).
+    """
+    if width is not None and width <= 0:
+        return _error_result(
+            MCPVideoError(
+                f"width must be positive, got {width}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
+    if height is not None and height <= 0:
+        return _error_result(
+            MCPVideoError(
+                f"height must be positive, got {height}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
+    if crf is not None and not (0 <= crf <= 51):
+        return _error_result(
+            MCPVideoError(f"crf must be 0-51, got {crf}", error_type="validation_error", code="invalid_parameter")
+        )
+    if preset is not None and preset not in VALID_PRESETS:
+        return _error_result(
+            MCPVideoError(f"Invalid preset: {preset}", error_type="validation_error", code="invalid_parameter")
+        )
+    try:
+        if not 0 <= opacity <= 1:
+            return _error_result(
+                MCPVideoError(
+                    f"opacity must be between 0 and 1, got {opacity}",
+                    error_type="validation_error",
+                    code="invalid_parameter",
+                )
+            )
+        return _result(
+            overlay_video(
+                background_path,
+                overlay_path=overlay_path,
+                position=position,
+                width=width,
+                height=height,
+                opacity=opacity,
+                start_time=start_time,
+                duration=duration,
+                output_path=output_path,
+                crf=crf,
+                preset=preset,
+            )
+        )
+    except MCPVideoError as e:
+        return _error_result(e)
+    except Exception as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_split_screen(
+    left_path: str,
+    right_path: str,
+    layout: str = "side-by-side",
+    output_path: str | None = None,
+) -> dict[str, Any]:
+    """Place two videos side by side or top/bottom.
+
+    Args:
+        left_path: Absolute path to the first video.
+        right_path: Absolute path to the second video.
+        layout: Layout type (side-by-side or top-bottom).
+        output_path: Where to save the output. Auto-generated if omitted.
+    """
+    if layout not in VALID_LAYOUTS:
+        return _error_result(
+            MCPVideoError(
+                f"Invalid layout: must be one of {sorted(VALID_LAYOUTS)}, got '{layout}'",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
+    try:
+        return _result(split_screen(left_path, right_path=right_path, layout=layout, output_path=output_path))
+    except MCPVideoError as e:
+        return _error_result(e)
+    except Exception as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_detect_scenes(
+    input_path: str,
+    threshold: float = 0.3,
+    min_scene_duration: float = 1.0,
+) -> dict[str, Any]:
+    """Detect scene changes in a video.
+
+    Args:
+        input_path: Absolute path to the input video.
+        threshold: Scene detection sensitivity (0.0-1.0, lower = more sensitive, default 0.3).
+        min_scene_duration: Minimum scene duration in seconds (default 1.0).
+    """
+    try:
+        if not 0 <= threshold <= 1:
+            return _error_result(
+                MCPVideoError(
+                    f"threshold must be between 0 and 1, got {threshold}",
+                    error_type="validation_error",
+                    code="invalid_parameter",
+                )
+            )
+        if min_scene_duration <= 0:
+            return _error_result(
+                MCPVideoError(
+                    f"min_scene_duration must be positive, got {min_scene_duration}",
+                    error_type="validation_error",
+                    code="invalid_parameter",
+                )
+            )
+        return _result(detect_scenes(input_path, threshold=threshold, min_scene_duration=min_scene_duration))
+    except MCPVideoError as e:
+        return _error_result(e)
+    except Exception as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_create_from_images(
+    images: list[str],
+    output_path: str | None = None,
+    fps: float = 30.0,
+) -> dict[str, Any]:
+    """Create a video from a sequence of images.
+
+    Args:
+        images: List of absolute paths to image files (in order).
+        output_path: Where to save the output video. Auto-generated if omitted.
+        fps: Frames per second for the output video (default 30.0).
+    """
+    try:
+        if fps <= 0 or fps > MAX_EXPORT_FRAMES_FPS:
+            return _error_result(
+                MCPVideoError(
+                    f"fps must be between 1 and {MAX_EXPORT_FRAMES_FPS}, got {fps}",
+                    error_type="validation_error",
+                    code="invalid_parameter",
+                )
+            )
+        return _result(create_from_images(images, output_path=output_path, fps=fps))
+    except MCPVideoError as e:
+        return _error_result(e)
+    except Exception as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_export_frames(
+    input_path: str,
+    output_dir: str | None = None,
+    fps: float = 1.0,
+    format: str = "jpg",
+) -> dict[str, Any]:
+    """Export frames from a video as individual images.
+
+    Args:
+        input_path: Absolute path to the input video.
+        output_dir: Directory for extracted frames. Auto-generated if omitted.
+        fps: Frames per second to extract (1.0 = 1 frame per second, default 1.0).
+        format: Output image format (jpg or png, default jpg).
+    """
+    if fps <= 0:
+        return _error_result(
+            MCPVideoError(
+                f"fps must be positive, got {fps}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
+    if fps > MAX_EXPORT_FRAMES_FPS:
+        return _error_result(
+            MCPVideoError(
+                f"FPS {fps} exceeds maximum of {MAX_EXPORT_FRAMES_FPS}",
+                error_type="validation_error",
+                code="fps_too_high",
+            )
+        )
+    try:
+        return _result(export_frames(input_path, output_dir=output_dir, fps=fps, format=format))
+    except MCPVideoError as e:
+        return _error_result(e)
+    except Exception as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_generate_subtitles(
+    entries: list[dict],
+    input_path: str,
+    burn: bool = False,
+) -> dict[str, Any]:
+    """Generate SRT subtitles from text entries and optionally burn into video.
+
+    Args:
+        entries: List of subtitle entries with keys: start (float), end (float), text (str).
+        input_path: Absolute path to the input video.
+        burn: If True, burn subtitles into the video (default False).
+    """
+    if not isinstance(entries, list) or len(entries) == 0:
+        return _error_result(
+            MCPVideoError(
+                "entries must be a non-empty list",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
+    try:
+        return _result(generate_subtitles(entries, input_path, burn=burn))
+    except MCPVideoError as e:
+        return _error_result(e)
+    except Exception as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_compare_quality(
+    original_path: str,
+    distorted_path: str,
+    metrics: list[str] | None = None,
+) -> dict[str, Any]:
+    """Compare video quality between original and processed versions.
+
+    Args:
+        original_path: Absolute path to the original/reference video.
+        distorted_path: Absolute path to the processed/distorted video.
+        metrics: Metrics to compute (default: ['psnr', 'ssim']).
+    """
+    try:
+        return _result(compare_quality(original_path, distorted_path, metrics=metrics))
+    except MCPVideoError as e:
+        return _error_result(e)
+    except Exception as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_read_metadata(
+    input_path: str,
+) -> dict[str, Any]:
+    """Read metadata tags from a video/audio file.
+
+    Args:
+        input_path: Absolute path to the video or audio file.
+    """
+    try:
+        return _result(read_metadata(input_path))
+    except MCPVideoError as e:
+        return _error_result(e)
+    except Exception as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_write_metadata(
+    input_path: str,
+    metadata: dict[str, str],
+    output_path: str | None = None,
+) -> dict[str, Any]:
+    """Write metadata tags to a video/audio file.
+
+    Args:
+        input_path: Absolute path to the input file.
+        metadata: Dict of tag key-value pairs (e.g. {'title': 'My Video', 'artist': 'Me'}).
+        output_path: Where to save the output. Auto-generated if omitted.
+    """
+    try:
+        return _result(write_metadata(input_path, metadata=metadata, output_path=output_path))
+    except MCPVideoError as e:
+        return _error_result(e)
+    except Exception as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_stabilize(
+    input_path: str,
+    smoothing: float = 15,
+    zooming: float = 0,
+    output_path: str | None = None,
+) -> dict[str, Any]:
+    """Stabilize a shaky video using motion vector analysis.
+
+    Args:
+        input_path: Absolute path to the input video.
+        smoothing: Smoothing strength (default 15, higher = more stable).
+        zooming: Zoom percentage to avoid black borders (default 0).
+        output_path: Where to save the output. Auto-generated if omitted.
+    """
+    try:
+        if smoothing < 0:
+            return _error_result(
+                MCPVideoError(
+                    f"smoothing must be non-negative, got {smoothing}",
+                    error_type="validation_error",
+                    code="invalid_parameter",
+                )
+            )
+        if zooming < 0:
+            return _error_result(
+                MCPVideoError(
+                    f"zooming must be non-negative, got {zooming}",
+                    error_type="validation_error",
+                    code="invalid_parameter",
+                )
+            )
+        return _result(stabilize(input_path, smoothing=smoothing, zooming=zooming, output_path=output_path))
+    except MCPVideoError as e:
+        return _error_result(e)
+    except Exception as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_apply_mask(
+    input_path: str,
+    mask_path: str,
+    feather: int = 5,
+    output_path: str | None = None,
+) -> dict[str, Any]:
+    """Apply an image mask to a video with edge feathering.
+
+    Args:
+        input_path: Absolute path to the input video.
+        mask_path: Absolute path to the mask image (white = visible, black = transparent).
+        feather: Feather/blur amount at mask edges in pixels (default 5).
+        output_path: Where to save the output. Auto-generated if omitted.
+    """
+    try:
+        if feather < 0:
+            return _error_result(
+                MCPVideoError(
+                    f"feather must be non-negative, got {feather}",
+                    error_type="validation_error",
+                    code="invalid_parameter",
+                )
+            )
+        return _result(apply_mask(input_path, mask_path=mask_path, feather=feather, output_path=output_path))
+    except MCPVideoError as e:
+        return _error_result(e)
+    except Exception as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_audio_waveform(
+    input_path: str,
+    bins: int = 50,
+) -> dict[str, Any]:
+    """Extract audio waveform data (peaks and silence regions).
+
+    Args:
+        input_path: Absolute path to the input video/audio file.
+        bins: Number of time segments to analyze (default 50).
+    """
+    try:
+        if bins < 1 or bins > 1000:
+            return _error_result(
+                MCPVideoError(
+                    f"bins must be between 1 and 1000, got {bins}",
+                    error_type="validation_error",
+                    code="invalid_parameter",
+                )
+            )
+        return _result(audio_waveform(input_path, bins=bins))
+    except MCPVideoError as e:
+        return _error_result(e)
+    except Exception as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_batch(
+    inputs: list[str],
+    operation: str,
+    params: dict[str, Any] | None = None,
+    output_dir: str | None = None,
+) -> dict[str, Any]:
+    """Apply the same operation to multiple video files.
+
+    Args:
+        inputs: List of absolute paths to input video files.
+        operation: Operation (trim, resize, convert, filter, blur, color_grade, watermark, speed, fade, normalize_audio).
+        params: Parameters for the operation.
+        output_dir: Directory for output files. Auto-generated if omitted.
+    """
+    VALID_BATCH_OPERATIONS = {
+        "trim",
+        "resize",
+        "convert",
+        "filter",
+        "blur",
+        "color_grade",
+        "watermark",
+        "speed",
+        "fade",
+        "normalize_audio",
+    }
+    if operation not in VALID_BATCH_OPERATIONS:
+        return _error_result(
+            MCPVideoError(
+                f"Unknown operation '{operation}'. Valid operations: {sorted(VALID_BATCH_OPERATIONS)}",
+                error_type="validation_error",
+                code="invalid_operation",
+            )
+        )
+    if len(inputs) > MAX_BATCH_SIZE:
+        return _error_result(
+            MCPVideoError(
+                f"Batch size {len(inputs)} exceeds maximum of {MAX_BATCH_SIZE}",
+                error_type="validation_error",
+                code="batch_too_large",
+            )
+        )
+    try:
+        return _result(_video_batch(inputs, operation, params, output_dir))
+    except MCPVideoError as e:
+        return _error_result(e)
+    except Exception as e:
+        return {"success": False, "error": {"type": "internal_error", "code": "unexpected_error", "message": str(e)}}
+
+
+@mcp.tool()
+def video_extract_frame(
+    input_path: str,
+    timestamp: float | None = None,
+    output_path: str | None = None,
+) -> dict[str, Any]:
+    """Extract a single frame from a video. Alias for video_thumbnail.
+
+    Args:
+        input_path: Absolute path to the input video.
+        timestamp: Time in seconds to extract frame. Defaults to 10% of video duration.
+        output_path: Where to save the frame image. Auto-generated if omitted.
+    """
+    try:
+        return _result(thumbnail(input_path, timestamp=timestamp, output_path=output_path))
+    except MCPVideoError as e:
+        return _error_result(e)
+    except Exception as e:
+        return _error_result(e)
