@@ -1,0 +1,392 @@
+"""Basic MCP video tool registrations."""
+
+from __future__ import annotations
+
+from typing import Any
+
+from .engine import add_audio, add_text, convert, merge, probe, resize, speed, trim
+from .errors import MCPVideoError
+from .limits import MAX_RESOLUTION, MAX_SPEED_FACTOR, MIN_SPEED_FACTOR
+from .server_app import _error_result, _result, mcp
+from .validation import VALID_FORMATS, VALID_PRESETS
+
+
+@mcp.tool()
+def video_info(input_path: str) -> dict[str, Any]:
+    """Get metadata about a video file: duration, resolution, codec, fps, size.
+
+    Args:
+        input_path: Absolute path to the video file.
+    """
+    try:
+        info = probe(input_path)
+        return {"success": True, "info": info.model_dump()}
+    except MCPVideoError as e:
+        return _error_result(e)
+    except Exception as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_trim(
+    input_path: str,
+    start: str = "0",
+    duration: str | None = None,
+    end: str | None = None,
+    output_path: str | None = None,
+) -> dict[str, Any]:
+    """Trim a video clip by start time and duration.
+
+    Args:
+        input_path: Absolute path to the input video.
+        start: Start timestamp (e.g. '00:02:15' or seconds as string like '10.5').
+        duration: Duration to keep (e.g. '00:00:30' or '30'). Exclusive with end.
+        end: End timestamp. Exclusive with duration.
+        output_path: Where to save the trimmed video. Auto-generated if omitted.
+    """
+    try:
+        return _result(trim(input_path, start=start, duration=duration, end=end, output_path=output_path))
+    except MCPVideoError as e:
+        return _error_result(e)
+    except Exception as e:
+        return _error_result(e)
+
+
+VALID_XFADE_TRANSITIONS = {
+    "fade",
+    "dissolve",
+    "wipeleft",
+    "wiperight",
+    "slideleft",
+    "slideright",
+    "slideup",
+    "slidedown",
+    "circlecrop",
+    "radial",
+    "smoothleft",
+    "smoothright",
+    "smoothup",
+    "smoothdown",
+}
+
+
+@mcp.tool()
+def video_merge(
+    clips: list[str],
+    output_path: str | None = None,
+    transition: str | None = None,
+    transitions: list[str] | None = None,
+    transition_duration: float = 1.0,
+) -> dict[str, Any]:
+    """Merge multiple video clips into one.
+
+    Args:
+        clips: List of absolute paths to video clips to merge (in order).
+        output_path: Where to save the merged video. Auto-generated if omitted.
+        transition: Single transition type for all clip pairs (fade, dissolve, wipe-*).
+        transitions: Per-pair transition types. Overrides transition if both provided.
+        transition_duration: Duration of each transition in seconds.
+    """
+    if transition is not None and transition not in VALID_XFADE_TRANSITIONS:
+        return _error_result(
+            MCPVideoError(
+                f"Invalid transition '{transition}'. Must be one of: {', '.join(sorted(VALID_XFADE_TRANSITIONS))}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
+    if transitions is not None:
+        invalid = [t for t in transitions if t not in VALID_XFADE_TRANSITIONS]
+        if invalid:
+            return _error_result(
+                MCPVideoError(
+                    f"Invalid transition(s): {', '.join(invalid)}. Must be one of: {', '.join(sorted(VALID_XFADE_TRANSITIONS))}",
+                    error_type="validation_error",
+                    code="invalid_parameter",
+                )
+            )
+    try:
+        return _result(
+            merge(
+                clips,
+                output_path=output_path,
+                transition=transition,
+                transitions=transitions,
+                transition_duration=transition_duration,
+            )
+        )
+    except MCPVideoError as e:
+        return _error_result(e)
+    except Exception as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_add_text(
+    input_path: str,
+    text: str,
+    position: str | dict = "top-center",
+    font: str | None = None,
+    size: int = 48,
+    color: str = "white",
+    shadow: bool = True,
+    start_time: float | None = None,
+    duration: float | None = None,
+    output_path: str | None = None,
+    crf: int | None = None,
+    preset: str | None = None,
+) -> dict[str, Any]:
+    """Overlay text on a video (titles, captions, watermarks).
+
+    Args:
+        input_path: Absolute path to the input video.
+        text: Text to overlay.
+        position: Position on screen. Named (top-left, top-center, etc.), pixel {"x": 100, "y": 50}, or percentage {"x_pct": 0.5, "y_pct": 0.5}.
+        font: Path to font file. Uses system default if omitted.
+        size: Font size in pixels.
+        color: Text color (CSS color name or hex).
+        shadow: Add text shadow for readability.
+        start_time: When the text appears (seconds). Null = always visible.
+        duration: How long text is visible (seconds). Requires start_time.
+        output_path: Where to save the output. Auto-generated if omitted.
+        crf: Override CRF value (0-51, lower = better quality). Default 23.
+        preset: Override FFmpeg encoding preset (ultrafast, fast, medium, slow, veryslow).
+    """
+    if crf is not None and not (0 <= crf <= 51):
+        return _error_result(
+            MCPVideoError(f"crf must be 0-51, got {crf}", error_type="validation_error", code="invalid_parameter")
+        )
+    if preset is not None and preset not in VALID_PRESETS:
+        return _error_result(
+            MCPVideoError(f"Invalid preset: {preset}", error_type="validation_error", code="invalid_parameter")
+        )
+    try:
+        if size < 8 or size > 500:
+            return _error_result(
+                MCPVideoError(
+                    f"Font size must be between 8 and 500, got {size}",
+                    error_type="validation_error",
+                    code="invalid_parameter",
+                )
+            )
+        return _result(
+            add_text(
+                input_path,
+                text=text,
+                position=position,
+                font=font,
+                size=size,
+                color=color,
+                shadow=shadow,
+                start_time=start_time,
+                duration=duration,
+                output_path=output_path,
+                crf=crf,
+                preset=preset,
+            )
+        )
+    except MCPVideoError as e:
+        return _error_result(e)
+    except Exception as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_add_audio(
+    video_path: str,
+    audio_path: str,
+    volume: float = 1.0,
+    fade_in: float = 0.0,
+    fade_out: float = 0.0,
+    mix: bool = False,
+    start_time: float | None = None,
+    output_path: str | None = None,
+) -> dict[str, Any]:
+    """Add or replace the audio track of a video.
+
+    Args:
+        video_path: Absolute path to the video file.
+        audio_path: Absolute path to the audio file (MP3, WAV, etc.).
+        volume: Audio volume (0.0 to 2.0, where 1.0 = original).
+        fade_in: Fade in duration in seconds.
+        fade_out: Fade out duration in seconds.
+        mix: If true, mix with existing audio. If false, replace it.
+        start_time: When the audio starts playing (seconds).
+        output_path: Where to save the output. Auto-generated if omitted.
+    """
+    try:
+        if not 0 <= volume <= 2.0:
+            return _error_result(
+                MCPVideoError(
+                    f"volume must be between 0.0 and 2.0, got {volume}",
+                    error_type="validation_error",
+                    code="invalid_parameter",
+                )
+            )
+        if fade_in is not None and fade_in < 0:
+            return _error_result(
+                MCPVideoError(
+                    f"fade_in must be non-negative, got {fade_in}",
+                    error_type="validation_error",
+                    code="invalid_parameter",
+                )
+            )
+        if fade_out is not None and fade_out < 0:
+            return _error_result(
+                MCPVideoError(
+                    f"fade_out must be non-negative, got {fade_out}",
+                    error_type="validation_error",
+                    code="invalid_parameter",
+                )
+            )
+        return _result(
+            add_audio(
+                video_path,
+                audio_path=audio_path,
+                volume=volume,
+                fade_in=fade_in,
+                fade_out=fade_out,
+                mix=mix,
+                start_time=start_time,
+                output_path=output_path,
+            )
+        )
+    except MCPVideoError as e:
+        return _error_result(e)
+    except Exception as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_resize(
+    input_path: str,
+    width: int | None = None,
+    height: int | None = None,
+    aspect_ratio: str | None = None,
+    quality: str = "high",
+    output_path: str | None = None,
+) -> dict[str, Any]:
+    """Resize a video or change its aspect ratio.
+
+    Args:
+        input_path: Absolute path to the input video.
+        width: Target width in pixels. Use with height.
+        height: Target height in pixels. Use with width.
+        aspect_ratio: Preset aspect ratio (16:9, 9:16, 1:1, 4:3, 4:5, 21:9). Overrides width/height.
+        quality: Quality preset (low, medium, high, ultra).
+        output_path: Where to save the output. Auto-generated if omitted.
+    """
+    if width is not None and width > MAX_RESOLUTION:
+        return _error_result(
+            MCPVideoError(
+                f"Width {width} exceeds maximum resolution of {MAX_RESOLUTION}",
+                error_type="validation_error",
+                code="resolution_too_high",
+            )
+        )
+    if width is not None and width <= 0:
+        return _error_result(
+            MCPVideoError(
+                f"Width must be positive, got {width}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
+    if height is not None and height > MAX_RESOLUTION:
+        return _error_result(
+            MCPVideoError(
+                f"Height {height} exceeds maximum resolution of {MAX_RESOLUTION}",
+                error_type="validation_error",
+                code="resolution_too_high",
+            )
+        )
+    if height is not None and height <= 0:
+        return _error_result(
+            MCPVideoError(
+                f"Height must be positive, got {height}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
+    try:
+        return _result(
+            resize(
+                input_path,
+                width=width,
+                height=height,
+                aspect_ratio=aspect_ratio,
+                quality=quality,
+                output_path=output_path,
+            )
+        )
+    except MCPVideoError as e:
+        return _error_result(e)
+    except Exception as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_convert(
+    input_path: str,
+    format: str = "mp4",
+    quality: str = "high",
+    output_path: str | None = None,
+) -> dict[str, Any]:
+    """Convert a video to a different format.
+
+    Args:
+        input_path: Absolute path to the input video.
+        format: Target format (mp4, webm, gif, mov).
+        quality: Quality preset (low, medium, high, ultra).
+        output_path: Where to save the output. Auto-generated if omitted.
+    """
+    if format not in VALID_FORMATS:
+        return _error_result(
+            MCPVideoError(
+                f"Invalid format: {format}. Must be one of {sorted(VALID_FORMATS)}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
+    try:
+        return _result(
+            convert(
+                input_path,
+                format=format,
+                quality=quality,
+                output_path=output_path,
+            )
+        )
+    except MCPVideoError as e:
+        return _error_result(e)
+    except Exception as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_speed(
+    input_path: str,
+    factor: float = 1.0,
+    output_path: str | None = None,
+) -> dict[str, Any]:
+    """Change video playback speed.
+
+    Args:
+        input_path: Absolute path to the input video.
+        factor: Speed multiplier. 2.0 = 2x faster (time-lapse), 0.5 = half speed (slow-mo).
+        output_path: Where to save the output. Auto-generated if omitted.
+    """
+    if not (MIN_SPEED_FACTOR <= factor <= MAX_SPEED_FACTOR):
+        return _error_result(
+            MCPVideoError(
+                f"Speed factor {factor} out of range [{MIN_SPEED_FACTOR}, {MAX_SPEED_FACTOR}]",
+                error_type="validation_error",
+                code="speed_out_of_range",
+            )
+        )
+    try:
+        return _result(speed(input_path, factor=factor, output_path=output_path))
+    except MCPVideoError as e:
+        return _error_result(e)
+    except Exception as e:
+        return _error_result(e)
