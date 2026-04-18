@@ -54,6 +54,7 @@ def main() -> None:
         if handle_initial_command(args, use_json=use_json):
             return
 
+        # Remaining command families are still handled here until their batches move.
         if args.command == "filter":
             from .engine import apply_filter
 

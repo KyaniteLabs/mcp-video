@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from .common import _with_spinner, output_json
 from .formatting import (
     _format_doctor_text,
     _format_edit_text,
+    _format_extract_audio_text,
     _format_info_text,
     _format_storyboard_text,
     _format_thumbnail_text,
@@ -314,14 +316,10 @@ def handle_initial_command(args: Any, *, use_json: bool) -> bool:
         if use_json:
             output_json({"success": True, "output_path": result})
         else:
-            from .formatting import _format_extract_audio_text
-
             _format_extract_audio_text(result)
         return True
 
     if args.command == "edit":
-        import json
-
         from ..engine import edit_timeline
         from ..models import Timeline
         from .common import _parse_json_arg
