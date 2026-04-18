@@ -10,14 +10,13 @@ from rich.panel import Panel
 from rich.table import Table
 
 from .cli.common import _auto_output, _parse_json_arg, _with_spinner, output_json
+from .cli.handlers_core import handle_initial_command
 from .cli.parser import build_parser
 from .cli.formatting import (
     _format_batch_text,
-    _format_doctor_text,
     _format_edit_text,
     _format_error,
     _format_extract_audio_text,
-    _format_info_text,
     _format_storyboard_text,
     _format_thumbnail_text,
     console,
@@ -54,38 +53,10 @@ def main() -> None:
 
     # CLI commands
     try:
-        if args.command == "doctor":
-            from .doctor import run_diagnostics
+        if handle_initial_command(args, use_json=use_json):
+            return
 
-            report = run_diagnostics()
-            if use_json or args.json:
-                output_json(report)
-            else:
-                _format_doctor_text(report)
-
-        elif args.command == "info":
-            from .engine import probe
-
-            info = probe(args.input)
-            if use_json:
-                info_dict = info.model_dump() if hasattr(info, "model_dump") else info
-                output_json({"success": True, "data": info_dict})
-            else:
-                _format_info_text(info)
-
-        elif args.command == "extract-frame":
-            from .engine import thumbnail
-
-            result = _with_spinner(
-                "Extracting frame...", thumbnail, args.input, timestamp=args.timestamp, output_path=args.output
-            )
-            if use_json:
-                result_dict = result.model_dump() if hasattr(result, "model_dump") else result
-                output_json({"success": True, **result_dict})
-            else:
-                _format_thumbnail_text(result)
-
-        elif args.command == "trim":
+        if args.command == "trim":
             from .engine import trim
 
             result = _with_spinner(
