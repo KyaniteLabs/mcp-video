@@ -35,6 +35,7 @@ from .models import (
 )
 from .ffmpeg_helpers import _escape_ffmpeg_filter_value, _seconds_to_srt_time
 from .engine_audio_ops import add_audio as add_audio
+from .engine_audio_normalize import normalize_audio as normalize_audio
 from .engine_chroma_key import chroma_key as chroma_key
 from .engine_crop import crop as crop
 from .engine_edit import trim as trim
@@ -786,66 +787,6 @@ def apply_filter(
         size_mb=info.size_mb,
         format="mp4",
         operation=f"filter_{filter_type}",
-    )
-
-
-# ---------------------------------------------------------------------------
-# Audio normalization
-# ---------------------------------------------------------------------------
-
-
-def normalize_audio(
-    input_path: str,
-    target_lufs: float = -16.0,
-    lra: float = 11.0,
-    output_path: str | None = None,
-) -> EditResult:
-    """Normalize audio loudness to a target LUFS level.
-
-    Args:
-        input_path: Path to the input video.
-        target_lufs: Target integrated loudness in LUFS. Common values:
-            -16 (YouTube), -23 (EBU R128/broadcast), -14 (Apple/Spotify).
-        lra: Loudness range target in LU. Default 11.0.
-        output_path: Where to save the output.
-    """
-    _validate_input(input_path)
-    if not isinstance(target_lufs, (int, float)) or not (-70 <= target_lufs <= -5):
-        raise MCPVideoError(
-            f"target_lufs must be -70 to -5, got {target_lufs}", error_type="validation_error", code="invalid_parameter"
-        )
-    _require_filter("loudnorm", "Audio normalization")
-    output = output_path or _auto_output(input_path, "normalized")
-
-    # loudnorm parameters: I=integrated loudness, TP=true peak, LRA=loudness range
-    # TP (true peak) should be a fixed value near -1.5 dBTP regardless of target LUFS.
-    tp = -1.5
-
-    _run_ffmpeg(
-        [
-            "-i",
-            input_path,
-            "-af",
-            f"loudnorm=I={target_lufs}:TP={tp}:LRA={lra}",
-            "-c:v",
-            "copy",
-            "-c:a",
-            "aac",
-            "-b:a",
-            "192k",
-            *_movflags_args(output),
-            output,
-        ]
-    )
-
-    info = probe(output)
-    return EditResult(
-        output_path=output,
-        duration=info.duration,
-        resolution=info.resolution,
-        size_mb=info.size_mb,
-        format="mp4",
-        operation="normalize_audio",
     )
 
 
