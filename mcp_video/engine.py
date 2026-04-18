@@ -42,6 +42,7 @@ from .models import (
 from .ffmpeg_helpers import _escape_ffmpeg_filter_value, _run_ffprobe_json, _seconds_to_srt_time
 from .engine_probe import get_duration as get_duration
 from .engine_probe import probe as probe
+from .engine_transcode import normalize as normalize
 from .engine_runtime_utils import (
     _auto_output as _auto_output,
     _auto_output_dir as _auto_output_dir,
@@ -67,36 +68,6 @@ from .engine_runtime_utils import (
     _validate_input as _validate_input,
     _validate_position as _validate_position,
 )
-
-
-# ---------------------------------------------------------------------------
-# Normalize — convert to H.264/AAC for editing
-# ---------------------------------------------------------------------------
-
-
-def normalize(input_path: str, output_path: str | None = None) -> str:
-    """Normalize a video to H.264 video + AAC audio for reliable editing."""
-    _validate_input(input_path)
-    output = output_path or _auto_output(input_path, "normalized")
-    _run_ffmpeg(
-        [
-            "-i",
-            input_path,
-            "-c:v",
-            "libx264",
-            "-preset",
-            "fast",
-            "-crf",
-            "23",
-            "-c:a",
-            "aac",
-            "-b:a",
-            "128k",
-            *_movflags_args(output),
-            output,
-        ]
-    )
-    return output
 
 
 # ---------------------------------------------------------------------------
