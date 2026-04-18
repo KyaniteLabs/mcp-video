@@ -21,6 +21,7 @@ This project follows a simple release-note style:
 
 - Updated public tool count messaging from 82 to the current 83 MCP tools.
 - Updated the landing page with crawl metadata and structured software/source metadata.
+- Normalized root metadata links to the canonical repository URL.
 
 ## 1.2.1 - 2026-04-13
 
