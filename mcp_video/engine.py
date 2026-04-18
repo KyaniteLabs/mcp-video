@@ -41,6 +41,7 @@ from .engine_chroma_key import chroma_key as chroma_key
 from .engine_crop import crop as crop
 from .engine_edit import trim as trim
 from .engine_export import export_video as export_video
+from .engine_extract_audio import extract_audio as extract_audio
 from .engine_merge import merge as merge
 from .engine_preview import preview as preview
 
@@ -599,49 +600,6 @@ def _apply_composite_overlays(
                 output_path,
             ]
         )
-
-
-def extract_audio(
-    input_path: str,
-    output_path: str | None = None,
-    format: str = "mp3",
-) -> str:
-    """Extract audio track from a video file."""
-    VALID_AUDIO_FORMATS = {"mp3", "aac", "wav", "ogg", "flac"}
-    if format not in VALID_AUDIO_FORMATS:
-        raise MCPVideoError(
-            f"Invalid audio format: {format}. Must be one of {VALID_AUDIO_FORMATS}",
-            error_type="validation_error",
-            code="invalid_parameter",
-        )
-    _validate_input(input_path)
-    ext = f".{format}" if not format.startswith(".") else format
-    output = output_path or _auto_output(input_path, "audio", ext=ext)
-
-    codec_map = {
-        "mp3": "libmp3lame",
-        "aac": "aac",
-        "wav": "pcm_s16le",
-        "ogg": "libvorbis",
-        "flac": "flac",
-    }
-    codec = codec_map[format]
-
-    _run_ffmpeg(
-        [
-            "-i",
-            input_path,
-            "-vn",
-            "-c:a",
-            codec,
-            "-b:a",
-            "192k" if format != "wav" else "0",
-            "-y",
-            output,
-        ]
-    )
-
-    return output
 
 
 # ---------------------------------------------------------------------------
