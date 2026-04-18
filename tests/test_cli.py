@@ -510,6 +510,56 @@ class TestCLIFade:
         assert "Done" in result.stdout
 
 
+class TestCLIVisualEffects:
+    @pytest.mark.parametrize(
+        ("command", "output_name", "label", "extra_args"),
+        [
+            ("effect-vignette", "vignette.mp4", "Vignette", {"intensity": 0.5, "radius": 0.8, "smoothness": 0.5}),
+            ("effect-glow", "glow.mp4", "Glow", {"intensity": 0.5, "radius": 10, "threshold": 0.7}),
+            ("effect-noise", "noise.mp4", "Noise", {"intensity": 0.05, "mode": "film", "static": False}),
+            ("effect-scanlines", "scanlines.mp4", "Scanlines", {"line_height": 2, "opacity": 0.3, "flicker": 0.1}),
+            ("effect-chromatic-aberration", "chromatic.mp4", "Chromatic aberration", {"intensity": 2.0, "angle": 0}),
+        ],
+    )
+    def test_effect_handler_outputs_json(
+        self, command, output_name, label, extra_args, sample_video, tmp_path, monkeypatch, capsys
+    ):
+        output = tmp_path / output_name
+        from mcp_video.cli import handlers_effects
+
+        output.write_bytes(b"fake video")
+        monkeypatch.setattr(handlers_effects, "_with_spinner", lambda *args, **kwargs: str(output))
+        args = SimpleNamespace(command=command, input=sample_video, output=str(output), **extra_args)
+
+        handled = handlers_effects.handle_effect_command(args, use_json=True)
+        data = json.loads(capsys.readouterr().out)
+
+        assert handled is True
+        assert data["success"] is True
+        assert data["output_path"] == str(output)
+
+    def test_effect_handler_outputs_text(self, sample_video, tmp_path, monkeypatch, capsys):
+        output = tmp_path / "vignette.mp4"
+        from mcp_video.cli import handlers_effects
+
+        monkeypatch.setattr(handlers_effects, "_with_spinner", lambda *args, **kwargs: str(output))
+        args = SimpleNamespace(
+            command="effect-vignette",
+            input=sample_video,
+            output=str(output),
+            intensity=0.5,
+            radius=0.8,
+            smoothness=0.5,
+        )
+
+        handled = handlers_effects.handle_effect_command(args, use_json=False)
+        stdout = capsys.readouterr().out
+
+        assert handled is True
+        assert "Vignette applied" in stdout
+        assert output.name in stdout
+
+
 class TestCLITransitions:
     def test_transition_glitch_outputs_json(self, sample_video, tmp_path):
         output = tmp_path / "glitch.mp4"
