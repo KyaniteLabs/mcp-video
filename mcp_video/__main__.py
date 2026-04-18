@@ -10,6 +10,7 @@ from rich.panel import Panel
 from rich.table import Table
 
 from .cli.common import _parse_json_arg, _with_spinner, output_json
+from .cli.handlers_composition import handle_composition_command
 from .cli.handlers_core import handle_initial_command
 from .cli.handlers_effects import handle_effect_command
 from .cli.handlers_transitions import handle_transition_command
@@ -58,6 +59,8 @@ def main() -> None:
         if handle_effect_command(args, use_json=use_json):
             return
         if handle_transition_command(args, use_json=use_json):
+            return
+        if handle_composition_command(args, use_json=use_json):
             return
 
         # Remaining command families are still handled here until their batches move.
@@ -991,141 +994,6 @@ def main() -> None:
                 console.print(
                     Panel(
                         f"[bold green]Audio effects applied:[/bold green] {result}", border_style="green", title="Done"
-                    )
-                )
-
-        # ------------------------------------------------------------------
-        # Motion graphics commands
-        # ------------------------------------------------------------------
-
-        elif args.command == "video-text-animated":
-            from .effects_engine import text_animated
-
-            result = _with_spinner(
-                "Adding animated text...",
-                text_animated,
-                args.input,
-                args.text,
-                args.output,
-                animation=args.animation,
-                font=args.font,
-                size=args.size,
-                color=args.color,
-                position=args.position,
-                start=args.start,
-                duration=args.duration,
-            )
-            if use_json:
-                output_json({"success": True, "output_path": result})
-            else:
-                console.print(
-                    Panel(
-                        f"[bold green]Animated text ({args.animation}):[/bold green] {result}",
-                        border_style="green",
-                        title="Done",
-                    )
-                )
-
-        elif args.command == "video-mograph-count":
-            from .effects_engine import mograph_count
-
-            style = _parse_json_arg(args.style, "style", json_mode=use_json) if args.style else None
-            result = _with_spinner(
-                "Generating counter...",
-                mograph_count,
-                args.start,
-                args.end,
-                args.duration,
-                args.output,
-                style=style,
-                fps=args.fps,
-            )
-            if use_json:
-                output_json({"success": True, "output_path": result})
-            else:
-                console.print(
-                    Panel(
-                        f"[bold green]Counter ({args.start}-{args.end}):[/bold green] {result}",
-                        border_style="green",
-                        title="Done",
-                    )
-                )
-
-        elif args.command == "video-mograph-progress":
-            from .effects_engine import mograph_progress
-
-            result = _with_spinner(
-                "Generating progress animation...",
-                mograph_progress,
-                args.duration,
-                args.output,
-                style=args.style,
-                color=args.color,
-                track_color=args.track_color,
-                fps=args.fps,
-            )
-            if use_json:
-                output_json({"success": True, "output_path": result})
-            else:
-                console.print(
-                    Panel(
-                        f"[bold green]Progress bar ({args.style}):[/bold green] {result}",
-                        border_style="green",
-                        title="Done",
-                    )
-                )
-
-        # ------------------------------------------------------------------
-        # Layout commands
-        # ------------------------------------------------------------------
-
-        elif args.command == "video-layout-grid":
-            from .effects_engine import layout_grid
-
-            result = _with_spinner(
-                "Creating grid layout...",
-                layout_grid,
-                args.inputs,
-                args.layout,
-                args.output,
-                gap=args.gap,
-                padding=args.padding,
-                background=args.background,
-            )
-            if use_json:
-                output_json({"success": True, "output_path": result})
-            else:
-                console.print(
-                    Panel(
-                        f"[bold green]Grid layout ({args.layout}):[/bold green] {result}",
-                        border_style="green",
-                        title="Done",
-                    )
-                )
-
-        elif args.command == "video-layout-pip":
-            from .effects_engine import layout_pip
-
-            result = _with_spinner(
-                "Creating PIP layout...",
-                layout_pip,
-                args.main,
-                args.pip,
-                args.output,
-                position=args.position,
-                size=args.size,
-                margin=args.margin,
-                border=args.border,
-                border_color=args.border_color,
-                border_width=args.border_width,
-                rounded_corners=args.rounded_corners,
-            )
-            if use_json:
-                output_json({"success": True, "output_path": result})
-            else:
-                console.print(
-                    Panel(
-                        f"[bold green]PIP ({args.position}):[/bold green] {result}", border_style="green", title="Done"
                     )
                 )
 
