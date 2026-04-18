@@ -17,7 +17,6 @@ from .cli.formatting import (
     _format_edit_text,
     _format_error,
     _format_extract_audio_text,
-    _format_storyboard_text,
     _format_thumbnail_text,
     console,
     err_console,
@@ -56,76 +55,7 @@ def main() -> None:
         if handle_initial_command(args, use_json=use_json):
             return
 
-        if args.command == "resize":
-            from .engine import resize
-
-            result = _with_spinner(
-                "Resizing...",
-                resize,
-                args.input,
-                width=args.width,
-                height=args.height,
-                aspect_ratio=args.aspect_ratio,
-                quality=args.quality,
-                output_path=args.output,
-            )
-            if use_json:
-                output_json(result)
-            else:
-                _format_edit_text(result)
-
-        elif args.command == "speed":
-            from .engine import speed
-
-            result = _with_spinner("Changing speed...", speed, args.input, factor=args.factor, output_path=args.output)
-            if use_json:
-                output_json(result)
-            else:
-                _format_edit_text(result)
-
-        elif args.command == "convert":
-            from .engine import convert
-
-            result = _with_spinner(
-                "Converting...", convert, args.input, format=args.fmt, quality=args.quality, output_path=args.output
-            )
-            if use_json:
-                output_json(result)
-            else:
-                _format_edit_text(result)
-
-        elif args.command == "thumbnail":
-            from .engine import thumbnail
-
-            result = thumbnail(args.input, timestamp=args.timestamp, output_path=args.output)
-            if use_json:
-                output_json(result)
-            else:
-                _format_edit_text(result)
-
-        elif args.command == "preview":
-            from .engine import preview
-
-            result = _with_spinner(
-                "Generating preview...", preview, args.input, output_path=args.output, scale_factor=args.scale
-            )
-            if use_json:
-                output_json(result)
-            else:
-                _format_edit_text(result)
-
-        elif args.command == "storyboard":
-            from .engine import storyboard
-
-            result = _with_spinner(
-                "Extracting storyboard...", storyboard, args.input, output_dir=args.output_dir, frame_count=args.frames
-            )
-            if use_json:
-                output_json(result)
-            else:
-                _format_storyboard_text(result)
-
-        elif args.command == "subtitles":
+        if args.command == "subtitles":
             from .engine import subtitles
 
             result = _with_spinner(
