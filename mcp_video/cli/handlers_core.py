@@ -208,4 +208,136 @@ def handle_initial_command(args: Any, *, use_json: bool) -> bool:
             _format_storyboard_text(result)
         return True
 
+    if args.command == "subtitles":
+        from ..engine import subtitles
+
+        result = _with_spinner(
+            "Burning subtitles...", subtitles, args.input, subtitle_path=args.subtitle, output_path=args.output
+        )
+        if use_json:
+            output_json(result)
+        else:
+            _format_edit_text(result)
+        return True
+
+    if args.command == "watermark":
+        from ..engine import watermark
+
+        result = _with_spinner(
+            "Adding watermark...",
+            watermark,
+            args.input,
+            image_path=args.image,
+            position=args.position,
+            opacity=args.opacity,
+            margin=args.margin,
+            output_path=args.output,
+        )
+        if use_json:
+            output_json(result)
+        else:
+            _format_edit_text(result)
+        return True
+
+    if args.command == "crop":
+        from ..engine import crop
+
+        result = _with_spinner(
+            "Cropping...",
+            crop,
+            args.input,
+            width=args.width,
+            height=args.height,
+            x=args.x,
+            y=args.y,
+            output_path=args.output,
+        )
+        if use_json:
+            output_json(result)
+        else:
+            _format_edit_text(result)
+        return True
+
+    if args.command == "rotate":
+        from ..engine import rotate
+
+        result = _with_spinner(
+            "Rotating...",
+            rotate,
+            args.input,
+            angle=args.angle,
+            flip_horizontal=args.flip_h,
+            flip_vertical=args.flip_v,
+            output_path=args.output,
+        )
+        if use_json:
+            output_json(result)
+        else:
+            _format_edit_text(result)
+        return True
+
+    if args.command == "fade":
+        from ..engine import fade
+
+        result = _with_spinner(
+            "Applying fade...",
+            fade,
+            args.input,
+            fade_in=args.fade_in,
+            fade_out=args.fade_out,
+            output_path=args.output,
+        )
+        if use_json:
+            output_json(result)
+        else:
+            _format_edit_text(result)
+        return True
+
+    if args.command == "export":
+        from ..engine import export_video
+
+        result = _with_spinner(
+            "Exporting...", export_video, args.input, quality=args.quality, format=args.fmt, output_path=args.output
+        )
+        if use_json:
+            output_json(result)
+        else:
+            _format_edit_text(result)
+        return True
+
+    if args.command == "extract-audio":
+        from ..engine import extract_audio
+
+        result = _with_spinner(
+            "Extracting audio...", extract_audio, args.input, output_path=args.output, format=args.audio_format
+        )
+        if use_json:
+            output_json({"success": True, "output_path": result})
+        else:
+            from .formatting import _format_extract_audio_text
+
+            _format_extract_audio_text(result)
+        return True
+
+    if args.command == "edit":
+        import json
+
+        from ..engine import edit_timeline
+        from ..models import Timeline
+        from .common import _parse_json_arg
+
+        timeline_arg = args.timeline.strip()
+        if timeline_arg.startswith(("{", "[")):
+            tl = Timeline.model_validate(_parse_json_arg(timeline_arg, "timeline", json_mode=use_json))
+        else:
+            with open(timeline_arg) as f:
+                tl = Timeline.model_validate(json.load(f))
+
+        result = _with_spinner("Editing timeline...", edit_timeline, tl, output_path=args.output)
+        if use_json:
+            output_json(result)
+        else:
+            _format_edit_text(result)
+        return True
+
     return False
