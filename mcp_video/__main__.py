@@ -9,8 +9,9 @@ from typing import Any
 from rich.panel import Panel
 from rich.table import Table
 
-from .cli.common import _auto_output, _parse_json_arg, _with_spinner, output_json
+from .cli.common import _parse_json_arg, _with_spinner, output_json
 from .cli.handlers_core import handle_initial_command
+from .cli.handlers_effects import handle_effect_command
 from .cli.handlers_transitions import handle_transition_command
 from .cli.parser import build_parser
 from .cli.formatting import (
@@ -53,6 +54,8 @@ def main() -> None:
     # CLI commands
     try:
         if handle_initial_command(args, use_json=use_json):
+            return
+        if handle_effect_command(args, use_json=use_json):
             return
         if handle_transition_command(args, use_json=use_json):
             return
@@ -656,113 +659,6 @@ def main() -> None:
                 if data.get("operations"):
                     lines.append(f"[bold green]Post-process ops:[/bold green] {', '.join(data['operations'])}")
                 console.print(Panel("\n".join(lines), border_style="green", title="Remotion Pipeline"))
-
-        # ------------------------------------------------------------------
-        # Effect commands
-        # ------------------------------------------------------------------
-
-        elif args.command == "effect-vignette":
-            from .effects_engine import effect_vignette
-
-            out = args.output or _auto_output(args.input, "vignette")
-            result = _with_spinner(
-                "Applying vignette...",
-                effect_vignette,
-                args.input,
-                out,
-                intensity=args.intensity,
-                radius=args.radius,
-                smoothness=args.smoothness,
-            )
-            if use_json:
-                output_json({"success": True, "output_path": result})
-            else:
-                console.print(
-                    Panel(f"[bold green]Vignette applied:[/bold green] {result}", border_style="green", title="Done")
-                )
-
-        elif args.command == "effect-glow":
-            from .effects_engine import effect_glow
-
-            out = args.output or _auto_output(args.input, "glow")
-            result = _with_spinner(
-                "Applying glow...",
-                effect_glow,
-                args.input,
-                out,
-                intensity=args.intensity,
-                radius=args.radius,
-                threshold=args.threshold,
-            )
-            if use_json:
-                output_json({"success": True, "output_path": result})
-            else:
-                console.print(
-                    Panel(f"[bold green]Glow applied:[/bold green] {result}", border_style="green", title="Done")
-                )
-
-        elif args.command == "effect-noise":
-            from .effects_engine import effect_noise
-
-            out = args.output or _auto_output(args.input, "noise")
-            result = _with_spinner(
-                "Applying noise...",
-                effect_noise,
-                args.input,
-                out,
-                intensity=args.intensity,
-                mode=args.mode,
-                animated=not args.static,
-            )
-            if use_json:
-                output_json({"success": True, "output_path": result})
-            else:
-                console.print(
-                    Panel(f"[bold green]Noise applied:[/bold green] {result}", border_style="green", title="Done")
-                )
-
-        elif args.command == "effect-scanlines":
-            from .effects_engine import effect_scanlines
-
-            out = args.output or _auto_output(args.input, "scanlines")
-            result = _with_spinner(
-                "Applying scanlines...",
-                effect_scanlines,
-                args.input,
-                out,
-                line_height=args.line_height,
-                opacity=args.opacity,
-                flicker=args.flicker,
-            )
-            if use_json:
-                output_json({"success": True, "output_path": result})
-            else:
-                console.print(
-                    Panel(f"[bold green]Scanlines applied:[/bold green] {result}", border_style="green", title="Done")
-                )
-
-        elif args.command == "effect-chromatic-aberration":
-            from .effects_engine import effect_chromatic_aberration
-
-            out = args.output or _auto_output(args.input, "chromatic")
-            result = _with_spinner(
-                "Applying chromatic aberration...",
-                effect_chromatic_aberration,
-                args.input,
-                out,
-                intensity=args.intensity,
-                angle=args.angle,
-            )
-            if use_json:
-                output_json({"success": True, "output_path": result})
-            else:
-                console.print(
-                    Panel(
-                        f"[bold green]Chromatic aberration applied:[/bold green] {result}",
-                        border_style="green",
-                        title="Done",
-                    )
-                )
 
         # ------------------------------------------------------------------
         # AI commands
