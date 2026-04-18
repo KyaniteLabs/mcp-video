@@ -43,6 +43,7 @@ from .ffmpeg_helpers import _escape_ffmpeg_filter_value, _run_ffprobe_json, _sec
 from .engine_probe import get_duration as get_duration
 from .engine_probe import probe as probe
 from .engine_transcode import normalize as normalize
+from .engine_edit import trim as trim
 from .engine_runtime_utils import (
     _auto_output as _auto_output,
     _auto_output_dir as _auto_output_dir,
@@ -73,54 +74,6 @@ from .engine_runtime_utils import (
 # ---------------------------------------------------------------------------
 # Core operations
 # ---------------------------------------------------------------------------
-
-
-def trim(
-    input_path: str,
-    start: str | float = 0,
-    duration: str | float | None = None,
-    end: str | float | None = None,
-    output_path: str | None = None,
-) -> EditResult:
-    """Trim a video by start time and duration or end time."""
-    _validate_input(input_path)
-    output = output_path or _auto_output(input_path, "trimmed")
-
-    args = []
-    if start:
-        args.extend(["-ss", str(start)])
-    args.extend(["-i", input_path])
-    if duration:
-        args.extend(["-t", str(duration)])
-    elif end:
-        args.extend(["-to", str(end)])
-    args.extend(
-        [
-            "-c:v",
-            "libx264",
-            "-preset",
-            "fast",
-            "-crf",
-            "23",
-            "-c:a",
-            "aac",
-            "-b:a",
-            "128k",
-            *_movflags_args(output),
-            output,
-        ]
-    )
-    _run_ffmpeg(args)
-
-    info = probe(output)
-    return EditResult(
-        output_path=output,
-        duration=info.duration,
-        resolution=info.resolution,
-        size_mb=info.size_mb,
-        format="mp4",
-        operation="trim",
-    )
 
 
 def merge(
