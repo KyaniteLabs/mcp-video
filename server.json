@@ -5,7 +5,7 @@
   "description": "Video editing MCP server for AI agents using FFmpeg and Remotion structured tools.",
   "version": "1.2.1",
   "repository": {
-    "url": "https://github.com/Pastorsimon1798/mcp-video",
+    "url": "https://github.com/pastorsimon1798/mcp-video",
     "source": "github"
   },
   "packages": [

@@ -833,7 +833,7 @@ pytest tests/ -v -m "not slow and not remotion"
 - Security reports: see [SECURITY.md](SECURITY.md) (private reporting path).
 - Need help or want to request a feature? Start with [SUPPORT.md](SUPPORT.md).
 - Expected behavior in community spaces: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
-- Discussions: ask questions, share demos, and float ideas in [GitHub Discussions](https://github.com/Pastorsimon1798/mcp-video/discussions).
+- Discussions: ask questions, share demos, and float ideas in [GitHub Discussions](https://github.com/pastorsimon1798/mcp-video/discussions).
 - Governance and maintainer expectations: [GOVERNANCE.md](GOVERNANCE.md) and [MAINTAINERS.md](MAINTAINERS.md).
 - Release history: [CHANGELOG.md](CHANGELOG.md).
 
