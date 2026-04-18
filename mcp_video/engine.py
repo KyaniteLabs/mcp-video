@@ -26,7 +26,6 @@ from .models import (
     Position,
     QualityLevel,
     QualityMetricsResult,
-    SceneDetectionResult,
     SplitLayout,
     SubtitleResult,
     Timeline,
@@ -38,6 +37,7 @@ from .engine_audio_ops import add_audio as add_audio
 from .engine_audio_normalize import normalize_audio as normalize_audio
 from .engine_chroma_key import chroma_key as chroma_key
 from .engine_crop import crop as crop
+from .engine_detect_scenes import detect_scenes as detect_scenes
 from .engine_edit import trim as trim
 from .engine_export import export_video as export_video
 from .engine_extract_audio import extract_audio as extract_audio
@@ -1195,95 +1195,6 @@ def audio_waveform(
         max_level=round(max_level, 1),
         min_level=round(min_level, 1),
         silence_regions=silence_regions,
-    )
-
-
-# ---------------------------------------------------------------------------
-# Scene detection
-# ---------------------------------------------------------------------------
-
-
-def detect_scenes(
-    input_path: str,
-    threshold: float = 0.3,
-    min_scene_duration: float = 1.0,
-) -> SceneDetectionResult:
-    """Detect scene changes in a video.
-
-    Args:
-        input_path: Path to the input video.
-        threshold: Scene detection sensitivity (0.0-1.0, lower = more sensitive).
-        min_scene_duration: Minimum duration of a scene in seconds.
-    """
-    _validate_input(input_path)
-    if not isinstance(threshold, (int, float)) or not (0.0 <= threshold <= 1.0):
-        raise MCPVideoError(
-            f"threshold must be 0.0-1.0, got {threshold}", error_type="validation_error", code="invalid_parameter"
-        )
-    info = probe(input_path)
-    duration = info.duration
-
-    # Use FFmpeg select filter with scene detection
-    proc = subprocess.run(
-        [
-            _ffmpeg(),
-            "-i",
-            input_path,
-            "-vf",
-            f"select='gt(scene,{threshold})',showinfo",
-            "-f",
-            "null",
-            "-",
-        ],
-        capture_output=True,
-        text=True,
-        timeout=300,
-    )
-    if proc.returncode != 0:
-        raise parse_ffmpeg_error(proc.stderr)
-
-    # Parse showinfo output for scene change timestamps
-    scene_times: list[float] = []
-    for line in proc.stderr.split("\n"):
-        if "showinfo" in line and "pts_time:" in line:
-            try:
-                # Format: [showinfo @ ...] pts_time:X ...
-                pts_match = re.search(r"pts_time:(\d+\.?\d*)", line)
-                if pts_match:
-                    scene_times.append(float(pts_match.group(1)))
-            except (ValueError, IndexError):
-                continue
-
-    # Build scene list from timestamps
-    scenes: list[dict] = []
-    prev_time = 0.0
-    for t in scene_times:
-        if t - prev_time >= min_scene_duration:
-            scenes.append(
-                {
-                    "start": round(prev_time, 2),
-                    "end": round(t, 2),
-                    "start_frame": round(prev_time * info.fps),
-                    "end_frame": round(t * info.fps),
-                }
-            )
-            prev_time = t
-
-    # Add final scene
-    if duration - prev_time >= 0.1:
-        scenes.append(
-            {
-                "start": round(prev_time, 2),
-                "end": round(duration, 2),
-                "start_frame": round(prev_time * info.fps),
-                "end_frame": round(duration * info.fps),
-            }
-        )
-
-    return SceneDetectionResult(
-        scenes=scenes,
-        scene_count=len(scenes),
-        duration=duration,
     )
 
 
