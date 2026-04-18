@@ -23,7 +23,6 @@ from .models import (
     ExportFormat,
     FilterType,
     ImageSequenceResult,
-    MetadataResult,
     NamedPosition,
     Position,
     QualityLevel,
@@ -35,7 +34,7 @@ from .models import (
     TimelineImageOverlay,
     WaveformResult,
 )
-from .ffmpeg_helpers import _escape_ffmpeg_filter_value, _run_ffprobe_json, _seconds_to_srt_time
+from .ffmpeg_helpers import _escape_ffmpeg_filter_value, _seconds_to_srt_time
 from .engine_audio_ops import add_audio as add_audio
 from .engine_chroma_key import chroma_key as chroma_key
 from .engine_crop import crop as crop
@@ -43,6 +42,8 @@ from .engine_edit import trim as trim
 from .engine_export import export_video as export_video
 from .engine_extract_audio import extract_audio as extract_audio
 from .engine_merge import merge as merge
+from .engine_metadata import read_metadata as read_metadata
+from .engine_metadata import write_metadata as write_metadata
 from .engine_preview import preview as preview
 
 # Compatibility re-export: callers still import get_duration from mcp_video.engine.
@@ -1623,95 +1624,6 @@ def compare_quality(
     return QualityMetricsResult(
         metrics=computed,
         overall_quality=overall,
-    )
-
-
-# ---------------------------------------------------------------------------
-# Metadata editing
-# ---------------------------------------------------------------------------
-
-
-def read_metadata(input_path: str) -> MetadataResult:
-    """Read metadata tags from a video/audio file.
-
-    Args:
-        input_path: Path to the input file.
-    """
-    _validate_input(input_path)
-    data = _run_ffprobe_json(input_path)
-
-    # Extract tags from format
-    fmt_tags = data.get("format", {}).get("tags", {})
-    # Also check stream tags
-    stream_tags: dict[str, str] = {}
-    for stream in data.get("streams", []):
-        for k, v in stream.get("tags", {}).items():
-            if k not in stream_tags:
-                stream_tags[k] = v
-
-    all_tags = {**stream_tags, **fmt_tags}
-
-    return MetadataResult(
-        title=all_tags.pop("title", None),
-        artist=all_tags.pop("artist", None),
-        album=all_tags.pop("album", None),
-        comment=all_tags.pop("comment", None),
-        date=all_tags.pop("date", None) or all_tags.pop("creation_time", None),
-        tags=all_tags,
-    )
-
-
-def write_metadata(
-    input_path: str,
-    metadata: dict[str, str],
-    output_path: str | None = None,
-) -> EditResult:
-    """Write metadata tags to a video/audio file.
-
-    Args:
-        input_path: Path to the input file.
-        metadata: Dict of tag key-value pairs (e.g. {"title": "My Video", "artist": "Me"}).
-        output_path: Where to save the output. If None, overwrites in place with a temp file.
-    """
-    _validate_input(input_path)
-    if not metadata:
-        raise MCPVideoError(
-            "No metadata provided",
-            error_type="validation_error",
-            code="empty_metadata",
-        )
-
-    # Validate metadata keys and values: reject newlines, null bytes, and '=' in keys
-    for key, value in metadata.items():
-        if "=" in key or "\n" in key or "\0" in key:
-            raise MCPVideoError(
-                f"Invalid metadata key '{key}': keys cannot contain '=', newline, or null bytes",
-                error_type="validation_error",
-                code="invalid_metadata_key",
-            )
-        if "\n" in str(value) or "\0" in str(value):
-            raise MCPVideoError(
-                f"Invalid metadata value for '{key}': values cannot contain newline or null bytes",
-                error_type="validation_error",
-                code="invalid_metadata_value",
-            )
-
-    output = output_path or _auto_output(input_path, "tagged")
-
-    args = ["-i", input_path]
-    for key, value in metadata.items():
-        args.extend(["-metadata", f"{key}={value}"])
-    args.extend(["-c:v", "copy", "-c:a", "copy", *_movflags_args(output), output])
-    _run_ffmpeg(args)
-
-    result_info = probe(output)
-    return EditResult(
-        output_path=output,
-        duration=result_info.duration,
-        resolution=result_info.resolution,
-        size_mb=result_info.size_mb,
-        format=result_info.format,
-        operation="write_metadata",
     )
 
 
