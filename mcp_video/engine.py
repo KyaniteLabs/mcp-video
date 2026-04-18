@@ -76,6 +76,7 @@ from .engine_subtitles import subtitles as subtitles
 from .engine_text import add_text as add_text
 from .engine_thumbnail import thumbnail as thumbnail
 from .engine_transcode import normalize as normalize
+from .engine_watermark import watermark as watermark
 
 
 # ---------------------------------------------------------------------------
@@ -283,67 +284,6 @@ def convert(
         operation="convert",
         progress=100.0,
         thumbnail_base64=thumb_b64,
-    )
-
-
-def watermark(
-    input_path: str,
-    image_path: str,
-    position: Position = "bottom-right",
-    opacity: float = 0.7,
-    margin: int = 20,
-    output_path: str | None = None,
-    crf: int | None = None,
-    preset: str | None = None,
-) -> EditResult:
-    """Add an image watermark to a video."""
-    _validate_input(input_path)
-    _validate_input(image_path)
-    output = output_path or _auto_output(input_path, "watermarked")
-
-    # Position expressions for the overlay
-    position_map: dict[NamedPosition, str] = {
-        "top-left": f"{margin}:{margin}",
-        "top-center": "(main_w-overlay_w)/2:{margin}",
-        "top-right": f"main_w-overlay_w-{margin}:{margin}",
-        "center-left": f"{margin}:(main_h-overlay_h)/2",
-        "center": "(main_w-overlay_w)/2:(main_h-overlay_h)/2",
-        "center-right": f"main_w-overlay_w-{margin}:(main_h-overlay_h)/2",
-        "bottom-left": f"{margin}:main_h-overlay_h-{margin}",
-        "bottom-center": "(main_w-overlay_w)/2:main_h-overlay_h-{margin}",
-        "bottom-right": f"main_w-overlay_w-{margin}:main_h-overlay_h-{margin}",
-    }
-
-    overlay_pos = _resolve_position(position, position_map, "bottom-right")
-    # Format opacity for FFmpeg (0.0 to 1.0)
-    opacity_fmt = f"{opacity:.2f}"
-
-    _run_ffmpeg(
-        [
-            "-i",
-            input_path,
-            "-i",
-            image_path,
-            "-filter_complex",
-            f"[1:v]format=rgba,colorchannelmixer=aa={opacity_fmt}[wm];[0:v][wm]overlay={overlay_pos}",
-            "-c:v",
-            "libx264",
-            *_quality_args(crf=crf, preset=preset),
-            "-c:a",
-            "copy",
-            *_movflags_args(output),
-            output,
-        ]
-    )
-
-    info = probe(output)
-    return EditResult(
-        output_path=output,
-        duration=info.duration,
-        resolution=info.resolution,
-        size_mb=info.size_mb,
-        format="mp4",
-        operation="watermark",
     )
 
 
