@@ -28,9 +28,13 @@ def has_ffprobe() -> bool:
     return shutil.which("ffprobe") is not None
 
 
-requires_ffmpeg = pytest.mark.skipif(not has_ffmpeg(), reason="FFmpeg not installed")
+requires_ffmpeg = pytest.mark.skipif(
+    not has_ffmpeg(), reason="FFmpeg not installed"
+)
 
-requires_ffprobe = pytest.mark.skipif(not has_ffprobe(), reason="FFprobe not installed")
+requires_ffprobe = pytest.mark.skipif(
+    not has_ffprobe(), reason="FFprobe not installed"
+)
 
 
 # ---------------------------------------------------------------------------
@@ -47,34 +51,15 @@ def create_video_with_silence(output_path: str, duration: float = 5) -> str:
     - 2 seconds of sine wave audio
     """
     cmd = [
-        "ffmpeg",
-        "-y",
-        "-f",
-        "lavfi",
-        "-i",
-        f"color=c=blue:s=320x240:d={duration}",
-        "-f",
-        "lavfi",
-        "-i",
-        "sine=frequency=1000:duration=2",
-        "-f",
-        "lavfi",
-        "-i",
-        "anullsrc=r=44100:cl=mono",  # silence
-        "-f",
-        "lavfi",
-        "-i",
-        "sine=frequency=1000:duration=2",
-        "-filter_complex",
-        "[1:a][2:a][3:a]concat=n=3:v=0:a=1[a]",
-        "-map",
-        "0:v",
-        "-map",
-        "[a]",
-        "-pix_fmt",
-        "yuv420p",
-        "-shortest",
-        output_path,
+        "ffmpeg", "-y",
+        "-f", "lavfi", "-i", f"color=c=blue:s=320x240:d={duration}",
+        "-f", "lavfi", "-i", "sine=frequency=1000:duration=2",
+        "-f", "lavfi", "-i", "anullsrc=r=44100:cl=mono",  # silence
+        "-f", "lavfi", "-i", "sine=frequency=1000:duration=2",
+        "-filter_complex", "[1:a][2:a][3:a]concat=n=3:v=0:a=1[a]",
+        "-map", "0:v", "-map", "[a]",
+        "-pix_fmt", "yuv420p", "-shortest",
+        output_path
     ]
     subprocess.run(cmd, capture_output=True, check=True)
     return output_path
@@ -83,14 +68,10 @@ def create_video_with_silence(output_path: str, duration: float = 5) -> str:
 def get_video_duration(video_path: str) -> float:
     """Get video duration using ffprobe."""
     probe_cmd = [
-        "ffprobe",
-        "-v",
-        "error",
-        "-show_entries",
-        "format=duration",
-        "-of",
-        "default=noprint_wrappers=1:nokey=1",
-        video_path,
+        "ffprobe", "-v", "error",
+        "-show_entries", "format=duration",
+        "-of", "default=noprint_wrappers=1:nokey=1",
+        video_path
     ]
     result = subprocess.run(probe_cmd, capture_output=True, text=True, check=True)
     return float(result.stdout.strip())
@@ -111,7 +92,12 @@ def test_remove_silence():
         # Get input duration
         input_duration = get_video_duration(input_video)
 
-        result = ai_remove_silence(input_video, output_video, silence_threshold=-50, min_silence_duration=0.3)
+        result = ai_remove_silence(
+            input_video,
+            output_video,
+            silence_threshold=-50,
+            min_silence_duration=0.3
+        )
 
         assert os.path.exists(result), "Output not created"
 
@@ -138,20 +124,11 @@ def test_remove_silence_no_silence():
 
         # Create video with continuous audio (no silence)
         cmd = [
-            "ffmpeg",
-            "-y",
-            "-f",
-            "lavfi",
-            "-i",
-            "color=c=red:s=320x240:d=3",
-            "-f",
-            "lavfi",
-            "-i",
-            "sine=frequency=500:duration=3",
-            "-pix_fmt",
-            "yuv420p",
-            "-shortest",
-            input_video,
+            "ffmpeg", "-y",
+            "-f", "lavfi", "-i", "color=c=red:s=320x240:d=3",
+            "-f", "lavfi", "-i", "sine=frequency=500:duration=3",
+            "-pix_fmt", "yuv420p", "-shortest",
+            input_video
         ]
         subprocess.run(cmd, capture_output=True, check=True)
 
@@ -164,7 +141,8 @@ def test_remove_silence_no_silence():
         output_duration = get_video_duration(result)
 
         # Duration should be approximately the same
-        assert abs(output_duration - input_duration) < 0.5, "Duration should remain similar when no silence to remove"
+        assert abs(output_duration - input_duration) < 0.5, \
+            "Duration should remain similar when no silence to remove"
 
 
 @requires_ffmpeg
@@ -180,7 +158,12 @@ def test_remove_silence_custom_threshold():
         create_video_with_silence(input_video)
 
         # Use stricter threshold (more negative = quieter sounds considered silence)
-        result = ai_remove_silence(input_video, output_video, silence_threshold=-60, min_silence_duration=0.3)
+        result = ai_remove_silence(
+            input_video,
+            output_video,
+            silence_threshold=-60,
+            min_silence_duration=0.3
+        )
 
         assert os.path.exists(result), "Output not created"
 
@@ -208,7 +191,7 @@ def test_remove_silence_with_margin():
             output_video,
             silence_threshold=-50,
             min_silence_duration=0.3,
-            keep_margin=0.5,  # Larger margin
+            keep_margin=0.5  # Larger margin
         )
 
         assert os.path.exists(result), "Output not created"
@@ -242,19 +225,10 @@ def create_video_with_speech(output_path: str) -> str:
     """Create test video with synthetic speech audio."""
     # Create a simple video with sine wave that simulates speech
     cmd = [
-        "ffmpeg",
-        "-y",
-        "-f",
-        "lavfi",
-        "-i",
-        "color=c=green:s=320x240:d=3",
-        "-f",
-        "lavfi",
-        "-i",
-        "sine=frequency=440:duration=3",
-        "-pix_fmt",
-        "yuv420p",
-        "-shortest",
+        "ffmpeg", "-y",
+        "-f", "lavfi", "-i", "color=c=green:s=320x240:d=3",
+        "-f", "lavfi", "-i", "sine=frequency=440:duration=3",
+        "-pix_fmt", "yuv420p", "-shortest",
         output_path,
     ]
     subprocess.run(cmd, capture_output=True, check=True)
@@ -313,9 +287,7 @@ class TestTranscription:
         from mcp_video.ai_engine import ai_transcribe
         from mcp_video.errors import ProcessingError
 
-        monkeypatch.setattr(
-            "mcp_video.ai_engine.subprocess.run", lambda *a, **k: type("R", (), {"returncode": 1, "stderr": "boom"})()
-        )
+        monkeypatch.setattr("mcp_video.ai_engine.subprocess.run", lambda *a, **k: type("R", (), {"returncode": 1, "stderr": "boom"})())
 
         with pytest.raises(ProcessingError, match="FFmpeg processing failed"):
             ai_transcribe(sample_video)
@@ -455,9 +427,9 @@ def test_ai_scene_detect_missing_file_does_not_create_parent_dir(tmp_path, monke
     pil_module = types.ModuleType("PIL")
     image_module = types.ModuleType("PIL.Image")
     pil_module.Image = image_module
-    monkeypatch.setitem(__import__("sys").modules, "imagehash", imagehash_module)
-    monkeypatch.setitem(__import__("sys").modules, "PIL", pil_module)
-    monkeypatch.setitem(__import__("sys").modules, "PIL.Image", image_module)
+    monkeypatch.setitem(sys.modules, "imagehash", imagehash_module)
+    monkeypatch.setitem(sys.modules, "PIL", pil_module)
+    monkeypatch.setitem(sys.modules, "PIL.Image", image_module)
 
     with pytest.raises(InputFileError):
         ai_scene_detect(str(missing_video), use_ai=True)
@@ -482,26 +454,16 @@ class TestColorGrade:
 
             # Create test video with blue color
             cmd = [
-                "ffmpeg",
-                "-y",
-                "-f",
-                "lavfi",
-                "-i",
-                "color=c=blue:s=320x240:d=2",
-                "-f",
-                "lavfi",
-                "-i",
-                "sine=frequency=1000:duration=2",
-                "-pix_fmt",
-                "yuv420p",
-                "-shortest",
+                "ffmpeg", "-y",
+                "-f", "lavfi", "-i", "color=c=blue:s=320x240:d=2",
+                "-f", "lavfi", "-i", "sine=frequency=1000:duration=2",
+                "-pix_fmt", "yuv420p", "-shortest",
                 input_video,
             ]
             subprocess.run(cmd, capture_output=True, check=True)
 
             # Test cinematic style
             from mcp_video.ai_engine import ai_color_grade
-
             result = ai_color_grade(input_video, output_video, style="cinematic")
             assert os.path.exists(result), "Output video should be created"
             assert result == output_video
@@ -516,19 +478,10 @@ class TestColorGrade:
 
             # Create test video
             cmd = [
-                "ffmpeg",
-                "-y",
-                "-f",
-                "lavfi",
-                "-i",
-                "color=c=green:s=320x240:d=1",
-                "-f",
-                "lavfi",
-                "-i",
-                "sine=frequency=1000:duration=1",
-                "-pix_fmt",
-                "yuv420p",
-                "-shortest",
+                "ffmpeg", "-y",
+                "-f", "lavfi", "-i", "color=c=green:s=320x240:d=1",
+                "-f", "lavfi", "-i", "sine=frequency=1000:duration=1",
+                "-pix_fmt", "yuv420p", "-shortest",
                 input_video,
             ]
             subprocess.run(cmd, capture_output=True, check=True)
@@ -552,38 +505,20 @@ class TestColorGrade:
 
             # Create input video (blue)
             cmd = [
-                "ffmpeg",
-                "-y",
-                "-f",
-                "lavfi",
-                "-i",
-                "color=c=blue:s=320x240:d=1",
-                "-f",
-                "lavfi",
-                "-i",
-                "sine=frequency=1000:duration=1",
-                "-pix_fmt",
-                "yuv420p",
-                "-shortest",
+                "ffmpeg", "-y",
+                "-f", "lavfi", "-i", "color=c=blue:s=320x240:d=1",
+                "-f", "lavfi", "-i", "sine=frequency=1000:duration=1",
+                "-pix_fmt", "yuv420p", "-shortest",
                 input_video,
             ]
             subprocess.run(cmd, capture_output=True, check=True)
 
             # Create reference video (red)
             cmd = [
-                "ffmpeg",
-                "-y",
-                "-f",
-                "lavfi",
-                "-i",
-                "color=c=red:s=320x240:d=1",
-                "-f",
-                "lavfi",
-                "-i",
-                "sine=frequency=1000:duration=1",
-                "-pix_fmt",
-                "yuv420p",
-                "-shortest",
+                "ffmpeg", "-y",
+                "-f", "lavfi", "-i", "color=c=red:s=320x240:d=1",
+                "-f", "lavfi", "-i", "sine=frequency=1000:duration=1",
+                "-pix_fmt", "yuv420p", "-shortest",
                 reference_video,
             ]
             subprocess.run(cmd, capture_output=True, check=True)
@@ -602,19 +537,10 @@ class TestColorGrade:
 
             # Create test video
             cmd = [
-                "ffmpeg",
-                "-y",
-                "-f",
-                "lavfi",
-                "-i",
-                "color=c=gray:s=320x240:d=1",
-                "-f",
-                "lavfi",
-                "-i",
-                "sine=frequency=1000:duration=1",
-                "-pix_fmt",
-                "yuv420p",
-                "-shortest",
+                "ffmpeg", "-y",
+                "-f", "lavfi", "-i", "color=c=gray:s=320x240:d=1",
+                "-f", "lavfi", "-i", "sine=frequency=1000:duration=1",
+                "-pix_fmt", "yuv420p", "-shortest",
                 input_video,
             ]
             subprocess.run(cmd, capture_output=True, check=True)
@@ -717,22 +643,12 @@ if __name__ == "__main__":
 def create_stereo_video(output_path):
     """Create video with stereo audio."""
     cmd = [
-        "ffmpeg",
-        "-y",
-        "-f",
-        "lavfi",
-        "-i",
-        "color=c=orange:s=320x240:d=5",
-        "-f",
-        "lavfi",
-        "-i",
-        "sine=frequency=1000:duration=5",
-        "-ac",
-        "2",  # stereo
-        "-pix_fmt",
-        "yuv420p",
-        "-shortest",
-        output_path,
+        "ffmpeg", "-y",
+        "-f", "lavfi", "-i", "color=c=orange:s=320x240:d=5",
+        "-f", "lavfi", "-i", "sine=frequency=1000:duration=5",
+        "-ac", "2",  # stereo
+        "-pix_fmt", "yuv420p", "-shortest",
+        output_path
     ]
     subprocess.run(cmd, capture_output=True, check=True)
     return output_path
@@ -741,16 +657,11 @@ def create_stereo_video(output_path):
 def get_audio_channels(video_path):
     """Get audio channel count."""
     cmd = [
-        "ffprobe",
-        "-v",
-        "error",
-        "-select_streams",
-        "a:0",
-        "-show_entries",
-        "stream=channels",
-        "-of",
-        "default=noprint_wrappers=1:nokey=1",
-        video_path,
+        "ffprobe", "-v", "error",
+        "-select_streams", "a:0",
+        "-show_entries", "stream=channels",
+        "-of", "default=noprint_wrappers=1:nokey=1",
+        video_path
     ]
     result = subprocess.run(cmd, capture_output=True, text=True)
     return int(result.stdout.strip())
@@ -770,9 +681,9 @@ def test_spatial_audio():
 
         # Test simple spatial positioning
         positions = [
-            {"time": 0, "azimuth": -45, "elevation": 0},  # left
+            {"time": 0, "azimuth": -45, "elevation": 0},   # left
             {"time": 2.5, "azimuth": 0, "elevation": 30},  # center, up
-            {"time": 5, "azimuth": 45, "elevation": 0},  # right
+            {"time": 5, "azimuth": 45, "elevation": 0},    # right
         ]
 
         result = audio_spatial(input_video, output_video, positions, method="simple")
@@ -901,20 +812,11 @@ if __name__ == "__main__":
 def create_low_res_video(output_path, resolution="160x120"):
     """Create low-res test video."""
     cmd = [
-        "ffmpeg",
-        "-y",
-        "-f",
-        "lavfi",
-        "-i",
-        f"color=c=red:s={resolution}:d=2",
-        "-f",
-        "lavfi",
-        "-i",
-        "sine=frequency=1000:duration=2",
-        "-pix_fmt",
-        "yuv420p",
-        "-shortest",
-        output_path,
+        "ffmpeg", "-y",
+        "-f", "lavfi", "-i", f"color=c=red:s={resolution}:d=2",
+        "-f", "lavfi", "-i", "sine=frequency=1000:duration=2",
+        "-pix_fmt", "yuv420p", "-shortest",
+        output_path
     ]
     subprocess.run(cmd, capture_output=True)
     return output_path
@@ -923,16 +825,11 @@ def create_low_res_video(output_path, resolution="160x120"):
 def get_video_resolution(video_path):
     """Get video resolution."""
     cmd = [
-        "ffprobe",
-        "-v",
-        "error",
-        "-select_streams",
-        "v:0",
-        "-show_entries",
-        "stream=width,height",
-        "-of",
-        "csv=s=x:p=0",
-        video_path,
+        "ffprobe", "-v", "error",
+        "-select_streams", "v:0",
+        "-show_entries", "stream=width,height",
+        "-of", "csv=s=x:p=0",
+        video_path
     ]
     result = subprocess.run(cmd, capture_output=True, text=True)
     return result.stdout.strip()
@@ -943,7 +840,9 @@ def realesrgan_installed():
     return importlib.util.find_spec("realesrgan") is not None
 
 
-requires_realesrgan = pytest.mark.skipif(not realesrgan_installed(), reason="Real-ESRGAN not installed")
+requires_realesrgan = pytest.mark.skipif(
+    not realesrgan_installed(), reason="Real-ESRGAN not installed"
+)
 
 
 @requires_ffmpeg
@@ -1098,23 +997,11 @@ def test_ai_upscale_missing_file():
 def create_simple_video(output_path: str, duration: float = 3) -> str:
     """Create a minimal test video with audio."""
     cmd = [
-        "ffmpeg",
-        "-y",
-        "-f",
-        "lavfi",
-        "-i",
-        f"color=c=red:s=320x240:d={duration}",
-        "-f",
-        "lavfi",
-        "-i",
-        f"sine=frequency=440:duration={duration}",
-        "-map",
-        "0:v",
-        "-map",
-        "1:a",
-        "-pix_fmt",
-        "yuv420p",
-        "-shortest",
+        "ffmpeg", "-y",
+        "-f", "lavfi", "-i", f"color=c=red:s=320x240:d={duration}",
+        "-f", "lavfi", "-i", f"sine=frequency=440:duration={duration}",
+        "-map", "0:v", "-map", "1:a",
+        "-pix_fmt", "yuv420p", "-shortest",
         output_path,
     ]
     subprocess.run(cmd, capture_output=True, check=True)
@@ -1276,14 +1163,12 @@ def test_analyze_video_writes_txt_output():
 
 def test_is_url_detects_http():
     from mcp_video.ai_engine import _is_url
-
     assert _is_url("http://example.com/video.mp4") is True
     assert _is_url("https://example.com/video.mp4") is True
 
 
 def test_is_url_rejects_local_path():
     from mcp_video.ai_engine import _is_url
-
     assert _is_url("/local/path/video.mp4") is False
     assert _is_url("relative/path.mp4") is False
     assert _is_url("C:\\Windows\\video.mp4") is False
@@ -1291,7 +1176,6 @@ def test_is_url_rejects_local_path():
 
 def test_url_host_extraction():
     from mcp_video.ai_engine import _url_host
-
     assert _url_host("https://www.youtube.com/watch?v=abc") == "www.youtube.com"
     assert _url_host("https://example.com/path/video.mp4") == "example.com"
     assert _url_host("http://cdn.example.com:8080/v.mp4") == "cdn.example.com:8080"
