@@ -112,8 +112,10 @@ class TestAddText:
     @requires_filter("drawtext", "Text overlay")
     def test_add_text_with_timing(self, sample_video):
         result = add_text(
-            sample_video, text="Timed",
-            start_time=0.5, duration=1.0,
+            sample_video,
+            text="Timed",
+            start_time=0.5,
+            duration=1.0,
         )
         assert os.path.isfile(result.output_path)
 
@@ -130,8 +132,10 @@ class TestAddAudio:
 
     def test_audio_with_fade(self, sample_video, sample_audio):
         result = add_audio(
-            sample_video, sample_audio,
-            fade_in=0.5, fade_out=0.5,
+            sample_video,
+            sample_audio,
+            fade_in=0.5,
+            fade_out=0.5,
         )
         assert os.path.isfile(result.output_path)
 
@@ -139,6 +143,7 @@ class TestAddAudio:
 class TestResize:
     def test_resize_by_dimensions(self, sample_video):
         from mcp_video.engine import resize
+
         result = resize(sample_video, width=320, height=240)
         assert os.path.isfile(result.output_path)
         info = probe(result.output_path)
@@ -147,6 +152,7 @@ class TestResize:
 
     def test_resize_by_aspect_ratio(self, sample_video):
         from mcp_video.engine import resize
+
         result = resize(sample_video, aspect_ratio="1:1")
         assert os.path.isfile(result.output_path)
         info = probe(result.output_path)
@@ -210,9 +216,7 @@ class TestSubtitles:
     @requires_filter("subtitles", "Subtitle burn-in")
     def test_burn_subtitles(self, sample_video, tmp_path):
         srt_path = tmp_path / "subs.srt"
-        srt_path.write_text(
-            "1\n00:00:00,000 --> 00:00:02,000\nTest subtitle\n"
-        )
+        srt_path.write_text("1\n00:00:00,000 --> 00:00:02,000\nTest subtitle\n")
         result = subtitles(input_path=str(sample_video), subtitle_path=str(srt_path))
         assert os.path.isfile(result.output_path)
 
@@ -243,14 +247,18 @@ class TestProgressCallbacks:
         # Create a simple FFmpeg command
         output = str(tmp_path / "output.mp4")
         args = [
-            "-i", sample_video,
-            "-t", "1",
-            "-c", "copy",
+            "-i",
+            sample_video,
+            "-t",
+            "1",
+            "-c",
+            "copy",
             output,
         ]
 
         # With estimated_duration=None, on_progress should not be called
         progress_calls = []
+
         def mock_on_progress(pct):
             progress_calls.append(pct)
 
@@ -335,6 +343,7 @@ class TestChromaKey:
     def test_chroma_key_preserves_alpha_with_mov(self, sample_video):
         """MOV output should use prores_ks with alpha channel support."""
         import tempfile
+
         with tempfile.NamedTemporaryFile(suffix=".mov", delete=False) as tmp:
             result = chroma_key(sample_video, output_path=tmp.name)
             assert result.success is True

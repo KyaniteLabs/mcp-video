@@ -36,8 +36,10 @@ class TestTikTokWorkflow:
 
         # 2. Add text
         titled = editor.add_text(
-            trimmed.output_path, text="Follow for more!",
-            position="bottom-center", size=36,
+            trimmed.output_path,
+            text="Follow for more!",
+            position="bottom-center",
+            size=36,
         )
         assert os.path.isfile(titled.output_path)
 
@@ -68,9 +70,12 @@ class TestYouTubeWorkflow:
 
         # 2. Add title text
         titled = editor.add_text(
-            merged.output_path, text="EPISODE 1",
-            position="top-center", size=48,
-            start_time=0, duration=2,
+            merged.output_path,
+            text="EPISODE 1",
+            position="top-center",
+            size=48,
+            start_time=0,
+            duration=2,
         )
         assert os.path.isfile(titled.output_path)
 

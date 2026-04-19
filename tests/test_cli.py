@@ -113,7 +113,7 @@ class TestCLIFilter:
         assert data["operation"] == "filter_blur"
 
     def test_filter_color_preset_outputs_json(self, sample_video):
-        result = run_cli_json("filter", sample_video, "-t", "color_preset", '--params', '{"preset": "warm"}')
+        result = run_cli_json("filter", sample_video, "-t", "color_preset", "--params", '{"preset": "warm"}')
         data = json.loads(result.stdout)
         assert data["success"] is True
 
@@ -159,13 +159,15 @@ class TestCLISplitScreen:
 
 class TestCLIBatch:
     def test_batch_outputs_json(self, sample_video):
-        result = run_cli_json("batch", sample_video, "--operation", "trim", '--params', '{"start": "0", "duration": "1"}')
+        result = run_cli_json(
+            "batch", sample_video, "--operation", "trim", "--params", '{"start": "0", "duration": "1"}'
+        )
         data = json.loads(result.stdout)
         assert data["success"] is True
         assert data["succeeded"] == 1
 
     def test_batch_outputs_text(self, sample_video):
-        result = run_cli("batch", sample_video, "--operation", "trim", '--params', '{"start": "0", "duration": "1"}')
+        result = run_cli("batch", sample_video, "--operation", "trim", "--params", '{"start": "0", "duration": "1"}')
         assert "Batch Results" in result.stdout
 
 
@@ -378,14 +380,7 @@ class TestCLIExtractAudio:
 class TestCLIEdit:
     def test_edit_outputs_json(self, sample_video, tmp_path):
         # Create a timeline JSON file
-        timeline = {
-            "tracks": [
-                {
-                    "type": "video",
-                    "clips": [{"source": sample_video, "start": 0, "end": 1}]
-                }
-            ]
-        }
+        timeline = {"tracks": [{"type": "video", "clips": [{"source": sample_video, "start": 0, "end": 1}]}]}
         timeline_path = tmp_path / "timeline.json"
         timeline_path.write_text(json.dumps(timeline))
 
@@ -395,14 +390,7 @@ class TestCLIEdit:
 
     def test_edit_outputs_text(self, sample_video, tmp_path):
         # Create a timeline JSON file
-        timeline = {
-            "tracks": [
-                {
-                    "type": "video",
-                    "clips": [{"source": sample_video, "start": 0, "end": 1}]
-                }
-            ]
-        }
+        timeline = {"tracks": [{"type": "video", "clips": [{"source": sample_video, "start": 0, "end": 1}]}]}
         timeline_path = tmp_path / "timeline.json"
         timeline_path.write_text(json.dumps(timeline))
 
@@ -448,7 +436,9 @@ class TestCLIAudioWaveform:
 
 class TestCLIGenerateSubtitles:
     def test_generate_subtitles_outputs_json(self, sample_video):
-        result = run_cli_json("generate-subtitles", sample_video, "--entries", '[{"start": 0, "end": 1, "text": "Hello"}]')
+        result = run_cli_json(
+            "generate-subtitles", sample_video, "--entries", '[{"start": 0, "end": 1, "text": "Hello"}]'
+        )
         data = json.loads(result.stdout)
         assert data["success"] is True
         assert "srt_path" in data or "entry_count" in data
@@ -626,7 +616,9 @@ class TestCLICompositionHandlers:
             ),
         ],
     )
-    def test_composition_handler_outputs_json(self, command, output_name, label, extra_args, tmp_path, monkeypatch, capsys):
+    def test_composition_handler_outputs_json(
+        self, command, output_name, label, extra_args, tmp_path, monkeypatch, capsys
+    ):
         output = tmp_path / output_name
         from mcp_video.cli import handlers_composition
 

@@ -15,27 +15,33 @@ from mcp_video.errors import MCPVideoError
 # Unit tests — no image deps needed (mocked)
 # ---------------------------------------------------------------------------
 
+
 class TestRgbToHex:
     def test_basic(self):
         from mcp_video.image_engine import _rgb_to_hex
+
         assert _rgb_to_hex(139, 69, 19) == "#8B4513"
 
     def test_black(self):
         from mcp_video.image_engine import _rgb_to_hex
+
         assert _rgb_to_hex(0, 0, 0) == "#000000"
 
     def test_white(self):
         from mcp_video.image_engine import _rgb_to_hex
+
         assert _rgb_to_hex(255, 255, 255) == "#FFFFFF"
 
     def test_red(self):
         from mcp_video.image_engine import _rgb_to_hex
+
         assert _rgb_to_hex(255, 0, 0) == "#FF0000"
 
 
 class TestRgbToHsl:
     def test_red(self):
         from mcp_video.image_engine import _rgb_to_hsl
+
         h, lightness, s = _rgb_to_hsl(255, 0, 0)
         assert h == pytest.approx(0.0, abs=0.01)
         assert s == pytest.approx(1.0, abs=0.01)
@@ -43,11 +49,13 @@ class TestRgbToHsl:
 
     def test_white(self):
         from mcp_video.image_engine import _rgb_to_hsl
+
         _, lightness, _ = _rgb_to_hsl(255, 255, 255)
         assert lightness == pytest.approx(1.0, abs=0.01)
 
     def test_black(self):
         from mcp_video.image_engine import _rgb_to_hsl
+
         _, lightness, _ = _rgb_to_hsl(0, 0, 0)
         assert lightness == pytest.approx(0.0, abs=0.01)
 
@@ -55,12 +63,14 @@ class TestRgbToHsl:
 class TestHslToRgb:
     def test_roundtrip_red(self):
         from mcp_video.image_engine import _hsl_to_rgb, _rgb_to_hsl
+
         h, lightness, s = _rgb_to_hsl(255, 0, 0)
         r, g, b = _hsl_to_rgb(h, s, lightness)
         assert (r, g, b) == (255, 0, 0)
 
     def test_roundtrip_blue(self):
         from mcp_video.image_engine import _hsl_to_rgb, _rgb_to_hsl
+
         h, lightness, s = _rgb_to_hsl(0, 0, 255)
         r, g, b = _hsl_to_rgb(h, s, lightness)
         assert (r, g, b) == (0, 0, 255)
@@ -69,12 +79,14 @@ class TestHslToRgb:
 class TestModelsValidate:
     def test_dominant_color(self):
         from mcp_video.image_models import DominantColor
+
         c = DominantColor(hex="#FF0000", rgb=(255, 0, 0), name="red", percentage=50.0)
         assert c.hex == "#FF0000"
         assert c.percentage == 50.0
 
     def test_color_extraction_result(self):
         from mcp_video.image_models import ColorExtractionResult, DominantColor
+
         colors = [DominantColor(hex="#FF0000", rgb=(255, 0, 0), name="red", percentage=100.0)]
         result = ColorExtractionResult(image_path="/tmp/test.jpg", colors=colors, n_colors=1)
         assert result.success is True
@@ -82,13 +94,17 @@ class TestModelsValidate:
 
     def test_palette_result(self):
         from mcp_video.image_models import PaletteColor, PaletteResult, DominantColor
+
         source = DominantColor(hex="#FF0000", rgb=(255, 0, 0), name="red", percentage=50.0)
         palette = [PaletteColor(hex="#00FFFF", rgb=(0, 255, 255), role="complement")]
-        result = PaletteResult(image_path="/tmp/test.jpg", harmony="complementary", palette=palette, source_color=source)
+        result = PaletteResult(
+            image_path="/tmp/test.jpg", harmony="complementary", palette=palette, source_color=source
+        )
         assert result.harmony == "complementary"
 
     def test_product_analysis_result(self):
         from mcp_video.image_models import ProductAnalysisResult, DominantColor
+
         colors = [DominantColor(hex="#FF0000", rgb=(255, 0, 0), name="red", percentage=100.0)]
         result = ProductAnalysisResult(image_path="/tmp/test.jpg", colors=colors)
         assert result.ai_description is False
@@ -98,12 +114,14 @@ class TestModelsValidate:
 class TestValidateImage:
     def test_missing_file(self):
         from mcp_video.image_engine import _validate_image
+
         with pytest.raises(MCPVideoError) as exc_info:
             _validate_image("/nonexistent/path/image.jpg")
         assert exc_info.value.code == "file_not_found"
 
     def test_unsupported_format(self):
         from mcp_video.image_engine import _validate_image
+
         with tempfile.NamedTemporaryFile(suffix=".xyz", delete=False) as f:
             f.write(b"not an image")
             tmp_path = f.name
@@ -123,10 +141,7 @@ try:
     import PIL.Image
     import importlib.util
 
-    HAS_IMAGE_DEPS = all(
-        importlib.util.find_spec(module) is not None
-        for module in ("numpy", "sklearn")
-    )
+    HAS_IMAGE_DEPS = all(importlib.util.find_spec(module) is not None for module in ("numpy", "sklearn"))
 except ImportError:
     HAS_IMAGE_DEPS = False
 
@@ -161,6 +176,7 @@ def _create_two_color_image(
 class TestExtractColors:
     def test_solid_color_image(self):
         from mcp_video.image_engine import extract_colors
+
         path = _create_solid_image((255, 0, 0))
         try:
             result = extract_colors(path, n_colors=3)
@@ -175,6 +191,7 @@ class TestExtractColors:
 
     def test_two_color_image(self):
         from mcp_video.image_engine import extract_colors
+
         path = _create_two_color_image((255, 0, 0), (0, 0, 255))
         try:
             result = extract_colors(path, n_colors=2)
@@ -188,6 +205,7 @@ class TestExtractColors:
 
     def test_n_colors_validated(self):
         from mcp_video.image_engine import extract_colors
+
         path = _create_solid_image((0, 0, 0))
         try:
             with pytest.raises(MCPVideoError):
@@ -197,6 +215,7 @@ class TestExtractColors:
 
     def test_result_has_hex(self):
         from mcp_video.image_engine import extract_colors
+
         path = _create_solid_image((128, 64, 32))
         try:
             result = extract_colors(path, n_colors=1)
@@ -210,6 +229,7 @@ class TestExtractColors:
 class TestGeneratePalette:
     def test_complementary_from_red(self):
         from mcp_video.image_engine import generate_palette
+
         path = _create_solid_image((255, 0, 0))
         try:
             result = generate_palette(path, harmony="complementary")
@@ -225,6 +245,7 @@ class TestGeneratePalette:
 
     def test_triadic_from_red(self):
         from mcp_video.image_engine import generate_palette
+
         path = _create_solid_image((255, 0, 0))
         try:
             result = generate_palette(path, harmony="triadic")
@@ -235,6 +256,7 @@ class TestGeneratePalette:
 
     def test_invalid_harmony(self):
         from mcp_video.image_engine import generate_palette
+
         path = _create_solid_image((128, 128, 128))
         try:
             with pytest.raises(MCPVideoError) as exc_info:
@@ -247,6 +269,7 @@ class TestGeneratePalette:
 class TestAnalyzeProduct:
     def test_no_ai(self):
         from mcp_video.image_engine import analyze_product
+
         path = _create_solid_image((64, 128, 200))
         try:
             result = analyze_product(path, use_ai=False)
@@ -269,6 +292,7 @@ class TestGracefulError:
         with patch.dict("sys.modules", {"PIL": None, "PIL.Image": None}):
             # Force ImportError by patching the import
             import builtins
+
             real_import = builtins.__import__
 
             def mock_import(name, *args, **kwargs):

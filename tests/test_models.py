@@ -24,8 +24,12 @@ from mcp_video.models import (
 class TestVideoInfo:
     def test_basic_creation(self):
         info = VideoInfo(
-            path="/tmp/video.mp4", duration=10.5,
-            width=1920, height=1080, fps=30.0, codec="h264",
+            path="/tmp/video.mp4",
+            duration=10.5,
+            width=1920,
+            height=1080,
+            fps=30.0,
+            codec="h264",
         )
         assert info.path == "/tmp/video.mp4"
         assert info.duration == 10.5
@@ -36,8 +40,12 @@ class TestVideoInfo:
 
     def test_optional_fields_default_none(self):
         info = VideoInfo(
-            path="/tmp/video.mp4", duration=5.0,
-            width=640, height=480, fps=24.0, codec="h264",
+            path="/tmp/video.mp4",
+            duration=5.0,
+            width=640,
+            height=480,
+            fps=24.0,
+            codec="h264",
         )
         assert info.audio_codec is None
         assert info.audio_sample_rate is None
@@ -47,10 +55,17 @@ class TestVideoInfo:
 
     def test_optional_fields_set(self):
         info = VideoInfo(
-            path="/tmp/video.mp4", duration=5.0,
-            width=640, height=480, fps=24.0, codec="h264",
-            audio_codec="aac", audio_sample_rate=44100,
-            bitrate=5000000, size_bytes=10485760, format="mp4",
+            path="/tmp/video.mp4",
+            duration=5.0,
+            width=640,
+            height=480,
+            fps=24.0,
+            codec="h264",
+            audio_codec="aac",
+            audio_sample_rate=44100,
+            bitrate=5000000,
+            size_bytes=10485760,
+            format="mp4",
         )
         assert info.audio_codec == "aac"
         assert info.audio_sample_rate == 44100
@@ -60,59 +75,91 @@ class TestVideoInfo:
 
     def test_resolution_property(self):
         info = VideoInfo(
-            path="/tmp/video.mp4", duration=5.0,
-            width=1920, height=1080, fps=30.0, codec="h264",
+            path="/tmp/video.mp4",
+            duration=5.0,
+            width=1920,
+            height=1080,
+            fps=30.0,
+            codec="h264",
         )
         assert info.resolution == "1920x1080"
 
     def test_aspect_ratio_property(self):
         info = VideoInfo(
-            path="/tmp/video.mp4", duration=5.0,
-            width=1920, height=1080, fps=30.0, codec="h264",
+            path="/tmp/video.mp4",
+            duration=5.0,
+            width=1920,
+            height=1080,
+            fps=30.0,
+            codec="h264",
         )
         assert info.aspect_ratio == "16:9"
 
     def test_aspect_ratio_4_3(self):
         info = VideoInfo(
-            path="/tmp/video.mp4", duration=5.0,
-            width=640, height=480, fps=30.0, codec="h264",
+            path="/tmp/video.mp4",
+            duration=5.0,
+            width=640,
+            height=480,
+            fps=30.0,
+            codec="h264",
         )
         assert info.aspect_ratio == "4:3"
 
     def test_aspect_ratio_9_16(self):
         info = VideoInfo(
-            path="/tmp/video.mp4", duration=5.0,
-            width=1080, height=1920, fps=30.0, codec="h264",
+            path="/tmp/video.mp4",
+            duration=5.0,
+            width=1080,
+            height=1920,
+            fps=30.0,
+            codec="h264",
         )
         assert info.aspect_ratio == "9:16"
 
     def test_size_mb_property(self):
         info = VideoInfo(
-            path="/tmp/video.mp4", duration=5.0,
-            width=640, height=480, fps=30.0, codec="h264",
+            path="/tmp/video.mp4",
+            duration=5.0,
+            width=640,
+            height=480,
+            fps=30.0,
+            codec="h264",
             size_bytes=10485760,  # 10 MB
         )
         assert info.size_mb == 10.0
 
     def test_size_mb_property_none(self):
         info = VideoInfo(
-            path="/tmp/video.mp4", duration=5.0,
-            width=640, height=480, fps=30.0, codec="h264",
+            path="/tmp/video.mp4",
+            duration=5.0,
+            width=640,
+            height=480,
+            fps=30.0,
+            codec="h264",
         )
         assert info.size_mb is None
 
     def test_size_mb_property_rounding(self):
         info = VideoInfo(
-            path="/tmp/video.mp4", duration=5.0,
-            width=640, height=480, fps=30.0, codec="h264",
+            path="/tmp/video.mp4",
+            duration=5.0,
+            width=640,
+            height=480,
+            fps=30.0,
+            codec="h264",
             size_bytes=1500000,  # ~1.43 MB
         )
         assert info.size_mb == 1.43
 
     def test_model_dump(self):
         info = VideoInfo(
-            path="/tmp/video.mp4", duration=5.0,
-            width=640, height=480, fps=30.0, codec="h264",
+            path="/tmp/video.mp4",
+            duration=5.0,
+            width=640,
+            height=480,
+            fps=30.0,
+            codec="h264",
         )
         d = info.model_dump()
         assert d["path"] == "/tmp/video.mp4"
@@ -256,7 +303,9 @@ class TestTimelineTextElement:
 
     def test_custom(self):
         elem = TimelineTextElement(
-            text="Title", start=1.0, duration=3.0,
+            text="Title",
+            start=1.0,
+            duration=3.0,
             position="bottom-center",
             style={"font": "Arial", "size": 36, "color": "yellow"},
         )
@@ -311,7 +360,8 @@ class TestTimeline:
 
     def test_with_tracks(self):
         tl = Timeline(
-            width=1080, height=1920,
+            width=1080,
+            height=1920,
             tracks=[
                 TimelineTrack(type="video", clips=[TimelineClip(source="v.mp4")]),
             ],
@@ -394,8 +444,12 @@ class TestInvalidInputs:
         # Pydantic doesn't enforce positive by default on int fields,
         # but validate that model accepts valid inputs
         info = VideoInfo(
-            path="/tmp/v.mp4", duration=1.0,
-            width=100, height=100, fps=30.0, codec="h264",
+            path="/tmp/v.mp4",
+            duration=1.0,
+            width=100,
+            height=100,
+            fps=30.0,
+            codec="h264",
         )
         assert info.width == 100
 
@@ -484,4 +538,7 @@ class TestEditResultNewFields:
         )
         d = result.model_dump()
         assert "thumbnail_base64" in d
-        assert d["thumbnail_base64"] == "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+        assert (
+            d["thumbnail_base64"]
+            == "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+        )

@@ -10,9 +10,15 @@ import pytest
 def create_test_video(output_path, duration=2, color="red"):
     """Helper to create test video using FFmpeg."""
     cmd = [
-        "ffmpeg", "-y", "-f", "lavfi", "-i",
+        "ffmpeg",
+        "-y",
+        "-f",
+        "lavfi",
+        "-i",
         f"color=c={color}:s=320x240:d={duration}",
-        "-pix_fmt", "yuv420p", output_path
+        "-pix_fmt",
+        "yuv420p",
+        output_path,
     ]
     subprocess.run(cmd, capture_output=True)
     return output_path

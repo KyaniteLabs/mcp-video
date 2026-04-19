@@ -268,7 +268,8 @@ class TestOverlayRealMedia:
         _require_ffmpeg()
         out = str(tmp_path / "pip.mov")
         result = overlay_video(
-            real_landscape, real_square,
+            real_landscape,
+            real_square,
             position="bottom-right",
             width=360,
             output_path=out,
@@ -285,7 +286,8 @@ class TestOverlayRealMedia:
         _require_ffmpeg()
         out = str(tmp_path / "pip_timed.mov")
         result = overlay_video(
-            real_landscape, real_portrait,
+            real_landscape,
+            real_portrait,
             position="top-left",
             width=480,
             start_time=0.0,
@@ -303,7 +305,8 @@ class TestOverlayRealMedia:
         _require_ffmpeg()
         out = str(tmp_path / "png_overlay.mov")
         result = overlay_video(
-            real_landscape, real_png,
+            real_landscape,
+            real_png,
             position="center",
             width=400,
             opacity=0.9,
@@ -320,7 +323,8 @@ class TestOverlayRealMedia:
         _require_ffmpeg()
         out = str(tmp_path / "crop_overlay.mp4")
         result = overlay_video(
-            real_mp4, real_crop,
+            real_mp4,
+            real_crop,
             position="top-right",
             width=320,
             height=240,
@@ -480,8 +484,10 @@ class TestCrossFeatureRealMedia:
         # Step 2: overlay square on filtered video
         out = str(tmp_path / "filtered_pip.mov")
         r2 = overlay_video(
-            r1.output_path, real_square,
-            position="bottom-right", width=320,
+            r1.output_path,
+            real_square,
+            position="bottom-right",
+            width=320,
             output_path=out,
         )
         assert r2.success

@@ -128,7 +128,6 @@ class TestCodecError:
         assert "documentation_url" in d
 
 
-
 class TestProcessingError:
     def test_message_includes_returncode(self):
         err = ProcessingError("ffmpeg -i in.mp4 out.mp4", 1, "some error output")
@@ -160,7 +159,6 @@ class TestProcessingError:
         err = ProcessingError("ffmpeg -i a.mp4 b.mp4", 1, "err")
         assert err.command == "ffmpeg -i a.mp4 b.mp4"
         assert err.returncode == 1
-
 
 
 class TestResourceError:
