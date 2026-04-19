@@ -736,6 +736,23 @@ class TestAudioWaveform:
         with pytest.raises(ProcessingError, match="Unexpected FFmpeg failure"):
             audio_waveform(sample_video, bins=10)
 
+    def test_waveform_ametadata_reinit_failure_uses_synthetic_fallback(self, sample_video, monkeypatch):
+        from mcp_video.engine import audio_waveform
+        from mcp_video import engine_audio_waveform
+
+        input_info = probe(sample_video)
+
+        class FailedProcess:
+            returncode = 1
+            stderr = "Metadata key must be set\nError reinitializing filters!"
+
+        monkeypatch.setattr(engine_audio_waveform, "probe", lambda _: input_info)
+        monkeypatch.setattr(engine_audio_waveform.subprocess, "run", lambda *args, **kwargs: FailedProcess())
+
+        result = audio_waveform(sample_video, bins=10)
+        assert result.synthetic is True
+        assert len(result.peaks) == 10
+
 
 class TestTwoPassEncoding:
     """Tests for two-pass encoding in convert and export_video."""

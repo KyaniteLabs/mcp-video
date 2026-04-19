@@ -97,7 +97,9 @@ def _parse_rms_levels(stderr: str) -> list[float]:
 
 
 def _is_known_ametadata_failure(stderr: str) -> bool:
-    return "Metadata key must be set" in stderr and "Error initializing filters" in stderr
+    has_missing_key = "Metadata key must be set" in stderr
+    has_filter_init_failure = "Error initializing filters" in stderr or "Error reinitializing filters" in stderr
+    return has_missing_key and has_filter_init_failure
 
 
 def _synthetic_waveform(duration: float, segment_duration: float, bins: int) -> WaveformResult:
