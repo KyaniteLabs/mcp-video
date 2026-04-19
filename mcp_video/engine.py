@@ -17,7 +17,6 @@ from .models import (
     FilterType,
     NamedPosition,
     QualityLevel,
-    SplitLayout,
     Timeline,
     TimelineImageOverlay,
 )
@@ -76,6 +75,7 @@ from .engine_runtime_utils import (
 from .engine_speed import speed as speed
 from .engine_stabilize import stabilize as stabilize
 from .engine_storyboard import storyboard as storyboard
+from .engine_split_screen import split_screen as _split_screen
 from .engine_subtitle_generate import generate_subtitles as generate_subtitles
 from .engine_subtitles import subtitles as subtitles
 from .engine_text import add_text as add_text
@@ -85,6 +85,7 @@ from .engine_watermark import watermark as watermark
 
 apply_mask = _apply_mask
 overlay_video = _overlay_video
+split_screen = _split_screen
 
 
 # ---------------------------------------------------------------------------
@@ -791,94 +792,6 @@ def apply_filter(
 
 # ---------------------------------------------------------------------------
 # Compositing & overlays
-# ---------------------------------------------------------------------------
-
-
-def split_screen(
-    left_path: str,
-    right_path: str,
-    layout: SplitLayout = "side-by-side",
-    output_path: str | None = None,
-) -> EditResult:
-    """Place two videos side by side or top/bottom.
-
-    Args:
-        left_path: Path to the first video.
-        right_path: Path to the second video.
-        layout: 'side-by-side' or 'top-bottom'.
-        output_path: Where to save the output.
-    """
-    _validate_input(left_path)
-    _validate_input(right_path)
-    output = output_path or _auto_output(left_path, f"split_{layout}")
-
-    # Get info about both videos to check if resizing is needed
-    left_info = probe(left_path)
-    right_info = probe(right_path)
-
-    # Build filter_complex to normalize heights (side-by-side) or widths (top-bottom)
-    # Use max dimensions to avoid losing quality when one video is larger
-    if layout == "side-by-side":
-        target_h = max(left_info.height, right_info.height)
-        if left_info.height != right_info.height:
-            filter_complex = (
-                f"[0:v]scale=-1:{target_h},setsar=1[left];"
-                f"[1:v]scale=-1:{target_h},setsar=1[right];"
-                f"[left][right]hstack=inputs=2[v]"
-            )
-        else:
-            filter_complex = "[0:v][1:v]hstack=inputs=2[v]"
-    else:
-        target_w = max(left_info.width, right_info.width)
-        if left_info.width != right_info.width:
-            filter_complex = (
-                f"[0:v]scale={target_w}:-1,setsar=1[top];"
-                f"[1:v]scale={target_w}:-1,setsar=1[bottom];"
-                f"[top][bottom]vstack=inputs=2[v]"
-            )
-        else:
-            filter_complex = "[0:v][1:v]vstack=inputs=2[v]"
-
-    _run_ffmpeg(
-        [
-            "-i",
-            left_path,
-            "-i",
-            right_path,
-            "-filter_complex",
-            filter_complex,
-            "-map",
-            "[v]",
-            "-map",
-            "0:a?",
-            "-c:v",
-            "libx264",
-            "-preset",
-            "fast",
-            "-crf",
-            "23",
-            "-c:a",
-            "aac",
-            "-b:a",
-            "128k",
-            *_movflags_args(output),
-            output,
-        ]
-    )
-
-    info = probe(output)
-    return EditResult(
-        output_path=output,
-        duration=info.duration,
-        resolution=info.resolution,
-        size_mb=info.size_mb,
-        format="mp4",
-        operation=f"split_screen_{layout}",
-    )
-
-
-# ---------------------------------------------------------------------------
-# Advanced masking
 # ---------------------------------------------------------------------------
 
 
