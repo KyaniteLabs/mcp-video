@@ -1,0 +1,266 @@
+"""Timeline editing operation for the FFmpeg engine."""
+
+from __future__ import annotations
+
+import os
+import shutil
+import tempfile
+
+from .engine_audio_ops import add_audio
+from .engine_edit import trim
+from .engine_export import export_video
+from .engine_merge import merge
+from .engine_probe import probe
+from .engine_resize import resize
+from .engine_runtime_utils import (
+    _auto_output,
+    _default_font,
+    _movflags_args,
+    _position_coords,
+    _quality_args,
+    _run_ffmpeg,
+    _validate_color,
+    _validate_input,
+)
+from .errors import MCPVideoError
+from .ffmpeg_helpers import _escape_ffmpeg_filter_value
+from .models import EditResult, NamedPosition, Timeline, TimelineImageOverlay
+
+
+def edit_timeline(timeline: Timeline | dict, output_path: str | None = None) -> EditResult:
+    """Execute a full timeline-based edit described in JSON."""
+    if isinstance(timeline, dict):
+        timeline = Timeline.model_validate(timeline)
+    tmpdir = tempfile.mkdtemp(prefix="mcp_video_timeline_")
+    try:
+        video_clips, audio_clips, text_elements, image_overlays = _collect_tracks(timeline, tmpdir)
+        if not video_clips:
+            raise MCPVideoError("Timeline must have at least one video clip")
+
+        current = _merge_timeline_video(video_clips, timeline, tmpdir)
+        if text_elements or image_overlays:
+            composited = os.path.join(tmpdir, "composited.mp4")
+            _apply_composite_overlays(current, composited, text_elements, image_overlays)
+            current = composited
+
+        if audio_clips:
+            final = os.path.join(tmpdir, "with_audio.mp4")
+            add_audio(current, audio_clips[0], output_path=final)
+            current = final
+
+        if timeline.width and timeline.height:
+            info = probe(current)
+            if info.width != timeline.width or info.height != timeline.height:
+                resized = os.path.join(tmpdir, "resized.mp4")
+                resize(current, width=timeline.width, height=timeline.height, output_path=resized)
+                current = resized
+
+        output = output_path or _auto_output(video_clips[0], "timeline", ext=f".{timeline.export.format}")
+        return export_video(current, output_path=output, quality=timeline.export.quality, format=timeline.export.format)
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+def _collect_tracks(timeline: Timeline, tmpdir: str):
+    video_clips: list[str] = []
+    audio_clips: list[str] = []
+    text_elements: list = []
+    image_overlays: list[TimelineImageOverlay] = []
+
+    for track in timeline.tracks:
+        if track.type == "video":
+            for clip in track.clips:
+                _validate_input(clip.source)
+                if clip.trim_start > 0 or clip.trim_end:
+                    trimmed = os.path.join(tmpdir, f"v_{len(video_clips):04d}.mp4")
+                    trim_kwargs = {"start": clip.trim_start}
+                    if clip.duration:
+                        trim_kwargs["duration"] = clip.duration
+                    elif clip.trim_end:
+                        trim_kwargs["end"] = clip.trim_end
+                    result = trim(clip.source, output_path=trimmed, **trim_kwargs)
+                    video_clips.append(result.output_path)
+                else:
+                    video_clips.append(clip.source)
+            text_elements.extend(track.elements)
+        elif track.type == "audio":
+            for clip in track.clips:
+                _validate_input(clip.source)
+                audio_clips.append(clip.source)
+        elif track.type == "text":
+            text_elements.extend(track.elements)
+        elif track.type == "image":
+            for img in track.images:
+                _validate_input(img.source)
+                image_overlays.append(img)
+    return video_clips, audio_clips, text_elements, image_overlays
+
+
+def _merge_timeline_video(video_clips: list[str], timeline: Timeline, tmpdir: str) -> str:
+    if len(video_clips) == 1:
+        return video_clips[0]
+    merged = os.path.join(tmpdir, "merged.mp4")
+    transition_list = None
+    trans_duration = 1.0
+    for track in timeline.tracks:
+        if track.type == "video" and track.transitions:
+            sorted_trans = sorted(track.transitions, key=lambda t: t.after_clip)
+            transition_list = [t.type for t in sorted_trans]
+            trans_duration = sorted_trans[0].duration
+            break
+    merge(video_clips, output_path=merged, transitions=transition_list, transition_duration=trans_duration)
+    return merged
+
+
+def _apply_composite_overlays(
+    input_path: str,
+    output_path: str,
+    text_elements: list,
+    image_overlays: list[TimelineImageOverlay],
+) -> None:
+    """Apply text and image overlays in a single FFmpeg filtergraph pass."""
+    info = probe(input_path)
+    inputs: list[str] = ["-i", input_path]
+    filter_parts: list[str] = []
+    input_idx = 1
+
+    overlay_position_map: dict[NamedPosition, str] = {
+        "top-left": "0:0",
+        "top-center": "(main_w-overlay_w)/2:0",
+        "top-right": "main_w-overlay_w:0",
+        "center-left": "0:(main_h-overlay_h)/2",
+        "center": "(main_w-overlay_w)/2:(main_h-overlay_h)/2",
+        "center-right": "main_w-overlay_w:(main_h-overlay_h)/2",
+        "bottom-left": "0:main_h-overlay_h",
+        "bottom-center": "(main_w-overlay_w)/2:main_h-overlay_h",
+        "bottom-right": "main_w-overlay_w:main_h-overlay_h",
+    }
+
+    prev_label = "0:v"
+    for i, img in enumerate(image_overlays):
+        img_label = f"img{i}"
+        ov_label = f"ov{i}"
+        inputs.extend(["-i", img.source])
+        chain = _image_overlay_chain(img)
+        filter_parts.append(f"[{input_idx}:v]{chain}[{img_label}]")
+        pos = _image_overlay_position(img, overlay_position_map)
+        enable_expr = _image_enable_expression(img)
+        filter_parts.append(f"[{prev_label}][{img_label}]overlay={pos}{enable_expr}[{ov_label}]")
+        prev_label = ov_label
+        input_idx += 1
+
+    vf_parts = [_drawtext_filter(elem, info.width, info.height) for elem in text_elements]
+    _run_overlay_command(inputs, filter_parts, vf_parts, prev_label, image_overlays, output_path)
+
+
+def _image_overlay_chain(img: TimelineImageOverlay) -> str:
+    chain_parts: list[str] = []
+    if img.width and img.height:
+        chain_parts.append(f"scale={img.width}:{img.height}")
+    elif img.width:
+        chain_parts.append(f"scale={img.width}:-1")
+    elif img.height:
+        chain_parts.append(f"scale=-1:{img.height}")
+    if img.opacity < 1.0:
+        chain_parts.append("format=rgba")
+        chain_parts.append(f"colorchannelmixer=aa={img.opacity:.2f}")
+    return ",".join(chain_parts) if chain_parts else "null"
+
+
+def _image_overlay_position(img: TimelineImageOverlay, overlay_position_map: dict[NamedPosition, str]) -> str:
+    if isinstance(img.position, dict):
+        if "x_pct" in img.position and "y_pct" in img.position:
+            return f"(main_w*{img.position['x_pct']}-overlay_w/2):(main_h*{img.position['y_pct']}-overlay_h/2)"
+        if "x" in img.position and "y" in img.position:
+            return f"{img.position['x']}:{img.position['y']}"
+        return overlay_position_map["center"]
+    if img.x is not None and img.y is not None:
+        return f"{img.x}:{img.y}"
+    return overlay_position_map.get(img.position, overlay_position_map["center"])
+
+
+def _image_enable_expression(img: TimelineImageOverlay) -> str:
+    if img.start is None and img.duration is None:
+        return ""
+    parts = []
+    if img.start is not None and img.duration is not None:
+        end = img.start + img.duration
+        parts.append(f"between(t,{img.start},{end})")
+    elif img.start is not None:
+        parts.append(f"gte(t,{img.start})")
+    elif img.duration is not None:
+        parts.append(f"lte(t,{img.duration})")
+    return f":enable='{parts[0]}'"
+
+
+def _drawtext_filter(elem, width: int, height: int) -> str:
+    fontfile = elem.style.get("font") or _default_font()
+    if fontfile is not None:
+        fontfile = _escape_ffmpeg_filter_value(fontfile)
+    size = elem.style.get("size", 48)
+    color = elem.style.get("color", "white")
+    _validate_color(color)
+    coords = _position_coords(elem.position, width, height)
+    escaped_text = elem.text.replace("\\", "\\\\").replace("'", "'\\''").replace(":", "\\:")
+    drawtext_parts = [
+        f"drawtext=text='{escaped_text}'",
+        f"fontsize={size}",
+        f"fontcolor={color}",
+        f"fontfile={fontfile}",
+        coords,
+    ]
+    if elem.style.get("shadow", True):
+        drawtext_parts.append("shadowcolor=black@0.5")
+        drawtext_parts.append("shadowx=2")
+        drawtext_parts.append("shadowy=2")
+    if elem.start is not None and elem.duration is not None:
+        drawtext_parts.append(f"enable='between(t\\,{elem.start}\\,{elem.start + elem.duration})'")
+    elif elem.start is not None:
+        drawtext_parts.append(f"enable='gte(t\\,{elem.start})'")
+    return ":".join(drawtext_parts)
+
+
+def _run_overlay_command(
+    inputs: list[str],
+    filter_parts: list[str],
+    vf_parts: list[str],
+    prev_label: str,
+    image_overlays: list[TimelineImageOverlay],
+    output_path: str,
+) -> None:
+    if image_overlays and vf_parts:
+        last_label = prev_label
+        for vf in vf_parts:
+            filter_parts.append(f"[{last_label}]{vf}[vout]")
+            last_label = "vout"
+        _run_ffmpeg(
+            [
+                *inputs,
+                "-filter_complex",
+                ";".join(filter_parts),
+                "-map",
+                f"[{last_label}]",
+                "-map",
+                "0:a?",
+                *_encode_args(output_path),
+            ]
+        )
+    elif image_overlays:
+        _run_ffmpeg(
+            [
+                *inputs,
+                "-filter_complex",
+                ";".join(filter_parts),
+                "-map",
+                f"[{prev_label}]",
+                "-map",
+                "0:a?",
+                *_encode_args(output_path),
+            ]
+        )
+    elif vf_parts:
+        _run_ffmpeg([*inputs, "-vf", ",".join(vf_parts), *_encode_args(output_path)])
+
+
+def _encode_args(output_path: str) -> list[str]:
+    return ["-c:v", "libx264", *_quality_args(), "-c:a", "copy", *_movflags_args(output_path), output_path]
