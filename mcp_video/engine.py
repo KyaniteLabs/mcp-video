@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import os
-import re
 import shutil
 import subprocess
 import tempfile
@@ -13,7 +12,6 @@ from collections.abc import Callable
 from .errors import (
     MCPVideoError,
     InputFileError,
-    ProcessingError,
     parse_ffmpeg_error,
 )
 from .models import (
@@ -25,7 +23,6 @@ from .models import (
     NamedPosition,
     Position,
     QualityLevel,
-    QualityMetricsResult,
     SplitLayout,
     SubtitleResult,
     Timeline,
@@ -36,6 +33,7 @@ from .engine_audio_waveform import audio_waveform as audio_waveform
 from .engine_audio_ops import add_audio as add_audio
 from .engine_audio_normalize import normalize_audio as normalize_audio
 from .engine_chroma_key import chroma_key as chroma_key
+from .engine_compare_quality import compare_quality as compare_quality
 from .engine_crop import crop as crop
 from .engine_detect_scenes import detect_scenes as detect_scenes
 from .engine_edit import trim as trim
@@ -1192,119 +1190,6 @@ def create_from_images(
         size_mb=result_info.size_mb,
         format="mp4",
         operation="create_from_images",
-    )
-
-
-# ---------------------------------------------------------------------------
-# Quality metrics
-# ---------------------------------------------------------------------------
-
-
-def compare_quality(
-    original_path: str,
-    distorted_path: str,
-    metrics: list[str] | None = None,
-) -> QualityMetricsResult:
-    """Compare video quality between original and distorted versions.
-
-    Args:
-        original_path: Path to the original/reference video.
-        distorted_path: Path to the distorted/processed video.
-        metrics: List of metrics to compute (default: ["psnr", "ssim"]).
-    """
-    _validate_input(original_path)
-    _validate_input(distorted_path)
-    metrics = metrics or ["psnr", "ssim"]
-
-    computed: dict[str, float] = {}
-
-    for metric in metrics:
-        metric_lower = metric.lower()
-        if metric_lower not in ("psnr", "ssim"):
-            continue
-
-        try:
-            # Get original resolution to scale distorted video to match
-            orig_info = probe(original_path)
-            target_w = orig_info.width
-            target_h = orig_info.height
-
-            # Scale distorted to match original resolution, then compare
-            filter_str = f"[1:v]scale={target_w}:{target_h}[scaled];[0:v][scaled]{metric_lower}"
-            proc = subprocess.run(
-                [
-                    _ffmpeg(),
-                    "-i",
-                    original_path,
-                    "-i",
-                    distorted_path,
-                    "-lavfi",
-                    filter_str,
-                    "-f",
-                    "null",
-                    "-",
-                ],
-                capture_output=True,
-                text=True,
-                timeout=300,
-            )
-            if proc.returncode != 0:
-                raise ProcessingError(
-                    f"ffmpeg -i {original_path} -i {distorted_path} -lavfi {metric_lower}",
-                    proc.returncode,
-                    proc.stderr[:500],
-                )
-
-            # Parse metric value from stderr
-            for line in proc.stderr.split("\n"):
-                if metric_lower == "psnr" and "average:" in line.lower():
-                    try:
-                        # Format: [Parsed_psnr ...] average:XX.XX
-                        val_match = re.search(r"average:\s*([0-9.]+)", line, re.IGNORECASE)
-                        if val_match:
-                            computed["psnr"] = float(val_match.group(1))
-                    except (ValueError, IndexError):
-                        continue
-                elif metric_lower == "ssim" and "All:" in line:
-                    try:
-                        # Format: [Parsed_ssim ...] All:X.XXXXXX
-                        val_match = re.search(r"All[:\s]+([0-9.]+)", line)
-                        if val_match:
-                            computed["ssim"] = float(val_match.group(1))
-                    except (ValueError, IndexError):
-                        continue
-        except Exception as e:
-            if isinstance(e, ProcessingError):
-                raise
-            raise ProcessingError(
-                f"ffmpeg -i {original_path} -i {distorted_path} -lavfi {metric_lower}",
-                1,
-                str(e)[:500],
-            ) from e
-
-    # Determine overall quality
-    if "ssim" in computed:
-        ssim_val = computed["ssim"]
-        if ssim_val >= 0.95:
-            overall = "high"
-        elif ssim_val >= 0.80:
-            overall = "medium"
-        else:
-            overall = "low"
-    elif "psnr" in computed:
-        psnr_val = computed["psnr"]
-        if psnr_val >= 40:
-            overall = "high"
-        elif psnr_val >= 30:
-            overall = "medium"
-        else:
-            overall = "low"
-    else:
-        overall = "unknown"
-
-    return QualityMetricsResult(
-        metrics=computed,
-        overall_quality=overall,
     )
 
 
