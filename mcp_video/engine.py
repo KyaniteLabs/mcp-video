@@ -30,9 +30,9 @@ from .models import (
     SubtitleResult,
     Timeline,
     TimelineImageOverlay,
-    WaveformResult,
 )
 from .ffmpeg_helpers import _escape_ffmpeg_filter_value, _seconds_to_srt_time
+from .engine_audio_waveform import audio_waveform as audio_waveform
 from .engine_audio_ops import add_audio as add_audio
 from .engine_audio_normalize import normalize_audio as normalize_audio
 from .engine_chroma_key import chroma_key as chroma_key
@@ -1080,121 +1080,6 @@ def generate_subtitles(
     return SubtitleResult(
         srt_path=srt_file,
         entry_count=len(entries),
-    )
-
-
-# ---------------------------------------------------------------------------
-# Audio waveform extraction
-# ---------------------------------------------------------------------------
-
-
-def audio_waveform(
-    input_path: str,
-    bins: int = 50,
-) -> WaveformResult:
-    """Extract audio waveform data (peaks and silence regions).
-
-    Args:
-        input_path: Path to the input video/audio file.
-        bins: Number of time segments to analyze (default 50).
-    """
-    _validate_input(input_path)
-
-    input_info = probe(input_path)
-    if input_info.audio_codec is None:
-        raise MCPVideoError(
-            "Audio waveform extraction requires an audio stream, but this video has none",
-            error_type="validation_error",
-            code="waveform_no_audio",
-        )
-
-    duration = input_info.duration
-    segment_duration = duration / bins
-
-    # Use astats filter to get per-segment audio levels
-    filter_str = "astats=metadata=1:reset=0,ametadata=1"
-    proc = subprocess.run(
-        [_ffmpeg(), "-i", input_path, "-af", filter_str, "-f", "null", "-"],
-        capture_output=True,
-        text=True,
-        timeout=120,
-    )
-    # Parse astats output for RMS level
-    peaks: list[dict] = []
-    levels: list[float] = []
-
-    for line in proc.stderr.split("\n"):
-        line = line.strip()
-        if "Parsed_dc" in line or "n_samples" in line:
-            continue
-        if "RMS_level_dB" in line:
-            try:
-                # Format: [Parsed_astats_...] RMS_level_dB=...
-                parts = line.split("RMS_level_dB=")
-                if len(parts) >= 2:
-                    val = float(parts[1].split()[0])
-                    levels.append(val)
-            except (ValueError, IndexError):
-                continue
-
-    # If astats didn't produce usable data, return synthetic waveform
-    if not levels:
-        for i in range(bins):
-            t = (i + 0.5) * segment_duration
-            peaks.append({"time": round(t, 2), "level": -20.0})
-
-        return WaveformResult(
-            duration=duration,
-            peaks=peaks,
-            mean_level=-20.0,
-            max_level=-20.0,
-            min_level=-20.0,
-            silence_regions=[],
-            synthetic=True,
-        )
-
-    # Bin the levels into the requested number of segments
-    samples_per_bin = max(1, len(levels) // bins)
-    binned: list[float] = []
-    for i in range(bins):
-        start_idx = i * samples_per_bin
-        end_idx = min((i + 1) * samples_per_bin, len(levels))
-        if start_idx < len(levels):
-            bin_avg = sum(levels[start_idx:end_idx]) / (end_idx - start_idx)
-            binned.append(bin_avg)
-
-    peaks = []
-    for i, level in enumerate(binned):
-        t = (i + 0.5) * segment_duration
-        peaks.append({"time": round(t, 2), "level": round(level, 1)})
-
-    # Detect silence (below -50 dB)
-    silence_threshold = -50.0
-    silence_regions: list[dict] = []
-    in_silence = False
-    silence_start = 0.0
-    for i, level in enumerate(binned):
-        t = (i + 0.5) * segment_duration
-        if level < silence_threshold and not in_silence:
-            in_silence = True
-            silence_start = t
-        elif level >= silence_threshold and in_silence:
-            in_silence = False
-            silence_regions.append({"start": round(silence_start, 2), "end": round(t, 2)})
-    if in_silence:
-        silence_regions.append({"start": round(silence_start, 2), "end": round(duration, 2)})
-
-    mean_level = sum(binned) / len(binned) if binned else -60.0
-    max_level = max(binned) if binned else -60.0
-    min_level = min(binned) if binned else -60.0
-
-    return WaveformResult(
-        duration=duration,
-        peaks=peaks,
-        mean_level=round(mean_level, 1),
-        max_level=round(max_level, 1),
-        min_level=round(min_level, 1),
-        silence_regions=silence_regions,
     )
 
 

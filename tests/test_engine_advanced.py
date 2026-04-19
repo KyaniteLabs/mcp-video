@@ -718,6 +718,41 @@ class TestAudioWaveform:
         result = audio_waveform(sample_video, bins=20)
         assert len(result.peaks) == 20
 
+    def test_waveform_rejects_excessive_bins(self, sample_video):
+        from mcp_video.engine import audio_waveform
+        with pytest.raises(MCPVideoError, match="bins"):
+            audio_waveform(sample_video, bins=1001)
+
+    def test_waveform_non_ametadata_failure_raises(self, sample_video, monkeypatch):
+        from mcp_video.engine import audio_waveform
+        from mcp_video import engine_audio_waveform
+
+        class FailedProcess:
+            returncode = 1
+            stderr = "Unexpected FFmpeg failure"
+
+        monkeypatch.setattr(engine_audio_waveform.subprocess, "run", lambda *args, **kwargs: FailedProcess())
+
+        with pytest.raises(ProcessingError, match="Unexpected FFmpeg failure"):
+            audio_waveform(sample_video, bins=10)
+
+    def test_waveform_ametadata_reinit_failure_uses_synthetic_fallback(self, sample_video, monkeypatch):
+        from mcp_video.engine import audio_waveform
+        from mcp_video import engine_audio_waveform
+
+        input_info = probe(sample_video)
+
+        class FailedProcess:
+            returncode = 1
+            stderr = "Metadata key must be set\nError reinitializing filters!"
+
+        monkeypatch.setattr(engine_audio_waveform, "probe", lambda _: input_info)
+        monkeypatch.setattr(engine_audio_waveform.subprocess, "run", lambda *args, **kwargs: FailedProcess())
+
+        result = audio_waveform(sample_video, bins=10)
+        assert result.synthetic is True
+        assert len(result.peaks) == 10
+
 
 class TestTwoPassEncoding:
     """Tests for two-pass encoding in convert and export_video."""
