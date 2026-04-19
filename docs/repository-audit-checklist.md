@@ -51,6 +51,22 @@ This validates:
 - package metadata URLs exist
 - local tag visibility (release hygiene signal)
 
+## 3.5) Integration smoke (before releases)
+
+Run the dedicated smoke workflow after packaging or integration changes:
+
+```bash
+gh workflow run "Integration smoke"
+```
+
+This validates:
+- base install imports and CLI help/version
+- `mcp-video doctor --json`
+- a minimal FFmpeg trim path
+- image extra import and tiny image color extraction
+- Node/npm/npx availability reporting for Remotion
+- AI module import and optional dependency reporting without installing heavyweight AI stacks
+
 ## 4) Documentation quality (weekly)
 
 - README: accurate tool counts, install instructions, and quick-start snippets.
