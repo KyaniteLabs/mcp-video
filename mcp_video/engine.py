@@ -16,7 +16,6 @@ from .models import (
     ExportFormat,
     FilterType,
     NamedPosition,
-    Position,
     QualityLevel,
     SplitLayout,
     Timeline,
@@ -39,6 +38,7 @@ from .engine_mask import apply_mask as _apply_mask
 from .engine_merge import merge as merge
 from .engine_metadata import read_metadata as read_metadata
 from .engine_metadata import write_metadata as write_metadata
+from .engine_overlay import overlay_video as _overlay_video
 from .engine_preview import preview as preview
 
 # Compatibility re-export: callers still import get_duration from mcp_video.engine.
@@ -84,6 +84,7 @@ from .engine_transcode import normalize as normalize
 from .engine_watermark import watermark as watermark
 
 apply_mask = _apply_mask
+overlay_video = _overlay_video
 
 
 # ---------------------------------------------------------------------------
@@ -791,114 +792,6 @@ def apply_filter(
 # ---------------------------------------------------------------------------
 # Compositing & overlays
 # ---------------------------------------------------------------------------
-
-
-def overlay_video(
-    background_path: str,
-    overlay_path: str,
-    position: Position = "top-right",
-    width: int | None = None,
-    height: int | None = None,
-    opacity: float = 0.8,
-    start_time: float | None = None,
-    duration: float | None = None,
-    output_path: str | None = None,
-    crf: int | None = None,
-    preset: str | None = None,
-) -> EditResult:
-    """Picture-in-picture: overlay a video on top of another.
-
-    Args:
-        background_path: Path to the background video.
-        overlay_path: Path to the overlay video.
-        position: Position of the overlay on screen.
-        width: Width to scale the overlay to.
-        height: Height to scale the overlay to.
-        opacity: Opacity of the overlay (0.0 to 1.0).
-        start_time: When the overlay appears (seconds).
-        duration: How long the overlay is visible (seconds).
-        output_path: Where to save the output.
-    """
-    _validate_input(background_path)
-    _validate_input(overlay_path)
-    _require_filter("overlay", "Video overlay")
-    output = output_path or _auto_output(background_path, "overlay")
-
-    # Build scale filter for overlay
-    scale_parts = []
-    if width and height:
-        scale_parts.append(f"scale={width}:{height}")
-    elif width:
-        scale_parts.append(f"scale={width}:-1")
-    elif height:
-        scale_parts.append(f"scale=-1:{height}")
-    scale_filter = ",".join(scale_parts) if scale_parts else ""
-
-    # Build the overlay filter chain
-    opacity_fmt = f"{opacity:.2f}"
-    overlay_chain_parts = ["format=rgba", f"colorchannelmixer=aa={opacity_fmt}"]
-    if scale_filter:
-        overlay_chain_parts.insert(0, scale_filter)
-    overlay_chain = ",".join(overlay_chain_parts)
-
-    # Position map (same as watermark but without margin)
-    position_map: dict[NamedPosition, str] = {
-        "top-left": "0:0",
-        "top-center": "(main_w-overlay_w)/2:0",
-        "top-right": "main_w-overlay_w:0",
-        "center-left": "0:(main_h-overlay_h)/2",
-        "center": "(main_w-overlay_w)/2:(main_h-overlay_h)/2",
-        "center-right": "main_w-overlay_w:(main_h-overlay_h)/2",
-        "bottom-left": "0:main_h-overlay_h",
-        "bottom-center": "(main_w-overlay_w)/2:main_h-overlay_h",
-        "bottom-right": "main_w-overlay_w:main_h-overlay_h",
-    }
-    overlay_pos = _resolve_position(position, position_map, "top-right")
-
-    # Optional enable expression for timing
-    enable_expr = ""
-    if start_time is not None or duration is not None:
-        parts = []
-        if start_time is not None and duration is not None:
-            end = start_time + duration
-            parts.append(f"between(t,{start_time},{end})")
-        elif start_time is not None:
-            parts.append(f"gte(t,{start_time})")
-        elif duration is not None:
-            parts.append(f"lte(t,{duration})")
-        enable_expr = f":enable='{parts[0]}'"
-
-    filter_complex = f"[1:v]{overlay_chain}[ov];[0:v][ov]overlay={overlay_pos}{enable_expr}"
-
-    _run_ffmpeg(
-        [
-            "-i",
-            background_path,
-            "-i",
-            overlay_path,
-            "-filter_complex",
-            filter_complex,
-            "-c:v",
-            "libx264",
-            *_quality_args(crf=crf, preset=preset),
-            "-c:a",
-            "aac",
-            "-b:a",
-            "128k",
-            *_movflags_args(output),
-            output,
-        ]
-    )
-
-    info = probe(output)
-    return EditResult(
-        output_path=output,
-        duration=info.duration,
-        resolution=info.resolution,
-        size_mb=info.size_mb,
-        format="mp4",
-        operation="overlay_video",
-    )
 
 
 def split_screen(
