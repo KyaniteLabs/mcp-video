@@ -30,7 +30,14 @@ def stabilize(
     zooming: float = 0,
     output_path: str | None = None,
 ) -> EditResult:
-    """Stabilize a shaky video using motion vector analysis."""
+    """Stabilize a shaky video with FFmpeg vidstab detect/transform passes.
+
+    Args:
+        input_path: Path to the input video.
+        smoothing: Smoothing strength (higher is more stable).
+        zooming: Zoom percentage to avoid black borders.
+        output_path: Optional output video path.
+    """
     _validate_input(input_path)
     _require_filter("vidstabdetect", "Video stabilization")
     output = output_path or _auto_output(input_path, "stabilized")
@@ -76,6 +83,7 @@ def stabilize(
 
 
 def _detect_motion_vectors(input_path: str, vectors_file: str) -> None:
+    safe_vectors_file = _escape_ffmpeg_filter_value(vectors_file)
     try:
         result = subprocess.run(
             [
@@ -84,7 +92,7 @@ def _detect_motion_vectors(input_path: str, vectors_file: str) -> None:
                 "-i",
                 input_path,
                 "-vf",
-                "vidstabdetect=shakiness=10:accuracy=15:result=" + vectors_file,
+                "vidstabdetect=shakiness=10:accuracy=15:result=" + safe_vectors_file,
                 "-f",
                 "null",
                 "-",
