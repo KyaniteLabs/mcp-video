@@ -53,6 +53,7 @@ class TestErrorHandlingRobustness:
     def test_server_error_result_mcpvideoerror(self) -> None:
         """_error_result handles MCPVideoError correctly."""
         from mcp_video.server import _error_result
+
         err = InputFileError("/tmp/nonexistent.mp4")
         result = _error_result(err)
         assert result["success"] is False
@@ -62,6 +63,7 @@ class TestErrorHandlingRobustness:
     def test_server_error_result_generic_exception(self) -> None:
         """_error_result handles generic Exception without crash — sanitized for no detail leak."""
         from mcp_video.server import _error_result
+
         err = RuntimeError("unexpected failure")
         result = _error_result(err)
         assert result["success"] is False
@@ -171,12 +173,14 @@ class TestErrorTypeConsistency:
     def test_effects_engine_raises_processing_error(self) -> None:
         """effects_engine raises MCPVideoError (InputFileError), not RuntimeError."""
         from mcp_video.effects_engine import effect_vignette
+
         with pytest.raises(MCPVideoError):
             effect_vignette("/nonexistent/video.mp4", "/tmp/out.mp4")
 
     def test_transitions_engine_raises_processing_error(self) -> None:
         """transitions_engine raises MCPVideoError (InputFileError), not RuntimeError."""
         from mcp_video.transitions_engine import transition_pixelate
+
         with pytest.raises(MCPVideoError):
             transition_pixelate(
                 "/nonexistent/clip1.mp4",
@@ -199,6 +203,7 @@ class TestTimeoutProtection:
         """effects_engine subprocess.run calls include timeout parameter."""
         import inspect
         from mcp_video import ffmpeg_helpers
+
         # Timeout lives in the shared ffmpeg_helpers module used by effects_engine
         source = inspect.getsource(ffmpeg_helpers)
         assert "timeout=" in source or "timeout =" in source
@@ -207,6 +212,7 @@ class TestTimeoutProtection:
         """transitions_engine subprocess.run calls include timeout parameter."""
         import inspect
         from mcp_video import ffmpeg_helpers
+
         # Timeout lives in the shared ffmpeg_helpers module used by transitions_engine
         source = inspect.getsource(ffmpeg_helpers)
         assert "timeout=" in source or "timeout =" in source
@@ -248,42 +254,49 @@ class TestParameterBounds:
     def test_audio_frequency_too_low(self) -> None:
         """Frequency below 20 Hz is rejected."""
         from mcp_video.audio_engine import audio_synthesize
+
         with pytest.raises(MCPVideoError, match=r"[Ff]requency"):
             audio_synthesize("/tmp/test.wav", frequency=5)
 
     def test_audio_frequency_too_high(self) -> None:
         """Frequency above 20000 Hz is rejected."""
         from mcp_video.audio_engine import audio_synthesize
+
         with pytest.raises(MCPVideoError, match=r"[Ff]requency"):
             audio_synthesize("/tmp/test.wav", frequency=50000)
 
     def test_audio_frequency_zero(self) -> None:
         """Frequency of 0 Hz is rejected."""
         from mcp_video.audio_engine import audio_synthesize
+
         with pytest.raises(MCPVideoError, match=r"[Ff]requency"):
             audio_synthesize("/tmp/test.wav", frequency=0)
 
     def test_audio_duration_too_short(self) -> None:
         """Duration below 0.01s is rejected."""
         from mcp_video.audio_engine import audio_synthesize
+
         with pytest.raises(MCPVideoError, match=r"[Dd]uration"):
             audio_synthesize("/tmp/test.wav", duration=0.001)
 
     def test_audio_duration_too_long(self) -> None:
         """Duration above MAX_AUDIO_DURATION is rejected."""
         from mcp_video.audio_engine import audio_synthesize
+
         with pytest.raises(MCPVideoError, match=r"[Dd]uration"):
             audio_synthesize("/tmp/test.wav", duration=100000)
 
     def test_audio_volume_negative(self) -> None:
         """Negative volume is rejected."""
         from mcp_video.audio_engine import audio_synthesize
+
         with pytest.raises(MCPVideoError, match=r"[Vv]olume"):
             audio_synthesize("/tmp/test.wav", volume=-0.5)
 
     def test_audio_volume_over_one(self) -> None:
         """Volume > 1.0 is rejected."""
         from mcp_video.audio_engine import audio_synthesize
+
         with pytest.raises(MCPVideoError, match=r"[Vv]olume"):
             audio_synthesize("/tmp/test.wav", volume=1.5)
 
@@ -291,6 +304,7 @@ class TestParameterBounds:
         """Valid bounds at edges are accepted."""
         from mcp_video.audio_engine import audio_synthesize
         from mcp_video.limits import MIN_FREQUENCY
+
         # These should NOT raise - just validate params, don't actually run
         # We can't easily test without creating a file, so just test validation
         # by checking the function doesn't raise at boundary values
@@ -314,6 +328,7 @@ class TestLimitsModule:
     def test_limits_importable(self) -> None:
         """Limits module can be imported."""
         from mcp_video import limits
+
         assert hasattr(limits, "MAX_VIDEO_DURATION")
         assert hasattr(limits, "MAX_RESOLUTION")
         assert hasattr(limits, "MAX_FILE_SIZE_MB")
@@ -330,6 +345,7 @@ class TestLimitsModule:
             MAX_BATCH_SIZE,
             MAX_AUDIO_DURATION,
         )
+
         assert MAX_VIDEO_DURATION > 0
         assert MAX_RESOLUTION > 0
         assert MAX_FILE_SIZE_MB > 0
@@ -377,5 +393,6 @@ class TestEscapingConsistency:
         """quality_guardrails uses escaped paths for movie= filter."""
         import inspect
         from mcp_video import quality_guardrails
+
         source = inspect.getsource(quality_guardrails)
         assert "_escape_lavfi_path" in source

@@ -37,6 +37,7 @@ class TestClientInfo:
 
     def test_info_nonexistent_file(self, editor):
         from mcp_video.errors import InputFileError
+
         with pytest.raises(InputFileError):
             editor.info("/nonexistent/video.mp4")
 
@@ -84,9 +85,13 @@ class TestClientAddText:
     @requires_filter("drawtext", "Text overlay")
     def test_add_text_passes_params(self, editor, sample_video):
         result = editor.add_text(
-            sample_video, text="Test",
-            position="bottom-center", font=None, size=36,
-            color="yellow", shadow=False,
+            sample_video,
+            text="Test",
+            position="bottom-center",
+            font=None,
+            size=36,
+            color="yellow",
+            shadow=False,
         )
         assert isinstance(result, EditResult)
 
@@ -103,8 +108,11 @@ class TestClientAddAudio:
 
     def test_add_audio_with_fade(self, editor, sample_video, sample_audio):
         result = editor.add_audio(
-            sample_video, sample_audio,
-            volume=0.8, fade_in=0.5, fade_out=0.5,
+            sample_video,
+            sample_audio,
+            volume=0.8,
+            fade_in=0.5,
+            fade_out=0.5,
         )
         assert isinstance(result, EditResult)
 

@@ -18,16 +18,15 @@ from mcp_video import Client
 
 # Test video files (real media)
 TEST_VIDEOS = {
-    'explainer': 'out/McpVideoExplainer-FINAL.mp4',
-    'original': 'out/McpVideoExplainerV1.mp4',
-    'short': 'out/new-scenes-bright.mp4',
+    "explainer": "out/McpVideoExplainer-FINAL.mp4",
+    "original": "out/McpVideoExplainerV1.mp4",
+    "short": "out/new-scenes-bright.mp4",
 }
 
 # Skip if no test videos
 pytestmark = [
     pytest.mark.skipif(
-        not os.path.exists(TEST_VIDEOS['explainer']),
-        reason="Test video not found - run explainer render first"
+        not os.path.exists(TEST_VIDEOS["explainer"]), reason="Test video not found - run explainer render first"
     ),
     pytest.mark.slow,
 ]
@@ -42,7 +41,7 @@ class TestRealVideoEditing:
 
     @pytest.fixture
     def test_video(self):
-        return TEST_VIDEOS['explainer']
+        return TEST_VIDEOS["explainer"]
 
     @pytest.fixture
     def output_dir(self):
@@ -63,21 +62,19 @@ class TestRealVideoEditing:
     def test_02_trim_video(self, client, test_video, output_dir):
         """Trim real video."""
         print("\n[Test] Trim 10-20s from video...")
-        output = os.path.join(output_dir, 'trimmed.mp4')
+        output = os.path.join(output_dir, "trimmed.mp4")
 
-        result = client.edit({
-            'tracks': [{
-                'type': 'video',
-                'clips': [{
-                    'source': test_video,
-                    'in': 0,
-                    'out': 10,
-                    'trim_start': 10,
-                    'trim_end': 90
-                }]
-            }],
-            'output': output
-        })
+        result = client.edit(
+            {
+                "tracks": [
+                    {
+                        "type": "video",
+                        "clips": [{"source": test_video, "in": 0, "out": 10, "trim_start": 10, "trim_end": 90}],
+                    }
+                ],
+                "output": output,
+            }
+        )
 
         # Check edit was successful
         assert result.success
@@ -87,15 +84,28 @@ class TestRealVideoEditing:
     def test_03_resize_video(self, client, test_video, output_dir):
         """Resize to 720p."""
         print("\n[Test] Resize to 720p...")
-        output = os.path.join(output_dir, '720p.mp4')
+        output = os.path.join(output_dir, "720p.mp4")
 
         # Use ffmpeg directly for resize test
-        subprocess.run([
-            'ffmpeg', '-y', '-i', test_video,
-            '-t', '5', '-vf', 'scale=1280:720',
-            '-c:v', 'libx264', '-c:a', 'aac',
-            output
-        ], capture_output=True, check=True)
+        subprocess.run(
+            [
+                "ffmpeg",
+                "-y",
+                "-i",
+                test_video,
+                "-t",
+                "5",
+                "-vf",
+                "scale=1280:720",
+                "-c:v",
+                "libx264",
+                "-c:a",
+                "aac",
+                output,
+            ],
+            capture_output=True,
+            check=True,
+        )
 
         assert os.path.exists(output)
         info = client.info(output)
@@ -114,7 +124,7 @@ class TestRealAIFeatures:
     def test_04_ai_scene_detect(self, client):
         """Detect scenes in video."""
         print("\n[Test] AI scene detection...")
-        test_video = TEST_VIDEOS.get('explainer')
+        test_video = TEST_VIDEOS.get("explainer")
         if not test_video or not os.path.exists(test_video):
             pytest.skip("No test video available")
 
@@ -139,20 +149,46 @@ class TestRealEffects:
     def test_05_transition_glitch(self, client, output_dir):
         """Apply glitch transition."""
         print("\n[Test] Glitch transition...")
-        clip1 = os.path.join(output_dir, 'clip1.mp4')
-        clip2 = os.path.join(output_dir, 'clip2.mp4')
+        clip1 = os.path.join(output_dir, "clip1.mp4")
+        clip2 = os.path.join(output_dir, "clip2.mp4")
 
-        subprocess.run([
-            'ffmpeg', '-y', '-f', 'lavfi', '-i', 'color=c=red:s=320x240:d=2',
-            '-c:v', 'libx264', '-pix_fmt', 'yuv420p', clip1
-        ], capture_output=True, check=True)
+        subprocess.run(
+            [
+                "ffmpeg",
+                "-y",
+                "-f",
+                "lavfi",
+                "-i",
+                "color=c=red:s=320x240:d=2",
+                "-c:v",
+                "libx264",
+                "-pix_fmt",
+                "yuv420p",
+                clip1,
+            ],
+            capture_output=True,
+            check=True,
+        )
 
-        subprocess.run([
-            'ffmpeg', '-y', '-f', 'lavfi', '-i', 'color=c=blue:s=320x240:d=2',
-            '-c:v', 'libx264', '-pix_fmt', 'yuv420p', clip2
-        ], capture_output=True, check=True)
+        subprocess.run(
+            [
+                "ffmpeg",
+                "-y",
+                "-f",
+                "lavfi",
+                "-i",
+                "color=c=blue:s=320x240:d=2",
+                "-c:v",
+                "libx264",
+                "-pix_fmt",
+                "yuv420p",
+                clip2,
+            ],
+            capture_output=True,
+            check=True,
+        )
 
-        output = os.path.join(output_dir, 'glitch.mp4')
+        output = os.path.join(output_dir, "glitch.mp4")
         result = client.transition_glitch(clip1, clip2, output, duration=0.5)
 
         assert os.path.exists(result)
@@ -161,19 +197,45 @@ class TestRealEffects:
     def test_06_transition_pixelate(self, client, output_dir):
         """Apply pixelate transition."""
         print("\n[Test] Pixelate transition...")
-        clip1 = os.path.join(output_dir, 'clip1.mp4')
-        clip2 = os.path.join(output_dir, 'clip2.mp4')
-        output = os.path.join(output_dir, 'pixelate.mp4')
+        clip1 = os.path.join(output_dir, "clip1.mp4")
+        clip2 = os.path.join(output_dir, "clip2.mp4")
+        output = os.path.join(output_dir, "pixelate.mp4")
 
         # Create fresh clips
-        subprocess.run([
-            'ffmpeg', '-y', '-f', 'lavfi', '-i', 'color=c=green:s=320x240:d=2',
-            '-c:v', 'libx264', '-pix_fmt', 'yuv420p', clip1
-        ], capture_output=True, check=True)
-        subprocess.run([
-            'ffmpeg', '-y', '-f', 'lavfi', '-i', 'color=c=yellow:s=320x240:d=2',
-            '-c:v', 'libx264', '-pix_fmt', 'yuv420p', clip2
-        ], capture_output=True, check=True)
+        subprocess.run(
+            [
+                "ffmpeg",
+                "-y",
+                "-f",
+                "lavfi",
+                "-i",
+                "color=c=green:s=320x240:d=2",
+                "-c:v",
+                "libx264",
+                "-pix_fmt",
+                "yuv420p",
+                clip1,
+            ],
+            capture_output=True,
+            check=True,
+        )
+        subprocess.run(
+            [
+                "ffmpeg",
+                "-y",
+                "-f",
+                "lavfi",
+                "-i",
+                "color=c=yellow:s=320x240:d=2",
+                "-c:v",
+                "libx264",
+                "-pix_fmt",
+                "yuv420p",
+                clip2,
+            ],
+            capture_output=True,
+            check=True,
+        )
 
         result = client.transition_pixelate(clip1, clip2, output, duration=0.4)
 
@@ -183,19 +245,45 @@ class TestRealEffects:
     def test_07_transition_morph(self, client, output_dir):
         """Apply morph transition."""
         print("\n[Test] Morph transition...")
-        clip1 = os.path.join(output_dir, 'clip1.mp4')
-        clip2 = os.path.join(output_dir, 'clip2.mp4')
-        output = os.path.join(output_dir, 'morph.mp4')
+        clip1 = os.path.join(output_dir, "clip1.mp4")
+        clip2 = os.path.join(output_dir, "clip2.mp4")
+        output = os.path.join(output_dir, "morph.mp4")
 
         # Create fresh clips
-        subprocess.run([
-            'ffmpeg', '-y', '-f', 'lavfi', '-i', 'color=c=purple:s=320x240:d=2',
-            '-c:v', 'libx264', '-pix_fmt', 'yuv420p', clip1
-        ], capture_output=True, check=True)
-        subprocess.run([
-            'ffmpeg', '-y', '-f', 'lavfi', '-i', 'color=c=orange:s=320x240:d=2',
-            '-c:v', 'libx264', '-pix_fmt', 'yuv420p', clip2
-        ], capture_output=True, check=True)
+        subprocess.run(
+            [
+                "ffmpeg",
+                "-y",
+                "-f",
+                "lavfi",
+                "-i",
+                "color=c=purple:s=320x240:d=2",
+                "-c:v",
+                "libx264",
+                "-pix_fmt",
+                "yuv420p",
+                clip1,
+            ],
+            capture_output=True,
+            check=True,
+        )
+        subprocess.run(
+            [
+                "ffmpeg",
+                "-y",
+                "-f",
+                "lavfi",
+                "-i",
+                "color=c=orange:s=320x240:d=2",
+                "-c:v",
+                "libx264",
+                "-pix_fmt",
+                "yuv420p",
+                clip2,
+            ],
+            capture_output=True,
+            check=True,
+        )
 
         result = client.transition_morph(clip1, clip2, output, duration=0.6)
 
@@ -212,7 +300,7 @@ class TestRealQualityGuardrails:
 
     @pytest.fixture
     def test_video(self):
-        return TEST_VIDEOS.get('explainer')
+        return TEST_VIDEOS.get("explainer")
 
     def test_08_video_info_detailed(self, client, test_video):
         """Get detailed video info."""
@@ -223,7 +311,7 @@ class TestRealQualityGuardrails:
         result = client.video_info_detailed(test_video)
 
         assert isinstance(result, dict)
-        assert 'duration' in result
+        assert "duration" in result
         print(f"  ✓ Detailed info: {len(result)} fields")
 
     def test_09_quality_check(self, client, test_video):
@@ -260,8 +348,8 @@ def run_all_tests():
         print(f"  {exists} {name}: {path}")
     print()
 
-    pytest.main([__file__, '-v', '--tb=short', '-s'])
+    pytest.main([__file__, "-v", "--tb=short", "-s"])
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     run_all_tests()

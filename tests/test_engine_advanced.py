@@ -81,12 +81,14 @@ class TestWatermark:
 class TestExportVideo:
     def test_wrapper_for_convert(self, sample_video):
         from mcp_video.engine import export_video
+
         result = export_video(sample_video)
         assert os.path.isfile(result.output_path)
         assert result.operation == "export"
 
     def test_with_quality(self, sample_video):
         from mcp_video.engine import export_video
+
         result = export_video(sample_video, quality="low")
         assert os.path.isfile(result.output_path)
 
@@ -94,7 +96,8 @@ class TestExportVideo:
 class TestEditTimeline:
     def test_single_clip_no_transitions(self, sample_video):
         tl = Timeline(
-            width=640, height=480,
+            width=640,
+            height=480,
             tracks=[
                 TimelineTrack(
                     type="video",
@@ -109,7 +112,8 @@ class TestEditTimeline:
     @requires_filter("drawtext", "Text overlay")
     def test_multiple_clips_with_text(self, sample_video):
         tl = Timeline(
-            width=640, height=480,
+            width=640,
+            height=480,
             tracks=[
                 TimelineTrack(
                     type="video",
@@ -120,13 +124,15 @@ class TestEditTimeline:
                 ),
                 TimelineTrack(
                     type="text",
-                    elements=[{
-                        "text": "Test Title",
-                        "start": 0,
-                        "duration": 2,
-                        "position": "center",
-                        "style": {"size": 36, "color": "white", "shadow": True},
-                    }],
+                    elements=[
+                        {
+                            "text": "Test Title",
+                            "start": 0,
+                            "duration": 2,
+                            "position": "center",
+                            "style": {"size": 36, "color": "white", "shadow": True},
+                        }
+                    ],
                 ),
             ],
         )
@@ -136,7 +142,8 @@ class TestEditTimeline:
     def test_timeline_with_audio(self, sample_video, sample_audio, tmp_path):
         out = str(tmp_path / "timeline_audio.mp4")
         tl = Timeline(
-            width=640, height=480,
+            width=640,
+            height=480,
             tracks=[
                 TimelineTrack(
                     type="video",
@@ -275,7 +282,8 @@ class TestExtractAudioAdvanced:
 class TestAddAudioAdvanced:
     def test_with_start_time(self, sample_video, sample_audio):
         result = add_audio(
-            sample_video, sample_audio,
+            sample_video,
+            sample_audio,
             start_time=0.5,
         )
         assert os.path.isfile(result.output_path)
@@ -396,6 +404,7 @@ class TestMergePerTransition:
 # ---------------------------------------------------------------------------
 # v0.3.0 features: filters, compositing, audio normalization
 # ---------------------------------------------------------------------------
+
 
 class TestColorPresetFilter:
     def test_warm_preset(self):
@@ -581,9 +590,16 @@ class TestAudioEffects:
 
     @requires_filter("aecho", "Reverb filter")
     def test_reverb_with_params(self, sample_video):
-        result = apply_filter(sample_video, filter_type="reverb", params={
-            "in_gain": 0.6, "out_gain": 0.8, "delays": 80, "decay": 0.3,
-        })
+        result = apply_filter(
+            sample_video,
+            filter_type="reverb",
+            params={
+                "in_gain": 0.6,
+                "out_gain": 0.8,
+                "delays": 80,
+                "decay": 0.3,
+            },
+        )
         assert os.path.isfile(result.output_path)
 
     @requires_filter("acompressor", "Compressor filter")
@@ -594,9 +610,16 @@ class TestAudioEffects:
 
     @requires_filter("acompressor", "Compressor filter")
     def test_compressor_with_params(self, sample_video):
-        result = apply_filter(sample_video, filter_type="compressor", params={
-            "threshold_db": -15, "ratio": 6, "attack": 3, "release": 100,
-        })
+        result = apply_filter(
+            sample_video,
+            filter_type="compressor",
+            params={
+                "threshold_db": -15,
+                "ratio": 6,
+                "attack": 3,
+                "release": 100,
+            },
+        )
         assert os.path.isfile(result.output_path)
 
     @requires_filter("asetrate", "Pitch shift filter")
@@ -634,6 +657,7 @@ class TestLoudnormTruePeak:
     def test_broadcast_tp_is_fixed(self, sample_video, tmp_path):
         """TP should be -1.5 regardless of target_lufs, not target_lufs + 14.5."""
         from mcp_video.engine import normalize_audio
+
         out = str(tmp_path / "norm_broadcast.mp4")
         result = normalize_audio(sample_video, target_lufs=-23.0, output_path=out)
         assert os.path.isfile(result.output_path)
@@ -650,9 +674,14 @@ class TestKenBurns:
 
     @requires_filter("zoompan", "Zoom pan filter")
     def test_ken_burns_with_params(self, sample_video):
-        result = apply_filter(sample_video, filter_type="ken_burns", params={
-            "zoom_speed": 0.002, "duration": 100,
-        })
+        result = apply_filter(
+            sample_video,
+            filter_type="ken_burns",
+            params={
+                "zoom_speed": 0.002,
+                "duration": 100,
+            },
+        )
         assert os.path.isfile(result.output_path)
 
 
@@ -661,6 +690,7 @@ class TestGenerateSubtitles:
 
     def test_generate_srt_file(self, sample_video, tmp_path):
         from mcp_video.engine import generate_subtitles
+
         out = str(tmp_path / "subs")
         entries = [
             {"start": 0.0, "end": 1.5, "text": "Hello World"},
@@ -675,6 +705,7 @@ class TestGenerateSubtitles:
 
     def test_burn_subtitles_into_video(self, sample_video, tmp_path):
         from mcp_video.engine import generate_subtitles
+
         out = str(tmp_path / "burned")
         entries = [{"start": 0.0, "end": 2.0, "text": "Burned text"}]
         result = generate_subtitles(entries, sample_video, output_path=out, burn=True)
@@ -684,11 +715,13 @@ class TestGenerateSubtitles:
 
     def test_empty_entries_raises(self, sample_video):
         from mcp_video.engine import generate_subtitles
+
         with pytest.raises(MCPVideoError, match="entries"):
             generate_subtitles([], sample_video)
 
     def test_invalid_time_range_raises(self, sample_video):
         from mcp_video.engine import generate_subtitles
+
         entries = [{"start": 2.0, "end": 1.0, "text": "Bad range"}]
         with pytest.raises(MCPVideoError, match=r"start.*end"):
             generate_subtitles(entries, sample_video)
@@ -699,6 +732,7 @@ class TestAudioWaveform:
 
     def test_waveform_extraction(self, sample_video):
         from mcp_video.engine import audio_waveform
+
         result = audio_waveform(sample_video, bins=10)
         assert result.success is True
         assert result.duration > 0
@@ -710,16 +744,19 @@ class TestAudioWaveform:
 
     def test_waveform_no_audio_raises(self, sample_video_no_audio):
         from mcp_video.engine import audio_waveform
+
         with pytest.raises(MCPVideoError, match="audio"):
             audio_waveform(sample_video_no_audio)
 
     def test_waveform_custom_bins(self, sample_video):
         from mcp_video.engine import audio_waveform
+
         result = audio_waveform(sample_video, bins=20)
         assert len(result.peaks) == 20
 
     def test_waveform_rejects_excessive_bins(self, sample_video):
         from mcp_video.engine import audio_waveform
+
         with pytest.raises(MCPVideoError, match="bins"):
             audio_waveform(sample_video, bins=1001)
 
@@ -770,6 +807,7 @@ class TestTwoPassEncoding:
 
     def test_export_video_two_pass(self, sample_video, tmp_path):
         from mcp_video.engine import export_video
+
         out = str(tmp_path / "export_two_pass.mp4")
         result = export_video(sample_video, output_path=out, two_pass=True, target_bitrate=1500)
         assert os.path.isfile(result.output_path)
@@ -785,9 +823,11 @@ class TestTwoPassEncoding:
 # Wave 3: Scene Detection
 # ---------------------------------------------------------------------------
 
+
 class TestSceneDetection:
     def test_detect_scenes_returns_result(self, sample_video):
         from mcp_video.engine import detect_scenes
+
         result = detect_scenes(sample_video)
         assert result.success is True
         assert result.duration > 0
@@ -796,11 +836,13 @@ class TestSceneDetection:
 
     def test_detect_scenes_custom_threshold(self, sample_video):
         from mcp_video.engine import detect_scenes
+
         result = detect_scenes(sample_video, threshold=0.5)
         assert result.success is True
 
     def test_detect_scenes_min_duration(self, sample_video):
         from mcp_video.engine import detect_scenes
+
         result = detect_scenes(sample_video, min_scene_duration=0.5)
         assert result.success is True
         # Verify no scene is shorter than min_duration
@@ -809,6 +851,7 @@ class TestSceneDetection:
 
     def test_detect_scenes_nonexistent_file(self):
         from mcp_video.engine import detect_scenes
+
         with pytest.raises(InputFileError):
             detect_scenes("/nonexistent/video.mp4")
 
@@ -829,11 +872,14 @@ class TestSceneDetection:
 # Wave 3: Image Sequences
 # ---------------------------------------------------------------------------
 
+
 class TestImageSequences:
     def test_create_from_images(self, sample_video, tmp_path):
         from mcp_video.engine import create_from_images
+
         # First export frames, then create video from them
         from mcp_video.engine import export_frames
+
         frames_dir = str(tmp_path / "frames")
         frames_result = export_frames(sample_video, output_dir=frames_dir, fps=1.0)
         assert len(frames_result.frame_paths) > 0
@@ -845,16 +891,19 @@ class TestImageSequences:
 
     def test_create_from_images_empty_raises(self):
         from mcp_video.engine import create_from_images
+
         with pytest.raises(MCPVideoError, match="No images"):
             create_from_images([])
 
     def test_create_from_images_invalid_file_raises(self):
         from mcp_video.engine import create_from_images
+
         with pytest.raises(InputFileError):
             create_from_images(["/nonexistent/image.jpg"])
 
     def test_export_frames(self, sample_video, tmp_path):
         from mcp_video.engine import export_frames
+
         out_dir = str(tmp_path / "exported")
         result = export_frames(sample_video, output_dir=out_dir, fps=1.0)
         assert result.success is True
@@ -865,6 +914,7 @@ class TestImageSequences:
 
     def test_export_frames_png(self, sample_video, tmp_path):
         from mcp_video.engine import export_frames
+
         out_dir = str(tmp_path / "exported_png")
         result = export_frames(sample_video, output_dir=out_dir, fps=1.0, format="png")
         assert result.frame_count > 0
@@ -876,10 +926,12 @@ class TestImageSequences:
 # Wave 3: Quality Metrics
 # ---------------------------------------------------------------------------
 
+
 class TestQualityMetrics:
     def test_compare_quality_same_file(self, sample_video):
         """Comparing a file to itself should yield high quality."""
         from mcp_video.engine import compare_quality
+
         result = compare_quality(sample_video, sample_video)
         assert result.success is True
         assert isinstance(result.metrics, dict)
@@ -888,6 +940,7 @@ class TestQualityMetrics:
     def test_compare_quality_psnr_parsed(self, sample_video):
         """PSNR should be parsed from average: summary line."""
         from mcp_video.engine import compare_quality
+
         result = compare_quality(sample_video, sample_video, metrics=["psnr"])
         assert result.success is True
         if "psnr" in result.metrics:
@@ -896,6 +949,7 @@ class TestQualityMetrics:
     def test_compare_quality_ssim_parsed(self, sample_video):
         """SSIM should be parsed from All: summary line."""
         from mcp_video.engine import compare_quality
+
         result = compare_quality(sample_video, sample_video, metrics=["ssim"])
         assert result.success is True
         if "ssim" in result.metrics:
@@ -903,6 +957,7 @@ class TestQualityMetrics:
 
     def test_compare_quality_default_metrics(self, sample_video):
         from mcp_video.engine import compare_quality
+
         result = compare_quality(sample_video, sample_video, metrics=["psnr", "ssim"])
         assert "psnr" in result.metrics or "ssim" in result.metrics
 
@@ -921,6 +976,7 @@ class TestQualityMetrics:
 
     def test_compare_quality_nonexistent_original(self, sample_video):
         from mcp_video.engine import compare_quality
+
         with pytest.raises(InputFileError):
             compare_quality("/nonexistent/original.mp4", sample_video)
 
@@ -929,20 +985,24 @@ class TestQualityMetrics:
 # Wave 3: Metadata Editing
 # ---------------------------------------------------------------------------
 
+
 class TestMetadataEditing:
     def test_read_metadata(self, sample_video):
         from mcp_video.engine import read_metadata
+
         result = read_metadata(sample_video)
         assert result.success is True
         assert isinstance(result.tags, dict)
 
     def test_read_metadata_nonexistent(self):
         from mcp_video.engine import read_metadata
+
         with pytest.raises(InputFileError):
             read_metadata("/nonexistent/video.mp4")
 
     def test_write_and_read_metadata(self, sample_video, tmp_path):
         from mcp_video.engine import read_metadata, write_metadata
+
         out = str(tmp_path / "tagged.mp4")
         tags = {"title": "Test Video", "artist": "Test Artist"}
         result = write_metadata(sample_video, metadata=tags, output_path=out)
@@ -956,6 +1016,7 @@ class TestMetadataEditing:
 
     def test_write_metadata_empty_raises(self, sample_video):
         from mcp_video.engine import write_metadata
+
         with pytest.raises(MCPVideoError, match="No metadata"):
             write_metadata(sample_video, metadata={})
 
@@ -964,9 +1025,11 @@ class TestMetadataEditing:
 # Wave 4: Video Stabilization
 # ---------------------------------------------------------------------------
 
+
 class TestStabilize:
     def test_stabilize(self, sample_video, tmp_path):
         from mcp_video.engine import stabilize
+
         out = str(tmp_path / "stabilized.mp4")
         if _check_filter_available("vidstabdetect"):
             result = stabilize(sample_video, output_path=out)
@@ -979,6 +1042,7 @@ class TestStabilize:
 
     def test_stabilize_with_params(self, sample_video, tmp_path):
         from mcp_video.engine import stabilize
+
         out = str(tmp_path / "stabilized_zoom.mp4")
         if _check_filter_available("vidstabdetect"):
             result = stabilize(sample_video, smoothing=20, zooming=5, output_path=out)
@@ -990,6 +1054,7 @@ class TestStabilize:
 
     def test_stabilize_nonexistent_file(self):
         from mcp_video.engine import stabilize
+
         with pytest.raises(InputFileError):
             stabilize("/nonexistent/video.mp4")
 
@@ -998,9 +1063,11 @@ class TestStabilize:
 # Wave 4: Advanced Masking
 # ---------------------------------------------------------------------------
 
+
 class TestApplyMask:
     def test_apply_mask(self, sample_video, sample_watermark_png, tmp_path):
         from mcp_video.engine import apply_mask
+
         if not _check_filter_available("alphamerge"):
             pytest.skip("alphamerge filter not available")
         out = str(tmp_path / "masked.mp4")
@@ -1011,6 +1078,7 @@ class TestApplyMask:
     def test_apply_mask_preserves_audio(self, sample_video, sample_watermark_png, tmp_path):
         """Masked video should retain the original audio track."""
         from mcp_video.engine import apply_mask
+
         if not _check_filter_available("alphamerge"):
             pytest.skip("alphamerge filter not available")
         out = str(tmp_path / "masked_audio.mp4")
@@ -1020,6 +1088,7 @@ class TestApplyMask:
 
     def test_apply_mask_with_feather(self, sample_video, sample_watermark_png, tmp_path):
         from mcp_video.engine import apply_mask
+
         if not _check_filter_available("alphamerge"):
             pytest.skip("alphamerge filter not available")
         out = str(tmp_path / "masked_feather.mp4")
@@ -1028,5 +1097,6 @@ class TestApplyMask:
 
     def test_apply_mask_nonexistent_input(self, sample_watermark_png):
         from mcp_video.engine import apply_mask
+
         with pytest.raises(InputFileError):
             apply_mask("/nonexistent/video.mp4", mask_path=sample_watermark_png)

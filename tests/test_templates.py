@@ -1,6 +1,5 @@
 """Tests for editing templates — no FFmpeg needed (validate JSON output)."""
 
-
 from mcp_video.templates import (
     TEMPLATES,
     instagram_post_template,

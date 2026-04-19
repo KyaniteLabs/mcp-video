@@ -39,11 +39,20 @@ def create_test_video(output_path: str, color: str = "gray", duration: float = 2
     ffmpeg_color = color_map.get(color, "gray")
 
     cmd = [
-        "ffmpeg", "-y",
-        "-f", "lavfi", "-i", f"color=c={ffmpeg_color}:s=320x240:d={duration}",
-        "-f", "lavfi", "-i", f"sine=frequency=1000:duration={duration}",
-        "-pix_fmt", "yuv420p", "-shortest",
-        output_path
+        "ffmpeg",
+        "-y",
+        "-f",
+        "lavfi",
+        "-i",
+        f"color=c={ffmpeg_color}:s=320x240:d={duration}",
+        "-f",
+        "lavfi",
+        "-i",
+        f"sine=frequency=1000:duration={duration}",
+        "-pix_fmt",
+        "yuv420p",
+        "-shortest",
+        output_path,
     ]
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
@@ -55,11 +64,16 @@ def create_video_no_audio(output_path: str, color: str = "gray", duration: float
     """Create a test video without audio."""
     ffmpeg_color = color
     cmd = [
-        "ffmpeg", "-y",
-        "-f", "lavfi", "-i", f"color=c={ffmpeg_color}:s=320x240:d={duration}",
-        "-pix_fmt", "yuv420p",
+        "ffmpeg",
+        "-y",
+        "-f",
+        "lavfi",
+        "-i",
+        f"color=c={ffmpeg_color}:s=320x240:d={duration}",
+        "-pix_fmt",
+        "yuv420p",
         "-an",  # No audio
-        output_path
+        output_path,
     ]
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
@@ -73,11 +87,7 @@ class TestQualityReport:
     def test_quality_report_creation(self):
         """Test creating a QualityReport."""
         report = QualityReport(
-            check_name="brightness",
-            passed=True,
-            score=85.0,
-            message="Brightness is good",
-            details={"y_avg": 128.0}
+            check_name="brightness", passed=True, score=85.0, message="Brightness is good", details={"y_avg": 128.0}
         )
         assert report.check_name == "brightness"
         assert report.passed is True
@@ -201,27 +211,30 @@ class TestVisualQualityGuardrails:
 
     def test_run_ffprobe_logs_nonzero_exit(self, guardrails):
         fake = Mock(return_value=Mock(returncode=1, stdout="", stderr="ffprobe failed"))
-        with patch("mcp_video.quality_guardrails.subprocess.run", fake), patch(
-            "mcp_video.quality_guardrails.logger.warning"
-        ) as mock_warning:
+        with (
+            patch("mcp_video.quality_guardrails.subprocess.run", fake),
+            patch("mcp_video.quality_guardrails.logger.warning") as mock_warning,
+        ):
             result = guardrails._run_ffprobe("/tmp/test.mp4", "lavfi.signalstats.YAVG")
             assert result["_error"]["stage"] == "ffprobe_signalstats"
         mock_warning.assert_called()
 
     def test_get_rgb_means_logs_nonzero_exit(self, guardrails):
         fake = Mock(return_value=Mock(returncode=1, stdout="", stderr="ffprobe failed"))
-        with patch("mcp_video.quality_guardrails.subprocess.run", fake), patch(
-            "mcp_video.quality_guardrails.logger.warning"
-        ) as mock_warning:
+        with (
+            patch("mcp_video.quality_guardrails.subprocess.run", fake),
+            patch("mcp_video.quality_guardrails.logger.warning") as mock_warning,
+        ):
             result = guardrails._get_rgb_means("/tmp/test.mp4")
             assert result["_error"]["stage"] == "ffprobe_rgb_means"
         mock_warning.assert_called()
 
     def test_analyze_loudnorm_logs_missing_json(self, guardrails):
         fake = Mock(return_value=Mock(returncode=0, stdout="", stderr="no structured data"))
-        with patch("mcp_video.quality_guardrails.subprocess.run", fake), patch(
-            "mcp_video.quality_guardrails.logger.warning"
-        ) as mock_warning:
+        with (
+            patch("mcp_video.quality_guardrails.subprocess.run", fake),
+            patch("mcp_video.quality_guardrails.logger.warning") as mock_warning,
+        ):
             result = guardrails._analyze_loudnorm("/tmp/test.mp4")
             assert result["_error"]["stage"] == "ffmpeg_loudnorm"
         mock_warning.assert_called()
@@ -235,7 +248,9 @@ class TestVisualQualityGuardrails:
     def test_check_brightness_exposes_fallback_diagnostic_details(self, guardrails):
         with (
             patch.object(guardrails, "_run_ffprobe", return_value={"_error": {"stage": "ffprobe_signalstats"}}),
-            patch.object(guardrails, "_run_ffmpeg_signalstats", return_value={"_error": {"stage": "ffmpeg_signalstats"}}),
+            patch.object(
+                guardrails, "_run_ffmpeg_signalstats", return_value={"_error": {"stage": "ffmpeg_signalstats"}}
+            ),
         ):
             report = guardrails.check_brightness("/tmp/test.mp4")
         assert report.passed is False

@@ -1,16 +1,40 @@
 """Red team: adversarial edge-case tests for mcp-video."""
+
 import os
 import subprocess
 
 import pytest
 
 from mcp_video.engine import (
-    add_text, apply_filter, audio_waveform, chroma_key, compare_quality,
-    convert, crop, create_from_images, detect_scenes, edit_timeline,
-    export_frames, extract_audio, fade, generate_subtitles, merge,
-    normalize_audio, overlay_video, probe, reverse,
-    rotate, speed, split_screen, stabilize, storyboard, thumbnail,
-    trim, watermark, write_metadata, apply_mask
+    add_text,
+    apply_filter,
+    audio_waveform,
+    chroma_key,
+    compare_quality,
+    convert,
+    crop,
+    create_from_images,
+    detect_scenes,
+    edit_timeline,
+    export_frames,
+    extract_audio,
+    fade,
+    generate_subtitles,
+    merge,
+    normalize_audio,
+    overlay_video,
+    probe,
+    reverse,
+    rotate,
+    speed,
+    split_screen,
+    stabilize,
+    storyboard,
+    thumbnail,
+    trim,
+    watermark,
+    write_metadata,
+    apply_mask,
 )
 from mcp_video.errors import InputFileError, ProcessingError, MCPVideoError
 
@@ -26,15 +50,21 @@ def unicode_video(tmp_path):
     video_path = tmp_path / "测试视频🎬.mp4"
     subprocess.run(
         [
-            "ffmpeg", "-y",
-            "-f", "lavfi",
-            "-i", "smptehdbars=size=320x240:duration=1:rate=30",
-            "-c:v", "libx264", "-preset", "ultrafast",
+            "ffmpeg",
+            "-y",
+            "-f",
+            "lavfi",
+            "-i",
+            "smptehdbars=size=320x240:duration=1:rate=30",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "ultrafast",
             "-an",
-            str(video_path)
+            str(video_path),
         ],
         capture_output=True,
-        timeout=15
+        timeout=15,
     )
     if not video_path.exists():
         pytest.skip("Could not create unicode video")
@@ -47,15 +77,21 @@ def tiny_video(tmp_path):
     video_path = tmp_path / "tiny.mp4"
     subprocess.run(
         [
-            "ffmpeg", "-y",
-            "-f", "lavfi",
-            "-i", "color=c=black:size=1x1:duration=1:rate=30",
-            "-c:v", "libx264", "-preset", "ultrafast",
+            "ffmpeg",
+            "-y",
+            "-f",
+            "lavfi",
+            "-i",
+            "color=c=black:size=1x1:duration=1:rate=30",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "ultrafast",
             "-an",
-            str(video_path)
+            str(video_path),
         ],
         capture_output=True,
-        timeout=15
+        timeout=15,
     )
     if not video_path.exists():
         pytest.skip("Could not create tiny video")
@@ -192,7 +228,9 @@ class TestMissingDependencies:
             # If it fails due to missing filter, that's acceptable
             # Just verify it's a dependency error, not a crash
             error_str = str(e).lower()
-            assert "vidstab" in error_str or "filter" in error_str or "not found" in error_str or "available" in error_str
+            assert (
+                "vidstab" in error_str or "filter" in error_str or "not found" in error_str or "available" in error_str
+            )
 
     def test_apply_filter_unsupported(self, sample_video):
         """Applying an unsupported filter should fail gracefully."""
@@ -210,7 +248,7 @@ class TestLargeBatch:
         result = video_batch(
             ["/nonexistent1.mp4", sample_video, "/nonexistent2.mp4"],
             operation="trim",
-            params={"start": "0", "duration": "1"}
+            params={"start": "0", "duration": "1"},
         )
 
         # Should have partial success

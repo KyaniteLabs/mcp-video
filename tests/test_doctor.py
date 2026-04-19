@@ -89,10 +89,10 @@ def test_run_diagnostics_checks_optional_packages_without_importing_them():
     assert checks["scikit-learn"]["ok"] is True
     assert checks["openai-whisper"]["ok"] is False
     assert checks["openai-whisper"]["required"] is False
-    assert 'mcp-video[transcribe]' in checks["openai-whisper"]["install_hint"]
-    assert 'mcp-video[stems]' in checks["demucs"]["install_hint"]
-    assert 'mcp-video[upscale]' in checks["opencv-contrib-python"]["install_hint"]
-    assert 'mcp-video[ai-scene]' in checks["imagehash"]["install_hint"]
+    assert "mcp-video[transcribe]" in checks["openai-whisper"]["install_hint"]
+    assert "mcp-video[stems]" in checks["demucs"]["install_hint"]
+    assert "mcp-video[upscale]" in checks["opencv-contrib-python"]["install_hint"]
+    assert "mcp-video[ai-scene]" in checks["imagehash"]["install_hint"]
 
 
 def test_run_diagnostics_requires_matching_distribution_for_package_checks():
