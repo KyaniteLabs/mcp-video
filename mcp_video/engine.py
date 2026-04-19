@@ -5,16 +5,13 @@ from __future__ import annotations
 import os
 import shutil
 import tempfile
-from typing import Any
 from collections.abc import Callable
 
 from .errors import MCPVideoError
 from .models import (
     QUALITY_PRESETS,
-    ColorPreset,
     EditResult,
     ExportFormat,
-    FilterType,
     NamedPosition,
     QualityLevel,
     Timeline,
@@ -33,6 +30,9 @@ from .engine_edit import trim as trim
 from .engine_export import export_video as export_video
 from .engine_extract_audio import extract_audio as extract_audio
 from .engine_frames import export_frames as export_frames
+from .engine_filters import _build_pitch_shift_filter as _build_pitch_shift_filter
+from .engine_filters import _get_color_preset_filter as _get_color_preset_filter
+from .engine_filters import apply_filter as _apply_filter
 from .engine_images import create_from_images as create_from_images
 from .engine_mask import apply_mask as _apply_mask
 from .engine_merge import merge as merge
@@ -85,6 +85,7 @@ from .engine_transcode import normalize as normalize
 from .engine_watermark import watermark as watermark
 
 apply_mask = _apply_mask
+apply_filter = _apply_filter
 overlay_video = _overlay_video
 split_screen = _split_screen
 video_batch = _video_batch
@@ -604,192 +605,6 @@ def _apply_composite_overlays(
                 output_path,
             ]
         )
-
-
-# ---------------------------------------------------------------------------
-# Video filters & effects
-# ---------------------------------------------------------------------------
-
-
-def _get_color_preset_filter(preset: ColorPreset) -> str:
-    """Return FFmpeg eq filter string for a named color preset."""
-    preset_filters: dict[ColorPreset, str] = {
-        "warm": "eq=brightness=0.05:saturation=1.3:contrast=1.05",
-        "cool": "eq=brightness=0.02:saturation=0.9:contrast=1.05",
-        "vintage": "eq=contrast=1.1:brightness=-0.02:saturation=0.7",
-        "cinematic": "eq=contrast=1.15:brightness=-0.03:saturation=0.85",
-        "noir": "eq=contrast=1.3:brightness=-0.05:saturation=0.0",
-    }
-    if preset not in preset_filters:
-        valid = ", ".join(sorted(preset_filters))
-        raise MCPVideoError(
-            f"Unknown color preset '{preset}'. Valid presets: {valid}",
-            error_type="validation_error",
-            code="invalid_color_preset",
-        )
-    return preset_filters[preset]
-
-
-def _build_pitch_shift_filter(semitones: float = 0) -> str:
-    """Build FFmpeg audio filter string for pitch shifting.
-
-    Args:
-        semitones: Number of semitones to shift. Positive = higher, negative = lower.
-            Each semitone is a 2^(1/12) ~ 1.0595x multiplier on sample rate.
-    """
-    rate_mult = 2 ** (semitones / 12)
-    new_rate = 44100 * rate_mult
-    # atempo compensates for the tempo change caused by sample rate shift,
-    # restoring original playback speed (avoids A/V desync)
-    tempo = 1.0 / rate_mult
-    # atempo supports 0.5-100.0; chain if needed
-    if tempo < 0.5:
-        chain_count = 2
-        while tempo ** (1 / chain_count) < 0.5:
-            chain_count += 1
-        tempo_val = tempo ** (1 / chain_count)
-        atempo_str = ",".join([f"atempo={tempo_val}"] * chain_count)
-    elif tempo > 100:
-        chain_count = 2
-        while tempo ** (1 / chain_count) > 100:
-            chain_count += 1
-        tempo_val = tempo ** (1 / chain_count)
-        atempo_str = ",".join([f"atempo={tempo_val}"] * chain_count)
-    else:
-        atempo_str = f"atempo={tempo}"
-    return f"asetrate={new_rate},aresample=44100,{atempo_str}"
-
-
-def apply_filter(
-    input_path: str,
-    filter_type: FilterType,
-    params: dict[str, Any] | None = None,
-    output_path: str | None = None,
-    crf: int | None = None,
-    preset: str | None = None,
-) -> EditResult:
-    """Apply a visual filter to a video.
-
-    Args:
-        input_path: Path to the input video.
-        filter_type: One of the supported filter types.
-        params: Optional parameters for the filter.
-        output_path: Where to save the output.
-    """
-    _validate_input(input_path)
-    params = params or {}
-    output = output_path or _auto_output(input_path, f"filter_{filter_type}")
-
-    # Sanitize numeric params to prevent injection via non-numeric input.
-    # Skip known string params (e.g. "preset" for color_preset filter).
-    _STRING_PARAMS = {"preset"}
-    for key in params:
-        if key not in _STRING_PARAMS:
-            params[key] = _sanitize_ffmpeg_number(params[key], key)
-
-    # Probe video dimensions for ken_burns filter
-    info = probe(input_path)
-
-    # Build the -vf filter string
-    # Audio filters use -af; video filters use -vf.
-    # filter_map entries: (filter_name, filter_string, is_audio)
-    filter_map: dict[FilterType, tuple[str, str, bool]] = {
-        "blur": ("boxblur", f"boxblur={params.get('radius', 5)}:{params.get('strength', 1)}", False),
-        "sharpen": ("unsharp", f"unsharp=5:5:{params.get('amount', 1.0)}:5:5:0.0", False),
-        "brightness": ("eq", f"eq=brightness={params.get('level', 0.1)}", False),
-        "contrast": ("eq", f"eq=contrast={params.get('level', 1.5)}", False),
-        "saturation": ("eq", f"eq=saturation={params.get('level', 1.5)}", False),
-        "grayscale": ("hue", "hue=s=0", False),
-        "sepia": ("colorchannelmixer", "colorchannelmixer=.393:.769:.189:0:.349:.686:.168:0:.272:.534:.131", False),
-        "invert": ("negate", "negate", False),
-        "vignette": ("vignette", f"vignette=angle={params.get('angle', 'PI/4')}", False),
-        "color_preset": ("eq", _get_color_preset_filter(params.get("preset", "warm")), False),
-        "denoise": (
-            "hqdn3d",
-            f"hqdn3d={params.get('luma_spatial', 4)}:{params.get('chroma_spatial', 3)}:{params.get('luma_tmp', 6)}:{params.get('chroma_tmp', 4.5)}",
-            False,
-        ),
-        "deinterlace": ("yadif", "yadif=0:-1:0", False),
-        "ken_burns": (
-            "zoompan",
-            f"zoompan=z='min(zoom+{params.get('zoom_speed', 0.0015)},1.5)':d={params.get('duration', 150)}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s={info.width}x{info.height}",
-            False,
-        ),
-        "reverb": (
-            "aecho",
-            f"aecho={params.get('in_gain', 0.8)}:{params.get('out_gain', 0.9)}:{params.get('delays', 60)}:{params.get('decay', 0.2)}",
-            True,
-        ),
-        "compressor": (
-            "acompressor",
-            f"acompressor=threshold={params.get('threshold_db', -20)}dB:ratio={params.get('ratio', 4)}:attack={params.get('attack', 5)}:release={params.get('release', 50)}",
-            True,
-        ),
-        "pitch_shift": ("asetrate", _build_pitch_shift_filter(params.get("semitones", 0)), True),
-        "noise_reduction": ("afftdn", f"afftdn=nf={params.get('noise_level', -25)}", True),
-    }
-
-    if filter_type not in filter_map:
-        valid = ", ".join(sorted(filter_map))
-        raise MCPVideoError(
-            f"Unknown filter type '{filter_type}'. Valid types: {valid}",
-            error_type="validation_error",
-            code="invalid_filter_type",
-        )
-    filter_name, filter_string, is_audio = filter_map[filter_type]
-    _require_filter(filter_name, f"Filter '{filter_type}'")
-
-    # Audio filters require an audio stream and use -af instead of -vf
-    if is_audio:
-        input_info = probe(input_path)
-        if input_info.audio_codec is None:
-            raise MCPVideoError(
-                f"Audio filter '{filter_type}' requires an audio stream, but this video has none",
-                error_type="validation_error",
-                code="audio_filter_no_audio",
-            )
-        _run_ffmpeg(
-            [
-                "-i",
-                input_path,
-                "-af",
-                filter_string,
-                "-c:v",
-                "copy",
-                "-c:a",
-                "aac",
-                "-b:a",
-                "128k",
-                *_movflags_args(output),
-                output,
-            ]
-        )
-    else:
-        _run_ffmpeg(
-            [
-                "-i",
-                input_path,
-                "-vf",
-                filter_string,
-                "-c:v",
-                "libx264",
-                *_quality_args(crf=crf, preset=preset),
-                "-c:a",
-                "copy",
-                *_movflags_args(output),
-                output,
-            ]
-        )
-
-    info = probe(output)
-    return EditResult(
-        output_path=output,
-        duration=info.duration,
-        resolution=info.resolution,
-        size_mb=info.size_mb,
-        format="mp4",
-        operation=f"filter_{filter_type}",
-    )
 
 
 # ---------------------------------------------------------------------------

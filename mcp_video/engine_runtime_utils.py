@@ -18,6 +18,7 @@ from .errors import (
     MCPVideoError,
     parse_ffmpeg_error,
 )
+from .limits import DEFAULT_CRF, DEFAULT_FFMPEG_TIMEOUT, DEFAULT_PRESET
 from .models import NamedPosition, Position
 
 # ---------------------------------------------------------------------------
@@ -306,7 +307,7 @@ def _run_ffmpeg(args: list[str]) -> subprocess.CompletedProcess[str]:
         cmd,
         capture_output=True,
         text=True,
-        timeout=600,  # 10-minute max
+        timeout=DEFAULT_FFMPEG_TIMEOUT,
     )
     if proc.returncode != 0:
         raise parse_ffmpeg_error(proc.stderr)
@@ -427,8 +428,8 @@ def _movflags_args(output_path: str) -> list[str]:
 def _quality_args(
     crf: int | None = None,
     preset: str | None = None,
-    default_crf: int = 23,
-    default_preset: str = "fast",
+    default_crf: int = DEFAULT_CRF,
+    default_preset: str = DEFAULT_PRESET,
 ) -> list[str]:
     """Build FFmpeg quality args [-preset, X, -crf, Y].
 

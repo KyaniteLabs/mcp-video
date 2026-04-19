@@ -27,6 +27,8 @@ MAX_SPEED_FACTOR = 100.0
 # Encoding parameter bounds
 MAX_CRF = 51
 MIN_CRF = 0
+DEFAULT_CRF = 23
+DEFAULT_PRESET = "fast"
 
 # Network / concurrency bounds
 MAX_PORT = 65535
