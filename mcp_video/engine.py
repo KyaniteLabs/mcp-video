@@ -5,15 +5,11 @@ from __future__ import annotations
 import os
 import shutil
 import tempfile
-from collections.abc import Callable
 
 from .errors import MCPVideoError
 from .models import (
-    QUALITY_PRESETS,
     EditResult,
-    ExportFormat,
     NamedPosition,
-    QualityLevel,
     Timeline,
     TimelineImageOverlay,
 )
@@ -24,6 +20,7 @@ from .engine_audio_normalize import normalize_audio as normalize_audio
 from .engine_batch import video_batch as _video_batch
 from .engine_chroma_key import chroma_key as chroma_key
 from .engine_compare_quality import compare_quality as compare_quality
+from .engine_convert import convert as convert
 from .engine_crop import crop as crop
 from .engine_detect_scenes import detect_scenes as detect_scenes
 from .engine_edit import trim as trim
@@ -94,209 +91,6 @@ video_batch = _video_batch
 # ---------------------------------------------------------------------------
 # Core operations
 # ---------------------------------------------------------------------------
-
-
-def convert(
-    input_path: str,
-    format: ExportFormat = "mp4",
-    quality: QualityLevel = "high",
-    output_path: str | None = None,
-    on_progress: Callable[[float], None] | None = None,
-    two_pass: bool = False,
-    target_bitrate: int | None = None,
-) -> EditResult:
-    """Convert video to a different format."""
-    _validate_input(input_path)
-
-    if two_pass and format not in ("mp4", "mov"):
-        raise MCPVideoError(
-            f"Two-pass encoding is only supported for mp4 and mov formats, got '{format}'",
-            error_type="validation_error",
-            code="two_pass_unsupported_format",
-        )
-    if two_pass and target_bitrate is None:
-        raise MCPVideoError(
-            "Two-pass encoding requires target_bitrate to be set",
-            error_type="validation_error",
-            code="two_pass_needs_bitrate",
-        )
-
-    preset = QUALITY_PRESETS[quality]
-    ext = f".{format}" if not format.startswith(".") else format
-    output = output_path or _auto_output(input_path, format, ext=ext)
-
-    # Get input duration for progress estimation
-    input_info = probe(input_path)
-
-    if two_pass and target_bitrate:
-        # Two-pass encoding for better quality at target bitrate
-        passlogdir = tempfile.mkdtemp(prefix="mcp_video_2pass_")
-        try:
-            passlogfile = os.path.join(passlogdir, "pass")
-            _run_ffmpeg(
-                [
-                    "-i",
-                    input_path,
-                    "-c:v",
-                    "libx264",
-                    "-b:v",
-                    f"{target_bitrate}k",
-                    "-pass",
-                    "1",
-                    "-passlogfile",
-                    passlogfile,
-                    "-an",
-                    "-f",
-                    "null",
-                    os.devnull,
-                ]
-            )
-            _run_ffmpeg(
-                [
-                    "-i",
-                    input_path,
-                    "-c:v",
-                    "libx264",
-                    "-b:v",
-                    f"{target_bitrate}k",
-                    "-pass",
-                    "2",
-                    "-passlogfile",
-                    passlogfile,
-                    "-preset",
-                    preset["preset"],
-                    "-c:a",
-                    "aac",
-                    "-b:a",
-                    "128k",
-                    *_movflags_args(output),
-                    output,
-                ]
-            )
-        finally:
-            shutil.rmtree(passlogdir, ignore_errors=True)
-    elif format == "mp4":
-        _run_ffmpeg_with_progress(
-            [
-                "-i",
-                input_path,
-                "-c:v",
-                "libx264",
-                "-crf",
-                str(preset["crf"]),
-                "-preset",
-                preset["preset"],
-                "-c:a",
-                "aac",
-                "-b:a",
-                "128k",
-                "-movflags",
-                "+faststart",
-                output,
-            ],
-            estimated_duration=input_info.duration,
-            on_progress=on_progress,
-        )
-    elif format == "webm":
-        _run_ffmpeg_with_progress(
-            [
-                "-i",
-                input_path,
-                "-c:v",
-                "libvpx-vp9",
-                "-crf",
-                str(preset["crf"]),
-                "-b:v",
-                "0",
-                "-c:a",
-                "libopus",
-                output,
-            ],
-            estimated_duration=input_info.duration,
-            on_progress=on_progress,
-        )
-    elif format == "mov":
-        _run_ffmpeg_with_progress(
-            [
-                "-i",
-                input_path,
-                "-c:v",
-                "libx264",
-                "-crf",
-                str(preset["crf"]),
-                "-preset",
-                preset["preset"],
-                "-c:a",
-                "pcm_s16le",
-                output,
-            ],
-            estimated_duration=input_info.duration,
-            on_progress=on_progress,
-        )
-    elif format == "gif":
-        # Two-pass palette-based GIF generation for quality
-        # Scale by quality level: low=320, medium=480, high=640, ultra=800
-        gif_scale = {"low": 320, "medium": 480, "high": 640, "ultra": 800}
-        width = gif_scale.get(quality, 480)
-        tmpdir = tempfile.mkdtemp(prefix="mcp_video_gif_")
-        try:
-            palette = os.path.join(tmpdir, "palette.png")
-            _run_ffmpeg(
-                [
-                    "-i",
-                    input_path,
-                    "-vf",
-                    f"fps=15,scale={width}:-1:flags=lanczos,palettegen",
-                    "-y",
-                    palette,
-                ]
-            )
-            _run_ffmpeg_with_progress(
-                [
-                    "-i",
-                    input_path,
-                    "-i",
-                    palette,
-                    "-lavfi",
-                    f"fps=15,scale={width}:-1:flags=lanczos [x]; [x][1:v] paletteuse",
-                    "-y",
-                    output,
-                ],
-                estimated_duration=input_info.duration,
-                on_progress=on_progress,
-            )
-        finally:
-            shutil.rmtree(tmpdir, ignore_errors=True)
-    else:
-        raise MCPVideoError(f"Unsupported format: {format}", code="unsupported_format")
-
-    thumb_b64 = _generate_thumbnail_base64(output) if format != "gif" else None
-
-    if os.path.isfile(output):
-        size_mb = os.path.getsize(output) / (1024 * 1024)
-        if format != "gif":
-            info = probe(output)
-            return EditResult(
-                output_path=output,
-                duration=info.duration,
-                resolution=info.resolution,
-                size_mb=round(size_mb, 2),
-                format=format,
-                operation="convert",
-                progress=100.0,
-                thumbnail_base64=thumb_b64,
-            )
-    else:
-        size_mb = None
-
-    return EditResult(
-        output_path=output,
-        size_mb=round(size_mb, 2) if size_mb else None,
-        format=format,
-        operation="convert",
-        progress=100.0,
-        thumbnail_base64=thumb_b64,
-    )
 
 
 # ---------------------------------------------------------------------------
