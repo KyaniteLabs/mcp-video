@@ -22,9 +22,9 @@ def audio_waveform(
         bins: Number of time segments to analyze (default 50).
     """
     _validate_input(input_path)
-    if not isinstance(bins, int) or bins < 1:
+    if not isinstance(bins, int) or bins < 1 or bins > 1000:
         raise MCPVideoError(
-            f"bins must be a positive integer, got {bins}",
+            f"bins must be between 1 and 1000, got {bins}",
             error_type="validation_error",
             code="invalid_parameter",
         )
@@ -53,6 +53,10 @@ def audio_waveform(
             -1,
             f"Audio waveform extraction timed out after {DEFAULT_FFMPEG_TIMEOUT} seconds",
         ) from exc
+    if proc.returncode != 0:
+        if _is_known_ametadata_failure(proc.stderr):
+            return _synthetic_waveform(duration, segment_duration, bins)
+        raise ProcessingError(" ".join(cmd), proc.returncode, proc.stderr)
     levels = _parse_rms_levels(proc.stderr)
     if not levels:
         return _synthetic_waveform(duration, segment_duration, bins)
@@ -90,6 +94,10 @@ def _parse_rms_levels(stderr: str) -> list[float]:
         except (ValueError, IndexError):
             continue
     return levels
+
+
+def _is_known_ametadata_failure(stderr: str) -> bool:
+    return "Metadata key must be set" in stderr and "Error initializing filters" in stderr
 
 
 def _synthetic_waveform(duration: float, segment_duration: float, bins: int) -> WaveformResult:
