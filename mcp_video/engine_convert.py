@@ -1,0 +1,240 @@
+"""Format conversion operation for the FFmpeg engine."""
+
+from __future__ import annotations
+
+import os
+import shutil
+import tempfile
+from collections.abc import Callable
+
+from .engine_probe import probe
+from .engine_runtime_utils import (
+    _auto_output,
+    _generate_thumbnail_base64,
+    _movflags_args,
+    _run_ffmpeg,
+    _run_ffmpeg_with_progress,
+    _validate_input,
+)
+from .errors import MCPVideoError
+from .models import QUALITY_PRESETS, EditResult, ExportFormat, QualityLevel
+
+
+def convert(
+    input_path: str,
+    format: ExportFormat = "mp4",
+    quality: QualityLevel = "high",
+    output_path: str | None = None,
+    on_progress: Callable[[float], None] | None = None,
+    two_pass: bool = False,
+    target_bitrate: int | None = None,
+) -> EditResult:
+    """Convert video to a different format."""
+    _validate_input(input_path)
+
+    if two_pass and format not in ("mp4", "mov"):
+        raise MCPVideoError(
+            f"Two-pass encoding is only supported for mp4 and mov formats, got '{format}'",
+            error_type="validation_error",
+            code="two_pass_unsupported_format",
+        )
+    if two_pass and target_bitrate is None:
+        raise MCPVideoError(
+            "Two-pass encoding requires target_bitrate to be set",
+            error_type="validation_error",
+            code="two_pass_needs_bitrate",
+        )
+
+    preset = QUALITY_PRESETS[quality]
+    ext = f".{format}" if not format.startswith(".") else format
+    output = output_path or _auto_output(input_path, format, ext=ext)
+    input_info = probe(input_path)
+
+    if two_pass and target_bitrate:
+        _convert_two_pass(input_path, output, target_bitrate, preset["preset"])
+    elif format == "mp4":
+        _convert_mp4(input_path, output, preset, input_info.duration, on_progress)
+    elif format == "webm":
+        _convert_webm(input_path, output, preset, input_info.duration, on_progress)
+    elif format == "mov":
+        _convert_mov(input_path, output, preset, input_info.duration, on_progress)
+    elif format == "gif":
+        _convert_gif(input_path, output, quality, input_info.duration, on_progress)
+    else:
+        raise MCPVideoError(f"Unsupported format: {format}", code="unsupported_format")
+
+    return _convert_result(output, format)
+
+
+def _convert_two_pass(input_path: str, output: str, target_bitrate: int, preset: str) -> None:
+    passlogdir = tempfile.mkdtemp(prefix="mcp_video_2pass_")
+    try:
+        passlogfile = os.path.join(passlogdir, "pass")
+        _run_ffmpeg(
+            [
+                "-i",
+                input_path,
+                "-c:v",
+                "libx264",
+                "-b:v",
+                f"{target_bitrate}k",
+                "-pass",
+                "1",
+                "-passlogfile",
+                passlogfile,
+                "-an",
+                "-f",
+                "null",
+                os.devnull,
+            ]
+        )
+        _run_ffmpeg(
+            [
+                "-i",
+                input_path,
+                "-c:v",
+                "libx264",
+                "-b:v",
+                f"{target_bitrate}k",
+                "-pass",
+                "2",
+                "-passlogfile",
+                passlogfile,
+                "-preset",
+                preset,
+                "-c:a",
+                "aac",
+                "-b:a",
+                "128k",
+                *_movflags_args(output),
+                output,
+            ]
+        )
+    finally:
+        shutil.rmtree(passlogdir, ignore_errors=True)
+
+
+def _convert_mp4(
+    input_path: str, output: str, preset: dict, duration: float, on_progress: Callable[[float], None] | None
+) -> None:
+    _run_ffmpeg_with_progress(
+        [
+            "-i",
+            input_path,
+            "-c:v",
+            "libx264",
+            "-crf",
+            str(preset["crf"]),
+            "-preset",
+            preset["preset"],
+            "-c:a",
+            "aac",
+            "-b:a",
+            "128k",
+            "-movflags",
+            "+faststart",
+            output,
+        ],
+        estimated_duration=duration,
+        on_progress=on_progress,
+    )
+
+
+def _convert_webm(
+    input_path: str, output: str, preset: dict, duration: float, on_progress: Callable[[float], None] | None
+) -> None:
+    _run_ffmpeg_with_progress(
+        [
+            "-i",
+            input_path,
+            "-c:v",
+            "libvpx-vp9",
+            "-crf",
+            str(preset["crf"]),
+            "-b:v",
+            "0",
+            "-c:a",
+            "libopus",
+            output,
+        ],
+        estimated_duration=duration,
+        on_progress=on_progress,
+    )
+
+
+def _convert_mov(
+    input_path: str, output: str, preset: dict, duration: float, on_progress: Callable[[float], None] | None
+) -> None:
+    _run_ffmpeg_with_progress(
+        [
+            "-i",
+            input_path,
+            "-c:v",
+            "libx264",
+            "-crf",
+            str(preset["crf"]),
+            "-preset",
+            preset["preset"],
+            "-c:a",
+            "pcm_s16le",
+            output,
+        ],
+        estimated_duration=duration,
+        on_progress=on_progress,
+    )
+
+
+def _convert_gif(
+    input_path: str, output: str, quality: QualityLevel, duration: float, on_progress: Callable[[float], None] | None
+) -> None:
+    gif_scale = {"low": 320, "medium": 480, "high": 640, "ultra": 800}
+    width = gif_scale.get(quality, 480)
+    tmpdir = tempfile.mkdtemp(prefix="mcp_video_gif_")
+    try:
+        palette = os.path.join(tmpdir, "palette.png")
+        _run_ffmpeg(["-i", input_path, "-vf", f"fps=15,scale={width}:-1:flags=lanczos,palettegen", "-y", palette])
+        _run_ffmpeg_with_progress(
+            [
+                "-i",
+                input_path,
+                "-i",
+                palette,
+                "-lavfi",
+                f"fps=15,scale={width}:-1:flags=lanczos [x]; [x][1:v] paletteuse",
+                "-y",
+                output,
+            ],
+            estimated_duration=duration,
+            on_progress=on_progress,
+        )
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+def _convert_result(output: str, format: ExportFormat) -> EditResult:
+    thumb_b64 = _generate_thumbnail_base64(output) if format != "gif" else None
+    if os.path.isfile(output):
+        size_mb = os.path.getsize(output) / (1024 * 1024)
+        if format != "gif":
+            info = probe(output)
+            return EditResult(
+                output_path=output,
+                duration=info.duration,
+                resolution=info.resolution,
+                size_mb=round(size_mb, 2),
+                format=format,
+                operation="convert",
+                progress=100.0,
+                thumbnail_base64=thumb_b64,
+            )
+    else:
+        size_mb = None
+
+    return EditResult(
+        output_path=output,
+        size_mb=round(size_mb, 2) if size_mb else None,
+        format=format,
+        operation="convert",
+        progress=100.0,
+        thumbnail_base64=thumb_b64,
+    )
