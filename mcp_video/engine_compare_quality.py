@@ -27,17 +27,20 @@ def compare_quality(
     _validate_input(original_path)
     _validate_input(distorted_path)
     requested_metrics = metrics or ["psnr", "ssim"]
+    supported_metrics = [metric.lower() for metric in requested_metrics if metric.lower() in ("psnr", "ssim")]
 
     computed: dict[str, float] = {}
+    if not supported_metrics:
+        return QualityMetricsResult(
+            metrics=computed,
+            overall_quality="unknown",
+        )
+
     orig_info = probe(original_path)
     target_w = orig_info.width
     target_h = orig_info.height
 
-    for metric in requested_metrics:
-        metric_lower = metric.lower()
-        if metric_lower not in ("psnr", "ssim"):
-            continue
-
+    for metric_lower in supported_metrics:
         try:
             stderr = _run_metric(original_path, distorted_path, metric_lower, target_w, target_h)
             _parse_metric(stderr, metric_lower, computed)
