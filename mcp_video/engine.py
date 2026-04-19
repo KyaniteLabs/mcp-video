@@ -23,11 +23,10 @@ from .models import (
     Position,
     QualityLevel,
     SplitLayout,
-    SubtitleResult,
     Timeline,
     TimelineImageOverlay,
 )
-from .ffmpeg_helpers import _escape_ffmpeg_filter_value, _seconds_to_srt_time
+from .ffmpeg_helpers import _escape_ffmpeg_filter_value
 from .engine_audio_waveform import audio_waveform as audio_waveform
 from .engine_audio_ops import add_audio as add_audio
 from .engine_audio_normalize import normalize_audio as normalize_audio
@@ -79,6 +78,7 @@ from .engine_runtime_utils import (
 )
 from .engine_speed import speed as speed
 from .engine_storyboard import storyboard as storyboard
+from .engine_subtitle_generate import generate_subtitles as generate_subtitles
 from .engine_subtitles import subtitles as subtitles
 from .engine_text import add_text as add_text
 from .engine_thumbnail import thumbnail as thumbnail
@@ -981,103 +981,6 @@ def split_screen(
         size_mb=info.size_mb,
         format="mp4",
         operation=f"split_screen_{layout}",
-    )
-
-
-def generate_subtitles(
-    entries: list[dict],
-    input_path: str,
-    output_path: str | None = None,
-    burn: bool = False,
-) -> SubtitleResult:
-    """Generate SRT subtitles from text entries and optionally burn into video.
-
-    Args:
-        entries: List of dicts with keys: start (float), end (float), text (str).
-        input_path: Path to the input video.
-        output_path: Base path for output files.
-        burn: If True, burn subtitles into the video.
-    """
-    _validate_input(input_path)
-    if not entries:
-        raise MCPVideoError(
-            "entries cannot be empty",
-            error_type="validation_error",
-            code="empty_entries",
-        )
-    for i, entry in enumerate(entries):
-        if not isinstance(entry, dict) or "text" not in entry or "start" not in entry or "end" not in entry:
-            raise MCPVideoError(
-                f"Invalid subtitle entry {i}: must have 'start', 'end', 'text' keys",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        start = entry.get("start", 0)
-        end = entry.get("end", 0)
-        if start >= end:
-            raise MCPVideoError(
-                f"Entry {i}: start ({start}) must be less than end ({end})",
-                error_type="validation_error",
-                code="invalid_entry_range",
-            )
-
-    # Build SRT content
-    srt_lines: list[str] = []
-    for i, entry in enumerate(entries, 1):
-        start = entry["start"]
-        end = entry["end"]
-        text = entry["text"]
-        srt_lines.append(str(i))
-        srt_lines.append(_seconds_to_srt_time(start) + " --> " + _seconds_to_srt_time(end))
-        srt_lines.append(text)
-        srt_lines.append("")
-
-    srt_content = "\n".join(srt_lines)
-
-    # Write SRT file
-    if output_path:
-        srt_dir = output_path if os.path.isdir(output_path) else os.path.dirname(output_path) or "."
-        os.makedirs(srt_dir, exist_ok=True)
-    else:
-        srt_dir = _auto_output_dir(input_path, "subtitles")
-        os.makedirs(srt_dir, exist_ok=True)
-
-    srt_filename = "subtitles.srt"
-    srt_file = os.path.join(srt_dir, srt_filename)
-    with open(srt_file, "w", encoding="utf-8") as f:
-        f.write(srt_content)
-
-    if burn:
-        _require_filter("subtitles", "Subtitle burn-in")
-        video_out = os.path.join(srt_dir, "subtitled.mp4")
-        escaped_srt = _escape_ffmpeg_filter_value(srt_file)
-        _run_ffmpeg(
-            [
-                "-i",
-                input_path,
-                "-vf",
-                f"subtitles={escaped_srt}",
-                "-c:v",
-                "libx264",
-                "-preset",
-                "fast",
-                "-crf",
-                "23",
-                "-c:a",
-                "copy",
-                *_movflags_args(video_out),
-                video_out,
-            ]
-        )
-        return SubtitleResult(
-            srt_path=srt_file,
-            video_path=video_out,
-            entry_count=len(entries),
-        )
-
-    return SubtitleResult(
-        srt_path=srt_file,
-        entry_count=len(entries),
     )
 
 
