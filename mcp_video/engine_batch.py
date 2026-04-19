@@ -6,8 +6,10 @@ import os
 from typing import Any
 
 from .engine_audio_normalize import normalize_audio
+from .engine_convert import convert
 from .engine_edit import trim
 from .engine_fade import fade
+from .engine_filters import apply_filter
 from .engine_resize import resize
 from .engine_speed import speed
 from .engine_watermark import watermark
@@ -89,8 +91,6 @@ def _run_batch_operation(
             output_path=_batch_output(),
         )
     if operation == "convert":
-        from .engine import convert
-
         out_ext = f".{params.get('format', 'mp4')}"
         return convert(
             input_path,
@@ -99,8 +99,6 @@ def _run_batch_operation(
             output_path=_batch_output(out_ext),
         )
     if operation == "filter":
-        from .engine import apply_filter
-
         return apply_filter(
             input_path,
             filter_type=params.get("filter_type", "blur"),
@@ -108,14 +106,10 @@ def _run_batch_operation(
             output_path=_batch_output(),
         )
     if operation == "blur":
-        from .engine import apply_filter
-
         return apply_filter(
             input_path, filter_type="blur", params=params.get("filter_params", {}), output_path=_batch_output()
         )
     if operation == "color_grade":
-        from .engine import apply_filter
-
         return apply_filter(
             input_path,
             filter_type="color_preset",

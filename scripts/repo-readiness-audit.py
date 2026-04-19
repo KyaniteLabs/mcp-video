@@ -8,6 +8,7 @@ import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+PACKAGE = ROOT / "mcp_video"
 
 REQUIRED_FILES = [
     "README.md",
@@ -94,6 +95,10 @@ def dependabot_groups_by_ecosystem() -> dict[tuple[str, str], set[str]]:
         if line and not raw_line.startswith("      ") and not line.startswith("-"):
             in_groups = False
     return grouped
+
+
+def line_count(path: Path) -> int:
+    return len(path.read_text(encoding="utf-8").splitlines())
 
 
 def main() -> int:
@@ -247,6 +252,34 @@ def main() -> int:
             failures=failures,
             warnings=warnings,
         )
+
+    print("\n== Architecture guardrail checks ==")
+    for relative_path, max_lines in [
+        ("mcp_video/engine.py", 140),
+        ("mcp_video/server.py", 180),
+    ]:
+        actual_lines = line_count(ROOT / relative_path)
+        check(
+            actual_lines <= max_lines,
+            f"{relative_path} remains a thin facade ({actual_lines} lines)",
+            f"{relative_path} should remain a thin facade; found {actual_lines} lines",
+            failures=failures,
+            warnings=warnings,
+        )
+
+    oversized_modules = sorted(
+        f"{path.relative_to(ROOT)} ({line_count(path)} lines)"
+        for pattern in ["engine*.py", "server*.py"]
+        for path in PACKAGE.glob(pattern)
+        if line_count(path) > 800
+    )
+    check(
+        oversized_modules == [],
+        "Engine/server modules stay below 800 lines",
+        "Engine/server modules exceed 800 lines: " + ", ".join(oversized_modules),
+        failures=failures,
+        warnings=warnings,
+    )
 
     print("\n== Release/tag visibility checks ==")
     tags = git_stdout("tag", "--list")
