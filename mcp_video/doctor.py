@@ -70,7 +70,13 @@ PACKAGE_CHECKS = (
     ("basicsr", "basicsr", "ai", False, 'Install upscale extras: pip install "mcp-video[upscale]"'),
     ("numpy", "numpy", "ai", False, 'Install upscale extras: pip install "mcp-video[upscale]"'),
     ("opencv-contrib-python", "cv2", "ai", False, 'Install upscale extras: pip install "mcp-video[upscale]"'),
-    ("torch", "torch", "ai", False, 'Install stem/upscale extras: pip install "mcp-video[stems]" or "mcp-video[upscale]"'),
+    (
+        "torch",
+        "torch",
+        "ai",
+        False,
+        'Install stem/upscale extras: pip install "mcp-video[stems]" or "mcp-video[upscale]"',
+    ),
     ("torchaudio", "torchaudio", "ai", False, 'Install stem-separation extras: pip install "mcp-video[stems]"'),
     ("imagehash", "imagehash", "ai", False, 'Install AI scene extras: pip install "mcp-video[ai-scene]"'),
 )
