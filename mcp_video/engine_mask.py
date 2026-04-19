@@ -22,7 +22,16 @@ def apply_mask(
     feather: int = 5,
     output_path: str | None = None,
 ) -> EditResult:
-    """Apply an image mask to a video with edge feathering."""
+    """Apply an image mask to a video with edge feathering.
+
+    Uses alphamerge filter to composite the mask as an alpha channel.
+
+    Args:
+        input_path: Path to the input video.
+        mask_path: Path to the mask image (white = visible, black = transparent).
+        feather: Feather/blur amount at mask edges in pixels (default 5).
+        output_path: Where to save the output.
+    """
     _validate_input(input_path)
     _validate_input(mask_path)
     _require_filter("alphamerge", "Advanced masking")

@@ -35,7 +35,7 @@ from .engine_export import export_video as export_video
 from .engine_extract_audio import extract_audio as extract_audio
 from .engine_frames import export_frames as export_frames
 from .engine_images import create_from_images as create_from_images
-from .engine_mask import apply_mask as apply_mask
+from .engine_mask import apply_mask as _apply_mask
 from .engine_merge import merge as merge
 from .engine_metadata import read_metadata as read_metadata
 from .engine_metadata import write_metadata as write_metadata
@@ -82,6 +82,8 @@ from .engine_text import add_text as add_text
 from .engine_thumbnail import thumbnail as thumbnail
 from .engine_transcode import normalize as normalize
 from .engine_watermark import watermark as watermark
+
+apply_mask = _apply_mask
 
 
 # ---------------------------------------------------------------------------
