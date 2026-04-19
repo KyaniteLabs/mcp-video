@@ -14,7 +14,7 @@ from .engine_runtime_utils import (
     _sanitize_ffmpeg_number,
 )
 from .errors import MCPVideoError
-from .ffmpeg_helpers import _escape_ffmpeg_filter_value, _run_ffmpeg, _validate_input_path
+from .ffmpeg_helpers import _escape_ffmpeg_filter_value, _run_ffmpeg as _run_ffmpeg_cmd, _validate_input_path
 from .models import ColorPreset, EditResult, FilterType
 
 
@@ -169,10 +169,8 @@ def _run_audio_filter(input_path: str, filter_type: FilterType, filter_string: s
             error_type="validation_error",
             code="audio_filter_no_audio",
         )
-    _run_ffmpeg(
+    _run_filter_ffmpeg(
         [
-            _ffmpeg(),
-            "-y",
             "-i",
             input_path,
             "-af",
@@ -190,10 +188,8 @@ def _run_audio_filter(input_path: str, filter_type: FilterType, filter_string: s
 
 
 def _run_video_filter(input_path: str, filter_string: str, output: str, crf: int | None, preset: str | None) -> None:
-    _run_ffmpeg(
+    _run_filter_ffmpeg(
         [
-            _ffmpeg(),
-            "-y",
             "-i",
             input_path,
             "-vf",
@@ -207,3 +203,8 @@ def _run_video_filter(input_path: str, filter_string: str, output: str, crf: int
             output,
         ]
     )
+
+
+def _run_filter_ffmpeg(args: list[str]) -> None:
+    """Run an FFmpeg filter command through the canonical subprocess helper."""
+    _run_ffmpeg_cmd([_ffmpeg(), "-y", *args])
