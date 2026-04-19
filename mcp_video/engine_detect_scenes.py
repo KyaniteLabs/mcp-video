@@ -34,24 +34,29 @@ def detect_scenes(
     info = probe(input_path)
     duration = info.duration
 
+    cmd = [
+        _ffmpeg(),
+        "-i",
+        input_path,
+        "-vf",
+        f"select='gt(scene,{safe_threshold})',showinfo",
+        "-f",
+        "null",
+        "-",
+    ]
     try:
         proc = subprocess.run(
-            [
-                _ffmpeg(),
-                "-i",
-                input_path,
-                "-vf",
-                f"select='gt(scene,{safe_threshold})',showinfo",
-                "-f",
-                "null",
-                "-",
-            ],
+            cmd,
             capture_output=True,
             text=True,
             timeout=DEFAULT_FFMPEG_TIMEOUT,
         )
     except subprocess.TimeoutExpired as exc:
-        raise ProcessingError(f"Scene detection timed out after {DEFAULT_FFMPEG_TIMEOUT} seconds") from exc
+        raise ProcessingError(
+            " ".join(cmd),
+            -1,
+            f"Scene detection timed out after {DEFAULT_FFMPEG_TIMEOUT} seconds",
+        ) from exc
     if proc.returncode != 0:
         raise parse_ffmpeg_error(proc.stderr)
 

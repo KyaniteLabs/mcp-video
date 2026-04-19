@@ -1,6 +1,7 @@
 """Advanced engine tests for uncovered operations and edge cases — needs FFmpeg."""
 
 import os
+import subprocess
 
 import pytest
 
@@ -31,7 +32,7 @@ from mcp_video.engine import (
     watermark,
 )
 from mcp_video.models import Timeline, TimelineClip, TimelineTrack
-from mcp_video.errors import InputFileError, MCPVideoError
+from mcp_video.errors import InputFileError, MCPVideoError, ProcessingError
 
 
 def requires_filter(name: str, feature: str):
@@ -775,6 +776,18 @@ class TestSceneDetection:
         from mcp_video.engine import detect_scenes
         with pytest.raises(InputFileError):
             detect_scenes("/nonexistent/video.mp4")
+
+    def test_detect_scenes_timeout_raises_processing_error(self, sample_video, monkeypatch):
+        from mcp_video.engine import detect_scenes
+        from mcp_video import engine_detect_scenes
+
+        def raise_timeout(*args, **kwargs):
+            raise subprocess.TimeoutExpired(cmd=args[0], timeout=kwargs.get("timeout"))
+
+        monkeypatch.setattr(engine_detect_scenes.subprocess, "run", raise_timeout)
+
+        with pytest.raises(ProcessingError, match="timed out"):
+            detect_scenes(sample_video)
 
 
 # ---------------------------------------------------------------------------
