@@ -263,6 +263,16 @@ mcp-video template tiktok video.mp4 --caption "Check this out!"
 | `video_ai_color_grade` | Auto color grading with style presets or reference matching | FFmpeg |
 | `video_audio_spatial` | 3D spatial audio positioning (azimuth + elevation) | FFmpeg |
 
+Install only the AI dependencies you need:
+
+```bash
+pip install "mcp-video[transcribe]"  # Whisper transcription
+pip install "mcp-video[ai-scene]"    # perceptual scene hashing
+pip install "mcp-video[stems]"       # Demucs stem separation
+pip install "mcp-video[upscale]"     # Real-ESRGAN/OpenCV upscaling
+pip install "mcp-video[ai]"          # all AI extras, kept for compatibility
+```
+
 ### Remotion & Motion Graphics (8 tools)
 
 Create videos programmatically using [Remotion](https://www.remotion.dev/) — a React framework for video. Scaffold projects, render compositions, then post-process with mcp-video.
