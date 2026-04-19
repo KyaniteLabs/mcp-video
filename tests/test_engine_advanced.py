@@ -906,6 +906,19 @@ class TestQualityMetrics:
         result = compare_quality(sample_video, sample_video, metrics=["psnr", "ssim"])
         assert "psnr" in result.metrics or "ssim" in result.metrics
 
+    def test_compare_quality_unsupported_metrics_skip_probe(self, sample_video, monkeypatch):
+        from mcp_video.engine import compare_quality
+        from mcp_video import engine_compare_quality
+
+        def fail_probe(_path):
+            raise AssertionError("unsupported metrics should not probe")
+
+        monkeypatch.setattr(engine_compare_quality, "probe", fail_probe)
+
+        result = compare_quality(sample_video, sample_video, metrics=["vmaf"])
+        assert result.metrics == {}
+        assert result.overall_quality == "unknown"
+
     def test_compare_quality_nonexistent_original(self, sample_video):
         from mcp_video.engine import compare_quality
         with pytest.raises(InputFileError):
