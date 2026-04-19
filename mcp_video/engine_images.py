@@ -27,7 +27,7 @@ def create_from_images(
         )
     validated_images = [_validate_input_path(img) for img in images]
 
-    output = output_path or _auto_output(validated_images[0], "from_images")
+    output = output_path or _auto_output(images[0], "from_images")
     tmpdir = tempfile.mkdtemp(prefix="mcp_video_imgseq_")
     try:
         normalized = _normalize_images(validated_images, tmpdir)
