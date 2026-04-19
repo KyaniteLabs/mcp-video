@@ -8,7 +8,8 @@ import tempfile
 
 from .engine_probe import probe
 from .engine_runtime_utils import _auto_output, _movflags_args, _quality_args, _run_ffmpeg
-from .errors import InputFileError, MCPVideoError
+from .errors import MCPVideoError
+from .ffmpeg_helpers import _validate_input_path
 from .models import EditResult
 
 
@@ -24,14 +25,12 @@ def create_from_images(
             error_type="validation_error",
             code="empty_images",
         )
-    for img in images:
-        if not os.path.isfile(img):
-            raise InputFileError(img)
+    validated_images = [_validate_input_path(img) for img in images]
 
-    output = output_path or _auto_output(images[0], "from_images")
+    output = output_path or _auto_output(validated_images[0], "from_images")
     tmpdir = tempfile.mkdtemp(prefix="mcp_video_imgseq_")
     try:
-        normalized = _normalize_images(images, tmpdir)
+        normalized = _normalize_images(validated_images, tmpdir)
         concat_file = _write_concat_file(normalized, tmpdir, fps)
         _run_ffmpeg(
             [
