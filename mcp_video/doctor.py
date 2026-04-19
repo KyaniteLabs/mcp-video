@@ -64,14 +64,15 @@ PACKAGE_CHECKS = (
     ("scikit-learn", "sklearn", "image", False, 'Install image extras: pip install "mcp-video[image]"'),
     ("webcolors", "webcolors", "image", False, 'Install image extras: pip install "mcp-video[image]"'),
     ("anthropic", "anthropic", "image-ai", False, 'Install image AI extras: pip install "mcp-video[image-ai]"'),
-    ("openai-whisper", "whisper", "ai", False, 'Install AI extras: pip install "mcp-video[ai]"'),
-    ("demucs", "demucs", "ai", False, 'Install AI extras: pip install "mcp-video[ai]"'),
-    ("realesrgan", "realesrgan", "ai", False, 'Install AI extras: pip install "mcp-video[ai]"'),
-    ("basicsr", "basicsr", "ai", False, 'Install AI extras: pip install "mcp-video[ai]"'),
-    ("opencv-contrib-python", "cv2", "ai", False, 'Install AI extras: pip install "mcp-video[ai]"'),
-    ("torch", "torch", "ai", False, 'Install AI extras: pip install "mcp-video[ai]"'),
-    ("torchaudio", "torchaudio", "ai", False, 'Install AI extras: pip install "mcp-video[ai]"'),
-    ("imagehash", "imagehash", "ai", False, 'Install AI extras: pip install "mcp-video[ai]"'),
+    ("openai-whisper", "whisper", "ai", False, 'Install transcription extras: pip install "mcp-video[transcribe]"'),
+    ("demucs", "demucs", "ai", False, 'Install stem-separation extras: pip install "mcp-video[stems]"'),
+    ("realesrgan", "realesrgan", "ai", False, 'Install upscale extras: pip install "mcp-video[upscale]"'),
+    ("basicsr", "basicsr", "ai", False, 'Install upscale extras: pip install "mcp-video[upscale]"'),
+    ("numpy", "numpy", "ai", False, 'Install upscale extras: pip install "mcp-video[upscale]"'),
+    ("opencv-contrib-python", "cv2", "ai", False, 'Install upscale extras: pip install "mcp-video[upscale]"'),
+    ("torch", "torch", "ai", False, 'Install stem/upscale extras: pip install "mcp-video[stems]" or "mcp-video[upscale]"'),
+    ("torchaudio", "torchaudio", "ai", False, 'Install stem-separation extras: pip install "mcp-video[stems]"'),
+    ("imagehash", "imagehash", "ai", False, 'Install AI scene extras: pip install "mcp-video[ai-scene]"'),
 )
 
 
