@@ -7,14 +7,14 @@ from typing import Any
 from .engine_probe import probe
 from .engine_runtime_utils import (
     _auto_output,
-    _ffmpeg,
     _movflags_args,
     _quality_args,
     _require_filter,
+    _run_ffmpeg,
     _sanitize_ffmpeg_number,
 )
 from .errors import MCPVideoError
-from .ffmpeg_helpers import _escape_ffmpeg_filter_value, _run_ffmpeg as _run_ffmpeg_cmd, _validate_input_path
+from .ffmpeg_helpers import _escape_ffmpeg_filter_value, _validate_input_path
 from .models import ColorPreset, EditResult, FilterType
 
 
@@ -206,5 +206,5 @@ def _run_video_filter(input_path: str, filter_string: str, output: str, crf: int
 
 
 def _run_filter_ffmpeg(args: list[str]) -> None:
-    """Run an FFmpeg filter command through the canonical subprocess helper."""
-    _run_ffmpeg_cmd([_ffmpeg(), "-y", *args])
+    """Run an FFmpeg filter command while preserving engine error parsing."""
+    _run_ffmpeg(args)

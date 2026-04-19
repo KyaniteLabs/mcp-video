@@ -18,7 +18,7 @@ from .errors import (
     MCPVideoError,
     parse_ffmpeg_error,
 )
-from .limits import DEFAULT_CRF, DEFAULT_PRESET
+from .limits import DEFAULT_CRF, DEFAULT_FFMPEG_TIMEOUT, DEFAULT_PRESET
 from .models import NamedPosition, Position
 
 # ---------------------------------------------------------------------------
@@ -307,7 +307,7 @@ def _run_ffmpeg(args: list[str]) -> subprocess.CompletedProcess[str]:
         cmd,
         capture_output=True,
         text=True,
-        timeout=600,  # 10-minute max
+        timeout=DEFAULT_FFMPEG_TIMEOUT,
     )
     if proc.returncode != 0:
         raise parse_ffmpeg_error(proc.stderr)
