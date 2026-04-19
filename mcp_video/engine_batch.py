@@ -11,6 +11,7 @@ from .engine_fade import fade
 from .engine_resize import resize
 from .engine_speed import speed
 from .engine_watermark import watermark
+from .models import EditResult
 
 
 def video_batch(
@@ -57,7 +58,12 @@ def video_batch(
     }
 
 
-def _run_batch_operation(input_path: str, operation: str, params: dict[str, Any], output_dir: str | None):
+def _run_batch_operation(
+    input_path: str,
+    operation: str,
+    params: dict[str, Any],
+    output_dir: str | None,
+) -> EditResult | None:
     def _batch_output(ext: str | None = None) -> str | None:
         if output_dir:
             name = os.path.splitext(os.path.basename(input_path))[0]
