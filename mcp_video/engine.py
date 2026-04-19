@@ -4,15 +4,11 @@ from __future__ import annotations
 
 import os
 import shutil
-import subprocess
 import tempfile
 from typing import Any
 from collections.abc import Callable
 
-from .errors import (
-    MCPVideoError,
-    parse_ffmpeg_error,
-)
+from .errors import MCPVideoError
 from .models import (
     QUALITY_PRESETS,
     ColorPreset,
@@ -77,6 +73,7 @@ from .engine_runtime_utils import (
     _validate_position as _validate_position,
 )
 from .engine_speed import speed as speed
+from .engine_stabilize import stabilize as stabilize
 from .engine_storyboard import storyboard as storyboard
 from .engine_subtitle_generate import generate_subtitles as generate_subtitles
 from .engine_subtitles import subtitles as subtitles
@@ -987,84 +984,6 @@ def split_screen(
 # ---------------------------------------------------------------------------
 # Video stabilization
 # ---------------------------------------------------------------------------
-
-
-def stabilize(
-    input_path: str,
-    smoothing: float = 15,
-    zooming: float = 0,
-    output_path: str | None = None,
-) -> EditResult:
-    """Stabilize a shaky video using motion vector analysis.
-
-    Uses vidstab filter (two-pass: detect then transform).
-
-    Args:
-        input_path: Path to the input video.
-        smoothing: Smoothing strength (default 15, higher = more stable).
-        zooming: Zoom percentage to avoid black borders (default 0).
-        output_path: Where to save the output.
-    """
-    _validate_input(input_path)
-    _require_filter("vidstabdetect", "Video stabilization")
-    output = output_path or _auto_output(input_path, "stabilized")
-
-    tmpdir = tempfile.mkdtemp(prefix="mcp_video_stab_")
-    try:
-        # Pass 1: detect motion vectors
-        vectors_file = os.path.join(tmpdir, "vectors.trf")
-        result = subprocess.run(
-            [
-                _ffmpeg(),
-                "-y",
-                "-i",
-                input_path,
-                "-vf",
-                "vidstabdetect=shakiness=10:accuracy=15:result=" + vectors_file,
-                "-f",
-                "null",
-                "-",
-            ],
-            capture_output=True,
-            text=True,
-            timeout=600,
-        )
-        if result.returncode != 0:
-            raise parse_ffmpeg_error(result.stderr)
-
-        # Pass 2: apply stabilization
-        _run_ffmpeg(
-            [
-                "-i",
-                input_path,
-                "-vf",
-                f"vidstabtransform=input={vectors_file}:smoothing={smoothing}:zoom={zooming}:crop=black",
-                "-c:v",
-                "libx264",
-                "-preset",
-                "fast",
-                "-crf",
-                "23",
-                "-c:a",
-                "aac",
-                "-b:a",
-                "128k",
-                *_movflags_args(output),
-                output,
-            ]
-        )
-    finally:
-        shutil.rmtree(tmpdir, ignore_errors=True)
-
-    result_info = probe(output)
-    return EditResult(
-        output_path=output,
-        duration=result_info.duration,
-        resolution=result_info.resolution,
-        size_mb=result_info.size_mb,
-        format="mp4",
-        operation="stabilize",
-    )
 
 
 # ---------------------------------------------------------------------------
