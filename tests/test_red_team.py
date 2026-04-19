@@ -114,7 +114,6 @@ class TestUnicodeFilenames:
 class TestInvalidInputs:
     """Test various invalid parameter combinations."""
 
-    @pytest.mark.xfail(reason="FFmpeg on some platforms accepts negative start")
     def test_trim_negative_start(self, sample_video):
         """Negative start time should raise an error on most platforms."""
         with pytest.raises((ValueError, ProcessingError, MCPVideoError)):
@@ -267,7 +266,6 @@ class TestBoundaryValues:
         assert os.path.exists(path)
         assert os.path.getsize(path) > 0
 
-    @pytest.mark.xfail(reason="FFmpeg on some platforms doesn't reject out-of-range timestamps")
     def test_thumbnail_beyond_duration(self, sample_video):
         """Thumbnail beyond video duration should handle gracefully."""
         info = probe(sample_video)
