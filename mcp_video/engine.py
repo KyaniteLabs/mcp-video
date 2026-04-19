@@ -35,6 +35,7 @@ from .engine_export import export_video as export_video
 from .engine_extract_audio import extract_audio as extract_audio
 from .engine_frames import export_frames as export_frames
 from .engine_images import create_from_images as create_from_images
+from .engine_mask import apply_mask as _apply_mask
 from .engine_merge import merge as merge
 from .engine_metadata import read_metadata as read_metadata
 from .engine_metadata import write_metadata as write_metadata
@@ -81,6 +82,8 @@ from .engine_text import add_text as add_text
 from .engine_thumbnail import thumbnail as thumbnail
 from .engine_transcode import normalize as normalize
 from .engine_watermark import watermark as watermark
+
+apply_mask = _apply_mask
 
 
 # ---------------------------------------------------------------------------
@@ -984,78 +987,6 @@ def split_screen(
 # ---------------------------------------------------------------------------
 # Advanced masking
 # ---------------------------------------------------------------------------
-
-
-def apply_mask(
-    input_path: str,
-    mask_path: str,
-    feather: int = 5,
-    output_path: str | None = None,
-) -> EditResult:
-    """Apply an image mask to a video with edge feathering.
-
-    Uses alphamerge filter to composite the mask as an alpha channel.
-
-    Args:
-        input_path: Path to the input video.
-        mask_path: Path to the mask image (white = visible, black = transparent).
-        feather: Feather/blur amount at mask edges in pixels (default 5).
-        output_path: Where to save the output.
-    """
-    _validate_input(input_path)
-    _validate_input(mask_path)
-    _require_filter("alphamerge", "Advanced masking")
-    output = output_path or _auto_output(input_path, "masked")
-
-    # Get video dimensions to scale mask
-    info = probe(input_path)
-    w, h = info.width, info.height
-
-    # Scale mask to video dimensions, convert to alpha, and alphamerge
-    if feather > 0:
-        filter_complex = (
-            f"[1:v]format=gray,scale={w}:{h},colorchannelmixer=aa=1.0,boxblur={feather}[alpha];"
-            f"[0:v][alpha]alphamerge,format=yuv420p[out]"
-        )
-    else:
-        filter_complex = (
-            f"[1:v]format=gray,scale={w}:{h},colorchannelmixer=aa=1.0[alpha];[0:v][alpha]alphamerge,format=yuv420p[out]"
-        )
-
-    _run_ffmpeg(
-        [
-            "-i",
-            input_path,
-            "-i",
-            mask_path,
-            "-filter_complex",
-            filter_complex,
-            "-map",
-            "[out]",
-            "-map",
-            "0:a?",
-            "-c:v",
-            "libx264",
-            "-preset",
-            "fast",
-            "-crf",
-            "23",
-            "-c:a",
-            "copy",
-            *_movflags_args(output),
-            output,
-        ]
-    )
-
-    result_info = probe(output)
-    return EditResult(
-        output_path=output,
-        duration=result_info.duration,
-        resolution=result_info.resolution,
-        size_mb=result_info.size_mb,
-        format="mp4",
-        operation="apply_mask",
-    )
 
 
 # ---------------------------------------------------------------------------
