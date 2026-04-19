@@ -11,7 +11,6 @@ from collections.abc import Callable
 
 from .errors import (
     MCPVideoError,
-    InputFileError,
     parse_ffmpeg_error,
 )
 from .models import (
@@ -40,6 +39,7 @@ from .engine_edit import trim as trim
 from .engine_export import export_video as export_video
 from .engine_extract_audio import extract_audio as extract_audio
 from .engine_frames import export_frames as export_frames
+from .engine_images import create_from_images as create_from_images
 from .engine_merge import merge as merge
 from .engine_metadata import read_metadata as read_metadata
 from .engine_metadata import write_metadata as write_metadata
@@ -1078,118 +1078,6 @@ def generate_subtitles(
     return SubtitleResult(
         srt_path=srt_file,
         entry_count=len(entries),
-    )
-
-
-# ---------------------------------------------------------------------------
-# Image sequences
-# ---------------------------------------------------------------------------
-
-
-def create_from_images(
-    images: list[str],
-    output_path: str | None = None,
-    fps: float = 30.0,
-) -> EditResult:
-    """Create a video from a sequence of images.
-
-    Args:
-        images: List of image file paths.
-        output_path: Where to save the output video.
-        fps: Frames per second for the output video.
-    """
-    if not images:
-        raise MCPVideoError(
-            "No images provided",
-            error_type="validation_error",
-            code="empty_images",
-        )
-    for img in images:
-        if not os.path.isfile(img):
-            raise InputFileError(img)
-
-    output = output_path or _auto_output(images[0], "from_images")
-    tmpdir = tempfile.mkdtemp(prefix="mcp_video_imgseq_")
-    try:
-        # Detect if any input is PNG (has alpha channel)
-        has_png = any(img.lower().endswith(".png") for img in images)
-        img_format = "png" if has_png else "jpg"
-        ext = f".{img_format}"
-
-        # Normalize all images to same dimensions first
-        normalized: list[str] = []
-        for i, img in enumerate(images):
-            norm_path = os.path.join(tmpdir, f"img_{i:04d}{ext}")
-            if img_format == "png":
-                _run_ffmpeg(
-                    [
-                        "-y",
-                        "-i",
-                        img,
-                        "-vf",
-                        "scale=trunc(iw/2)*2:trunc(ih/2)*2",
-                        "-c:v",
-                        "png",
-                        norm_path,
-                    ]
-                )
-            else:
-                _run_ffmpeg(
-                    [
-                        "-y",
-                        "-i",
-                        img,
-                        "-vf",
-                        "scale=trunc(iw/2)*2:trunc(ih/2)*2",
-                        "-q:v",
-                        "2",
-                        norm_path,
-                    ]
-                )
-            normalized.append(norm_path)
-
-        # Build concat file
-        concat_file = os.path.join(tmpdir, "concat.txt")
-        img_duration = 1.0 / fps
-        with open(concat_file, "w") as f:
-            for img in normalized:
-                abs_path = os.path.abspath(img).replace("'", "'\\''")
-                f.write(f"file '{abs_path}'\n")
-                f.write(f"duration {img_duration}\n")
-            abs_last = os.path.abspath(normalized[-1]).replace("'", "'\\''")
-            f.write(f"file '{abs_last}'\n")
-
-        _run_ffmpeg(
-            [
-                "-f",
-                "concat",
-                "-safe",
-                "0",
-                "-i",
-                concat_file,
-                "-c:v",
-                "libx264",
-                "-preset",
-                "fast",
-                "-crf",
-                "23",
-                "-pix_fmt",
-                "yuv420p",
-                *_movflags_args(output),
-                output,
-            ]
-        )
-    finally:
-        shutil.rmtree(tmpdir, ignore_errors=True)
-
-    result_info = probe(output)
-    return EditResult(
-        output_path=output,
-        duration=result_info.duration,
-        resolution=result_info.resolution,
-        size_mb=result_info.size_mb,
-        format="mp4",
-        operation="create_from_images",
     )
 
 
