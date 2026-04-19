@@ -19,9 +19,9 @@ def export_video(
 ) -> EditResult:
     """Export a video with specified quality and format settings."""
     _validate_input(input_path)
-    from . import engine as _engine
+    from .engine_convert import convert
 
-    result = _engine.convert(
+    result = convert(
         input_path,
         format=format,
         quality=quality,

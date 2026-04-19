@@ -94,8 +94,17 @@ def test_engine_operation_modules_do_not_import_compatibility_facade() -> None:
         tree = parse_module(path)
         bad_imports: list[str] = []
         for node in ast.walk(tree):
-            if isinstance(node, ast.ImportFrom) and node.module in {"engine", "mcp_video.engine"}:
-                bad_imports.append(f"from {node.module} import ...")
+            if isinstance(node, ast.ImportFrom):
+                # Catch: "from engine import …", "from mcp_video.engine import …",
+                # "from . import engine", "from .engine import …"
+                if node.module in {"engine", "mcp_video.engine"}:
+                    bad_imports.append(f"from {node.module} import ...")
+                if node.level and node.level >= 1 and node.module == "engine":
+                    bad_imports.append(f"from {'.' * node.level}engine import ...")
+                if node.level == 1 and node.module is None:
+                    for alias in node.names:
+                        if alias.name == "engine":
+                            bad_imports.append("from . import engine")
             if isinstance(node, ast.Import):
                 for alias in node.names:
                     if alias.name == "mcp_video.engine":
@@ -113,8 +122,17 @@ def test_server_tool_modules_register_against_server_app_not_facade() -> None:
         tree = parse_module(path)
         bad_imports: list[str] = []
         for node in ast.walk(tree):
-            if isinstance(node, ast.ImportFrom) and node.module in {"server", "mcp_video.server"}:
-                bad_imports.append(f"from {node.module} import ...")
+            if isinstance(node, ast.ImportFrom):
+                # Catch: "from server import …", "from mcp_video.server import …",
+                # "from . import server", "from .server import …"
+                if node.module in {"server", "mcp_video.server"}:
+                    bad_imports.append(f"from {node.module} import ...")
+                if node.level and node.level >= 1 and node.module == "server":
+                    bad_imports.append(f"from {'.' * node.level}server import ...")
+                if node.level == 1 and node.module is None:
+                    for alias in node.names:
+                        if alias.name == "server":
+                            bad_imports.append("from . import server")
             if isinstance(node, ast.Import):
                 for alias in node.names:
                     if alias.name == "mcp_video.server":
