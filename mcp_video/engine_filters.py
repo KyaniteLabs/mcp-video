@@ -7,15 +7,14 @@ from typing import Any
 from .engine_probe import probe
 from .engine_runtime_utils import (
     _auto_output,
+    _ffmpeg,
     _movflags_args,
     _quality_args,
     _require_filter,
-    _run_ffmpeg,
     _sanitize_ffmpeg_number,
-    _validate_input,
 )
 from .errors import MCPVideoError
-from .ffmpeg_helpers import _escape_ffmpeg_filter_value
+from .ffmpeg_helpers import _escape_ffmpeg_filter_value, _run_ffmpeg, _validate_input_path
 from .models import ColorPreset, EditResult, FilterType
 
 
@@ -70,7 +69,7 @@ def apply_filter(
     preset: str | None = None,
 ) -> EditResult:
     """Apply a visual or audio filter to a video."""
-    _validate_input(input_path)
+    _validate_input_path(input_path)
     params = _sanitize_params(params or {})
     output = output_path or _auto_output(input_path, f"filter_{filter_type}")
     info = probe(input_path)
@@ -172,6 +171,8 @@ def _run_audio_filter(input_path: str, filter_type: FilterType, filter_string: s
         )
     _run_ffmpeg(
         [
+            _ffmpeg(),
+            "-y",
             "-i",
             input_path,
             "-af",
@@ -191,6 +192,8 @@ def _run_audio_filter(input_path: str, filter_type: FilterType, filter_string: s
 def _run_video_filter(input_path: str, filter_string: str, output: str, crf: int | None, preset: str | None) -> None:
     _run_ffmpeg(
         [
+            _ffmpeg(),
+            "-y",
             "-i",
             input_path,
             "-vf",

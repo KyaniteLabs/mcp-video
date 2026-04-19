@@ -18,6 +18,7 @@ from .errors import (
     MCPVideoError,
     parse_ffmpeg_error,
 )
+from .limits import DEFAULT_CRF, DEFAULT_PRESET
 from .models import NamedPosition, Position
 
 # ---------------------------------------------------------------------------
@@ -427,8 +428,8 @@ def _movflags_args(output_path: str) -> list[str]:
 def _quality_args(
     crf: int | None = None,
     preset: str | None = None,
-    default_crf: int = 23,
-    default_preset: str = "fast",
+    default_crf: int = DEFAULT_CRF,
+    default_preset: str = DEFAULT_PRESET,
 ) -> list[str]:
     """Build FFmpeg quality args [-preset, X, -crf, Y].
 
