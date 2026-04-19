@@ -5,6 +5,7 @@
   <img src="https://img.shields.io/badge/tools-83%20MCP%20tools-orange.svg" alt="Tools">
   <img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="License">
   <img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python">
+[![SafeSkill 93/100](https://img.shields.io/badge/SafeSkill-93%2F100_Verified%20Safe-brightgreen)](https://safeskill.dev/scan/pastorsimon1798-mcp-video)
 </p>
 
 <!-- mcp-name: io.github.pastorsimon1798/mcp-video -->
