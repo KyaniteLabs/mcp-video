@@ -1320,6 +1320,9 @@ def ai_upscale(
         raise InputFileError(video)
 
     # Try to use Real-ESRGAN if available, otherwise use OpenCV DNN fallback
+    # NOTE: basicsr <= 1.4.2 has CVE-2024-27763 (command injection via SLURM_NODELIST).
+    # Our usage only imports the RRDBNet architecture class for inference.
+    # We do not execute the vulnerable scontrol path in basicsr/utils/dist_util.py.
     try:
         from realesrgan import RealESRGANer
         from basicsr.archs.rrdbnet_arch import RRDBNet
