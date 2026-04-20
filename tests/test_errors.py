@@ -263,3 +263,32 @@ class TestStripFFmpegBanner:
         stderr = "ffmpeg version 6.0\nbuilt with gcc 12\n"
         cleaned = _strip_ffmpeg_banner(stderr)
         assert cleaned == stderr
+
+
+class TestSanitizeFFmpegNumber:
+    def test_rejects_nan(self):
+        from mcp_video.engine_runtime_utils import _sanitize_ffmpeg_number
+
+        with pytest.raises(MCPVideoError) as exc_info:
+            _sanitize_ffmpeg_number(float("nan"), "factor")
+        assert "finite" in str(exc_info.value).lower()
+
+    def test_rejects_inf(self):
+        from mcp_video.engine_runtime_utils import _sanitize_ffmpeg_number
+
+        with pytest.raises(MCPVideoError) as exc_info:
+            _sanitize_ffmpeg_number(float("inf"), "factor")
+        assert "finite" in str(exc_info.value).lower()
+
+    def test_rejects_neg_inf(self):
+        from mcp_video.engine_runtime_utils import _sanitize_ffmpeg_number
+
+        with pytest.raises(MCPVideoError) as exc_info:
+            _sanitize_ffmpeg_number(float("-inf"), "factor")
+        assert "finite" in str(exc_info.value).lower()
+
+    def test_accepts_valid_number(self):
+        from mcp_video.engine_runtime_utils import _sanitize_ffmpeg_number
+
+        result = _sanitize_ffmpeg_number(2.5, "factor")
+        assert result == 2.5

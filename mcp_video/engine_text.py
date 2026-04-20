@@ -59,16 +59,7 @@ def add_text(
     escaped_fontfile = _escape_ffmpeg_filter_value(fontfile)
 
     # Escape FFmpeg drawtext special characters
-    # Colons and backslashes must be escaped even inside single quotes
-    # because FFmpeg parses filter options as key=value pairs with : delimiters
-    escaped_text = (
-        text.replace("\\", "\\\\")
-        .replace("'", "'\\''")
-        .replace(":", "\\:")
-        .replace("[", "\\[")
-        .replace("]", "\\]")
-        .replace(";", "\\;")
-    )
+    escaped_text = _escape_ffmpeg_filter_value(text)
 
     filter_parts = [
         f"drawtext=text='{escaped_text}'",

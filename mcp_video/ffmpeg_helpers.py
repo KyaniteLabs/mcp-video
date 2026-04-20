@@ -53,6 +53,7 @@ def _escape_ffmpeg_filter_value(value: str) -> str:
         .replace("]", "\\]")
         .replace(";", "\\;")
         .replace(",", "\\,")
+        .replace("=", "\\=")
     )
 
 
@@ -69,7 +70,13 @@ def _get_video_duration(video_path: str) -> float:
         video_path,
     ]
     result = _run_ffmpeg(cmd)
-    return float(result.stdout.strip())
+    stdout = result.stdout.strip()
+    if not stdout:
+        raise ProcessingError(" ".join(cmd), result.returncode, result.stderr)
+    try:
+        return float(stdout)
+    except ValueError:
+        raise ProcessingError(" ".join(cmd), result.returncode, f"Non-numeric duration from ffprobe: {stdout!r}") from None
 
 
 def _run_ffprobe_json(path: str) -> dict[str, Any]:
@@ -87,7 +94,10 @@ def _run_ffprobe_json(path: str) -> dict[str, Any]:
         path,
     ]
     result = _run_ffmpeg(cmd, timeout=FFPROBE_TIMEOUT)
-    return _json.loads(result.stdout)
+    try:
+        return _json.loads(result.stdout)
+    except _json.JSONDecodeError as e:
+        raise ProcessingError(" ".join(cmd), result.returncode, f"Invalid JSON from ffprobe: {e}") from None
 
 
 def _seconds_to_srt_time(seconds: float) -> str:
