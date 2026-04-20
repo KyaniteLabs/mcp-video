@@ -310,6 +310,14 @@ def main() -> int:
                     facade_import_offenders.append(f"{path.name}: from {node.module} import ...")
                 if node.level and node.level >= 1 and node.module == "engine":
                     facade_import_offenders.append(f"{path.name}: from .engine import ...")
+                if node.level == 1 and node.module is None:
+                    for alias in node.names:
+                        if alias.name == "engine":
+                            facade_import_offenders.append(f"{path.name}: from . import engine")
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    if alias.name == "mcp_video.engine":
+                        facade_import_offenders.append(f"{path.name}: import mcp_video.engine")
     check(
         facade_import_offenders == [],
         "Engine modules do not import compatibility facade",
@@ -328,6 +336,14 @@ def main() -> int:
                     server_tool_offenders.append(f"{path.name}: from {node.module} import ...")
                 if node.level and node.level >= 1 and node.module == "server":
                     server_tool_offenders.append(f"{path.name}: from .server import ...")
+                if node.level == 1 and node.module is None:
+                    for alias in node.names:
+                        if alias.name == "server":
+                            server_tool_offenders.append(f"{path.name}: from . import server")
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    if alias.name == "mcp_video.server":
+                        server_tool_offenders.append(f"{path.name}: import mcp_video.server")
     check(
         server_tool_offenders == [],
         "Server tool modules do not import server facade",
