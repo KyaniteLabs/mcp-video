@@ -31,6 +31,21 @@ def merge(
     """
     if not clips:
         raise InputFileError("", "No clips provided for merge")
+    if len(clips) == 1:
+        # Single clip — nothing to merge, just copy to output
+        _validate_input(clips[0])
+        output = output_path or _auto_output(clips[0], "merged")
+        shutil.copy2(clips[0], output)
+        info = probe(output)
+        return EditResult(
+            output_path=output,
+            duration=info.duration,
+            resolution=info.resolution,
+            size_mb=info.size_mb,
+            format="mp4",
+            operation="merge",
+            elapsed_ms=0.0,
+        )
 
     for c in clips:
         _validate_input(c)

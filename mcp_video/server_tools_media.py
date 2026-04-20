@@ -359,7 +359,7 @@ def video_fade(
 
 @mcp.tool()
 def video_edit(
-    timeline: dict[str, Any],
+    timeline: dict[str, Any] | str,
     output_path: str | None = None,
 ) -> dict[str, Any]:
     """Execute a full timeline-based edit from a JSON specification.
@@ -371,11 +371,50 @@ def video_edit(
 
     Args:
         timeline: JSON object with keys: width, height, tracks (video/audio/text/image), export.
+            Can also be a JSON string or a path to a .json file.
             Image overlays in tracks: {"type": "image", "images": [{"source": "logo.png", "position": "top-right", "width": 200, "opacity": 0.8}]}
         output_path: Where to save the final video. Auto-generated if omitted.
     """
+    parsed_timeline = timeline
+    if isinstance(timeline, str):
+        import json as _json
+
+        timeline_str = timeline.strip()
+        # Try parsing as inline JSON first
+        try:
+            parsed_timeline = _json.loads(timeline_str)
+        except _json.JSONDecodeError:
+            # Try reading as a file path
+            if os.path.isfile(timeline_str):
+                try:
+                    with open(timeline_str, encoding="utf-8") as f:
+                        parsed_timeline = _json.load(f)
+                except (_json.JSONDecodeError, OSError) as exc:
+                    return _error_result(
+                        MCPVideoError(
+                            f"Invalid timeline JSON file: {timeline_str} — {exc}",
+                            error_type="validation_error",
+                            code="invalid_json",
+                        )
+                    )
+            else:
+                return _error_result(
+                    MCPVideoError(
+                        f"timeline must be a dict, valid JSON string, or path to a .json file. Got: {timeline_str[:100]}",
+                        error_type="validation_error",
+                        code="invalid_parameter",
+                    )
+                )
+    if not isinstance(parsed_timeline, dict):
+        return _error_result(
+            MCPVideoError(
+                f"timeline must be a dict or JSON object. Got: {type(parsed_timeline).__name__}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
     try:
-        return _result(edit_timeline(timeline, output_path=output_path))
+        return _result(edit_timeline(parsed_timeline, output_path=output_path))
     except MCPVideoError as e:
         return _error_result(e)
     except Exception as e:
