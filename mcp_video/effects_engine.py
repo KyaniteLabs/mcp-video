@@ -5,6 +5,7 @@ Visual effects using FFmpeg filters and PIL for custom processing.
 
 from __future__ import annotations
 
+import logging
 import math
 import os
 import subprocess
@@ -976,8 +977,9 @@ def video_info_detailed(video: str) -> dict[str, Any]:
                         scene_changes.append(ts)
                     except (ValueError, IndexError):
                         pass
-    except Exception:
-        pass  # Scene detection is optional
+    except Exception as e:
+        logger = logging.getLogger(__name__)
+        logger.warning("Scene detection failed (optional): %s", e)
 
     return {
         "duration": duration,

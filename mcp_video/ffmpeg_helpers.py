@@ -11,16 +11,22 @@ import subprocess
 from typing import Any
 
 from .errors import InputFileError, ProcessingError
-from .limits import DEFAULT_FFMPEG_TIMEOUT, FFPROBE_TIMEOUT
+from .limits import DEFAULT_FFMPEG_TIMEOUT, FFPROBE_TIMEOUT, MAX_FILE_SIZE_MB
 
 
 def _validate_input_path(path: str) -> str:
-    """Validate and resolve a file path. Rejects null bytes and symlinks."""
+    """Validate and resolve a file path. Rejects null bytes, symlinks, and oversize files."""
     if "\x00" in path:
         raise InputFileError(path, "Path contains null bytes")
     resolved = os.path.realpath(path)
     if not os.path.isfile(resolved):
         raise InputFileError(resolved)
+    size_mb = os.path.getsize(resolved) / (1024 * 1024)
+    if size_mb > MAX_FILE_SIZE_MB:
+        raise InputFileError(
+            resolved,
+            f"File size ({size_mb:.1f} MB) exceeds maximum of {MAX_FILE_SIZE_MB} MB",
+        )
     return resolved
 
 

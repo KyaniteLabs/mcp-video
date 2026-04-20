@@ -9,6 +9,7 @@ from .errors import MCPVideoError
 from .limits import MAX_RESOLUTION, MAX_SPEED_FACTOR, MIN_SPEED_FACTOR
 from .server_app import _error_result, _result, mcp
 from .validation import VALID_FORMATS, VALID_PRESETS
+from .ffmpeg_helpers import _validate_input_path
 
 
 @mcp.tool()
@@ -19,6 +20,7 @@ def video_info(input_path: str) -> dict[str, Any]:
         input_path: Absolute path to the video file.
     """
     try:
+        _validate_input_path(input_path)
         info = probe(input_path)
         return {"success": True, "info": info.model_dump()}
     except MCPVideoError as e:
@@ -45,6 +47,7 @@ def video_trim(
         output_path: Where to save the trimmed video. Auto-generated if omitted.
     """
     try:
+        _validate_input_path(input_path)
         return _result(trim(input_path, start=start, duration=duration, end=end, output_path=output_path))
     except MCPVideoError as e:
         return _error_result(e)
@@ -106,6 +109,8 @@ def video_merge(
                 )
             )
     try:
+        for _p in clips:
+            _validate_input_path(_p)
         return _result(
             merge(
                 clips,
@@ -161,6 +166,7 @@ def video_add_text(
             MCPVideoError(f"Invalid preset: {preset}", error_type="validation_error", code="invalid_parameter")
         )
     try:
+        _validate_input_path(input_path)
         if size < 8 or size > 500:
             return _error_result(
                 MCPVideoError(
@@ -215,6 +221,8 @@ def video_add_audio(
         output_path: Where to save the output. Auto-generated if omitted.
     """
     try:
+        _validate_input_path(video_path)
+        _validate_input_path(audio_path)
         if not 0 <= volume <= 2.0:
             return _error_result(
                 MCPVideoError(
@@ -385,6 +393,7 @@ def video_speed(
             )
         )
     try:
+        _validate_input_path(input_path)
         return _result(speed(input_path, factor=factor, output_path=output_path))
     except MCPVideoError as e:
         return _error_result(e)

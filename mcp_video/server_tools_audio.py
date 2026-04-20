@@ -9,6 +9,7 @@ from typing import Any
 from .errors import MCPVideoError
 from .limits import MAX_FREQUENCY, MIN_FREQUENCY
 from .server_app import _error_result, _result, mcp
+from .ffmpeg_helpers import _validate_input_path
 from .validation import (
     VALID_AUDIO_EFFECT_TYPES,
     VALID_AUDIO_PRESETS,
@@ -311,6 +312,8 @@ def audio_compose(
                 )
             )
     try:
+        for _t in tracks:
+            _validate_input_path(_t.get("file", ""))
         from .audio_engine import audio_compose as _compose
 
         return _result(_compose(tracks=tracks, duration=duration, output=output_path))
@@ -363,6 +366,7 @@ def audio_effects(
                 )
             )
     try:
+        _validate_input_path(input_path)
         from .audio_engine import audio_effects as _effects
 
         return _result(_effects(input_path=input_path, output=output_path, effects=effects))
@@ -393,6 +397,7 @@ def video_add_generated_audio(
         Dict with success status and output_path.
     """
     try:
+        _validate_input_path(input_path)
         if not isinstance(audio_config, dict) or not audio_config:
             raise MCPVideoError(
                 "audio_config must be a non-empty dict",
@@ -433,6 +438,7 @@ def video_audio_spatial(
             )
         )
     try:
+        _validate_input_path(input_path)
         from .ai_engine import audio_spatial
 
         return _result(audio_spatial(input_path, output_path, positions, method))

@@ -5,6 +5,7 @@ from __future__ import annotations
 from .engine_probe import probe
 from .engine_runtime_utils import _auto_output, _movflags_args, _run_ffmpeg, _timed_operation, _validate_input
 from .errors import MCPVideoError
+from .limits import MAX_SPEED_CHAIN_COUNT
 from .models import EditResult
 
 
@@ -25,7 +26,6 @@ def speed(
     audio_filter = f"atempo={factor}"
 
     # atempo only supports 0.5 to 100.0; chain if needed
-    MAX_SPEED_CHAIN_COUNT = 20
     if factor < 0.5:
         chain_count = 2
         while factor ** (1 / chain_count) < 0.5:
