@@ -313,7 +313,14 @@ def audio_compose(
             )
     try:
         for _t in tracks:
-            _validate_input_path(_t.get("file", ""))
+            track_file = _t.get("file", "")
+            if not track_file or not isinstance(track_file, str):
+                raise MCPVideoError(
+                    "tracks must contain 'file' key with a non-empty path string",
+                    error_type="validation_error",
+                    code="invalid_parameter",
+                )
+            _validate_input_path(track_file)
         from .audio_engine import audio_compose as _compose
 
         return _result(_compose(tracks=tracks, duration=duration, output=output_path))
