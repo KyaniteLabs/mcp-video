@@ -9,7 +9,12 @@ description = "Video editing MCP server for AI agents. 83 tools, 3 interfaces, r
 readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.11"
-keywords = ["video", "editing", "mcp", "ffmpeg", "remotion", "ai", "agents"]
+keywords = [
+    "video", "editing", "mcp", "ffmpeg", "remotion", "ai", "agents",
+    "claude", "cursor", "subtitle", "whisper", "transcription",
+    "video-processing", "chroma-key", "stabilization", "color-grading",
+    "model-context-protocol", "cli",
+]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
@@ -19,6 +24,10 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Topic :: Multimedia :: Video",
+    "Topic :: Multimedia :: Sound/Audio",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Natural Language :: English",
+    "Typing :: Typed",
 ]
 dependencies = [
     "mcp>=1.27.0",
