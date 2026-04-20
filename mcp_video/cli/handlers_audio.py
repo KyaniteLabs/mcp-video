@@ -63,9 +63,7 @@ def handle_audio_commands(args: Any, *, use_json: bool) -> bool:
             output_json({"success": True, "output_path": result})
         else:
             console.print(
-                Panel(
-                    f"[bold green]Preset '{args.preset}':[/bold green] {result}", border_style="green", title="Done"
-                )
+                Panel(f"[bold green]Preset '{args.preset}':[/bold green] {result}", border_style="green", title="Done")
             )
         return True
 
@@ -91,9 +89,7 @@ def handle_audio_commands(args: Any, *, use_json: bool) -> bool:
             output_json({"success": True, "output_path": result})
         else:
             console.print(
-                Panel(
-                    f"[bold green]Audio effects applied:[/bold green] {result}", border_style="green", title="Done"
-                )
+                Panel(f"[bold green]Audio effects applied:[/bold green] {result}", border_style="green", title="Done")
             )
         return True
 
@@ -101,16 +97,12 @@ def handle_audio_commands(args: Any, *, use_json: bool) -> bool:
         from ..audio_engine import add_generated_audio
 
         audio_config = _parse_json_arg(args.audio_config, "audio-config", json_mode=use_json)
-        result = _with_spinner(
-            "Adding generated audio...", add_generated_audio, args.input, audio_config, args.output
-        )
+        result = _with_spinner("Adding generated audio...", add_generated_audio, args.input, audio_config, args.output)
         if use_json:
             output_json({"success": True, "output_path": result})
         else:
             console.print(
-                Panel(
-                    f"[bold green]Generated audio added:[/bold green] {result}", border_style="green", title="Done"
-                )
+                Panel(f"[bold green]Generated audio added:[/bold green] {result}", border_style="green", title="Done")
             )
         return True
 

@@ -95,9 +95,7 @@ def handle_remotion_commands(args: Any, *, use_json: bool) -> bool:
             output_json(result)
         else:
             data = (
-                result.model_dump()
-                if hasattr(result, "model_dump")
-                else (result if isinstance(result, dict) else {})
+                result.model_dump() if hasattr(result, "model_dump") else (result if isinstance(result, dict) else {})
             )
             console.print(
                 Panel(

@@ -138,9 +138,7 @@ def handle_advanced_commands(args: Any, *, use_json: bool) -> bool:
         if use_json:
             output_json({"success": True, "output_path": result})
         else:
-            console.print(
-                Panel(f"[bold green]Design fixed:[/bold green] {result}", border_style="green", title="Done")
-            )
+            console.print(Panel(f"[bold green]Design fixed:[/bold green] {result}", border_style="green", title="Done"))
         return True
 
     return False

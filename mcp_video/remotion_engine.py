@@ -155,7 +155,11 @@ def render(
         args += ["--concurrency", str(concurrency)]
     if frames is not None:
         if not re.match(r"^\d+-\d+$", frames):
-            raise MCPVideoError(f"Invalid frames format: '{frames}'. Expected format: 'START-END' (e.g. '0-90')", error_type="validation_error", code="invalid_parameter")
+            raise MCPVideoError(
+                f"Invalid frames format: '{frames}'. Expected format: 'START-END' (e.g. '0-90')",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
         args += ["--frames", frames]
     if scale is not None:
         args += ["--scale", str(scale)]
@@ -744,7 +748,11 @@ def render_and_post(
         is_last = i == len(post_process) - 1
 
         if op_type not in op_map:
-            raise MCPVideoError(f"Unknown post-processing operation: '{op_type}'. Valid operations: {', '.join(op_map)}", error_type="validation_error", code="invalid_parameter")
+            raise MCPVideoError(
+                f"Unknown post-processing operation: '{op_type}'. Valid operations: {', '.join(op_map)}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
 
         step_output = output_path if is_last else None
         result = op_map[op_type](current_input, output_path=step_output, **params)

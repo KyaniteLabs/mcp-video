@@ -225,9 +225,7 @@ def handle_media_commands(args: Any, *, use_json: bool) -> bool:
         from ..engine import compare_quality
 
         metrics = args.metrics if args.metrics else None
-        result = _with_spinner(
-            "Comparing quality...", compare_quality, args.original, args.distorted, metrics=metrics
-        )
+        result = _with_spinner("Comparing quality...", compare_quality, args.original, args.distorted, metrics=metrics)
         if use_json:
             output_json(result)
         else:
@@ -398,9 +396,7 @@ def handle_media_commands(args: Any, *, use_json: bool) -> bool:
         if args.outro:
             kwargs["outro_path"] = args.outro
         timeline = template_fn(**kwargs)
-        result = _with_spinner(
-            f"Applying {args.name} template...", edit_timeline, timeline, output_path=args.output
-        )
+        result = _with_spinner(f"Applying {args.name} template...", edit_timeline, timeline, output_path=args.output)
         if use_json:
             output_json(result)
         else:

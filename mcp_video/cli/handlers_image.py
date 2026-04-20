@@ -74,9 +74,7 @@ def handle_image_commands(args: Any, *, use_json: bool) -> bool:
             if colors:
                 lines.append("[bold green]Colors:[/bold green]")
                 for c in colors[:5]:
-                    lines.append(
-                        f"  {c.get('hex', '')} ({c.get('css_name', '')}) - {c.get('coverage_pct', 0):.1f}%"
-                    )
+                    lines.append(f"  {c.get('hex', '')} ({c.get('css_name', '')}) - {c.get('coverage_pct', 0):.1f}%")
             desc = data.get("description")
             if desc:
                 lines.append(f"\n[bold green]AI Description:[/bold green] {desc}")

@@ -160,9 +160,7 @@ def handle_ai_commands(args: Any, *, use_json: bool) -> bool:
     if args.command == "video-ai-upscale":
         from ..ai_engine import ai_upscale
 
-        result = _with_spinner(
-            "Upscaling...", ai_upscale, args.input, args.output, scale=args.scale, model=args.model
-        )
+        result = _with_spinner("Upscaling...", ai_upscale, args.input, args.output, scale=args.scale, model=args.model)
         if use_json:
             output_json({"success": True, "output_path": result})
         else:

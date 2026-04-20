@@ -184,7 +184,11 @@ class Client:
     @staticmethod
     def _validate_choice(name: str, value: str, valid_values: set[str]) -> None:
         if value not in valid_values:
-            raise MCPVideoError(f"{name} must be one of {sorted(valid_values)}, got {value}", error_type="validation_error", code="invalid_parameter")
+            raise MCPVideoError(
+                f"{name} must be one of {sorted(valid_values)}, got {value}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
 
     def convert(
         self,

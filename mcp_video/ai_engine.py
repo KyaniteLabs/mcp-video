@@ -215,7 +215,11 @@ def _standard_scene_detect(video: str, threshold: float) -> list[dict]:
     if not video_path.exists():
         raise InputFileError(video)
     if not isinstance(threshold, (int, float)) or not (0.0 <= threshold <= 1.0):
-        raise MCPVideoError(f"threshold must be between 0.0 and 1.0, got {threshold}", error_type="validation_error", code="invalid_parameter")
+        raise MCPVideoError(
+            f"threshold must be between 0.0 and 1.0, got {threshold}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
     cmd = ["ffmpeg", "-i", video, "-filter:v", f"select='gt(scene,{threshold})',showinfo", "-f", "null", "-"]
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
@@ -1178,7 +1182,9 @@ def _ai_upscale_opencv(video_path: str, output_path: str, scale: int) -> str:
     }
 
     if scale not in model_urls:
-        raise MCPVideoError(f"Scale must be 2 or 4, got {scale}", error_type="validation_error", code="invalid_parameter")
+        raise MCPVideoError(
+            f"Scale must be 2 or 4, got {scale}", error_type="validation_error", code="invalid_parameter"
+        )
 
     # Setup model path in cache directory
     cache_dir = Path.home() / ".cache" / "mcp-video" / "models"
@@ -1188,7 +1194,9 @@ def _ai_upscale_opencv(video_path: str, output_path: str, scale: int) -> str:
     # Download model if not exists (FSRCNN is ~57KB vs EDSR's 38MB!)
     model_filename = f"FSRCNN_x{scale}.pb"
     if model_filename not in _MODEL_HASHES:
-        raise MCPVideoError(f"No known hash for model {model_filename}", error_type="validation_error", code="invalid_parameter")
+        raise MCPVideoError(
+            f"No known hash for model {model_filename}", error_type="validation_error", code="invalid_parameter"
+        )
     expected_hash = _MODEL_HASHES[model_filename]
 
     if not model_path.exists():
@@ -1322,7 +1330,9 @@ def ai_upscale(
 
     # Validate scale parameter
     if scale not in (2, 4):
-        raise MCPVideoError(f"Scale must be 2 or 4, got {scale}", error_type="validation_error", code="invalid_parameter")
+        raise MCPVideoError(
+            f"Scale must be 2 or 4, got {scale}", error_type="validation_error", code="invalid_parameter"
+        )
 
     output_path = Path(output)
 
@@ -1346,7 +1356,11 @@ def ai_upscale(
     }
 
     if model not in model_configs:
-        raise MCPVideoError(f"Unknown model: {model}. Choose from: {list(model_configs.keys())}", error_type="validation_error", code="invalid_parameter")
+        raise MCPVideoError(
+            f"Unknown model: {model}. Choose from: {list(model_configs.keys())}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
 
     with tempfile.TemporaryDirectory() as tmpdir:
         tmpdir_path = Path(tmpdir)
@@ -1657,7 +1671,11 @@ def _download_direct_url(url: str, dest_dir: str) -> str:
             total += len(chunk)
             if total > max_download_bytes:
                 Path(dest).unlink(missing_ok=True)
-                raise MCPVideoError(f"Download exceeded {max_download_bytes >> 30} GiB size limit", error_type="resource_error", code="download_size_limit")
+                raise MCPVideoError(
+                    f"Download exceeded {max_download_bytes >> 30} GiB size limit",
+                    error_type="resource_error",
+                    code="download_size_limit",
+                )
             fh.write(chunk)
     return dest
 
@@ -1670,7 +1688,11 @@ def _download_with_ytdlp(url: str, dest_dir: str) -> str:
     try:
         import yt_dlp
     except ImportError:
-        raise MCPVideoError("yt-dlp is not installed. Install it with: pip install yt-dlp", error_type="dependency_error", code="missing_ytdlp") from None
+        raise MCPVideoError(
+            "yt-dlp is not installed. Install it with: pip install yt-dlp",
+            error_type="dependency_error",
+            code="missing_ytdlp",
+        ) from None
 
     dest_template = str(Path(dest_dir) / "%(id)s.%(ext)s")
     ydl_opts = {
@@ -1702,7 +1724,9 @@ def _resolve_video_source(video: str) -> tuple[str, str | None, str | None]:
         return video, None, None
 
     if not _is_safe_url(video):
-        raise MCPVideoError(f"URL blocked (SSRF protection): {video}", error_type="validation_error", code="ssrf_blocked")
+        raise MCPVideoError(
+            f"URL blocked (SSRF protection): {video}", error_type="validation_error", code="ssrf_blocked"
+        )
 
     source_url = video
     host = _url_host(video)
@@ -1755,7 +1779,9 @@ def _resolve_video_source(video: str) -> tuple[str, str | None, str | None]:
                     local = _download_direct_url(video, tmp)
                 except Exception as dl_exc:
                     shutil.rmtree(tmp, ignore_errors=True)
-                    raise ProcessingError(str(video), 1, f"Download failed (yt-dlp: {exc}; urllib: {dl_exc})") from dl_exc
+                    raise ProcessingError(
+                        str(video), 1, f"Download failed (yt-dlp: {exc}; urllib: {dl_exc})"
+                    ) from dl_exc
             else:
                 raise ProcessingError(str(video), 1, f"Failed to download {video}: {exc}") from exc
 
@@ -1815,7 +1841,11 @@ def analyze_video(
 
     # Validate scene_threshold
     if not (0.0 <= scene_threshold <= 1.0):
-        raise MCPVideoError(f"scene_threshold must be between 0.0 and 1.0, got {scene_threshold}", error_type="validation_error", code="invalid_parameter")
+        raise MCPVideoError(
+            f"scene_threshold must be between 0.0 and 1.0, got {scene_threshold}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
 
     # Validate output paths — ensure they don't escape safe directories
     for label, path in [
@@ -1840,7 +1870,9 @@ def analyze_video(
                 "/sys/",
             )
             if any(str(p).startswith(prefix) for prefix in blocked_prefixes):
-                raise MCPVideoError(f"{label} path escapes safe directory: {path}", error_type="validation_error", code="unsafe_path")
+                raise MCPVideoError(
+                    f"{label} path escapes safe directory: {path}", error_type="validation_error", code="unsafe_path"
+                )
 
     # ── Resolve URL → local file ─────────────────────────────────────────────
     _tmp_dir: str | None = None
