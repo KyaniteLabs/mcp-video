@@ -1,0 +1,7 @@
+# Exclude dev-only directories from GitHub auto-generated release archives
+# (pip/wheel users already don't get these via pyproject.toml)
+tests/          export-ignore
+manual/         export-ignore
+scripts/        export-ignore
+docs/internal/  export-ignore
+docs/plans/     export-ignore
