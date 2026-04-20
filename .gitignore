@@ -37,3 +37,16 @@ venv/
 out/
 
 .omc/
+
+# Internal development artifacts — keep these out of the repo root
+audit_scores.py
+explainer_real_v2.py
+explainer_v1_script.py
+generate_explainer_demos.py
+generate_real_demos.py
+GITHUB_GUARDIAN_AUDIT.md
+IMPROVEMENTS_SUMMARY.md
+MCP-VIDEO-FEEDBACK.md
+RELEASE_NOTES_v*.md
+CLAUDE.md
+glama-score*.png
