@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from .engine_probe import probe
-from .engine_runtime_utils import _auto_output, _movflags_args, _run_ffmpeg, _validate_input
+from .engine_runtime_utils import _auto_output, _movflags_args, _run_ffmpeg, _timed_operation, _validate_input
 from .errors import MCPVideoError
 from .ffmpeg_helpers import _run_ffprobe_json
 from .models import EditResult, MetadataResult
@@ -80,7 +80,9 @@ def write_metadata(
     for key, value in metadata.items():
         args.extend(["-metadata", f"{key}={value}"])
     args.extend(["-c:v", "copy", "-c:a", "copy", *_movflags_args(output), output])
-    _run_ffmpeg(args)
+
+    with _timed_operation() as timing:
+        _run_ffmpeg(args)
 
     result_info = probe(output)
     return EditResult(
@@ -90,4 +92,5 @@ def write_metadata(
         size_mb=result_info.size_mb,
         format=result_info.format,
         operation="write_metadata",
+        elapsed_ms=timing["elapsed_ms"],
     )

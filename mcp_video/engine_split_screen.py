@@ -9,6 +9,7 @@ from .engine_runtime_utils import (
     _quality_args,
     _run_ffmpeg,
     _sanitize_ffmpeg_number,
+    _timed_operation,
     _validate_input,
 )
 from .ffmpeg_helpers import _escape_ffmpeg_filter_value
@@ -37,29 +38,30 @@ def split_screen(
     right_info = probe(right_path)
     filter_complex = _split_filter(left_info.width, left_info.height, right_info.width, right_info.height, layout)
 
-    _run_ffmpeg(
-        [
-            "-i",
-            left_path,
-            "-i",
-            right_path,
-            "-filter_complex",
-            filter_complex,
-            "-map",
-            "[v]",
-            "-map",
-            "0:a?",
-            "-c:v",
-            "libx264",
-            *_quality_args(),
-            "-c:a",
-            "aac",
-            "-b:a",
-            "128k",
-            *_movflags_args(output),
-            output,
-        ]
-    )
+    with _timed_operation() as timing:
+        _run_ffmpeg(
+            [
+                "-i",
+                left_path,
+                "-i",
+                right_path,
+                "-filter_complex",
+                filter_complex,
+                "-map",
+                "[v]",
+                "-map",
+                "0:a?",
+                "-c:v",
+                "libx264",
+                *_quality_args(),
+                "-c:a",
+                "aac",
+                "-b:a",
+                "128k",
+                *_movflags_args(output),
+                output,
+            ]
+        )
 
     info = probe(output)
     return EditResult(
@@ -69,6 +71,7 @@ def split_screen(
         size_mb=info.size_mb,
         format="mp4",
         operation=f"split_screen_{layout}",
+        elapsed_ms=timing["elapsed_ms"],
     )
 
 

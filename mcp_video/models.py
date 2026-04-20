@@ -58,6 +58,7 @@ class EditResult(BaseModel):
     operation: str | None = None
     progress: float | None = Field(default=None, description="Final progress percentage (0-100)")
     thumbnail_base64: str | None = Field(default=None, description="Base64-encoded JPEG thumbnail of the first frame")
+    elapsed_ms: float | None = Field(default=None, description="Wall-clock processing time in milliseconds")
 
 
 class ErrorResult(BaseModel):

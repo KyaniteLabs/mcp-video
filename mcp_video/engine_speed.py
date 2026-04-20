@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from .engine_probe import probe
-from .engine_runtime_utils import _auto_output, _movflags_args, _run_ffmpeg, _validate_input
+from .engine_runtime_utils import _auto_output, _movflags_args, _run_ffmpeg, _timed_operation, _validate_input
 from .errors import MCPVideoError
 from .models import EditResult
 
@@ -55,49 +55,50 @@ def speed(
     info = probe(input_path)
     has_audio = info.audio_codec is not None
 
-    if has_audio:
-        _run_ffmpeg(
-            [
-                "-i",
-                input_path,
-                "-filter_complex",
-                f"[0:v]{video_filter}[v];[0:a]{audio_filter}[a]",
-                "-map",
-                "[v]",
-                "-map",
-                "[a]",
-                "-c:v",
-                "libx264",
-                "-preset",
-                "fast",
-                "-crf",
-                "23",
-                "-c:a",
-                "aac",
-                "-b:a",
-                "128k",
-                *_movflags_args(output),
-                output,
-            ]
-        )
-    else:
-        _run_ffmpeg(
-            [
-                "-i",
-                input_path,
-                "-vf",
-                video_filter,
-                "-an",
-                "-c:v",
-                "libx264",
-                "-preset",
-                "fast",
-                "-crf",
-                "23",
-                *_movflags_args(output),
-                output,
-            ]
-        )
+    with _timed_operation() as timing:
+        if has_audio:
+            _run_ffmpeg(
+                [
+                    "-i",
+                    input_path,
+                    "-filter_complex",
+                    f"[0:v]{video_filter}[v];[0:a]{audio_filter}[a]",
+                    "-map",
+                    "[v]",
+                    "-map",
+                    "[a]",
+                    "-c:v",
+                    "libx264",
+                    "-preset",
+                    "fast",
+                    "-crf",
+                    "23",
+                    "-c:a",
+                    "aac",
+                    "-b:a",
+                    "128k",
+                    *_movflags_args(output),
+                    output,
+                ]
+            )
+        else:
+            _run_ffmpeg(
+                [
+                    "-i",
+                    input_path,
+                    "-vf",
+                    video_filter,
+                    "-an",
+                    "-c:v",
+                    "libx264",
+                    "-preset",
+                    "fast",
+                    "-crf",
+                    "23",
+                    *_movflags_args(output),
+                    output,
+                ]
+            )
 
     info = probe(output)
     return EditResult(
@@ -107,4 +108,5 @@ def speed(
         size_mb=info.size_mb,
         format="mp4",
         operation="speed",
+        elapsed_ms=timing["elapsed_ms"],
     )

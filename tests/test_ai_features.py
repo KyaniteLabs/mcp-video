@@ -1010,7 +1010,7 @@ def test_ai_upscale_import_error_message_mentions_opencv_contrib(sample_video, t
 
     with (
         patch("mcp_video.ai_engine._ai_upscale_opencv", side_effect=ImportError),
-        pytest.raises(RuntimeError, match="opencv-contrib-python"),
+        pytest.raises(MCPVideoError, match="opencv-contrib-python"),
     ):
         ai_upscale(sample_video, output_video, scale=2)
 
@@ -1066,11 +1066,11 @@ def test_ai_upscale_invalid_scale():
         create_low_res_video(input_video, "160x120")
         output_video = os.path.join(tmpdir, "output.mp4")
 
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(MCPVideoError) as exc_info:
             ai_upscale(input_video, output_video, scale=3)  # Invalid scale
 
         assert "scale" in str(exc_info.value).lower()
-        print(f"✓ Correctly raised ValueError for invalid scale: {exc_info.value}")
+        print(f"✓ Correctly raised MCPVideoError for invalid scale: {exc_info.value}")
 
 
 @requires_ffmpeg
@@ -1149,15 +1149,15 @@ def test_analyze_video_file_not_found():
     """analyze_video raises FileNotFoundError for missing files."""
     from mcp_video.ai_engine import analyze_video
 
-    with pytest.raises(FileNotFoundError):
+    with pytest.raises(InputFileError):
         analyze_video("/nonexistent/path/video.mp4", include_transcript=False)
 
 
 def test_analyze_video_null_byte_path():
-    """analyze_video raises FileNotFoundError for null-byte paths."""
+    """analyze_video raises InputFileError for null-byte paths."""
     from mcp_video.ai_engine import analyze_video
 
-    with pytest.raises(FileNotFoundError):
+    with pytest.raises(InputFileError):
         analyze_video("path/with\x00null", include_transcript=False)
 
 
@@ -1324,7 +1324,7 @@ def test_resolve_video_source_platform_url_requires_ytdlp(monkeypatch):
 
     from mcp_video.ai_engine import _resolve_video_source
 
-    with pytest.raises(RuntimeError, match="yt-dlp"):
+    with pytest.raises(MCPVideoError, match="yt-dlp"):
         _resolve_video_source("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
 
 
@@ -1345,7 +1345,7 @@ def test_resolve_video_source_direct_url_no_extension_no_ytdlp(monkeypatch):
 
     from mcp_video.ai_engine import _resolve_video_source
 
-    with pytest.raises(RuntimeError, match="yt-dlp"):
+    with pytest.raises(MCPVideoError, match="yt-dlp"):
         _resolve_video_source("https://example.com/stream")  # no .mp4 extension
 
 

@@ -3,7 +3,14 @@
 from __future__ import annotations
 
 from .engine_probe import probe
-from .engine_runtime_utils import _auto_output, _movflags_args, _quality_args, _run_ffmpeg, _validate_input
+from .engine_runtime_utils import (
+    _auto_output,
+    _movflags_args,
+    _quality_args,
+    _run_ffmpeg,
+    _timed_operation,
+    _validate_input,
+)
 from .errors import MCPVideoError
 from .models import EditResult
 
@@ -33,21 +40,22 @@ def fade(
 
     vf = ",".join(vf_parts)
 
-    _run_ffmpeg(
-        [
-            "-i",
-            input_path,
-            "-vf",
-            vf,
-            "-c:v",
-            "libx264",
-            *_quality_args(crf=crf, preset=preset),
-            "-c:a",
-            "copy",
-            *_movflags_args(output),
-            output,
-        ]
-    )
+    with _timed_operation() as timing:
+        _run_ffmpeg(
+            [
+                "-i",
+                input_path,
+                "-vf",
+                vf,
+                "-c:v",
+                "libx264",
+                *_quality_args(crf=crf, preset=preset),
+                "-c:a",
+                "copy",
+                *_movflags_args(output),
+                output,
+            ]
+        )
 
     result_info = probe(output)
     return EditResult(
@@ -57,4 +65,5 @@ def fade(
         size_mb=result_info.size_mb,
         format="mp4",
         operation="fade",
+        elapsed_ms=timing["elapsed_ms"],
     )

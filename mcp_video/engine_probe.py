@@ -2,21 +2,28 @@
 
 from __future__ import annotations
 
+import os
+
 from .errors import InputFileError
 from .ffmpeg_helpers import _run_ffprobe_json
 from .models import VideoInfo
 from .engine_runtime_utils import _get_audio_stream, _get_video_stream, _validate_input
 
 # ---------------------------------------------------------------------------
-# Probe
+# Probe cache — keyed by (path, mtime, size) so stale data is never returned
 # ---------------------------------------------------------------------------
 
+_probe_cache: dict[tuple[str, float, int], VideoInfo] = {}
+_MAX_PROBE_CACHE = 256
 
-def probe(path: str) -> VideoInfo:
-    """Get metadata about a video file using ffprobe."""
-    _validate_input(path)
-    data = _run_ffprobe_json(path)
 
+def _cache_key(path: str) -> tuple[str, float, int]:
+    stat = os.stat(path)
+    return (path, stat.st_mtime, stat.st_size)
+
+
+def _build_video_info(path: str, data: dict) -> VideoInfo:
+    """Construct a VideoInfo from raw ffprobe JSON data."""
     vs = _get_video_stream(data)
     if vs is None:
         raise InputFileError(path, "No video stream found")
@@ -65,6 +72,40 @@ def probe(path: str) -> VideoInfo:
         size_bytes=size_bytes,
         format=fmt_name,
     )
+
+
+def probe(path: str) -> VideoInfo:
+    """Get metadata about a video file using ffprobe.
+
+    Results are cached by (path, mtime, size) so repeated calls on the
+    same unmodified file skip the ffprobe subprocess.
+    """
+    _validate_input(path)
+    key = _cache_key(path)
+
+    cached = _probe_cache.get(key)
+    if cached is not None:
+        return cached
+
+    data = _run_ffprobe_json(path)
+    info = _build_video_info(path, data)
+
+    # Evict oldest entries when cache is full
+    if len(_probe_cache) >= _MAX_PROBE_CACHE:
+        _probe_cache.pop(next(iter(_probe_cache)))
+    _probe_cache[key] = info
+
+    return info
+
+
+def invalidate_probe_cache(path: str | None = None) -> None:
+    """Drop cached probe data. Pass a path to evict one entry, or None for all."""
+    if path is None:
+        _probe_cache.clear()
+    else:
+        keys_to_remove = [k for k in _probe_cache if k[0] == path]
+        for k in keys_to_remove:
+            del _probe_cache[k]
 
 
 def get_duration(path: str) -> float:

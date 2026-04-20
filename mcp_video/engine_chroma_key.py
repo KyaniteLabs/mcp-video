@@ -10,6 +10,7 @@ from .engine_runtime_utils import (
     _require_filter,
     _run_ffmpeg,
     _sanitize_ffmpeg_number,
+    _timed_operation,
     _validate_chroma_color,
     _validate_input,
 )
@@ -59,7 +60,8 @@ def chroma_key(
         vf = f"chromakey=color={safe_color}:similarity={safe_similarity}:blend={safe_blend}"
         codec_args = ["-c:v", "libx264", *_quality_args(), "-c:a", "aac", "-b:a", "128k"]
 
-    _run_ffmpeg(["-i", input_path, "-vf", vf, *codec_args, *_movflags_args(output), output])
+    with _timed_operation() as timing:
+        _run_ffmpeg(["-i", input_path, "-vf", vf, *codec_args, *_movflags_args(output), output])
 
     info = probe(output)
     return EditResult(
@@ -69,6 +71,7 @@ def chroma_key(
         size_mb=info.size_mb,
         format="mp4",
         operation="chroma_key",
+        elapsed_ms=timing["elapsed_ms"],
     )
 
 

@@ -215,7 +215,11 @@ def _standard_scene_detect(video: str, threshold: float) -> list[dict]:
     if not video_path.exists():
         raise InputFileError(video)
     if not isinstance(threshold, (int, float)) or not (0.0 <= threshold <= 1.0):
-        raise ValueError(f"threshold must be between 0.0 and 1.0, got {threshold}")
+        raise MCPVideoError(
+            f"threshold must be between 0.0 and 1.0, got {threshold}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
     cmd = ["ffmpeg", "-i", video, "-filter:v", f"select='gt(scene,{threshold})',showinfo", "-f", "null", "-"]
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
@@ -414,7 +418,7 @@ def _apply_simple_spatial(
             except subprocess.TimeoutExpired:
                 raise ProcessingError("Operation timed out after 600 seconds") from None
             if result.returncode != 0:
-                raise RuntimeError(f"FFmpeg segment processing failed: {result.stderr}")
+                raise ProcessingError(" ".join(cmd), result.returncode, result.stderr)
 
         # Concatenate all segments
         if len(segment_files) == 1:
@@ -448,7 +452,7 @@ def _apply_simple_spatial(
             except subprocess.TimeoutExpired:
                 raise ProcessingError("Operation timed out after 600 seconds") from None
             if result.returncode != 0:
-                raise RuntimeError(f"FFmpeg concat failed: {result.stderr}")
+                raise ProcessingError(" ".join(cmd), result.returncode, result.stderr)
 
     return output
 
@@ -685,7 +689,7 @@ def _concat_segments(
     Uses segment extraction followed by concat demuxer.
     """
     if not segments:
-        raise ValueError("No segments to keep")
+        raise MCPVideoError("No segments to keep", error_type="validation_error", code="invalid_parameter")
 
     if len(segments) == 1:
         # Single segment - just trim
@@ -709,7 +713,7 @@ def _concat_segments(
         except subprocess.TimeoutExpired:
             raise ProcessingError("Operation timed out after 600 seconds") from None
         if result.returncode != 0:
-            raise RuntimeError(f"FFmpeg trim error: {result.stderr}")
+            raise ProcessingError(" ".join(cmd), result.returncode, result.stderr)
         return output
 
     # Multiple segments - extract each and concatenate
@@ -738,7 +742,7 @@ def _concat_segments(
             except subprocess.TimeoutExpired:
                 raise ProcessingError("Operation timed out after 600 seconds") from None
             if result.returncode != 0:
-                raise RuntimeError(f"FFmpeg segment extraction error: {result.stderr}")
+                raise ProcessingError(" ".join(cmd), result.returncode, result.stderr)
 
             segment_files.append(str(segment_file))
 
@@ -769,7 +773,7 @@ def _concat_segments(
         except subprocess.TimeoutExpired:
             raise ProcessingError("Operation timed out after 600 seconds") from None
         if result.returncode != 0:
-            raise RuntimeError(f"FFmpeg concat error: {result.stderr}")
+            raise ProcessingError(" ".join(cmd), result.returncode, result.stderr)
 
     return output
 
@@ -809,7 +813,7 @@ def ai_remove_silence(
     video_duration = float(info.get("format", {}).get("duration", 0))
 
     if video_duration == 0:
-        raise ValueError("Could not determine video duration")
+        raise MCPVideoError("Could not determine video duration", error_type="processing_error", code="probe_failed")
 
     # Step 2: Detect silent sections
     silence_regions = _detect_silence_regions(
@@ -1039,7 +1043,7 @@ def ai_color_grade(
     except subprocess.TimeoutExpired:
         raise ProcessingError("Operation timed out after 600 seconds") from None
     if result.returncode != 0:
-        raise RuntimeError(f"FFmpeg color grading failed: {result.stderr}")
+        raise ProcessingError(" ".join(cmd), result.returncode, result.stderr)
 
     return output
 
@@ -1178,7 +1182,9 @@ def _ai_upscale_opencv(video_path: str, output_path: str, scale: int) -> str:
     }
 
     if scale not in model_urls:
-        raise ValueError(f"Scale must be 2 or 4, got {scale}")
+        raise MCPVideoError(
+            f"Scale must be 2 or 4, got {scale}", error_type="validation_error", code="invalid_parameter"
+        )
 
     # Setup model path in cache directory
     cache_dir = Path.home() / ".cache" / "mcp-video" / "models"
@@ -1188,7 +1194,9 @@ def _ai_upscale_opencv(video_path: str, output_path: str, scale: int) -> str:
     # Download model if not exists (FSRCNN is ~57KB vs EDSR's 38MB!)
     model_filename = f"FSRCNN_x{scale}.pb"
     if model_filename not in _MODEL_HASHES:
-        raise ValueError(f"No known hash for model {model_filename}")
+        raise MCPVideoError(
+            f"No known hash for model {model_filename}", error_type="validation_error", code="invalid_parameter"
+        )
     expected_hash = _MODEL_HASHES[model_filename]
 
     if not model_path.exists():
@@ -1235,18 +1243,18 @@ def _ai_upscale_opencv(video_path: str, output_path: str, scale: int) -> str:
         except subprocess.TimeoutExpired:
             raise ProcessingError("Operation timed out after 600 seconds") from None
         if result.returncode != 0:
-            raise RuntimeError(f"Failed to extract frames: {result.stderr}")
+            raise ProcessingError(" ".join(cmd), result.returncode, result.stderr)
 
         frames = sorted(frames_dir.glob("frame_*.png"))
         if not frames:
-            raise RuntimeError("No frames extracted from video")
+            raise ProcessingError(cmd[0], 1, "No frames extracted from video")
 
         # Upscale each frame using OpenCV DNN
         for i, frame_path in enumerate(frames, 1):
             # Load frame with OpenCV
             img = cv2.imread(str(frame_path))
             if img is None:
-                raise RuntimeError(f"Failed to load frame: {frame_path}")
+                raise ProcessingError("cv2.imread", 1, f"Failed to load frame: {frame_path}")
 
             # Upscale using DNN
             result_img = sr.upsample(img)
@@ -1277,7 +1285,7 @@ def _ai_upscale_opencv(video_path: str, output_path: str, scale: int) -> str:
         except subprocess.TimeoutExpired:
             raise ProcessingError("Operation timed out after 600 seconds") from None
         if result.returncode != 0:
-            raise RuntimeError(f"Failed to create upscaled video: {result.stderr}")
+            raise ProcessingError(" ".join(cmd), result.returncode, result.stderr)
 
     return str(output_file)
 
@@ -1322,7 +1330,9 @@ def ai_upscale(
 
     # Validate scale parameter
     if scale not in (2, 4):
-        raise ValueError(f"Scale must be 2 or 4, got {scale}")
+        raise MCPVideoError(
+            f"Scale must be 2 or 4, got {scale}", error_type="validation_error", code="invalid_parameter"
+        )
 
     output_path = Path(output)
 
@@ -1331,9 +1341,11 @@ def ai_upscale(
         try:
             return _ai_upscale_opencv(str(video_path), str(output_path), scale)
         except ImportError:
-            raise RuntimeError(
+            raise MCPVideoError(
                 "AI upscaling requires either realesrgan or opencv-contrib-python (cv2). "
-                "Install with: pip install realesrgan or pip install opencv-contrib-python"
+                "Install with: pip install realesrgan or pip install opencv-contrib-python",
+                error_type="dependency_error",
+                code="missing_upscale_dep",
             ) from None
 
     # Map model names to RRDBNet configurations
@@ -1344,7 +1356,11 @@ def ai_upscale(
     }
 
     if model not in model_configs:
-        raise ValueError(f"Unknown model: {model}. Choose from: {list(model_configs.keys())}")
+        raise MCPVideoError(
+            f"Unknown model: {model}. Choose from: {list(model_configs.keys())}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
 
     with tempfile.TemporaryDirectory() as tmpdir:
         tmpdir_path = Path(tmpdir)
@@ -1365,12 +1381,12 @@ def ai_upscale(
         except subprocess.TimeoutExpired:
             raise ProcessingError("Operation timed out after 600 seconds") from None
         if result.returncode != 0:
-            raise RuntimeError(f"Failed to extract frames: {result.stderr}")
+            raise ProcessingError(" ".join(cmd), result.returncode, result.stderr)
 
         # Get list of extracted frames
         frames = sorted(frames_dir.glob("frame_*.png"))
         if not frames:
-            raise RuntimeError("No frames extracted from video")
+            raise ProcessingError(cmd[0], 1, "No frames extracted from video")
 
         # Step 3: Initialize Real-ESRGAN model
         config = model_configs[model]
@@ -1480,7 +1496,7 @@ def ai_upscale(
         except subprocess.TimeoutExpired:
             raise ProcessingError("Operation timed out after 600 seconds") from None
         if result.returncode != 0:
-            raise RuntimeError(f"Failed to reconstruct video: {result.stderr}")
+            raise ProcessingError(" ".join(cmd), result.returncode, result.stderr)
 
     return str(output_path)
 
@@ -1632,7 +1648,7 @@ def _url_host(url: str) -> str:
 def _download_direct_url(url: str, dest_dir: str) -> str:
     """Download a direct video URL to *dest_dir* using urllib. Returns local path."""
     if not _is_safe_url(url):
-        raise ValueError(f"URL blocked (SSRF protection): {url}")
+        raise MCPVideoError(f"URL blocked (SSRF protection): {url}", error_type="validation_error", code="ssrf_blocked")
 
     import urllib.request
     import urllib.parse
@@ -1655,7 +1671,11 @@ def _download_direct_url(url: str, dest_dir: str) -> str:
             total += len(chunk)
             if total > max_download_bytes:
                 Path(dest).unlink(missing_ok=True)
-                raise RuntimeError(f"Download exceeded {max_download_bytes >> 30} GiB size limit")
+                raise MCPVideoError(
+                    f"Download exceeded {max_download_bytes >> 30} GiB size limit",
+                    error_type="resource_error",
+                    code="download_size_limit",
+                )
             fh.write(chunk)
     return dest
 
@@ -1668,7 +1688,11 @@ def _download_with_ytdlp(url: str, dest_dir: str) -> str:
     try:
         import yt_dlp
     except ImportError:
-        raise RuntimeError("yt-dlp is not installed. Install it with: pip install yt-dlp") from None
+        raise MCPVideoError(
+            "yt-dlp is not installed. Install it with: pip install yt-dlp",
+            error_type="dependency_error",
+            code="missing_ytdlp",
+        ) from None
 
     dest_template = str(Path(dest_dir) / "%(id)s.%(ext)s")
     ydl_opts = {
@@ -1700,7 +1724,9 @@ def _resolve_video_source(video: str) -> tuple[str, str | None, str | None]:
         return video, None, None
 
     if not _is_safe_url(video):
-        raise ValueError(f"URL blocked (SSRF protection): {video}")
+        raise MCPVideoError(
+            f"URL blocked (SSRF protection): {video}", error_type="validation_error", code="ssrf_blocked"
+        )
 
     source_url = video
     host = _url_host(video)
@@ -1712,34 +1738,36 @@ def _resolve_video_source(video: str) -> tuple[str, str | None, str | None]:
         tmp = tempfile.mkdtemp(prefix="mcp_video_url_")
         try:
             local = _download_with_ytdlp(video, tmp)
-        except RuntimeError:
+        except MCPVideoError:
             shutil.rmtree(tmp, ignore_errors=True)
             raise  # re-raise "yt-dlp not installed" cleanly
         except Exception as exc:
             shutil.rmtree(tmp, ignore_errors=True)
-            raise RuntimeError(f"Failed to download {video}: {exc}") from exc
+            raise ProcessingError(str(video), 1, f"Failed to download {video}: {exc}") from exc
     else:
         # Try yt-dlp first (handles edge cases like redirect-to-stream),
         # fall back to direct urllib download.
         try:
             tmp = tempfile.mkdtemp(prefix="mcp_video_url_")
             local = _download_with_ytdlp(video, tmp)
-        except RuntimeError:
+        except MCPVideoError:
             # yt-dlp not installed — fall back to urllib for direct URLs
             shutil.rmtree(tmp, ignore_errors=True)
             url_path = video.split("?")[0]  # strip query string for ext detection
             ext = Path(url_path).suffix.lower()
             if ext not in _DIRECT_VIDEO_EXTENSIONS:
-                raise RuntimeError(
+                raise MCPVideoError(
                     f"Cannot download '{video}': not a recognised direct video URL and "
-                    "yt-dlp is not installed. Install yt-dlp with: pip install yt-dlp"
+                    "yt-dlp is not installed. Install yt-dlp with: pip install yt-dlp",
+                    error_type="dependency_error",
+                    code="missing_ytdlp",
                 ) from None
             tmp = tempfile.mkdtemp(prefix="mcp_video_url_")
             try:
                 local = _download_direct_url(video, tmp)
             except Exception as exc:
                 shutil.rmtree(tmp, ignore_errors=True)
-                raise RuntimeError(f"Failed to download {video}: {exc}") from exc
+                raise ProcessingError(str(video), 1, f"Failed to download {video}: {exc}") from exc
         except Exception as exc:
             # yt-dlp is installed but failed — try urllib as last resort
             shutil.rmtree(tmp, ignore_errors=True)
@@ -1751,9 +1779,11 @@ def _resolve_video_source(video: str) -> tuple[str, str | None, str | None]:
                     local = _download_direct_url(video, tmp)
                 except Exception as dl_exc:
                     shutil.rmtree(tmp, ignore_errors=True)
-                    raise RuntimeError(f"Download failed (yt-dlp: {exc}; urllib: {dl_exc})") from dl_exc
+                    raise ProcessingError(
+                        str(video), 1, f"Download failed (yt-dlp: {exc}; urllib: {dl_exc})"
+                    ) from dl_exc
             else:
-                raise RuntimeError(f"Failed to download {video}: {exc}") from exc
+                raise ProcessingError(str(video), 1, f"Failed to download {video}: {exc}") from exc
 
     return local, tmp, source_url
 
@@ -1807,11 +1837,15 @@ def analyze_video(
         audio, chapters, colors, quality, errors.
     """
     if "\x00" in video:
-        raise FileNotFoundError("Invalid path: contains null bytes")
+        raise InputFileError(video, "Invalid path: contains null bytes")
 
     # Validate scene_threshold
     if not (0.0 <= scene_threshold <= 1.0):
-        raise ValueError(f"scene_threshold must be between 0.0 and 1.0, got {scene_threshold}")
+        raise MCPVideoError(
+            f"scene_threshold must be between 0.0 and 1.0, got {scene_threshold}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
 
     # Validate output paths — ensure they don't escape safe directories
     for label, path in [
@@ -1836,7 +1870,9 @@ def analyze_video(
                 "/sys/",
             )
             if any(str(p).startswith(prefix) for prefix in blocked_prefixes):
-                raise ValueError(f"{label} path escapes safe directory: {path}")
+                raise MCPVideoError(
+                    f"{label} path escapes safe directory: {path}", error_type="validation_error", code="unsafe_path"
+                )
 
     # ── Resolve URL → local file ─────────────────────────────────────────────
     _tmp_dir: str | None = None
@@ -1845,7 +1881,7 @@ def analyze_video(
 
         video_path = Path(local_video)
         if not video_path.exists():
-            raise FileNotFoundError(f"Video file not found: {video}")
+            raise InputFileError(str(video_path))
 
         # Lazy imports — keep optional-dependency pattern consistent with the rest
         from . import engine as _engine

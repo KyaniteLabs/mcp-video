@@ -13,6 +13,7 @@ from .engine_runtime_utils import (
     _quality_args,
     _require_filter,
     _run_ffmpeg,
+    _timed_operation,
     _validate_color,
     _validate_input,
 )
@@ -82,21 +83,22 @@ def add_text(
 
     vf = ":".join(filter_parts)
 
-    _run_ffmpeg(
-        [
-            "-i",
-            input_path,
-            "-vf",
-            vf,
-            "-c:v",
-            "libx264",
-            *_quality_args(crf=crf, preset=preset),
-            "-c:a",
-            "copy",
-            *_movflags_args(output),
-            output,
-        ]
-    )
+    with _timed_operation() as timing:
+        _run_ffmpeg(
+            [
+                "-i",
+                input_path,
+                "-vf",
+                vf,
+                "-c:v",
+                "libx264",
+                *_quality_args(crf=crf, preset=preset),
+                "-c:a",
+                "copy",
+                *_movflags_args(output),
+                output,
+            ]
+        )
 
     info = probe(output)
     return EditResult(
@@ -106,4 +108,5 @@ def add_text(
         size_mb=info.size_mb,
         format="mp4",
         operation="add_text",
+        elapsed_ms=timing["elapsed_ms"],
     )

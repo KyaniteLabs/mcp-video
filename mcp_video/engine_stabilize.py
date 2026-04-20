@@ -16,6 +16,7 @@ from .engine_runtime_utils import (
     _require_filter,
     _run_ffmpeg,
     _sanitize_ffmpeg_number,
+    _timed_operation,
     _validate_input,
 )
 from .errors import ProcessingError, parse_ffmpeg_error
@@ -45,31 +46,32 @@ def stabilize(
     safe_smoothing = _escape_ffmpeg_filter_value(str(_sanitize_ffmpeg_number(smoothing, "smoothing")))
     safe_zooming = _escape_ffmpeg_filter_value(str(_sanitize_ffmpeg_number(zooming, "zooming")))
 
-    tmpdir = tempfile.mkdtemp(prefix="mcp_video_stab_")
-    try:
-        vectors_file = os.path.join(tmpdir, "vectors.trf")
-        _detect_motion_vectors(input_path, vectors_file)
+    with _timed_operation() as timing:
+        tmpdir = tempfile.mkdtemp(prefix="mcp_video_stab_")
+        try:
+            vectors_file = os.path.join(tmpdir, "vectors.trf")
+            _detect_motion_vectors(input_path, vectors_file)
 
-        safe_vectors_file = _escape_ffmpeg_filter_value(vectors_file)
-        _run_ffmpeg(
-            [
-                "-i",
-                input_path,
-                "-vf",
-                f"vidstabtransform=input={safe_vectors_file}:smoothing={safe_smoothing}:zoom={safe_zooming}:crop=black",
-                "-c:v",
-                "libx264",
-                *_quality_args(),
-                "-c:a",
-                "aac",
-                "-b:a",
-                "128k",
-                *_movflags_args(output),
-                output,
-            ]
-        )
-    finally:
-        shutil.rmtree(tmpdir, ignore_errors=True)
+            safe_vectors_file = _escape_ffmpeg_filter_value(vectors_file)
+            _run_ffmpeg(
+                [
+                    "-i",
+                    input_path,
+                    "-vf",
+                    f"vidstabtransform=input={safe_vectors_file}:smoothing={safe_smoothing}:zoom={safe_zooming}:crop=black",
+                    "-c:v",
+                    "libx264",
+                    *_quality_args(),
+                    "-c:a",
+                    "aac",
+                    "-b:a",
+                    "128k",
+                    *_movflags_args(output),
+                    output,
+                ]
+            )
+        finally:
+            shutil.rmtree(tmpdir, ignore_errors=True)
 
     result_info = probe(output)
     return EditResult(
@@ -79,6 +81,7 @@ def stabilize(
         size_mb=result_info.size_mb,
         format="mp4",
         operation="stabilize",
+        elapsed_ms=timing["elapsed_ms"],
     )
 
 

@@ -8,7 +8,9 @@ import re
 import shutil
 import subprocess
 import tempfile
-from collections.abc import Callable
+import time
+from collections.abc import Callable, Generator
+from contextlib import contextmanager
 from typing import Any
 
 from .errors import (
@@ -312,6 +314,24 @@ def _run_ffmpeg(args: list[str]) -> subprocess.CompletedProcess[str]:
     if proc.returncode != 0:
         raise parse_ffmpeg_error(proc.stderr)
     return proc
+
+
+@contextmanager
+def _timed_operation() -> Generator[dict[str, float | None]]:
+    """Context manager that measures wall-clock elapsed time in ms.
+
+    Usage::
+
+        with _timed_operation() as timing:
+            _run_ffmpeg([...])
+        result = EditResult(..., elapsed_ms=timing["elapsed_ms"])
+    """
+    timing: dict[str, float | None] = {"elapsed_ms": None}
+    start = time.monotonic()
+    try:
+        yield timing
+    finally:
+        timing["elapsed_ms"] = (time.monotonic() - start) * 1000
 
 
 def _parse_ffmpeg_time(time_str: str) -> float:

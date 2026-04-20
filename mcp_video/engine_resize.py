@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from .engine_probe import probe
-from .engine_runtime_utils import _auto_output, _movflags_args, _run_ffmpeg, _validate_input
+from .engine_runtime_utils import _auto_output, _movflags_args, _run_ffmpeg, _timed_operation, _validate_input
 from .errors import MCPVideoError
 from .models import ASPECT_RATIOS, QUALITY_PRESETS, EditResult, QualityLevel
 
@@ -52,26 +52,27 @@ def resize(
     # Scale to fit within target, then pad to exact dimensions
     vf = f"scale={w}:{h}:force_original_aspect_ratio=decrease,pad={w}:{h}:(ow-iw)/2:(oh-ih)/2:black"
 
-    _run_ffmpeg(
-        [
-            "-i",
-            input_path,
-            "-vf",
-            vf,
-            "-c:v",
-            "libx264",
-            "-crf",
-            str(preset["crf"]),
-            "-preset",
-            preset["preset"],
-            "-c:a",
-            "aac",
-            "-b:a",
-            "128k",
-            *_movflags_args(output),
-            output,
-        ]
-    )
+    with _timed_operation() as timing:
+        _run_ffmpeg(
+            [
+                "-i",
+                input_path,
+                "-vf",
+                vf,
+                "-c:v",
+                "libx264",
+                "-crf",
+                str(preset["crf"]),
+                "-preset",
+                preset["preset"],
+                "-c:a",
+                "aac",
+                "-b:a",
+                "128k",
+                *_movflags_args(output),
+                output,
+            ]
+        )
 
     info = probe(output)
     return EditResult(
@@ -81,4 +82,5 @@ def resize(
         size_mb=info.size_mb,
         format="mp4",
         operation="resize",
+        elapsed_ms=timing["elapsed_ms"],
     )

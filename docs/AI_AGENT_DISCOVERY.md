@@ -75,10 +75,11 @@ Cursor:
 
 High-leverage listing targets:
 
-- Official MCP Registry.
-- Glama MCP directory.
-- Smithery MCP directory.
-- Awesome MCP server lists.
+- Official MCP Registry — metadata in `server.json` at the repo root, ready for submission via `npx @anthropic-ai/mcp-registry publish`. Identifier: `io.github.pastorsimon1798/mcp-video`.
+- [Glama MCP Registry](https://glama.ai/mcp/servers) — Submit via GitHub repo URL.
+- [Smithery](https://smithery.ai) — `npx @anthropic-ai/mcp-registry publish`.
+- [MCP.so](https://mcp.so) — Submit via GitHub repo URL.
+- [Awesome MCP Servers](https://github.com/punkpeye/awesome-mcp-servers) — Submit via PR.
 - GitHub topics for `mcp`, `mcp-server`, `ffmpeg`, `video-editing`, `ai-agents`.
 
 ## Measurement

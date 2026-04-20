@@ -14,6 +14,7 @@ from .engine_runtime_utils import (
     _movflags_args,
     _run_ffmpeg,
     _run_ffmpeg_with_progress,
+    _timed_operation,
     _validate_input,
 )
 from .errors import MCPVideoError
@@ -50,20 +51,21 @@ def convert(
     output = output_path or _auto_output(input_path, format, ext=ext)
     input_info = probe(input_path)
 
-    if two_pass and target_bitrate:
-        _convert_two_pass(input_path, output, target_bitrate, preset["preset"])
-    elif format == "mp4":
-        _convert_mp4(input_path, output, preset, input_info.duration, on_progress)
-    elif format == "webm":
-        _convert_webm(input_path, output, preset, input_info.duration, on_progress)
-    elif format == "mov":
-        _convert_mov(input_path, output, preset, input_info.duration, on_progress)
-    elif format == "gif":
-        _convert_gif(input_path, output, quality, input_info.duration, on_progress)
-    else:
-        raise MCPVideoError(f"Unsupported format: {format}", code="unsupported_format")
+    with _timed_operation() as timing:
+        if two_pass and target_bitrate:
+            _convert_two_pass(input_path, output, target_bitrate, preset["preset"])
+        elif format == "mp4":
+            _convert_mp4(input_path, output, preset, input_info.duration, on_progress)
+        elif format == "webm":
+            _convert_webm(input_path, output, preset, input_info.duration, on_progress)
+        elif format == "mov":
+            _convert_mov(input_path, output, preset, input_info.duration, on_progress)
+        elif format == "gif":
+            _convert_gif(input_path, output, quality, input_info.duration, on_progress)
+        else:
+            raise MCPVideoError(f"Unsupported format: {format}", code="unsupported_format")
 
-    return _convert_result(output, format)
+    return _convert_result(output, format, timing["elapsed_ms"])
 
 
 def _convert_two_pass(input_path: str, output: str, target_bitrate: int, preset: str) -> None:
@@ -211,7 +213,7 @@ def _convert_gif(
         shutil.rmtree(tmpdir, ignore_errors=True)
 
 
-def _convert_result(output: str, format: ExportFormat) -> EditResult:
+def _convert_result(output: str, format: ExportFormat, elapsed_ms: float | None = None) -> EditResult:
     thumb_b64 = _generate_thumbnail_base64(output) if format != "gif" else None
     if os.path.isfile(output):
         size_mb = os.path.getsize(output) / (1024 * 1024)
@@ -226,6 +228,7 @@ def _convert_result(output: str, format: ExportFormat) -> EditResult:
                 operation="convert",
                 progress=100.0,
                 thumbnail_base64=thumb_b64,
+                elapsed_ms=elapsed_ms,
             )
     else:
         size_mb = None
@@ -237,4 +240,5 @@ def _convert_result(output: str, format: ExportFormat) -> EditResult:
         operation="convert",
         progress=100.0,
         thumbnail_base64=thumb_b64,
+        elapsed_ms=elapsed_ms,
     )

@@ -7,7 +7,7 @@ import shutil
 import tempfile
 
 from .engine_probe import probe
-from .engine_runtime_utils import _auto_output, _movflags_args, _quality_args, _run_ffmpeg
+from .engine_runtime_utils import _auto_output, _movflags_args, _quality_args, _run_ffmpeg, _timed_operation
 from .errors import MCPVideoError
 from .ffmpeg_helpers import _validate_input_path
 from .models import EditResult
@@ -29,28 +29,29 @@ def create_from_images(
 
     output = output_path or _auto_output(images[0], "from_images")
     tmpdir = tempfile.mkdtemp(prefix="mcp_video_imgseq_")
-    try:
-        normalized = _normalize_images(validated_images, tmpdir)
-        concat_file = _write_concat_file(normalized, tmpdir, fps)
-        _run_ffmpeg(
-            [
-                "-f",
-                "concat",
-                "-safe",
-                "0",
-                "-i",
-                concat_file,
-                "-c:v",
-                "libx264",
-                *_quality_args(),
-                "-pix_fmt",
-                "yuv420p",
-                *_movflags_args(output),
-                output,
-            ]
-        )
-    finally:
-        shutil.rmtree(tmpdir, ignore_errors=True)
+    with _timed_operation() as timing:
+        try:
+            normalized = _normalize_images(validated_images, tmpdir)
+            concat_file = _write_concat_file(normalized, tmpdir, fps)
+            _run_ffmpeg(
+                [
+                    "-f",
+                    "concat",
+                    "-safe",
+                    "0",
+                    "-i",
+                    concat_file,
+                    "-c:v",
+                    "libx264",
+                    *_quality_args(),
+                    "-pix_fmt",
+                    "yuv420p",
+                    *_movflags_args(output),
+                    output,
+                ]
+            )
+        finally:
+            shutil.rmtree(tmpdir, ignore_errors=True)
 
     result_info = probe(output)
     return EditResult(
@@ -60,6 +61,7 @@ def create_from_images(
         size_mb=result_info.size_mb,
         format="mp4",
         operation="create_from_images",
+        elapsed_ms=timing["elapsed_ms"],
     )
 
 
