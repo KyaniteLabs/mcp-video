@@ -28,6 +28,11 @@ export const SceneSoundDesign: React.FC<SceneSoundDesignProps> = ({ sceneNumber 
         8: 105,  // MCP Primer - connection
         9: 125,  // Code comparison - intellectual
         10: 95,  // CTA - building to finish
+        11: 115, // AI Features - bright
+        12: 100, // Transitions - flowing
+        13: 105, // Audio Synthesis - tonal
+        14: 110, // Visual Effects - dramatic
+        15: 90,  // Quality Guardrails - confident
       };
       
       soundDesign.startDrone(droneFreqs[sceneNumber] || 100);
@@ -135,6 +140,50 @@ export const SceneSoundDesign: React.FC<SceneSoundDesignProps> = ({ sceneNumber 
         // Copied success
         if (frame === 60) {
           soundDesign.playChime();
+        }
+        break;
+
+      case 11: // AI Features
+        // Feature card pops
+        if (frame % 30 === 15) {
+          trigger('blip', () => soundDesign.playBlip(700, 0.04), 15);
+        }
+        // Upscale reveal
+        if (frame === 90) {
+          soundDesign.playWhoosh(0.3, 'up');
+        }
+        break;
+
+      case 12: // Transitions
+        // Transition swoosh on each card
+        if (frame % 40 === 20) {
+          trigger('whoosh', () => soundDesign.playWhoosh(0.4, 'down'), 20);
+        }
+        break;
+
+      case 13: // Audio Synthesis
+        // Waveform bleeps
+        if (frame % 20 === 10) {
+          trigger('blip', () => soundDesign.playBlip(400 + (frame % 5) * 100, 0.03), 10);
+        }
+        break;
+
+      case 14: // Visual Effects
+        // Effect burst on cards
+        if (frame % 35 === 15) {
+          trigger('whoosh', () => soundDesign.playWhoosh(0.3, 'up'), 20);
+          trigger('blip', () => soundDesign.playBlip(900, 0.04), 15);
+        }
+        break;
+
+      case 15: // Quality Guardrails
+        // Check chimes
+        if (frame % 25 === 20) {
+          trigger('chime', () => soundDesign.playChime(), 25);
+        }
+        // Final pass
+        if (frame === 100) {
+          soundDesign.playWhoosh(0.5, 'up');
         }
         break;
     }

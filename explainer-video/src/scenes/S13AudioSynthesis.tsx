@@ -1,38 +1,52 @@
 import React from 'react';
-import { AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate, Easing } from 'remotion';
+import {
+  AbsoluteFill,
+  useCurrentFrame,
+  useVideoConfig,
+  spring,
+  interpolate,
+} from 'remotion';
+import GradientBackground from '../components/GradientBackground';
 import GlassCard from '../components/GlassCard';
-import { COLORS, TEXT, FONT_SIZE, glowShadow } from '../lib/theme';
+import {
+  COLORS,
+  FONT_SIZE,
+  TEXT,
+  glowShadow,
+} from '../lib/theme';
+import { SPRING_SMOOTH, stagger } from '../lib/animations';
 
-// Audio Synthesis Scene for v1.0
+const WAVEFORMS = ['sine', 'square', 'sawtooth', 'triangle'] as const;
+const PRESETS = [
+  { name: 'ui-blip', freq: '800Hz', type: 'sine' },
+  { name: 'chime', freq: '523Hz', type: 'triangle' },
+  { name: 'drone', freq: '100Hz', type: 'sawtooth' },
+  { name: 'typing', freq: 'noise', type: 'filtered' },
+];
+
 export const S13AudioSynthesis: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  
-  const progress = frame / (fps * 5);
-  
-  // Waveform animation
-  const waveOffset = frame * 0.1;
-  
-  // Entrance animations
-  const titleOpacity = interpolate(progress, [0, 0.15], [0, 1], {
+
+  const titleSpring = spring({
+    frame: Math.max(0, frame - 5),
+    fps,
+    config: SPRING_SMOOTH,
+  });
+
+  const contentOpacity = interpolate(frame, [25, 45], [0, 1], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
-  
-  const contentOpacity = interpolate(progress, [0.2, 0.35], [0, 1], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
-  
-  const presets = [
-    { name: 'ui-blip', freq: '800Hz', type: 'sine' },
-    { name: 'chime', freq: '523Hz', type: 'triangle' },
-    { name: 'drone', freq: '100Hz', type: 'sawtooth' },
-    { name: 'typing', freq: 'noise', type: 'filtered' },
-  ];
-  
+
   return (
-    <AbsoluteFill style={{ background: COLORS.BG_DEEP }}>
+    <AbsoluteFill style={{ backgroundColor: COLORS.BG_DEEP }}>
+      <GradientBackground
+        glowColor={COLORS.LIME}
+        glowX={0.5}
+        glowY={0.5}
+      />
+
       {/* Animated waveform background */}
       <svg
         style={{
@@ -42,7 +56,7 @@ export const S13AudioSynthesis: React.FC = () => {
           transform: 'translate(-50%, -50%)',
           width: 1200,
           height: 400,
-          opacity: 0.1,
+          opacity: 0.08,
         }}
       >
         {[...Array(5)].map((_, i) => (
@@ -50,7 +64,7 @@ export const S13AudioSynthesis: React.FC = () => {
             key={i}
             d={`M 0 200 ${[...Array(20)].map((_, j) => {
               const x = (j / 20) * 1200;
-              const y = 200 + Math.sin((j + waveOffset + i * 2) * 0.5) * (30 + i * 10);
+              const y = 200 + Math.sin((j + frame * 0.1 + i * 2) * 0.5) * (30 + i * 10);
               return `L ${x} ${y}`;
             }).join(' ')}`}
             stroke={COLORS.LIME}
@@ -59,207 +73,186 @@ export const S13AudioSynthesis: React.FC = () => {
           />
         ))}
       </svg>
-      
-      {/* Header */}
-      <div
+
+      <AbsoluteFill
         style={{
-          position: 'absolute',
-          top: 100,
-          left: 0,
-          right: 0,
-          textAlign: 'center',
-          opacity: titleOpacity,
+          padding: 60,
+          flexDirection: 'column',
+          alignItems: 'center',
         }}
       >
+        {/* Title */}
         <div
-          style={{
-            ...TEXT.overline,
-            fontSize: FONT_SIZE.OVERLINE,
-            color: COLORS.SPRING_GREEN,
-            marginBottom: 16,
-          }}
-        >
-          v1.0 FEATURES
-        </div>
-        <h2
           style={{
             ...TEXT.headline,
             fontSize: FONT_SIZE.HEADLINE,
             color: COLORS.TEXT_PRIMARY,
-            margin: 0,
+            textAlign: 'center',
+            opacity: interpolate(titleSpring, [0, 0.3], [0, 1]),
+            transform: `translateY(${interpolate(titleSpring, [0, 1], [20, 0])}px)`,
           }}
         >
-          Procedural Audio
-        </h2>
-        <p
+          Procedural <span style={{ color: COLORS.LIME }}>Audio</span>
+        </div>
+        <div
           style={{
-            ...TEXT.body,
-            fontSize: FONT_SIZE.SUBTITLE,
+            ...TEXT.subtitle,
+            fontSize: 18,
             color: COLORS.TEXT_SECONDARY,
-            marginTop: 12,
+            textAlign: 'center',
+            marginTop: 8,
+            opacity: interpolate(titleSpring, [0.3, 0.6], [0, 1]),
           }}
         >
-          Generate sound effects from code — no external audio files needed
-        </p>
-      </div>
-      
-      {/* Main content */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 280,
-          left: 60,
-          right: 60,
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: 40,
-          opacity: contentOpacity,
-        }}
-      >
-        {/* Left: Waveform visualization */}
-        <GlassCard
+          Generate sound effects from code — no audio files needed
+        </div>
+
+        {/* Two-column content */}
+        <div
           style={{
-            padding: 32,
-            borderColor: `${COLORS.LIME}30`,
-            boxShadow: glowShadow(COLORS.LIME, 0.3),
+            flex: 1,
+            flexDirection: 'row',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: 48,
+            maxWidth: 900,
+            width: '100%',
+            opacity: contentOpacity,
           }}
         >
-          <h3
+          {/* Left: Waveform visualization */}
+          <GlassCard
             style={{
-              ...TEXT.title,
-              fontSize: 20,
-              color: COLORS.LIME,
-              margin: '0 0 20px 0',
+              padding: 28,
+              width: 380,
+              borderColor: `${COLORS.LIME}20`,
             }}
           >
-            Waveform Generation
-          </h3>
-          
-          {/* Animated waveforms */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {['sine', 'square', 'sawtooth', 'triangle'].map((wave, i) => {
-              const offset = frame * (0.05 + i * 0.02);
-              return (
-                <div key={wave} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <span
-                    style={{
+            <div style={{
+              ...TEXT.title,
+              fontSize: 18,
+              color: COLORS.LIME,
+              marginBottom: 16,
+            }}>
+              Waveform Generation
+            </div>
+
+            <div style={{ flexDirection: 'column', gap: 14 }}>
+              {WAVEFORMS.map((wave, i) => {
+                const offset = frame * (0.05 + i * 0.02);
+                return (
+                  <div key={wave} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    <span style={{
                       ...TEXT.caption,
-                      fontSize: 12,
+                      fontSize: 11,
                       color: COLORS.TEXT_MUTED,
                       width: 60,
                       textTransform: 'uppercase',
-                    }}
-                  >
-                    {wave}
-                  </span>
-                  <svg width={200} height={30} style={{ opacity: 0.8 }}>
-                    <path
-                      d={`M 0 15 ${[...Array(50)].map((_, j) => {
-                        const x = (j / 50) * 200;
-                        let y = 15;
-                        if (wave === 'sine') {
-                          y = 15 + Math.sin((j + offset) * 0.3) * 12;
-                        } else if (wave === 'square') {
-                          y = 15 + (Math.sin((j + offset) * 0.3) > 0 ? 12 : -12);
-                        } else if (wave === 'sawtooth') {
-                          y = 15 + (((j + offset) % 20) / 20 - 0.5) * 24;
-                        } else if (wave === 'triangle') {
-                          const phase = ((j + offset) % 20) / 20;
-                          y = 15 + (phase < 0.5 ? phase * 48 - 12 : (1 - phase) * 48 - 12);
-                        }
-                        return `L ${x} ${y}`;
-                      }).join(' ')}`}
-                      stroke={COLORS.LIME}
-                      strokeWidth={2}
-                      fill="none"
-                    />
-                  </svg>
-                </div>
-              );
-            })}
-          </div>
-        </GlassCard>
-        
-        {/* Right: Presets */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <h3
-            style={{
+                    }}>
+                      {wave}
+                    </span>
+                    <svg width={200} height={28} style={{ opacity: 0.8 }}>
+                      <path
+                        d={`M 0 14 ${[...Array(50)].map((_, j) => {
+                          const x = (j / 50) * 200;
+                          let y = 14;
+                          if (wave === 'sine') y = 14 + Math.sin((j + offset) * 0.3) * 11;
+                          else if (wave === 'square') y = 14 + (Math.sin((j + offset) * 0.3) > 0 ? 11 : -11);
+                          else if (wave === 'sawtooth') y = 14 + (((j + offset) % 20) / 20 - 0.5) * 22;
+                          else y = 14 + ((((j + offset) % 20) / 20 < 0.5 ? ((j + offset) % 20) / 20 : 1 - ((j + offset) % 20) / 20) * 22 - 5.5);
+                          return `L ${x} ${y}`;
+                        }).join(' ')}`}
+                        stroke={COLORS.LIME}
+                        strokeWidth={2}
+                        fill="none"
+                      />
+                    </svg>
+                  </div>
+                );
+              })}
+            </div>
+          </GlassCard>
+
+          {/* Right: Presets */}
+          <div style={{
+            flexDirection: 'column',
+            gap: 10,
+            width: 360,
+          }}>
+            <div style={{
               ...TEXT.title,
-              fontSize: 20,
+              fontSize: 18,
               color: COLORS.TEXT_PRIMARY,
-              margin: '0 0 8px 0',
-            }}
-          >
-            18+ Audio Presets
-          </h3>
-          
-          {presets.map((preset, i) => (
-            <GlassCard
-              key={preset.name}
-              style={{
-                padding: '16px 20px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                borderColor: `${COLORS.SPRING_GREEN}20`,
-              }}
-            >
-              <div>
-                <span
+              marginBottom: 4,
+            }}>
+              18+ Audio Presets
+            </div>
+
+            {PRESETS.map((preset, i) => {
+              const presetSpring = spring({
+                frame: stagger(frame, i, 5),
+                fps,
+                config: SPRING_SMOOTH,
+              });
+              return (
+                <GlassCard
+                  key={preset.name}
                   style={{
-                    ...TEXT.code,
-                    fontSize: 14,
-                    color: COLORS.SPRING_GREEN,
+                    padding: '14px 18px',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    opacity: interpolate(presetSpring, [0, 0.3], [0, 1]),
+                    transform: `translateX(${interpolate(presetSpring, [0, 1], [15, 0])}px)`,
+                    borderColor: `${COLORS.SEAFOAM}15`,
                   }}
                 >
-                  {preset.name}
-                </span>
-                <span
-                  style={{
+                  <div>
+                    <span style={{
+                      ...TEXT.code,
+                      fontSize: 14,
+                      color: COLORS.SEAFOAM,
+                    }}>
+                      {preset.name}
+                    </span>
+                    <span style={{
+                      ...TEXT.caption,
+                      fontSize: 11,
+                      color: COLORS.TEXT_MUTED,
+                      marginLeft: 10,
+                    }}>
+                      {preset.type}
+                    </span>
+                  </div>
+                  <span style={{
                     ...TEXT.caption,
                     fontSize: 12,
-                    color: COLORS.TEXT_MUTED,
-                    marginLeft: 12,
-                  }}
-                >
-                  {preset.type}
-                </span>
-              </div>
-              <span
-                style={{
-                  ...TEXT.caption,
-                  fontSize: 12,
-                  color: COLORS.TEXT_SECONDARY,
-                }}
-              >
-                {preset.freq}
-              </span>
-            </GlassCard>
-          ))}
-          
-          <div
-            style={{
-              marginTop: 8,
-              padding: '12px 16px',
-              background: `${COLORS.LIME}10`,
+                    color: COLORS.TEXT_SECONDARY,
+                  }}>
+                    {preset.freq}
+                  </span>
+                </GlassCard>
+              );
+            })}
+
+            <div style={{
+              marginTop: 4,
+              padding: '10px 14px',
+              background: `${COLORS.LIME}08`,
               borderRadius: 8,
-              border: `1px solid ${COLORS.LIME}30`,
-            }}
-          >
-            <p
-              style={{
+              border: `1px solid ${COLORS.LIME}20`,
+            }}>
+              <span style={{
                 ...TEXT.caption,
-                fontSize: 13,
+                fontSize: 12,
                 color: COLORS.TEXT_SECONDARY,
-                margin: 0,
-              }}
-            >
-              + Effects: reverb, lowpass, fade, normalize, sequencing
-            </p>
+              }}>
+                + Effects: reverb, lowpass, fade, normalize, sequencing
+              </span>
+            </div>
           </div>
         </div>
-      </div>
-      
+      </AbsoluteFill>
     </AbsoluteFill>
   );
 };

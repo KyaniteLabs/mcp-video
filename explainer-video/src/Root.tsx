@@ -11,7 +11,7 @@ export const RemotionRoot: React.FC = () => {
       <Composition
         id="McpVideoExplainer"
         component={ExplainerVideo}
-        durationInFrames={3062}
+        durationInFrames={2738}
         fps={30}
         width={1920}
         height={1080}

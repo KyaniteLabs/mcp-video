@@ -22,8 +22,8 @@ import {
 import { SPRING_SMOOTH, SPRING_BOUNCE, useAmbientMotion } from '../lib/animations';
 
 const STATS = [
-  { value: '82', label: 'Tools' },
-  { value: '690+', label: 'Tests' },
+  { value: '80', label: 'Tools' },
+  { value: '902+', label: 'Tests' },
   { value: 'Apache 2.0', label: 'License' },
 ];
 
@@ -65,8 +65,8 @@ export const S10CTA: React.FC = () => {
 
   // Counter micro-tick on stat values
   const statCounter = Math.min(
-    82,
-    Math.floor(interpolate(frame, [40, 80], [0, 82], {
+    80,
+    Math.floor(interpolate(frame, [40, 80], [0, 80], {
       extrapolateRight: 'clamp',
     })),
   );
@@ -198,9 +198,9 @@ export const S10CTA: React.FC = () => {
           {STATS.map((stat, i) => {
             // Animated counter for each stat
             const animatedValue = stat.label === 'Tools'
-              ? Math.min(82, Math.floor(interpolate(frame, [40 + i * 10, 70 + i * 10], [0, 82], { extrapolateRight: 'clamp' })))
+              ? Math.min(80, Math.floor(interpolate(frame, [40 + i * 10, 70 + i * 10], [0, 80], { extrapolateRight: 'clamp' })))
               : stat.label === 'Tests'
-              ? Math.min(690, Math.floor(interpolate(frame, [40 + i * 10, 70 + i * 10], [0, 690], { extrapolateRight: 'clamp' })))
+              ? Math.min(902, Math.floor(interpolate(frame, [40 + i * 10, 70 + i * 10], [0, 902], { extrapolateRight: 'clamp' })))
               : stat.value;
             
             return (
@@ -277,7 +277,7 @@ export const S10CTA: React.FC = () => {
               zIndex: 1,
             }}
           >
-            github.com/simonbraz/mcp-video
+            github.com/Pastorsimon1798/mcp-video
           </span>
         </div>
       </AbsoluteFill>

@@ -11,12 +11,12 @@ import GlassCard from '../components/GlassCard';
 import {
   COLORS,
   FONT_SIZE,
-  FONT_DISPLAY,
   TEXT,
   glowShadow,
 } from '../lib/theme';
 import { SPRING_GLASS, stagger } from '../lib/animations';
 
+// ── Feature definitions ────────────────────────────────────────────
 const FEATURES = [
   { icon: '✂️', label: 'Trim & Cut', desc: 'Precision frame control' },
   { icon: '🔗', label: 'Merge', desc: 'Multi-clip composition' },
@@ -26,67 +26,146 @@ const FEATURES = [
   { icon: '⚡', label: 'Convert', desc: 'Format flexibility' },
 ];
 
+// ── Constants ──────────────────────────────────────────────────────
+const CYCLE_PERIOD = 35; // frames per highlighted card
+const STAGGER_DELAY = 6; // frames between card entrances
+const GRID_GAP = 24;
+const GRID_MAX_WIDTH = 900;
+const LAYOUT_PADDING = 80;
+const CARD_PADDING = 24;
+const ICON_SIZE = 28;
+const CARD_LABEL_SIZE = 20;
+const CARD_DESC_SIZE = 14;
+
 export const S3CoreEditing: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
+  // Determine which card is currently highlighted (cycles through all 6)
+  const activeIndex = Math.floor(frame / CYCLE_PERIOD) % FEATURES.length;
+
   return (
     <AbsoluteFill style={{ backgroundColor: COLORS.BG_DEEP }}>
-      <GradientBackground
-        glowColor={COLORS.NEON_PURPLE}
-        glowX={0.35}
-        glowY={0.5}
-      />
+      <GradientBackground glowColor={COLORS.NEON_PURPLE} />
 
       <AbsoluteFill
         style={{
-          flexDirection: 'row',
-          padding: 60,
-          gap: 40,
+          flexDirection: 'column',
+          padding: LAYOUT_PADDING,
           justifyContent: 'center',
           alignItems: 'center',
         }}
       >
-        {/* Left: Feature grid (3x2) - centered */}
+        {/* Title */}
         <div
           style={{
-            width: 480,
+            ...TEXT.headline,
+            fontSize: FONT_SIZE.HEADLINE,
+            color: COLORS.TEXT_PRIMARY,
+            marginBottom: 12,
+            opacity: interpolate(
+              spring({ frame, fps, config: SPRING_GLASS }),
+              [0, 1],
+              [0, 1],
+            ),
+            transform: `translateY(${interpolate(
+              spring({ frame, fps, config: SPRING_GLASS }),
+              [0, 1],
+              [20, 0],
+            )}px)`,
+          }}
+        >
+          Core Editing
+        </div>
+
+        {/* Subtitle */}
+        <div
+          style={{
+            ...TEXT.subtitle,
+            fontSize: FONT_SIZE.SUBTITLE,
+            color: COLORS.TEXT_MUTED,
+            marginBottom: 48,
+            opacity: interpolate(
+              spring({ frame: stagger(frame, 0, 4), fps, config: SPRING_GLASS }),
+              [0, 1],
+              [0, 1],
+            ),
+            transform: `translateY(${interpolate(
+              spring({ frame: stagger(frame, 0, 4), fps, config: SPRING_GLASS }),
+              [0, 1],
+              [12, 0],
+            )}px)`,
+          }}
+        >
+          Everything you need, one tool call away
+        </div>
+
+        {/* 3x2 Feature Grid */}
+        <div
+          style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(3, 1fr)',
-            gridTemplateRows: 'repeat(2, 1fr)',
-            gap: 12,
+            gap: GRID_GAP,
+            maxWidth: GRID_MAX_WIDTH,
+            width: '100%',
+            alignSelf: 'center',
           }}
         >
           {FEATURES.map((feature, i) => {
             const cardSpring = spring({
-              frame: stagger(frame, i, 6),
+              frame: stagger(frame, i, STAGGER_DELAY),
               fps,
               config: SPRING_GLASS,
             });
-            const rotate = interpolate(cardSpring, [0, 1], [2, 0]);
-            const demoIndex = Math.floor((frame % 210) / 70);
-            const isActive = i === demoIndex;
+
+            const isActive = i === activeIndex;
+            const accentColor = isActive ? COLORS.LIME : COLORS.VIOLET_MID;
+
+            // Entrance animation: opacity + scale + slight rotation
+            const entranceOpacity = interpolate(cardSpring, [0, 0.3], [0, 1]);
+            const entranceScale = interpolate(cardSpring, [0, 1], [0.92, 1]);
+            const entranceRotate = interpolate(cardSpring, [0, 1], [2, 0]);
+
+            // Active card glow intensity (subtle pulse)
+            const glowIntensity = isActive
+              ? interpolate(
+                  Math.sin(frame * 0.08),
+                  [-1, 1],
+                  [0.3, 0.6],
+                )
+              : 0;
 
             return (
               <div
                 key={feature.label}
                 style={{
-                  opacity: interpolate(cardSpring, [0, 0.3], [0, 1]),
-                  transform: `scale(${interpolate(cardSpring, [0, 1], [0.92, 1])}) rotate(${rotate}deg)`,
+                  opacity: entranceOpacity,
+                  transform: `scale(${entranceScale}) rotate(${entranceRotate}deg)`,
+                  boxShadow: glowIntensity > 0
+                    ? glowShadow(COLORS.LIME, glowIntensity)
+                    : undefined,
+                  borderRadius: 12,
                 }}
               >
                 <GlassCard
-                  accentColor={isActive ? COLORS.LIME : COLORS.VIOLET_MID}
+                  accentColor={accentColor}
                   accentTop
                   shimmer
-                  style={{ padding: '16px 12px' }}
+                  style={{ padding: CARD_PADDING }}
                 >
                   <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: 28, marginBottom: 8 }}>{feature.icon}</div>
+                    <div
+                      style={{
+                        fontSize: ICON_SIZE,
+                        marginBottom: 8,
+                      }}
+                    >
+                      {feature.icon}
+                    </div>
                     <div
                       style={{
                         ...TEXT.title,
-                        fontSize: 18,
+                        fontSize: CARD_LABEL_SIZE,
                         color: COLORS.TEXT_PRIMARY,
                         marginBottom: 4,
                       }}
@@ -96,7 +175,7 @@ export const S3CoreEditing: React.FC = () => {
                     <div
                       style={{
                         ...TEXT.caption,
-                        fontSize: 14,
+                        fontSize: CARD_DESC_SIZE,
                         color: COLORS.TEXT_MUTED,
                       }}
                     >
@@ -107,133 +186,6 @@ export const S3CoreEditing: React.FC = () => {
               </div>
             );
           })}
-        </div>
-
-        {/* Right: Cycling demo panel - enlarged */}
-        <div
-          style={{
-            width: 520,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <div
-            style={{
-              width: '100%',
-              borderRadius: 12,
-              overflow: 'hidden',
-              border: '1px solid rgba(255,255,255,0.08)',
-              background: 'rgba(0,0,0,0.3)',
-              padding: 28,
-              boxShadow: `0 0 60px ${COLORS.MIDNIGHT_VIOLET}30`,
-            }}
-          >
-            <div style={{ ...TEXT.overline, color: COLORS.VIOLET_MID, fontSize: 13, marginBottom: 20 }}>
-              DEMO
-            </div>
-
-            {(() => {
-              const cycleFrame = frame % 210;
-              const demoIdx = Math.floor(cycleFrame / 70);
-
-              const demos = [
-                {
-                  title: 'Trim & Cut',
-                  desc: 'Precision frame selection',
-                  icon: '✂️',
-                  visual: (
-                    <div style={{ position: 'relative', height: 200 }}>
-                      <div style={{
-                        position: 'absolute', top: '50%', left: 0, right: 0,
-                        height: 40, transform: 'translateY(-50%)',
-                        background: 'rgba(255,255,255,0.06)', borderRadius: 8,
-                      }}>
-                        <div style={{
-                          position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-                          background: 'rgba(255,255,255,0.04)', borderRadius: 8,
-                        }} />
-                        <div style={{
-                          position: 'absolute', top: 0,
-                          left: `${interpolate(cycleFrame, [0, 70], [10, 60], { extrapolateRight: 'clamp' })}%`,
-                          width: '30%', height: '100%',
-                          background: COLORS.VIOLET_MID, borderRadius: 8,
-                          boxShadow: glowShadow(COLORS.VIOLET_MID, 0.4),
-                        }} />
-                        <div style={{
-                          position: 'absolute',
-                          left: `${interpolate(cycleFrame, [0, 70], [10, 60], { extrapolateRight: 'clamp' })}%`,
-                          top: -16, fontSize: 24, transform: 'translateX(-50%)',
-                        }}>✂️</div>
-                      </div>
-                    </div>
-                  ),
-                },
-                {
-                  title: 'Color Grade',
-                  desc: 'Cinematic presets',
-                  icon: '🎨',
-                  visual: (
-                    <div style={{ height: 200, position: 'relative', borderRadius: 8, overflow: 'hidden' }}>
-                      <div style={{
-                        position: 'absolute', inset: 0,
-                        background: 'linear-gradient(135deg, #3a3a3a, #4a4a4a, #3a3a3a)',
-                      }} />
-                      <div style={{
-                        position: 'absolute', inset: 0,
-                        background: 'linear-gradient(135deg, #0f3460, #533483, #e94560)',
-                        clipPath: `inset(0 ${100 - interpolate(cycleFrame, [0, 70], [0, 100], { extrapolateRight: 'clamp' })}% 0 0)`,
-                      }} />
-                    </div>
-                  ),
-                },
-                {
-                  title: 'Merge',
-                  desc: 'Multi-clip composition',
-                  icon: '🔗',
-                  visual: (
-                    <div style={{ height: 200, display: 'flex', gap: 8, alignItems: 'center' }}>
-                      <div style={{
-                        flex: 1, height: 180, borderRadius: 8,
-                        background: 'linear-gradient(135deg, #1a1a2e, #16213e)',
-                        border: '1px solid rgba(255,255,255,0.06)',
-                        opacity: interpolate(cycleFrame, [0, 70], [0.5, 1], { extrapolateRight: 'clamp' }),
-                      }} />
-                      <div style={{
-                        flex: 1, height: 180, borderRadius: 8,
-                        background: 'linear-gradient(135deg, #2d1b3d, #0f3460)',
-                        border: '1px solid rgba(255,255,255,0.06)',
-                        transform: `translateX(${interpolate(cycleFrame, [0, 70], [200, 0], { extrapolateRight: 'clamp' })}px)`,
-                      }} />
-                    </div>
-                  ),
-                },
-              ];
-
-              const demo = demos[demoIdx];
-              const demoProgress = spring({
-                frame: Math.max(0, frame - demoIdx * 70),
-                fps,
-                config: { damping: 25, stiffness: 80, mass: 0.8 },
-              });
-
-              return (
-                <div key={demo.title} style={{
-                  opacity: interpolate(demoProgress, [0, 0.3], [0, 1]),
-                  transform: `translateY(${interpolate(demoProgress, [0, 1], [10, 0])}px)`,
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-                    <span style={{ fontSize: 28 }}>{demo.icon}</span>
-                    <div>
-                      <div style={{ ...TEXT.title, fontSize: 20, color: COLORS.TEXT_PRIMARY }}>{demo.title}</div>
-                      <div style={{ ...TEXT.caption, fontSize: 14, color: COLORS.TEXT_MUTED }}>{demo.desc}</div>
-                    </div>
-                  </div>
-                  {demo.visual}
-                </div>
-              );
-            })()}
-          </div>
         </div>
       </AbsoluteFill>
     </AbsoluteFill>

@@ -1,187 +1,127 @@
 import React from 'react';
-import { AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate, Easing } from 'remotion';
+import {
+  AbsoluteFill,
+  useCurrentFrame,
+  useVideoConfig,
+  spring,
+  interpolate,
+} from 'remotion';
+import GradientBackground from '../components/GradientBackground';
 import GlassCard from '../components/GlassCard';
-import { COLORS, TEXT, FONT_SIZE, glowShadow } from '../lib/theme';
+import {
+  COLORS,
+  FONT_SIZE,
+  TEXT,
+} from '../lib/theme';
+import { SPRING_SMOOTH, stagger } from '../lib/animations';
 
-// Real quality data from design_quality_check
-const QUALITY_DATA = {
-  overall_score: 96.2,
-  technical_score: 90.9,
-  design_score: 100,
-  issues_count: 0,
-};
+const QUALITY_SCORE = 96;
+const CHECKS = [
+  { name: 'Brightness', value: '128/255', icon: '☀' },
+  { name: 'Contrast', value: 'High', icon: '◐' },
+  { name: 'Saturation', value: '95%', icon: '🎨' },
+  { name: 'Audio LUFS', value: '-16 LUFS', icon: '🔊' },
+  { name: 'Color Balance', value: 'Balanced', icon: '⚖' },
+];
 
-// Quality Guardrails Scene for v1.0 - Now with REAL quality data
+const RING_SIZE = 110;
+const RING_INNER = 88;
+
 export const S15QualityGuardrails: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  
-  const progress = frame / (fps * 6);
-  
-  // Entrance animations
-  const titleOpacity = interpolate(progress, [0, 0.15], [0, 1], {
+
+  const titleSpring = spring({
+    frame: Math.max(0, frame - 5),
+    fps,
+    config: SPRING_SMOOTH,
+  });
+
+  // Score ring fill
+  const scoreProgress = interpolate(frame, [20, 60], [0, QUALITY_SCORE], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
-  
-  const contentOpacity = interpolate(progress, [0.2, 0.35], [0, 1], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
-  
-  // Animated checkmarks
-  const checkProgress = interpolate(progress, [0.4, 0.6], [0, 1], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-    easing: Easing.out(Easing.cubic),
-  });
-  
-  const qualityChecks = [
-    { name: 'Brightness', status: 'pass', value: '128/255', icon: '☀' },
-    { name: 'Contrast', status: 'pass', value: 'High', icon: '◐' },
-    { name: 'Saturation', status: 'pass', value: '95%', icon: '🎨' },
-    { name: 'Audio LUFS', status: 'pass', value: '-16 LUFS', icon: '🔊' },
-    { name: 'Color Balance', status: 'pass', value: 'Balanced', icon: '⚖' },
-  ];
-  
-  const ScoreBar: React.FC<{ label: string; score: number; color: string; delay: number }> = ({ 
-    label, score, color, delay 
-  }) => {
-    const barProgress = interpolate(progress, [0.3 + delay, 0.5 + delay], [0, score / 100], {
-      extrapolateLeft: 'clamp',
-      extrapolateRight: 'clamp',
-      easing: Easing.out(Easing.cubic),
-    });
-    
-    return (
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-          <span style={{ ...TEXT.caption, fontSize: 13, color: COLORS.TEXT_SECONDARY }}>{label}</span>
-          <span style={{ ...TEXT.caption, fontSize: 13, color, fontWeight: 600 }}>{Math.round(score)}</span>
-        </div>
-        <div
-          style={{
-            height: 8,
-            background: `${COLORS.BG_ELEVATED}`,
-            borderRadius: 4,
-            overflow: 'hidden',
-          }}
-        >
-          <div
-            style={{
-              width: `${barProgress * 100}%`,
-              height: '100%',
-              background: `linear-gradient(90deg, ${color}, ${color}80)`,
-              borderRadius: 4,
-              transition: 'width 0.3s ease',
-            }}
-          />
-        </div>
-      </div>
-    );
-  };
-  
+
   return (
-    <AbsoluteFill style={{ background: COLORS.BG_DEEP }}>
-      {/* Background accent */}
-      <div
-        style={{
-          position: 'absolute',
-          width: 700,
-          height: 700,
-          borderRadius: '50%',
-          background: `radial-gradient(circle, ${COLORS.LIME}10 0%, transparent 60%)`,
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-        }}
+    <AbsoluteFill style={{ backgroundColor: COLORS.BG_DEEP }}>
+      <GradientBackground
+        glowColor={COLORS.LIME}
+        glowX={0.5}
+        glowY={0.45}
       />
-      
-      {/* Header */}
-      <div
+
+      <AbsoluteFill
         style={{
-          position: 'absolute',
-          top: 80,
-          left: 0,
-          right: 0,
-          textAlign: 'center',
-          opacity: titleOpacity,
+          padding: 60,
+          flexDirection: 'column',
+          alignItems: 'center',
         }}
       >
+        {/* Title */}
         <div
-          style={{
-            ...TEXT.overline,
-            fontSize: FONT_SIZE.OVERLINE,
-            color: COLORS.LIME,
-            marginBottom: 16,
-          }}
-        >
-          v1.0 FEATURES
-        </div>
-        <h2
           style={{
             ...TEXT.headline,
             fontSize: FONT_SIZE.HEADLINE,
             color: COLORS.TEXT_PRIMARY,
-            margin: 0,
+            textAlign: 'center',
+            opacity: interpolate(titleSpring, [0, 0.3], [0, 1]),
+            transform: `translateY(${interpolate(titleSpring, [0, 1], [20, 0])}px)`,
           }}
         >
-          Visual Quality Guardrails
-        </h2>
-        <p
+          Quality <span style={{ color: COLORS.LIME }}>Guardrails</span>
+        </div>
+        <div
           style={{
-            ...TEXT.body,
-            fontSize: FONT_SIZE.SUBTITLE,
+            ...TEXT.subtitle,
+            fontSize: 18,
             color: COLORS.TEXT_SECONDARY,
-            marginTop: 12,
-            maxWidth: 600,
-            marginLeft: 'auto',
-            marginRight: 'auto',
+            textAlign: 'center',
+            marginTop: 8,
+            opacity: interpolate(titleSpring, [0.3, 0.6], [0, 1]),
           }}
         >
-          Automated quality checks — like code linting, but for video
-        </p>
-      </div>
-      
-      {/* Main content */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 240,
-          left: 60,
-          right: 60,
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: 40,
-          opacity: contentOpacity,
-        }}
-      >
-        {/* Left: Quality Score Card with REAL data */}
-        <GlassCard
+          Automated quality checks for every frame
+        </div>
+
+        {/* Two-column: Score ring + Check list */}
+        <div
           style={{
-            padding: 32,
-            borderColor: `${COLORS.LIME}30`,
-            boxShadow: glowShadow(COLORS.LIME, 0.3),
+            flex: 1,
+            flexDirection: 'row',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: 60,
+            maxWidth: 900,
+            width: '100%',
           }}
         >
-          <div style={{ textAlign: 'center', marginBottom: 24 }}>
+          {/* Left: Score ring */}
+          <GlassCard
+            style={{
+              padding: 32,
+              width: 280,
+              textAlign: 'center',
+              borderColor: `${COLORS.LIME}20`,
+              opacity: interpolate(titleSpring, [0.2, 0.5], [0, 1]),
+            }}
+          >
             <div
               style={{
-                width: 100,
-                height: 100,
+                width: RING_SIZE,
+                height: RING_SIZE,
                 borderRadius: '50%',
-                background: `conic-gradient(${COLORS.LIME} 0% ${checkProgress * QUALITY_DATA.overall_score}%, ${COLORS.BG_ELEVATED} ${checkProgress * QUALITY_DATA.overall_score}% 100%)`,
+                background: `conic-gradient(${COLORS.LIME} 0% ${scoreProgress}%, ${COLORS.BG_ELEVATED} ${scoreProgress}% 100%)`,
                 margin: '0 auto 16px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                position: 'relative',
               }}
             >
               <div
                 style={{
-                  width: 80,
-                  height: 80,
+                  width: RING_INNER,
+                  height: RING_INNER,
                   borderRadius: '50%',
                   background: COLORS.BG_CARD,
                   display: 'flex',
@@ -189,206 +129,97 @@ export const S15QualityGuardrails: React.FC = () => {
                   justifyContent: 'center',
                 }}
               >
-                <span
-                  style={{
-                    ...TEXT.display,
-                    fontSize: 32,
-                    color: COLORS.LIME,
-                  }}
-                >
-                  {Math.round(checkProgress * QUALITY_DATA.overall_score)}
+                <span style={{
+                  ...TEXT.display,
+                  fontSize: 30,
+                  color: COLORS.LIME,
+                }}>
+                  {Math.round(scoreProgress)}
                 </span>
               </div>
             </div>
-            <h3
-              style={{
-                ...TEXT.title,
-                fontSize: 20,
-                color: COLORS.TEXT_PRIMARY,
-                margin: 0,
-              }}
-            >
-              Quality Score
-            </h3>
-            <p
-              style={{
-                ...TEXT.caption,
-                fontSize: 14,
-                color: COLORS.TEXT_SECONDARY,
-                marginTop: 4,
-              }}
-            >
-              {QUALITY_DATA.issues_count === 0 ? 'All checks passing ✓' : `${QUALITY_DATA.issues_count} issues found`}
-            </p>
-            <p
-              style={{
-                ...TEXT.caption,
-                fontSize: 11,
-                color: COLORS.TEXT_MUTED,
-                marginTop: 8,
-              }}
-            >
-              (Real analysis of this video)
-            </p>
-          </div>
-          
-          {/* Real score breakdown */}
-          <ScoreBar label="Overall" score={QUALITY_DATA.overall_score} color={COLORS.LIME} delay={0} />
-          <ScoreBar label="Technical" score={QUALITY_DATA.technical_score} color={COLORS.SPRING_GREEN} delay={0.05} />
-          <ScoreBar label="Design" score={QUALITY_DATA.design_score} color={COLORS.CYAN_BRIGHT} delay={0.1} />
-        </GlassCard>
-        
-        {/* Right: Check List */}
-        <div>
-          <h3
-            style={{
+            <div style={{
               ...TEXT.title,
-              fontSize: 20,
+              fontSize: 18,
               color: COLORS.TEXT_PRIMARY,
-              margin: '0 0 20px 0',
-            }}
-          >
-            Automated Checks
-          </h3>
-          
-          {qualityChecks.map((check, i) => {
-            const itemProgress = interpolate(progress, [0.35 + i * 0.05, 0.5 + i * 0.05], [0, 1], {
-              extrapolateLeft: 'clamp',
-              extrapolateRight: 'clamp',
-            });
-            
-            return (
-              <GlassCard
-                key={check.name}
-                style={{
-                  padding: '16px 20px',
-                  marginBottom: 12,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 16,
-                  opacity: itemProgress,
-                  transform: `translateX(${(1 - itemProgress) * 20}px)`,
-                  borderColor: check.status === 'pass' ? `${COLORS.LIME}30` : undefined,
-                }}
-              >
-                <span style={{ fontSize: 24 }}>{check.icon}</span>
-                <div style={{ flex: 1 }}>
-                  <div
-                    style={{
+              marginBottom: 4,
+            }}>
+              Quality Score
+            </div>
+            <div style={{
+              ...TEXT.caption,
+              fontSize: 13,
+              color: COLORS.TEXT_SECONDARY,
+            }}>
+              All checks passing
+            </div>
+          </GlassCard>
+
+          {/* Right: Check list */}
+          <div style={{
+            flexDirection: 'column',
+            gap: 12,
+            width: 340,
+          }}>
+            {CHECKS.map((check, i) => {
+              const checkSpring = spring({
+                frame: stagger(frame, i, 5),
+                fps,
+                config: SPRING_SMOOTH,
+              });
+
+              return (
+                <GlassCard
+                  key={check.name}
+                  style={{
+                    padding: '14px 18px',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 14,
+                    opacity: interpolate(checkSpring, [0, 0.3], [0, 1]),
+                    transform: `translateX(${interpolate(checkSpring, [0, 1], [20, 0])}px)`,
+                    borderColor: `${COLORS.LIME}15`,
+                  }}
+                >
+                  <span style={{ fontSize: 22 }}>{check.icon}</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{
                       ...TEXT.body,
                       fontSize: 15,
                       color: COLORS.TEXT_PRIMARY,
                       fontWeight: 500,
-                    }}
-                  >
-                    {check.name}
-                  </div>
-                  <div
-                    style={{
+                    }}>
+                      {check.name}
+                    </div>
+                    <div style={{
                       ...TEXT.caption,
                       fontSize: 12,
                       color: COLORS.TEXT_MUTED,
+                    }}>
+                      {check.value}
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      width: 22,
+                      height: 22,
+                      borderRadius: '50%',
+                      background: COLORS.LIME,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      opacity: interpolate(checkSpring, [0.3, 0.6], [0, 1]),
+                      transform: `scale(${interpolate(checkSpring, [0.3, 1], [0, 1])})`,
                     }}
                   >
-                    {check.value}
+                    <span style={{ color: COLORS.BG_DEEP, fontSize: 12, fontWeight: 700 }}>✓</span>
                   </div>
-                </div>
-                <div
-                  style={{
-                    width: 24,
-                    height: 24,
-                    borderRadius: '50%',
-                    background: COLORS.LIME,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    opacity: itemProgress,
-                    transform: `scale(${itemProgress})`,
-                  }}
-                >
-                  <span style={{ color: COLORS.BG_DEEP, fontSize: 14 }}>✓</span>
-                </div>
-              </GlassCard>
-            );
-          })}
-          
-          {/* REAL Test Suite Results */}
-          <div
-            style={{
-              marginTop: 16,
-              padding: '16px 20px',
-              background: `${COLORS.VIOLET_BRIGHT}15`,
-              borderRadius: 8,
-              border: `1px solid ${COLORS.VIOLET_BRIGHT}40`,
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                marginBottom: 8,
-              }}
-            >
-              <span style={{ fontSize: 20 }}>🧪</span>
-              <span
-                style={{
-                  ...TEXT.title,
-                  fontSize: 14,
-                  color: COLORS.VIOLET_BRIGHT,
-                }}
-              >
-                Test Suite Results
-              </span>
-              <span
-                style={{
-                  ...TEXT.display,
-                  fontSize: 18,
-                  color: COLORS.LIME,
-                }}
-              >
-                70/70 ✅
-              </span>
-            </div>
-            <p
-              style={{
-                ...TEXT.caption,
-                fontSize: 12,
-                color: COLORS.TEXT_SECONDARY,
-                margin: 0,
-                lineHeight: 1.5,
-              }}
-            >
-              All features tested with real media. Core: 18/18, Audio: 10/10, 
-              AI: 8/8, Effects: 8/8, Transitions: 3/3 — 100% passing
-            </p>
-          </div>
-          
-          <div
-            style={{
-              marginTop: 12,
-              padding: '14px 18px',
-              background: `${COLORS.LIME}10`,
-              borderRadius: 8,
-              border: `1px solid ${COLORS.LIME}30`,
-            }}
-          >
-            <p
-              style={{
-                ...TEXT.caption,
-                fontSize: 13,
-                color: COLORS.TEXT_SECONDARY,
-                margin: 0,
-                lineHeight: 1.5,
-              }}
-            >
-              <strong style={{ color: COLORS.LIME }}>CI/CD Ready:</strong> Block releases 
-              that fail quality standards. Export only perfect video.
-            </p>
+                </GlassCard>
+              );
+            })}
           </div>
         </div>
-      </div>
-      
+      </AbsoluteFill>
     </AbsoluteFill>
   );
 };

@@ -60,7 +60,7 @@ export const ExplainerVideo: React.FC = () => {
         {/* S2: Solution — 6s / 180 frames */}
         <TransitionSeries.Sequence durationInFrames={180}>
           <S2Solution />
-          <BurnedCaption text="82 powerful video editing tools" />
+          <BurnedCaption text="80 video editing tools" />
           <SceneSoundDesign sceneNumber={2} />
         </TransitionSeries.Sequence>
 
@@ -190,7 +190,7 @@ export const ExplainerVideo: React.FC = () => {
         {/* S12: Transitions — 6s / 180 frames */}
         <TransitionSeries.Sequence durationInFrames={180}>
           <S12Transitions />
-          <BurnedCaption text="Cinematic transitions: slide, wipe, fade, cube" />
+          <BurnedCaption text="Cinematic transitions: glitch, pixelate, morph" />
           <SceneSoundDesign sceneNumber={12} />
         </TransitionSeries.Sequence>
 

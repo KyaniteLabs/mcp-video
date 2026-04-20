@@ -1,203 +1,172 @@
 import React from 'react';
-import { AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate, Easing } from 'remotion';
-import GlassCard from '../components/GlassCard';
-import { COLORS, TEXT, FONT_SIZE, glowShadow } from '../lib/theme';
+import {
+  AbsoluteFill,
+  useCurrentFrame,
+  useVideoConfig,
+  spring,
+  interpolate,
+  Video,
+  staticFile,
+} from 'remotion';
+import GradientBackground from '../components/GradientBackground';
+import {
+  COLORS,
+  FONT_SIZE,
+  TEXT,
+} from '../lib/theme';
+import { SPRING_SMOOTH, stagger } from '../lib/animations';
 
-// Transitions Scene for v1.0
+const TRANSITIONS = [
+  {
+    name: 'Glitch',
+    desc: 'RGB shift + noise',
+    color: COLORS.LIME,
+    src: staticFile('demos/trans_glitch.mp4'),
+  },
+  {
+    name: 'Pixelate',
+    desc: 'Block dissolve',
+    color: COLORS.VIOLET_BRIGHT,
+    src: staticFile('demos/trans_pixelate.mp4'),
+  },
+  {
+    name: 'Morph',
+    desc: 'Mesh warp',
+    color: COLORS.SEAFOAM,
+    src: staticFile('demos/trans_morph.mp4'),
+  },
+];
+
 export const S12Transitions: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  
-  const progress = frame / (fps * 5); // 5 seconds for this scene
-  
-  // Entrance animations
-  const titleOpacity = interpolate(progress, [0, 0.15], [0, 1], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
+
+  const titleSpring = spring({
+    frame: Math.max(0, frame - 5),
+    fps,
+    config: SPRING_SMOOTH,
   });
-  
-  const titleY = interpolate(progress, [0, 0.15], [30, 0], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-    easing: Easing.out(Easing.cubic),
-  });
-  
-  // Card animations
-  const cardDelay = 0.12;
-  const getCardProgress = (index: number) => 
-    interpolate(progress, [0.2 + cardDelay * index, 0.35 + cardDelay * index], [0, 1], {
-      extrapolateLeft: 'clamp',
-      extrapolateRight: 'clamp',
-      easing: Easing.out(Easing.cubic),
-    });
-  
-  const transitions = [
-    {
-      name: 'Glitch',
-      desc: 'RGB shift + noise',
-      icon: '⚡',
-      color: COLORS.LIME,
-      preview: 'RGB SPLIT',
-    },
-    {
-      name: 'Pixelate',
-      desc: 'Block dissolve',
-      icon: '🔲',
-      color: COLORS.VIOLET_BRIGHT,
-      preview: 'PIXEL\nBLOCKS',
-    },
-    {
-      name: 'Morph',
-      desc: 'Mesh warp',
-      icon: '🔮',
-      color: COLORS.CYAN_BRIGHT,
-      preview: 'WARP',
-    },
-  ];
-  
+
   return (
-    <AbsoluteFill style={{ background: COLORS.BG_DEEP }}>
-      {/* Background accent */}
-      <div
-        style={{
-          position: 'absolute',
-          width: 800,
-          height: 400,
-          background: `linear-gradient(90deg, ${COLORS.LIME}10, ${COLORS.VIOLET_MID}10)`,
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%) rotate(-5deg)',
-          filter: 'blur(60px)',
-        }}
+    <AbsoluteFill style={{ backgroundColor: COLORS.BG_DEEP }}>
+      <GradientBackground
+        glowColor={COLORS.LIME}
+        glowX={0.5}
+        glowY={0.5}
       />
-      
-      {/* Header */}
-      <div
+
+      <AbsoluteFill
         style={{
-          position: 'absolute',
-          top: 100,
-          left: 0,
-          right: 0,
-          textAlign: 'center',
-          opacity: titleOpacity,
-          transform: `translateY(${titleY}px)`,
+          padding: 60,
+          flexDirection: 'column',
+          alignItems: 'center',
         }}
       >
+        {/* Title */}
         <div
-          style={{
-            ...TEXT.overline,
-            fontSize: FONT_SIZE.OVERLINE,
-            color: COLORS.LIME,
-            marginBottom: 16,
-          }}
-        >
-          v1.0 FEATURES
-        </div>
-        <h2
           style={{
             ...TEXT.headline,
             fontSize: FONT_SIZE.HEADLINE,
             color: COLORS.TEXT_PRIMARY,
-            margin: 0,
+            textAlign: 'center',
+            opacity: interpolate(titleSpring, [0, 0.3], [0, 1]),
+            transform: `translateY(${interpolate(titleSpring, [0, 1], [20, 0])}px)`,
           }}
         >
-          Video Transitions
-        </h2>
-        <p
+          Video <span style={{ color: COLORS.LIME }}>Transitions</span>
+        </div>
+        <div
           style={{
-            ...TEXT.body,
-            fontSize: FONT_SIZE.SUBTITLE,
+            ...TEXT.subtitle,
+            fontSize: 18,
             color: COLORS.TEXT_SECONDARY,
-            marginTop: 12,
+            textAlign: 'center',
+            marginTop: 8,
+            opacity: interpolate(titleSpring, [0.3, 0.6], [0, 1]),
           }}
         >
           Professional transitions for seamless clip connections
-        </p>
-      </div>
-      
-      {/* Transition Cards */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 320,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          display: 'flex',
-          gap: 40,
-        }}
-      >
-        {transitions.map((t, i) => {
-          const p = getCardProgress(i);
-          const floatY = interpolate(
-            frame,
-            [0, fps * 2],
-            [0, -10],
-            { extrapolateRight: 'extend' }
-          );
-          
-          return (
-            <GlassCard
-              key={t.name}
-              style={{
-                width: 280,
-                height: 320,
-                padding: 0,
-                overflow: 'hidden',
-                opacity: p,
-                transform: `translateY(${(1 - p) * 40}px) translateY(${floatY * (i % 2 === 0 ? 1 : -1)}px)`,
-                borderColor: `${t.color}40`,
-                boxShadow: glowShadow(t.color, 0.5),
-              }}
-            >
-              {/* Preview area */}
+        </div>
+
+        {/* Transition demo cards */}
+        <div
+          style={{
+            flex: 1,
+            flexDirection: 'row',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: 32,
+          }}
+        >
+          {TRANSITIONS.map((t, i) => {
+            const cardSpring = spring({
+              frame: stagger(frame, i, 6),
+              fps,
+              config: SPRING_SMOOTH,
+            });
+
+            return (
               <div
+                key={t.name}
                 style={{
-                  height: 160,
-                  background: `linear-gradient(135deg, ${t.color}20, ${COLORS.BG_CARD})`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderBottom: `1px solid ${t.color}30`,
+                  width: 300,
+                  opacity: interpolate(cardSpring, [0, 0.3], [0, 1]),
+                  transform: `translateY(${interpolate(cardSpring, [0, 1], [30, 0])}px)`,
                 }}
               >
-                <span
+                {/* Video preview */}
+                <div
                   style={{
-                    fontSize: 64,
-                    filter: `drop-shadow(0 0 20px ${t.color}50)`,
+                    width: 300,
+                    height: 180,
+                    borderRadius: '12px 12px 0 0',
+                    overflow: 'hidden',
+                    border: `1px solid ${t.color}30`,
+                    borderBottom: 'none',
+                    background: COLORS.BG_CARD,
                   }}
                 >
-                  {t.icon}
-                </span>
-              </div>
-              
-              {/* Info area */}
-              <div style={{ padding: 24, textAlign: 'center' }}>
-                <h3
+                  <Video
+                    src={t.src}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                    }}
+                  />
+                </div>
+                {/* Label */}
+                <div
                   style={{
+                    padding: '16px 20px',
+                    borderRadius: '0 0 12px 12px',
+                    background: COLORS.BG_CARD,
+                    border: `1px solid ${t.color}20`,
+                    borderTop: 'none',
+                    textAlign: 'center',
+                  }}
+                >
+                  <div style={{
                     ...TEXT.title,
-                    fontSize: 28,
+                    fontSize: 20,
                     color: t.color,
-                    margin: '0 0 8px 0',
-                  }}
-                >
-                  {t.name}
-                </h3>
-                <p
-                  style={{
-                    ...TEXT.body,
-                    fontSize: 16,
+                    marginBottom: 4,
+                  }}>
+                    {t.name}
+                  </div>
+                  <div style={{
+                    ...TEXT.caption,
+                    fontSize: 14,
                     color: COLORS.TEXT_SECONDARY,
-                    margin: 0,
-                  }}
-                >
-                  {t.desc}
-                </p>
+                  }}>
+                    {t.desc}
+                  </div>
+                </div>
               </div>
-            </GlassCard>
-          );
-        })}
-      </div>
-      
+            );
+          })}
+        </div>
+      </AbsoluteFill>
     </AbsoluteFill>
   );
 };

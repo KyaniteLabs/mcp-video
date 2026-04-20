@@ -20,8 +20,9 @@ import {
 import { SPRING_SMOOTH, useAmbientMotion } from '../lib/animations';
 
 const ORBIT_LABELS = [
-  'trim', 'merge', 'filter', 'overlay',
-  'convert', 'watermark', 'fade', 'blur',
+  'trim', 'merge', 'color_grade', 'overlay',
+  'transcribe', 'stabilize', 'audio_synthesize', 'glitch',
+  'upscale', 'vignette', 'extract_colors', 'subtitle',
 ];
 
 export const S2Solution: React.FC = () => {
@@ -29,10 +30,10 @@ export const S2Solution: React.FC = () => {
   const { fps } = useVideoConfig();
   const { breathe } = useAmbientMotion(frame);
 
-  // Counter: 0 → 43 over 48 frames (2x speed for better pacing)
+  // Counter: 0 → 80 over 48 frames
   const counterValue = Math.min(
-    43,
-    Math.floor(interpolate(frame, [0, 48], [0, 43], {
+    80,
+    Math.floor(interpolate(frame, [0, 48], [0, 80], {
       extrapolateRight: 'clamp',
     })),
   );
@@ -55,7 +56,7 @@ export const S2Solution: React.FC = () => {
   const orbitAngle = (frame * 0.75) * (Math.PI / 180);
 
   // Background glow intensifies with counter
-  const glowIntensity = interpolate(counterValue, [0, 43], [0.06, 0.2]);
+  const glowIntensity = interpolate(counterValue, [0, 80], [0.06, 0.2]);
 
   return (
     <AbsoluteFill style={{ backgroundColor: COLORS.BG_DEEP }}>
@@ -103,7 +104,7 @@ export const S2Solution: React.FC = () => {
             transform: `translateY(${interpolate(subtitleSpring, [0, 1], [12, 0])}px)`,
           }}
         >
-          43 video editing tools
+          80 video editing tools
         </div>
 
         {/* Orbit ring */}

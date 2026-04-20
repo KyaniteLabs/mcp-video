@@ -15,30 +15,105 @@
     <meta property="og:title" content="mcp-video - Video Editing for AI Agents">
     <meta property="og:description" content="An open source MCP server, Python client, and CLI that wraps FFmpeg and Remotion for agent-assisted video editing.">
     <meta property="og:site_name" content="mcp-video">
-    <meta name="twitter:card" content="summary">
+    <meta property="og:image" content="https://pastorsimon1798.github.io/mcp-video/og-social-preview.png">
+    <meta property="og:image:width" content="1920">
+    <meta property="og:image:height" content="1080">
+    <meta property="og:image:alt" content="mcp-video - 83 video editing tools for AI agents">
+    <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="mcp-video - Video Editing for AI Agents">
     <meta name="twitter:description" content="Structured FFmpeg and Remotion tools for Claude Code, Cursor, and any MCP-compatible agent.">
+    <meta name="twitter:image" content="https://pastorsimon1798.github.io/mcp-video/og-social-preview.png">
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": ["SoftwareSourceCode", "SoftwareApplication"],
       "name": "mcp-video",
-      "description": "Open source MCP server, Python client, and CLI for AI-agent video editing with FFmpeg and Remotion.",
+      "description": "Open source MCP server, Python client, and CLI for AI-agent video editing with FFmpeg and Remotion. 83 tools across 9 categories.",
       "url": "https://pastorsimon1798.github.io/mcp-video/",
       "codeRepository": "https://github.com/Pastorsimon1798/mcp-video",
+      "author": {
+        "@type": "Person",
+        "name": "Simon Gonzalez De Cruz",
+        "url": "https://github.com/Pastorsimon1798"
+      },
+      "version": "1.2.1",
+      "datePublished": "2025-06-01",
       "programmingLanguage": ["Python", "TypeScript"],
       "runtimePlatform": ["Python 3.11+", "FFmpeg", "Model Context Protocol", "Remotion"],
       "applicationCategory": "MultimediaApplication",
       "operatingSystem": "macOS, Linux, Windows",
       "license": "https://www.apache.org/licenses/LICENSE-2.0",
+      "downloadUrl": "https://pypi.org/project/mcp-video/#files",
+      "installUrl": "https://github.com/Pastorsimon1798/mcp-video#install",
       "offers": {
         "@type": "Offer",
         "price": "0",
         "priceCurrency": "USD"
       },
+      "provider": {
+        "@type": "Organization",
+        "name": "PyPI",
+        "url": "https://pypi.org/project/mcp-video/"
+      },
       "sameAs": [
         "https://pypi.org/project/mcp-video/",
         "https://github.com/Pastorsimon1798/mcp-video"
+      ]
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What is mcp-video?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "mcp-video is an open-source MCP server, Python library, and CLI that wraps FFmpeg and Remotion to give AI agents 83 video editing tools. It runs locally, requires no cloud services, and is free under the Apache-2.0 license."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Which AI agents work with mcp-video?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Any MCP-compatible agent: Claude Code, Cursor, Windsurf, Cline, and any client that supports the MCP protocol."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Do I need FFmpeg installed?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. FFmpeg must be installed and available on your PATH. mcp-video wraps FFmpeg for all video processing operations."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is mcp-video free?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. mcp-video is open-source under the Apache-2.0 license. There are no API costs because everything runs locally using FFmpeg and optional local AI models."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What are the AI-powered features?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "mcp-video includes 7 AI features: silence removal, Whisper transcription, scene detection, stem separation, AI upscaling (2x/4x), auto color grading, and spatial audio positioning."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How do I install mcp-video?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "pip install mcp-video. For AI features like transcription and upscaling, use pip install mcp-video[ai]."
+          }
+        }
       ]
     }
     </script>
