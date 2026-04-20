@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import ast
 import re
 import subprocess
 from pathlib import Path
@@ -277,6 +278,83 @@ def main() -> int:
         oversized_modules == [],
         "Engine/server modules stay below 800 lines",
         "Engine/server modules exceed 800 lines: " + ", ".join(oversized_modules),
+        failures=failures,
+        warnings=warnings,
+    )
+
+    # Facade purity: engine.py and server.py must not define functions/classes
+    for relative_path in ("mcp_video/engine.py", "mcp_video/server.py"):
+        path = ROOT / relative_path
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        definitions = [
+            node.name for node in tree.body
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+        ]
+        if definitions:
+            failures.append(
+                f"{relative_path} should re-export/import behavior, not define {definitions}"
+            )
+            print(f"FAIL {relative_path} defines {definitions}")
+        else:
+            print(f"PASS {relative_path} is a pure facade")
+
+    # Engine modules must not import the compatibility facade
+    facade_import_offenders: list[str] = []
+    for path in sorted(PACKAGE.glob("engine*.py")):
+        if path.name == "engine.py":
+            continue
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ImportFrom):
+                if node.module in ("engine", "mcp_video.engine"):
+                    facade_import_offenders.append(f"{path.name}: from {node.module} import ...")
+                if node.level and node.level >= 1 and node.module == "engine":
+                    facade_import_offenders.append(f"{path.name}: from .engine import ...")
+    check(
+        facade_import_offenders == [],
+        "Engine modules do not import compatibility facade",
+        "Engine modules import facade: " + ", ".join(facade_import_offenders),
+        failures=failures,
+        warnings=warnings,
+    )
+
+    # Server tool modules must not import the server facade
+    server_tool_offenders: list[str] = []
+    for path in sorted(PACKAGE.glob("server_tools_*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ImportFrom):
+                if node.module in ("server", "mcp_video.server"):
+                    server_tool_offenders.append(f"{path.name}: from {node.module} import ...")
+                if node.level and node.level >= 1 and node.module == "server":
+                    server_tool_offenders.append(f"{path.name}: from .server import ...")
+    check(
+        server_tool_offenders == [],
+        "Server tool modules do not import server facade",
+        "Server tool modules import facade: " + ", ".join(server_tool_offenders),
+        failures=failures,
+        warnings=warnings,
+    )
+
+    # Prevent duplicate canonical helper definitions
+    allowed_helper_locations = {
+        "_run_ffmpeg": {"mcp_video/ffmpeg_helpers.py", "mcp_video/engine_runtime_utils.py"},
+        "_get_video_duration": {"mcp_video/ffmpeg_helpers.py", "mcp_video/ai_engine.py"},
+        "_seconds_to_srt_time": {"mcp_video/ffmpeg_helpers.py"},
+    }
+    helper_duplicates: list[str] = []
+    for path in sorted(PACKAGE.glob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.FunctionDef) and node.name in allowed_helper_locations:
+                expected = allowed_helper_locations[node.name]
+                actual = path.relative_to(ROOT).as_posix()
+                if actual not in expected:
+                    helper_duplicates.append(f"{actual}: {node.name}")
+    check(
+        helper_duplicates == [],
+        "Canonical helpers are not duplicated",
+        "Helper duplicates found: " + ", ".join(helper_duplicates),
         failures=failures,
         warnings=warnings,
     )

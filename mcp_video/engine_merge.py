@@ -35,7 +35,13 @@ def merge(
         # Single clip — nothing to merge, just copy to output
         _validate_input(clips[0])
         output = output_path or _auto_output(clips[0], "merged")
-        shutil.copy2(clips[0], output)
+        input_ext = os.path.splitext(clips[0])[1].lower()
+        output_ext = os.path.splitext(output)[1].lower()
+        if output_path is not None and input_ext != output_ext:
+            # Remux via FFmpeg to ensure correct container format
+            _run_ffmpeg(["-i", clips[0], "-c", "copy", *_movflags_args(output), output])
+        else:
+            shutil.copy2(clips[0], output)
         info = probe(output)
         return EditResult(
             output_path=output,

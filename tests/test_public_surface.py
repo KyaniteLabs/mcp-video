@@ -208,8 +208,10 @@ def test_server_tool_registry_keeps_public_tool_names():
     assert len(tool_names) == 83
 
 
-def test_server_module_reexports_resource_and_tool_functions():
+def test_module_reexports():
+    """Engine and server modules preserve expected import targets."""
     import mcp_video.server as server
+    import mcp_video.engine as engine
 
     for name in [
         "_error_result",
@@ -223,11 +225,7 @@ def test_server_module_reexports_resource_and_tool_functions():
         "remotion_render",
         "image_analyze_product",
     ]:
-        assert hasattr(server, name)
-
-
-def test_engine_module_preserves_legacy_import_targets():
-    import mcp_video.engine as engine
+        assert hasattr(server, name), f"server missing {name}"
 
     for name in [
         "_check_filter_available",
@@ -245,4 +243,4 @@ def test_engine_module_preserves_legacy_import_targets():
         "trim",
         "video_batch",
     ]:
-        assert hasattr(engine, name)
+        assert hasattr(engine, name), f"engine missing {name}"

@@ -10,6 +10,7 @@ from mcp_video.errors import (
     InputFileError,
     ProcessingError,
     ResourceError,
+    _strip_ffmpeg_banner,
     parse_ffmpeg_error,
 )
 
@@ -219,3 +220,46 @@ class TestParseFFmpegError:
         err = parse_ffmpeg_error(stderr)
         assert isinstance(err, ProcessingError)
         assert err.full_stderr == stderr
+
+
+class TestStripFFmpegBanner:
+    def test_strips_version_banner(self):
+        stderr = (
+            "ffmpeg version 6.0\n"
+            "built with gcc 12\n"
+            "libavutil 58.2.100 / 58.2.100\n"
+            "Input #0, mov,mp4,m4a,3gp,3g2,mj2, from 'in.mp4':\n"
+            "  Stream #0:0: Video: h264\n"
+            "Error: something broke\n"
+        )
+        cleaned = _strip_ffmpeg_banner(stderr)
+        assert "ffmpeg version" not in cleaned
+        assert "libavutil" not in cleaned
+        assert "Input #0" in cleaned
+        assert "Error: something broke" in cleaned
+
+    def test_preserves_permission_denied_in_banner(self):
+        stderr = (
+            "ffmpeg version 6.0\n"
+            "built with gcc 12\n"
+            "in.mp4: Permission denied\n"
+            "Input #0, mov,mp4,m4a,3gp,3g2,mj2, from 'in.mp4':\n"
+        )
+        cleaned = _strip_ffmpeg_banner(stderr)
+        assert "Permission denied" in cleaned
+        assert "ffmpeg version" not in cleaned
+
+    def test_preserves_no_such_file_in_banner(self):
+        stderr = (
+            "ffmpeg version 6.0\n"
+            "No such file or directory: missing.mp4\n"
+            "Stream mapping:\n"
+        )
+        cleaned = _strip_ffmpeg_banner(stderr)
+        assert "No such file or directory" in cleaned
+        assert "ffmpeg version" not in cleaned
+
+    def test_falls_back_to_original_when_everything_stripped(self):
+        stderr = "ffmpeg version 6.0\nbuilt with gcc 12\n"
+        cleaned = _strip_ffmpeg_banner(stderr)
+        assert cleaned == stderr

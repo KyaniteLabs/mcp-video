@@ -97,6 +97,15 @@ class TestMerge:
         result = merge([sample_video])
         assert os.path.isfile(result.output_path)
 
+    def test_merge_single_clip_remux_different_extension(self, sample_video, tmp_path):
+        """Single-clip merge must remux via FFmpeg when output extension differs."""
+        output_mov = str(tmp_path / "out.mov")
+        result = merge([sample_video], output_path=output_mov)
+        assert os.path.isfile(result.output_path)
+        info = probe(result.output_path)
+        # Probed output should be a valid video in the requested container
+        assert info.duration > 0
+
     def test_merge_no_clips_raises(self):
         with pytest.raises(InputFileError):
             merge([])

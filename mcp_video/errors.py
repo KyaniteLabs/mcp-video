@@ -141,12 +141,27 @@ class RemotionRenderError(MCPVideoError):
         self.full_stderr = stderr
 
 
+# Actionable error keywords that can appear before standard stream markers
+_ACTIONABLE_PATTERNS = (
+    "permission denied",
+    "no such file",
+    "not found",
+    "invalid data",
+    "protocol not found",
+    "unable to open",
+    "cannot open",
+)
+
+
 def _strip_ffmpeg_banner(stderr: str) -> str:
     """Remove FFmpeg version banner and build configuration from stderr.
 
     The banner includes version lines, build flags, and library versions
     that clutter error messages. We keep everything from the first 'Input #'
     or from the first line that doesn't look like banner noise.
+
+    Actionable root-cause lines (e.g. 'Permission denied') are preserved
+    even if they appear before the usual stream markers.
     """
     lines = stderr.splitlines()
     result_lines: list[str] = []
@@ -161,8 +176,10 @@ def _strip_ffmpeg_banner(stderr: str) -> str:
                 continue
             if stripped.startswith("lib") and "/" in stripped:
                 continue
+            # Preserve actionable root-cause lines that appear early
             if (
-                stripped.startswith("Stream mapping:")
+                any(p in stripped.lower() for p in _ACTIONABLE_PATTERNS)
+                or stripped.startswith("Stream mapping:")
                 or stripped.startswith("Input #")
                 or stripped.startswith("Output #")
                 or (stripped.startswith("[") and "Error" in stripped)
