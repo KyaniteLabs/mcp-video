@@ -1738,7 +1738,7 @@ def _resolve_video_source(video: str) -> tuple[str, str | None, str | None]:
         tmp = tempfile.mkdtemp(prefix="mcp_video_url_")
         try:
             local = _download_with_ytdlp(video, tmp)
-        except RuntimeError:
+        except MCPVideoError:
             shutil.rmtree(tmp, ignore_errors=True)
             raise  # re-raise "yt-dlp not installed" cleanly
         except Exception as exc:
@@ -1750,7 +1750,7 @@ def _resolve_video_source(video: str) -> tuple[str, str | None, str | None]:
         try:
             tmp = tempfile.mkdtemp(prefix="mcp_video_url_")
             local = _download_with_ytdlp(video, tmp)
-        except RuntimeError:
+        except MCPVideoError:
             # yt-dlp not installed — fall back to urllib for direct URLs
             shutil.rmtree(tmp, ignore_errors=True)
             url_path = video.split("?")[0]  # strip query string for ext detection
