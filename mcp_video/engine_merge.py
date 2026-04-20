@@ -119,8 +119,7 @@ def merge(
                 concat_file = os.path.join(tmpdir, "concat.txt")
                 with open(concat_file, "w") as f:
                     for clip in working_clips:
-                        # Escape single quotes for FFmpeg concat demuxer
-                        abs_path = os.path.abspath(clip).replace("'", "'\\''")
+                        abs_path = os.path.abspath(clip).replace("\\", "\\\\").replace("'", "'\\''")
                         f.write(f"file '{abs_path}'\n")
                 _run_ffmpeg(
                     ["-f", "concat", "-safe", "0", "-i", concat_file, "-c", "copy", *_movflags_args(output), output]

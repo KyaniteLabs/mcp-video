@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+
 from .engine_probe import probe
 from .engine_runtime_utils import _auto_output, _movflags_args, _run_ffmpeg, _timed_operation, _validate_input
 from .errors import MCPVideoError
@@ -75,6 +77,14 @@ def write_metadata(
             )
 
     output = output_path or _auto_output(input_path, "tagged")
+
+    if os.path.abspath(output) == os.path.abspath(input_path):
+        raise MCPVideoError(
+            "output_path cannot be the same as input_path for metadata writes. "
+            "Use a different output path or omit it to auto-generate one.",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
 
     args = ["-i", input_path]
     for key, value in metadata.items():

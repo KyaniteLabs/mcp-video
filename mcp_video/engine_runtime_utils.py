@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import math
 import os
 import re
 import shutil
@@ -18,6 +19,7 @@ from .errors import (
     FFprobeNotFoundError,
     InputFileError,
     MCPVideoError,
+    ProcessingError,
     parse_ffmpeg_error,
 )
 from .limits import DEFAULT_CRF, DEFAULT_FFMPEG_TIMEOUT, DEFAULT_PRESET
@@ -101,15 +103,22 @@ def _validate_input(path: str) -> None:
 
 
 def _sanitize_ffmpeg_number(value: Any, name: str) -> float:
-    """Ensure a value is numeric before FFmpeg interpolation. Returns float(value)."""
+    """Ensure a value is numeric and finite before FFmpeg interpolation. Returns float(value)."""
     try:
-        return float(value)
+        result = float(value)
     except (TypeError, ValueError):
         raise MCPVideoError(
             f"Invalid {name}: expected number, got {type(value).__name__}",
             error_type="validation_error",
             code="invalid_parameter",
         ) from None
+    if not math.isfinite(result):
+        raise MCPVideoError(
+            f"Invalid {name}: must be a finite number, got {result}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
+    return result
 
 
 _CSS_COLOR_NAMES = frozenset(
@@ -305,12 +314,15 @@ def _auto_output_dir(input_path: str, suffix: str = "output") -> str:
 
 def _run_ffmpeg(args: list[str]) -> subprocess.CompletedProcess[str]:
     cmd = [_ffmpeg(), "-y", *args]
-    proc = subprocess.run(
-        cmd,
-        capture_output=True,
-        text=True,
-        timeout=DEFAULT_FFMPEG_TIMEOUT,
-    )
+    try:
+        proc = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=DEFAULT_FFMPEG_TIMEOUT,
+        )
+    except subprocess.TimeoutExpired as e:
+        raise ProcessingError(" ".join(cmd), -1, f"FFmpeg command timed out after {DEFAULT_FFMPEG_TIMEOUT}s") from e
     if proc.returncode != 0:
         raise parse_ffmpeg_error(proc.stderr)
     return proc
@@ -368,12 +380,14 @@ def _run_ffmpeg_with_progress(
     )
 
     stderr_lines: list[str] = []
+    _MAX_STDERR_LINES = 10_000
     try:
         while True:
             line = proc.stderr.readline()
             if not line:
                 break
-            stderr_lines.append(line)
+            if len(stderr_lines) < _MAX_STDERR_LINES:
+                stderr_lines.append(line)
 
             match = _TIME_RE.search(line)
             if match:
@@ -381,7 +395,14 @@ def _run_ffmpeg_with_progress(
                 pct = min(100.0, (current_time / estimated_duration) * 100)
                 on_progress(pct)
     finally:
-        proc.wait()
+        try:
+            proc.wait(timeout=DEFAULT_FFMPEG_TIMEOUT)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait()
+            raise ProcessingError(
+                " ".join(cmd), -1, f"FFmpeg command timed out after {DEFAULT_FFMPEG_TIMEOUT}s"
+            ) from None
 
     stderr = "".join(stderr_lines)
     if proc.returncode != 0:
@@ -403,6 +424,7 @@ def _generate_thumbnail_base64(video_path: str) -> str | None:
 
     Returns base64 string or None if generation fails.
     """
+    tmp_path = ""
     try:
         with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tmp:
             tmp_path = tmp.name
@@ -431,10 +453,12 @@ def _generate_thumbnail_base64(video_path: str) -> str | None:
 
         with open(tmp_path, "rb") as f:
             data = f.read()
-        os.unlink(tmp_path)
         return base64.b64encode(data).decode("ascii")
     except Exception:
         return None
+    finally:
+        if tmp_path and os.path.isfile(tmp_path):
+            os.unlink(tmp_path)
 
 
 def _movflags_args(output_path: str) -> list[str]:
@@ -576,7 +600,11 @@ def _default_font() -> str:
         ]:
             if os.path.isfile(p):
                 return p
-        return "DejaVu Sans"
+        raise MCPVideoError(
+            "No suitable font file found on Linux. Install DejaVu fonts or specify a font path.",
+            error_type="dependency_error",
+            code="font_not_found",
+        )
 
 
 def _get_video_stream(data: dict) -> dict | None:

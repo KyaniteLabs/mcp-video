@@ -384,6 +384,11 @@ class TestEscapingConsistency:
         result = _escape_ffmpeg_filter_value("file,name")
         assert "\\," in result
 
+    def test_escape_filter_value_escapes_equals(self) -> None:
+        """Equals signs are escaped."""
+        result = _escape_ffmpeg_filter_value("key=value")
+        assert "\\=" in result
+
     def test_escape_filter_value_plain_path(self) -> None:
         """Plain paths without special chars pass through (except \\ to /)."""
         result = _escape_ffmpeg_filter_value("/tmp/test.mp4")

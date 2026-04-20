@@ -16,6 +16,7 @@ from typing import ClassVar, Literal
 from collections.abc import Callable
 import contextlib
 
+from .errors import ProcessingError
 from .limits import DEFAULT_FFMPEG_TIMEOUT
 
 
@@ -914,7 +915,11 @@ class DesignQualityGuardrails:
 
         cmd = ["ffmpeg", "-y", "-i", video_path, "-vf", "eq=brightness=0.1:gamma=1.1", "-c:a", "copy", output_path]
 
-        subprocess.run(cmd, capture_output=True, check=True, timeout=DEFAULT_FFMPEG_TIMEOUT)
+        try:
+            subprocess.run(cmd, capture_output=True, check=True, timeout=DEFAULT_FFMPEG_TIMEOUT)
+        except subprocess.CalledProcessError as e:
+            stderr = e.stderr.decode("utf-8", errors="replace") if isinstance(e.stderr, bytes) else e.stderr
+            raise ProcessingError(" ".join(cmd), e.returncode, stderr or "Auto-fix failed") from e
         return output_path
 
     def _auto_fix_contrast(self, video_path: str) -> str:
@@ -923,7 +928,11 @@ class DesignQualityGuardrails:
 
         cmd = ["ffmpeg", "-y", "-i", video_path, "-vf", "eq=contrast=1.1", "-c:a", "copy", output_path]
 
-        subprocess.run(cmd, capture_output=True, check=True, timeout=DEFAULT_FFMPEG_TIMEOUT)
+        try:
+            subprocess.run(cmd, capture_output=True, check=True, timeout=DEFAULT_FFMPEG_TIMEOUT)
+        except subprocess.CalledProcessError as e:
+            stderr = e.stderr.decode("utf-8", errors="replace") if isinstance(e.stderr, bytes) else e.stderr
+            raise ProcessingError(" ".join(cmd), e.returncode, stderr or "Auto-fix failed") from e
         return output_path
 
     def _auto_fix_saturation(self, video_path: str, boost: float = 1.2) -> str:
@@ -932,7 +941,11 @@ class DesignQualityGuardrails:
 
         cmd = ["ffmpeg", "-y", "-i", video_path, "-vf", f"eq=saturation={boost}", "-c:a", "copy", output_path]
 
-        subprocess.run(cmd, capture_output=True, check=True, timeout=DEFAULT_FFMPEG_TIMEOUT)
+        try:
+            subprocess.run(cmd, capture_output=True, check=True, timeout=DEFAULT_FFMPEG_TIMEOUT)
+        except subprocess.CalledProcessError as e:
+            stderr = e.stderr.decode("utf-8", errors="replace") if isinstance(e.stderr, bytes) else e.stderr
+            raise ProcessingError(" ".join(cmd), e.returncode, stderr or "Auto-fix failed") from e
         return output_path
 
     def _auto_fix_color_cast(self, video_path: str) -> str:
@@ -951,7 +964,11 @@ class DesignQualityGuardrails:
             output_path,
         ]
 
-        subprocess.run(cmd, capture_output=True, check=True, timeout=DEFAULT_FFMPEG_TIMEOUT)
+        try:
+            subprocess.run(cmd, capture_output=True, check=True, timeout=DEFAULT_FFMPEG_TIMEOUT)
+        except subprocess.CalledProcessError as e:
+            stderr = e.stderr.decode("utf-8", errors="replace") if isinstance(e.stderr, bytes) else e.stderr
+            raise ProcessingError(" ".join(cmd), e.returncode, stderr or "Auto-fix failed") from e
         return output_path
 
     def _auto_normalize_audio(self, video_path: str) -> str:
@@ -960,7 +977,11 @@ class DesignQualityGuardrails:
 
         cmd = ["ffmpeg", "-y", "-i", video_path, "-af", "loudnorm=I=-16:TP=-1.5:LRA=11", "-c:v", "copy", output_path]
 
-        subprocess.run(cmd, capture_output=True, check=True, timeout=DEFAULT_FFMPEG_TIMEOUT)
+        try:
+            subprocess.run(cmd, capture_output=True, check=True, timeout=DEFAULT_FFMPEG_TIMEOUT)
+        except subprocess.CalledProcessError as e:
+            stderr = e.stderr.decode("utf-8", errors="replace") if isinstance(e.stderr, bytes) else e.stderr
+            raise ProcessingError(" ".join(cmd), e.returncode, stderr or "Auto-fix failed") from e
         return output_path
 
     # ============== UTILITY METHODS ==============

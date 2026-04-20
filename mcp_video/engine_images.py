@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import os
 import shutil
 import tempfile
@@ -24,6 +25,12 @@ def create_from_images(
             "No images provided",
             error_type="validation_error",
             code="empty_images",
+        )
+    if fps <= 0 or not math.isfinite(fps):
+        raise MCPVideoError(
+            f"fps must be a positive finite number, got {fps}",
+            error_type="validation_error",
+            code="invalid_parameter",
         )
     validated_images = [_validate_input_path(img) for img in images]
 
@@ -108,9 +115,9 @@ def _write_concat_file(normalized: list[str], tmpdir: str, fps: float) -> str:
     img_duration = 1.0 / fps
     with open(concat_file, "w") as f:
         for img in normalized:
-            abs_path = os.path.abspath(img).replace("'", "'\\''")
+            abs_path = os.path.abspath(img).replace("\\", "\\\\").replace("'", "'\\''")
             f.write(f"file '{abs_path}'\n")
             f.write(f"duration {img_duration}\n")
-        abs_last = os.path.abspath(normalized[-1]).replace("'", "'\\''")
+        abs_last = os.path.abspath(normalized[-1]).replace("\\", "\\\\").replace("'", "'\\''")
         f.write(f"file '{abs_last}'\n")
     return concat_file

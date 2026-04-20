@@ -901,6 +901,24 @@ class TestImageSequences:
         with pytest.raises(InputFileError):
             create_from_images(["/nonexistent/image.jpg"])
 
+    def test_create_from_images_zero_fps_raises(self):
+        from mcp_video.engine import create_from_images
+
+        with pytest.raises(MCPVideoError, match="fps must be a positive finite number"):
+            create_from_images(["/nonexistent/image.jpg"], fps=0)
+
+    def test_create_from_images_negative_fps_raises(self):
+        from mcp_video.engine import create_from_images
+
+        with pytest.raises(MCPVideoError, match="fps must be a positive finite number"):
+            create_from_images(["/nonexistent/image.jpg"], fps=-1)
+
+    def test_write_metadata_same_path_raises(self, sample_video):
+        from mcp_video.engine import write_metadata
+
+        with pytest.raises(MCPVideoError, match="output_path cannot be the same as input_path"):
+            write_metadata(sample_video, {"title": "X"}, output_path=sample_video)
+
     def test_export_frames(self, sample_video, tmp_path):
         from mcp_video.engine import export_frames
 
