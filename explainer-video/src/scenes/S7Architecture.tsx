@@ -21,7 +21,7 @@ const LAYERS = [
   { label: 'MCP', desc: 'Protocol layer', color: COLORS.VIOLET_MID, scale: 1.0 },
   { label: 'mcp-video', desc: 'Python / FFmpeg', color: COLORS.VIOLET_BRIGHT, scale: 1.1 },
   { label: 'FFmpeg', desc: 'Encoding engine', color: COLORS.LIME, scale: 1.0 },
-  { label: 'Output', desc: 'MP4 / WebM / GIF', color: '#E76F51', scale: 1.15 },
+  { label: 'Output', desc: 'MP4 / WebM / GIF', color: COLORS.SEAFOAM, scale: 1.15 },
 ];
 
 export const S7Architecture: React.FC = () => {

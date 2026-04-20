@@ -340,6 +340,7 @@ export const S6Remotion: React.FC = () => {
             overflow: 'hidden',
             height: 36,
             alignItems: 'center',
+            transform: `translateX(${tickerOffset}px)`,
           }}
         >
           {TOOLS.map((tool, i) => (

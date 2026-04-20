@@ -42,7 +42,7 @@ export const S1Hook: React.FC = () => {
     extrapolateRight: 'clamp',
   });
   const hookGlitch = frame >= 15 && frame < 25
-    ? Math.random() > 0.7 ? Math.random() * 4 - 2 : 0
+    ? ((frame * 7 + 3) % 10 > 7 ? ((frame * 13 + 5) % 10) * 0.4 - 2 : 0)
     : 0;
 
   // Phase 3 (30-60): Logo slam

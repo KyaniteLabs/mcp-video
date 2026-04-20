@@ -1,207 +1,179 @@
 import React from 'react';
-import { AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate, Easing, Video, staticFile } from 'remotion';
+import {
+  AbsoluteFill,
+  useCurrentFrame,
+  useVideoConfig,
+  spring,
+  interpolate,
+  Video,
+  staticFile,
+} from 'remotion';
+import GradientBackground from '../components/GradientBackground';
 import GlassCard from '../components/GlassCard';
-import { COLORS, TEXT, FONT_SIZE, glowShadow } from '../lib/theme';
+import {
+  COLORS,
+  FONT_SIZE,
+  TEXT,
+} from '../lib/theme';
+import { SPRING_SMOOTH, stagger } from '../lib/animations';
 
-// Visual Effects Scene for v1.0 - Now with REAL demo videos
+const EFFECTS = [
+  {
+    name: 'Vignette',
+    desc: 'Darkened edges',
+    color: COLORS.VIOLET_MID,
+    src: staticFile('demos/effect_vignette.mp4'),
+  },
+  {
+    name: 'Chromatic',
+    desc: 'RGB separation',
+    color: COLORS.LIME,
+    src: staticFile('demos/effect_chromatic.mp4'),
+  },
+  {
+    name: 'Noise',
+    desc: 'Film grain',
+    color: COLORS.VIOLET_BRIGHT,
+    src: staticFile('demos/effect_noise.mp4'),
+  },
+  {
+    name: 'Glow',
+    desc: 'Bloom effect',
+    color: COLORS.SEAFOAM,
+    src: staticFile('demos/effect_glow.mp4'),
+  },
+];
+
 export const S14VisualEffects: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  
-  const progress = frame / (fps * 5);
-  
-  // Entrance animations
-  const titleOpacity = interpolate(progress, [0, 0.15], [0, 1], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
+
+  const titleSpring = spring({
+    frame: Math.max(0, frame - 5),
+    fps,
+    config: SPRING_SMOOTH,
   });
-  
-  const gridOpacity = interpolate(progress, [0.2, 0.35], [0, 1], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
-  
-  // Real effect demo videos
-  const effects = [
-    { 
-      name: 'Vignette', 
-      desc: 'Darkened edges', 
-      icon: '◐', 
-      color: COLORS.VIOLET_MID,
-      demo: 'demos/effect_vignette.mp4'
-    },
-    { 
-      name: 'Chromatic', 
-      desc: 'RGB separation', 
-      icon: '⚡', 
-      color: COLORS.LIME,
-      demo: 'demos/effect_chromatic.mp4'
-    },
-    { 
-      name: 'Scanlines', 
-      desc: 'CRT overlay', 
-      icon: '☰', 
-      color: COLORS.CYAN_BRIGHT,
-      demo: 'demos/effect_source.mp4'  // Fallback - scanlines has filter issue
-    },
-    { 
-      name: 'Noise', 
-      desc: 'Film grain', 
-      icon: '✻', 
-      color: COLORS.TEXT_MUTED,
-      demo: 'demos/effect_noise.mp4'
-    },
-    { 
-      name: 'Glow', 
-      desc: 'Bloom effect', 
-      icon: '✦', 
-      color: COLORS.VIOLET_BRIGHT,
-      demo: 'demos/effect_glow.mp4'
-    },
-  ];
-  
+
   return (
-    <AbsoluteFill style={{ background: COLORS.BG_DEEP }}>
-      {/* Background gradient */}
-      <div
-        style={{
-          position: 'absolute',
-          width: 600,
-          height: 600,
-          borderRadius: '50%',
-          background: `radial-gradient(circle, ${COLORS.VIOLET_MID}15 0%, transparent 70%)`,
-          top: '30%',
-          right: '-10%',
-        }}
+    <AbsoluteFill style={{ backgroundColor: COLORS.BG_DEEP }}>
+      <GradientBackground
+        glowColor={COLORS.VIOLET_MID}
+        glowX={0.5}
+        glowY={0.5}
       />
-      
-      {/* Header */}
-      <div
+
+      <AbsoluteFill
         style={{
-          position: 'absolute',
-          top: 100,
-          left: 0,
-          right: 0,
-          textAlign: 'center',
-          opacity: titleOpacity,
+          padding: 60,
+          flexDirection: 'column',
+          alignItems: 'center',
         }}
       >
+        {/* Title */}
         <div
-          style={{
-            ...TEXT.overline,
-            fontSize: FONT_SIZE.OVERLINE,
-            color: COLORS.VIOLET_BRIGHT,
-            marginBottom: 16,
-          }}
-        >
-          v1.0 FEATURES
-        </div>
-        <h2
           style={{
             ...TEXT.headline,
             fontSize: FONT_SIZE.HEADLINE,
             color: COLORS.TEXT_PRIMARY,
-            margin: 0,
+            textAlign: 'center',
+            opacity: interpolate(titleSpring, [0, 0.3], [0, 1]),
+            transform: `translateY(${interpolate(titleSpring, [0, 1], [20, 0])}px)`,
           }}
         >
-          Visual Effects
-        </h2>
-        <p
+          Visual <span style={{ color: COLORS.VIOLET_BRIGHT }}>Effects</span>
+        </div>
+        <div
           style={{
-            ...TEXT.body,
-            fontSize: FONT_SIZE.SUBTITLE,
+            ...TEXT.subtitle,
+            fontSize: 18,
             color: COLORS.TEXT_SECONDARY,
-            marginTop: 12,
+            textAlign: 'center',
+            marginTop: 8,
+            opacity: interpolate(titleSpring, [0.3, 0.6], [0, 1]),
           }}
         >
           Professional effects for cinematic looks
-        </p>
-      </div>
-      
-      {/* Effects Grid with Real Videos */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 280,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          display: 'flex',
-          gap: 24,
-          opacity: gridOpacity,
-        }}
-      >
-        {effects.map((effect, i) => (
-          <GlassCard
-            key={effect.name}
-            style={{
-              width: 180,
-              padding: 20,
-              borderColor: `${effect.color}30`,
-              boxShadow: glowShadow(effect.color, 0.3),
-            }}
-          >
-            {/* Real effect demo video */}
-            <div
-              style={{
-                width: '100%',
-                height: 120,
-                borderRadius: 8,
-                overflow: 'hidden',
-                position: 'relative',
-              }}
-            >
-              <Video
-                src={staticFile(effect.demo)}
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover',
-                }}
-              />
-              {/* Label overlay */}
+        </div>
+
+        {/* Effect cards with real demos */}
+        <div
+          style={{
+            flex: 1,
+            flexDirection: 'row',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: 24,
+          }}
+        >
+          {EFFECTS.map((effect, i) => {
+            const cardSpring = spring({
+              frame: stagger(frame, i, 5),
+              fps,
+              config: SPRING_SMOOTH,
+            });
+
+            return (
               <div
+                key={effect.name}
                 style={{
-                  position: 'absolute',
-                  bottom: 4,
-                  left: 4,
-                  right: 4,
-                  padding: '4px 8px',
-                  background: 'rgba(0,0,0,0.6)',
-                  borderRadius: 4,
-                  fontSize: 10,
-                  color: effect.color,
-                  textAlign: 'center',
+                  width: 210,
+                  opacity: interpolate(cardSpring, [0, 0.3], [0, 1]),
+                  transform: `translateY(${interpolate(cardSpring, [0, 1], [25, 0])}px)`,
                 }}
               >
-                LIVE DEMO
+                {/* Video preview */}
+                <div
+                  style={{
+                    width: 210,
+                    height: 140,
+                    borderRadius: '10px 10px 0 0',
+                    overflow: 'hidden',
+                    border: `1px solid ${effect.color}20`,
+                    borderBottom: 'none',
+                    background: COLORS.BG_CARD,
+                  }}
+                >
+                  <Video
+                    src={effect.src}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                    }}
+                  />
+                </div>
+                {/* Label */}
+                <div
+                  style={{
+                    padding: '14px 16px',
+                    borderRadius: '0 0 10px 10px',
+                    background: COLORS.BG_CARD,
+                    border: `1px solid ${effect.color}15`,
+                    borderTop: 'none',
+                    textAlign: 'center',
+                  }}
+                >
+                  <div style={{
+                    ...TEXT.title,
+                    fontSize: 17,
+                    color: effect.color,
+                    marginBottom: 3,
+                  }}>
+                    {effect.name}
+                  </div>
+                  <div style={{
+                    ...TEXT.caption,
+                    fontSize: 13,
+                    color: COLORS.TEXT_SECONDARY,
+                  }}>
+                    {effect.desc}
+                  </div>
+                </div>
               </div>
-            </div>
-            <div style={{ marginTop: 16, textAlign: 'center' }}>
-              <h3
-                style={{
-                  ...TEXT.title,
-                  fontSize: 18,
-                  color: effect.color,
-                  margin: '0 0 4px 0',
-                }}
-              >
-                {effect.name}
-              </h3>
-              <p
-                style={{
-                  ...TEXT.caption,
-                  fontSize: 13,
-                  color: COLORS.TEXT_SECONDARY,
-                  margin: 0,
-                }}
-              >
-                {effect.desc}
-              </p>
-            </div>
-          </GlassCard>
-        ))}
-      </div>
-      
+            );
+          })}
+        </div>
+      </AbsoluteFill>
     </AbsoluteFill>
   );
 };

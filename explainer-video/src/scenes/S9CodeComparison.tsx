@@ -29,7 +29,7 @@ const MOVIEPY_LINES = [
   'clip.write_videofile("out.mp4")',
 ];
 
-const MCPVIDEO_LINE = 'video.trim("input.mp4", start=0, end=10)';
+const MCPVIDEO_LINE = 'video_trim({input:"clip.mp4", start:0, end:10})';
 
 export const S9CodeComparison: React.FC = () => {
   const frame = useCurrentFrame();
@@ -166,7 +166,7 @@ export const S9CodeComparison: React.FC = () => {
               {MCPVIDEO_LINE.slice(0, charsVisible)}
             </div>
             <div style={{ color: COLORS.LIME }}>
-              {charsVisible >= MCPVIDEO_LINE.length ? "')" : ''}
+              {charsVisible >= MCPVIDEO_LINE.length ? '})' : ''}
             </div>
             <span
               style={{
