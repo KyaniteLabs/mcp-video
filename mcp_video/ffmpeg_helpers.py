@@ -76,7 +76,9 @@ def _get_video_duration(video_path: str) -> float:
     try:
         return float(stdout)
     except ValueError:
-        raise ProcessingError(" ".join(cmd), result.returncode, f"Non-numeric duration from ffprobe: {stdout!r}") from None
+        raise ProcessingError(
+            " ".join(cmd), result.returncode, f"Non-numeric duration from ffprobe: {stdout!r}"
+        ) from None
 
 
 def _run_ffprobe_json(path: str) -> dict[str, Any]:

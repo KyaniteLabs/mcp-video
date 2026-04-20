@@ -400,7 +400,9 @@ def _run_ffmpeg_with_progress(
         except subprocess.TimeoutExpired:
             proc.kill()
             proc.wait()
-            raise ProcessingError(" ".join(cmd), -1, f"FFmpeg command timed out after {DEFAULT_FFMPEG_TIMEOUT}s") from None
+            raise ProcessingError(
+                " ".join(cmd), -1, f"FFmpeg command timed out after {DEFAULT_FFMPEG_TIMEOUT}s"
+            ) from None
 
     stderr = "".join(stderr_lines)
     if proc.returncode != 0:
