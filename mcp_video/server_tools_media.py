@@ -21,6 +21,7 @@ from .engine import (
 from .errors import MCPVideoError
 from .server_app import _error_result, _result, mcp
 from .validation import VALID_AUDIO_FORMATS, VALID_FORMATS, VALID_PRESETS
+from .ffmpeg_helpers import _validate_input_path
 
 
 @mcp.tool()
@@ -37,6 +38,7 @@ def video_thumbnail(
         output_path: Where to save the frame image. Auto-generated if omitted.
     """
     try:
+        _validate_input_path(input_path)
         return _result(thumbnail(input_path, timestamp=timestamp, output_path=output_path))
     except MCPVideoError as e:
         return _error_result(e)
@@ -58,6 +60,7 @@ def video_preview(
         scale_factor: Downscale factor (4 = 1/4 resolution).
     """
     try:
+        _validate_input_path(input_path)
         MAX_SCALE_FACTOR = 16
         if scale_factor < 2:
             return _error_result(
@@ -96,6 +99,7 @@ def video_storyboard(
         frame_count: Number of key frames to extract.
     """
     try:
+        _validate_input_path(input_path)
         MAX_FRAME_COUNT = 100
         if frame_count is not None and (frame_count < 1 or frame_count > MAX_FRAME_COUNT):
             return _error_result(
@@ -126,6 +130,8 @@ def video_subtitles(
         output_path: Where to save the output. Auto-generated if omitted.
     """
     try:
+        _validate_input_path(input_path)
+        _validate_input_path(subtitle_path)
         return _result(subtitles(input_path, subtitle_path=subtitle_path, output_path=output_path))
     except MCPVideoError as e:
         return _error_result(e)
@@ -181,6 +187,8 @@ def video_watermark(
             MCPVideoError(f"Invalid preset: {preset}", error_type="validation_error", code="invalid_parameter")
         )
     try:
+        _validate_input_path(input_path)
+        _validate_input_path(image_path)
         return _result(
             watermark(
                 input_path,
@@ -257,6 +265,7 @@ def video_crop(
         output_path: Where to save the output. Auto-generated if omitted.
     """
     try:
+        _validate_input_path(input_path)
         return _result(crop(input_path, width=width, height=height, x=x, y=y, output_path=output_path))
     except MCPVideoError as e:
         return _error_result(e)
@@ -325,6 +334,7 @@ def video_fade(
             MCPVideoError(f"Invalid preset: {preset}", error_type="validation_error", code="invalid_parameter")
         )
     try:
+        _validate_input_path(input_path)
         if fade_in < 0:
             return _error_result(
                 MCPVideoError(
@@ -443,6 +453,7 @@ def video_extract_audio(
             )
         )
     try:
+        _validate_input_path(input_path)
         result = extract_audio(input_path, output_path=output_path, format=format)
         if not os.path.isfile(result):
             return _error_result(

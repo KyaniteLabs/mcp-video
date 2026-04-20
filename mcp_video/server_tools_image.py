@@ -6,6 +6,7 @@ from typing import Any
 
 from .errors import MCPVideoError
 from .server_app import _error_result, _result, mcp
+from .ffmpeg_helpers import _validate_input_path
 
 
 @mcp.tool()
@@ -23,6 +24,7 @@ def image_extract_colors(
         n_colors: Number of dominant colors to extract (1-20, default 5).
     """
     try:
+        _validate_input_path(image_path)
         from .image_engine import extract_colors
 
         return _result(extract_colors(image_path, n_colors=n_colors))
@@ -49,6 +51,7 @@ def image_generate_palette(
         n_colors: Number of dominant colors to base palette on (default 5).
     """
     try:
+        _validate_input_path(image_path)
         from .image_engine import generate_palette
 
         return _result(generate_palette(image_path, harmony=harmony, n_colors=n_colors))
@@ -75,6 +78,7 @@ def image_analyze_product(
         n_colors: Number of dominant colors to extract (default 5).
     """
     try:
+        _validate_input_path(image_path)
         from .image_engine import analyze_product
 
         return _result(analyze_product(image_path, use_ai=use_ai, n_colors=n_colors))

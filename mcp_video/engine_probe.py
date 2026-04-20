@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import os
 
-from .errors import InputFileError
+from .errors import InputFileError, MCPVideoError
 from .ffmpeg_helpers import _run_ffprobe_json
 from .models import VideoInfo
 from .engine_runtime_utils import _get_audio_stream, _get_video_stream, _validate_input
+from .limits import MAX_VIDEO_DURATION
 
 # ---------------------------------------------------------------------------
 # Probe cache — keyed by (path, mtime, size) so stale data is never returned
@@ -30,6 +31,12 @@ def _build_video_info(path: str, data: dict) -> VideoInfo:
 
     # Duration
     duration = float(data.get("format", {}).get("duration", 0) or vs.get("duration", 0))
+    if duration > MAX_VIDEO_DURATION:
+        raise MCPVideoError(
+            f"Video duration ({duration:.0f}s) exceeds maximum of {MAX_VIDEO_DURATION}s",
+            error_type="validation_error",
+            code="duration_too_long",
+        )
 
     # Resolution
     width = int(vs.get("width", 0))

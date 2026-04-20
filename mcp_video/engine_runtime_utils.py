@@ -381,13 +381,17 @@ def _run_ffmpeg_with_progress(
 
     stderr_lines: list[str] = []
     _MAX_STDERR_LINES = 10_000
+    _MAX_STDERR_BYTES = 1_000_000  # ~1 MB hard cap
+    _stderr_bytes = 0
     try:
         while True:
             line = proc.stderr.readline()
             if not line:
                 break
-            if len(stderr_lines) < _MAX_STDERR_LINES:
+            line_bytes = len(line.encode("utf-8", errors="replace"))
+            if len(stderr_lines) < _MAX_STDERR_LINES and _stderr_bytes + line_bytes <= _MAX_STDERR_BYTES:
                 stderr_lines.append(line)
+                _stderr_bytes += line_bytes
 
             match = _TIME_RE.search(line)
             if match:
