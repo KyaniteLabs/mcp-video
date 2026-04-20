@@ -9,6 +9,7 @@ from .engine_runtime_utils import (
     _quality_args,
     _resolve_position,
     _run_ffmpeg,
+    _timed_operation,
     _validate_input,
 )
 from .models import EditResult, NamedPosition, Position
@@ -46,23 +47,24 @@ def watermark(
     # Format opacity for FFmpeg (0.0 to 1.0)
     opacity_fmt = f"{opacity:.2f}"
 
-    _run_ffmpeg(
-        [
-            "-i",
-            input_path,
-            "-i",
-            image_path,
-            "-filter_complex",
-            f"[1:v]format=rgba,colorchannelmixer=aa={opacity_fmt}[wm];[0:v][wm]overlay={overlay_pos}",
-            "-c:v",
-            "libx264",
-            *_quality_args(crf=crf, preset=preset),
-            "-c:a",
-            "copy",
-            *_movflags_args(output),
-            output,
-        ]
-    )
+    with _timed_operation() as timing:
+        _run_ffmpeg(
+            [
+                "-i",
+                input_path,
+                "-i",
+                image_path,
+                "-filter_complex",
+                f"[1:v]format=rgba,colorchannelmixer=aa={opacity_fmt}[wm];[0:v][wm]overlay={overlay_pos}",
+                "-c:v",
+                "libx264",
+                *_quality_args(crf=crf, preset=preset),
+                "-c:a",
+                "copy",
+                *_movflags_args(output),
+                output,
+            ]
+        )
 
     info = probe(output)
     return EditResult(
@@ -72,4 +74,5 @@ def watermark(
         size_mb=info.size_mb,
         format="mp4",
         operation="watermark",
+        elapsed_ms=timing["elapsed_ms"],
     )

@@ -6,6 +6,7 @@ import pytest
 
 from mcp_video import Client
 from mcp_video.engine import _check_filter_available
+from mcp_video.errors import MCPVideoError
 from mcp_video.models import EditResult, StoryboardResult, ThumbnailResult, VideoInfo
 
 
@@ -332,37 +333,37 @@ class TestClientValidators:
     """Tests for parameter validation in the Python client."""
 
     def test_layout_grid_invalid_layout(self, editor):
-        with pytest.raises(ValueError, match="layout must be one of"):
+        with pytest.raises(MCPVideoError, match="layout must be one of"):
             editor.layout_grid(["a.mp4", "b.mp4"], "invalid-layout", "out.mp4")
 
     def test_layout_grid_valid_layouts(self, editor):
         for layout in ("2x2", "3x1", "1x3", "2x3"):
-            # Should not raise (will fail at FFmpeg but validation passes)
+            # Should not raise validation error (will fail at FFmpeg/input level but validation passes)
             with pytest.raises(Exception) as exc_info:
                 editor.layout_grid(["/nonexistent/a.mp4"], layout, "/nonexistent/out.mp4")
-            assert not isinstance(exc_info.value, ValueError)
+            assert exc_info.value.error_type != "validation_error"
 
     def test_layout_pip_invalid_position(self, editor):
-        with pytest.raises(ValueError, match="position must be one of"):
+        with pytest.raises(MCPVideoError, match="position must be one of"):
             editor.layout_pip("a.mp4", "b.mp4", "out.mp4", position="middle")
 
     def test_layout_pip_valid_positions(self, editor):
         for pos in ("top-left", "top-right", "bottom-left", "bottom-right"):
-            # Should not raise ValueError (will fail at FFmpeg)
+            # Should not raise validation error (will fail at FFmpeg/input level but validation passes)
             with pytest.raises(Exception) as exc_info:
                 editor.layout_pip("/nonexistent/a.mp4", "/nonexistent/b.mp4", "/nonexistent/out.mp4", position=pos)
-            assert not isinstance(exc_info.value, ValueError)
+            assert exc_info.value.error_type != "validation_error"
 
     def test_export_invalid_quality(self, editor):
-        with pytest.raises(ValueError, match="quality must be one of"):
+        with pytest.raises(MCPVideoError, match="quality must be one of"):
             editor.export("video.mp4", quality="superb")
 
     def test_convert_invalid_format(self, editor):
-        with pytest.raises(ValueError, match="format must be one of"):
+        with pytest.raises(MCPVideoError, match="format must be one of"):
             editor.convert("video.mp4", format="avi")
 
     def test_convert_invalid_quality(self, editor):
-        with pytest.raises(ValueError, match="quality must be one of"):
+        with pytest.raises(MCPVideoError, match="quality must be one of"):
             editor.convert("video.mp4", quality="medium-rare")
 
     def test_convert_valid_combos_no_value_error(self, editor):

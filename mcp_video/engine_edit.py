@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from .engine_probe import probe
-from .engine_runtime_utils import _auto_output, _movflags_args, _run_ffmpeg, _validate_input
+from .engine_runtime_utils import _auto_output, _movflags_args, _run_ffmpeg, _timed_operation, _validate_input
 from .models import EditResult
 
 
@@ -42,7 +42,9 @@ def trim(
             output,
         ]
     )
-    _run_ffmpeg(args)
+
+    with _timed_operation() as timing:
+        _run_ffmpeg(args)
 
     info = probe(output)
     return EditResult(
@@ -52,4 +54,5 @@ def trim(
         size_mb=info.size_mb,
         format="mp4",
         operation="trim",
+        elapsed_ms=timing["elapsed_ms"],
     )

@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Any
 
 from .errors import (
+    MCPVideoError,
     RemotionNotFoundError,
     RemotionProjectError,
     RemotionRenderError,
@@ -154,16 +155,18 @@ def render(
         args += ["--concurrency", str(concurrency)]
     if frames is not None:
         if not re.match(r"^\d+-\d+$", frames):
-            raise ValueError(f"Invalid frames format: '{frames}'. Expected format: 'START-END' (e.g. '0-90')")
+            raise MCPVideoError(f"Invalid frames format: '{frames}'. Expected format: 'START-END' (e.g. '0-90')", error_type="validation_error", code="invalid_parameter")
         args += ["--frames", frames]
     if scale is not None:
         args += ["--scale", str(scale)]
     if props is not None:
         props_json = json.dumps(props)
         if len(props_json) > 100_000:  # 100 KiB — well under OS arg limits
-            raise ValueError(
+            raise MCPVideoError(
                 f"Props JSON is {len(props_json)} bytes — exceeds 100 KiB limit. "
-                "Use a file-based approach for large props."
+                "Use a file-based approach for large props.",
+                error_type="validation_error",
+                code="props_too_large",
             )
         args += ["--props", props_json]
 
@@ -741,7 +744,7 @@ def render_and_post(
         is_last = i == len(post_process) - 1
 
         if op_type not in op_map:
-            raise ValueError(f"Unknown post-processing operation: '{op_type}'. Valid operations: {', '.join(op_map)}")
+            raise MCPVideoError(f"Unknown post-processing operation: '{op_type}'. Valid operations: {', '.join(op_map)}", error_type="validation_error", code="invalid_parameter")
 
         step_output = output_path if is_last else None
         result = op_map[op_type](current_input, output_path=step_output, **params)

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from .engine_probe import probe
-from .engine_runtime_utils import _auto_output, _movflags_args, _run_ffmpeg, _validate_input
+from .engine_runtime_utils import _auto_output, _movflags_args, _run_ffmpeg, _timed_operation, _validate_input
 from .errors import MCPVideoError
 from .models import PREVIEW_PRESETS, EditResult
 
@@ -24,28 +24,29 @@ def preview(
 
     output = output_path or _auto_output(input_path, "preview")
 
-    _run_ffmpeg(
-        [
-            "-i",
-            input_path,
-            "-vf",
-            f"scale={w}:{h}",
-            "-c:v",
-            "libx264",
-            "-crf",
-            str(PREVIEW_PRESETS["crf"]),
-            "-preset",
-            PREVIEW_PRESETS["preset"],
-            "-c:a",
-            "aac",
-            "-b:a",
-            "64k",
-            "-ac",
-            "2",
-            *_movflags_args(output),
-            output,
-        ]
-    )
+    with _timed_operation() as timing:
+        _run_ffmpeg(
+            [
+                "-i",
+                input_path,
+                "-vf",
+                f"scale={w}:{h}",
+                "-c:v",
+                "libx264",
+                "-crf",
+                str(PREVIEW_PRESETS["crf"]),
+                "-preset",
+                PREVIEW_PRESETS["preset"],
+                "-c:a",
+                "aac",
+                "-b:a",
+                "64k",
+                "-ac",
+                "2",
+                *_movflags_args(output),
+                output,
+            ]
+        )
 
     result_info = probe(output)
     return EditResult(
@@ -55,4 +56,5 @@ def preview(
         size_mb=result_info.size_mb,
         format="mp4",
         operation="preview",
+        elapsed_ms=timing["elapsed_ms"],
     )

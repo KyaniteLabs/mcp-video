@@ -9,6 +9,7 @@ from .engine_runtime_utils import (
     _require_filter,
     _run_ffmpeg,
     _sanitize_ffmpeg_number,
+    _timed_operation,
     _validate_input,
 )
 from .errors import MCPVideoError
@@ -46,22 +47,23 @@ def normalize_audio(
     # TP (true peak) should be a fixed value near -1.5 dBTP regardless of target LUFS.
     safe_tp = _escape_ffmpeg_filter_value(str(-1.5))
 
-    _run_ffmpeg(
-        [
-            "-i",
-            input_path,
-            "-af",
-            f"loudnorm=I={safe_target_lufs}:TP={safe_tp}:LRA={safe_lra}",
-            "-c:v",
-            "copy",
-            "-c:a",
-            "aac",
-            "-b:a",
-            "192k",
-            *_movflags_args(output),
-            output,
-        ]
-    )
+    with _timed_operation() as timing:
+        _run_ffmpeg(
+            [
+                "-i",
+                input_path,
+                "-af",
+                f"loudnorm=I={safe_target_lufs}:TP={safe_tp}:LRA={safe_lra}",
+                "-c:v",
+                "copy",
+                "-c:a",
+                "aac",
+                "-b:a",
+                "192k",
+                *_movflags_args(output),
+                output,
+            ]
+        )
 
     info = probe(output)
     return EditResult(
@@ -71,4 +73,5 @@ def normalize_audio(
         size_mb=info.size_mb,
         format="mp4",
         operation="normalize_audio",
+        elapsed_ms=timing["elapsed_ms"],
     )

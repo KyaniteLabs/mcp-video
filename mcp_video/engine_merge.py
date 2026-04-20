@@ -7,7 +7,7 @@ import shutil
 import tempfile
 
 from .engine_probe import get_duration, probe
-from .engine_runtime_utils import _auto_output, _movflags_args, _run_ffmpeg, _validate_input
+from .engine_runtime_utils import _auto_output, _movflags_args, _run_ffmpeg, _timed_operation, _validate_input
 from .errors import InputFileError, MCPVideoError
 from .models import EditResult
 
@@ -47,65 +47,66 @@ def merge(
     working_clips: list[str] = []
     tmpdir = tempfile.mkdtemp(prefix="mcp_video_")
 
-    try:
-        if needs_normalize:
-            for i, clip in enumerate(clips):
-                norm_path = os.path.join(tmpdir, f"clip_{i:04d}.mp4")
+    with _timed_operation() as timing:
+        try:
+            if needs_normalize:
+                for i, clip in enumerate(clips):
+                    norm_path = os.path.join(tmpdir, f"clip_{i:04d}.mp4")
+                    _run_ffmpeg(
+                        [
+                            "-i",
+                            clip,
+                            "-vf",
+                            f"scale={target_w}:{target_h}:force_original_aspect_ratio=decrease,pad={target_w}:{target_h}:(ow-iw)/2:(oh-ih)/2",
+                            "-c:v",
+                            "libx264",
+                            "-preset",
+                            "fast",
+                            "-crf",
+                            "23",
+                            "-c:a",
+                            "aac",
+                            "-b:a",
+                            "128k",
+                            "-r",
+                            "30",
+                            "-ar",
+                            "44100",
+                            "-ac",
+                            "2",
+                            norm_path,
+                        ]
+                    )
+                    working_clips.append(norm_path)
+            else:
+                working_clips = list(clips)
+
+            output = output_path or _auto_output(clips[0], "merged")
+
+            # Resolve transition types list
+            transition_types: list[str] | None = None
+            if transitions and len(working_clips) > 1:
+                transition_types = list(transitions)
+            elif transition and len(working_clips) > 1:
+                transition_types = [transition] * (len(working_clips) - 1)
+
+            if transition_types and len(working_clips) > 1:
+                # Use xfade filter for transitions
+                _merge_with_transitions(working_clips, output, transition_types, transition_duration)
+            else:
+                # Simple concat
+                concat_file = os.path.join(tmpdir, "concat.txt")
+                with open(concat_file, "w") as f:
+                    for clip in working_clips:
+                        # Escape single quotes for FFmpeg concat demuxer
+                        abs_path = os.path.abspath(clip).replace("'", "'\\''")
+                        f.write(f"file '{abs_path}'\n")
                 _run_ffmpeg(
-                    [
-                        "-i",
-                        clip,
-                        "-vf",
-                        f"scale={target_w}:{target_h}:force_original_aspect_ratio=decrease,pad={target_w}:{target_h}:(ow-iw)/2:(oh-ih)/2",
-                        "-c:v",
-                        "libx264",
-                        "-preset",
-                        "fast",
-                        "-crf",
-                        "23",
-                        "-c:a",
-                        "aac",
-                        "-b:a",
-                        "128k",
-                        "-r",
-                        "30",
-                        "-ar",
-                        "44100",
-                        "-ac",
-                        "2",
-                        norm_path,
-                    ]
+                    ["-f", "concat", "-safe", "0", "-i", concat_file, "-c", "copy", *_movflags_args(output), output]
                 )
-                working_clips.append(norm_path)
-        else:
-            working_clips = list(clips)
 
-        output = output_path or _auto_output(clips[0], "merged")
-
-        # Resolve transition types list
-        transition_types: list[str] | None = None
-        if transitions and len(working_clips) > 1:
-            transition_types = list(transitions)
-        elif transition and len(working_clips) > 1:
-            transition_types = [transition] * (len(working_clips) - 1)
-
-        if transition_types and len(working_clips) > 1:
-            # Use xfade filter for transitions
-            _merge_with_transitions(working_clips, output, transition_types, transition_duration)
-        else:
-            # Simple concat
-            concat_file = os.path.join(tmpdir, "concat.txt")
-            with open(concat_file, "w") as f:
-                for clip in working_clips:
-                    # Escape single quotes for FFmpeg concat demuxer
-                    abs_path = os.path.abspath(clip).replace("'", "'\\''")
-                    f.write(f"file '{abs_path}'\n")
-            _run_ffmpeg(
-                ["-f", "concat", "-safe", "0", "-i", concat_file, "-c", "copy", *_movflags_args(output), output]
-            )
-
-    finally:
-        shutil.rmtree(tmpdir, ignore_errors=True)
+        finally:
+            shutil.rmtree(tmpdir, ignore_errors=True)
 
     info = probe(output)
     return EditResult(
@@ -115,6 +116,7 @@ def merge(
         size_mb=info.size_mb,
         format="mp4",
         operation="merge",
+        elapsed_ms=timing["elapsed_ms"],
     )
 
 

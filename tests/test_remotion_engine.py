@@ -20,6 +20,7 @@ from mcp_video.remotion_engine import (
     validate,
 )
 from mcp_video.errors import (
+    MCPVideoError,
     RemotionNotFoundError,
     RemotionProjectError,
     RemotionRenderError,
@@ -899,7 +900,7 @@ class TestRenderAndPost:
             patch("mcp_video.remotion_engine.subprocess.run", return_value=fake_cp),
             patch("os.path.isfile", return_value=True),
             patch("os.path.getsize", return_value=1024),
-            pytest.raises(ValueError, match=r"Unknown post-processing operation.*nonexistent_op"),
+            pytest.raises(MCPVideoError, match=r"Unknown post-processing operation.*nonexistent_op"),
         ):
             render_and_post(
                 project,

@@ -86,6 +86,17 @@ Think of it as **FFmpeg + Remotion with an API that AI agents can actually use**
 
 ---
 
+## MCP Directories
+
+Submission status for MCP directory listings:
+
+- [ ] [Smithery](https://smithery.ai) — `npx @anthropic-ai/mcp-registry publish`
+- [ ] [Glama MCP Registry](https://glama.ai/mcp/servers) — Submit via GitHub repo URL
+- [ ] [MCP.so](https://mcp.so) — Submit via GitHub repo URL
+- [ ] [Awesome MCP Servers](https://github.com/punkpeye/awesome-mcp-servers) — Submit via PR
+
+---
+
 ## Installation
 
 ### Prerequisites

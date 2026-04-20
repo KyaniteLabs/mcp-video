@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from .engine_probe import probe
-from .engine_runtime_utils import _auto_output, _movflags_args, _require_filter, _run_ffmpeg, _validate_input
+from .engine_runtime_utils import _auto_output, _movflags_args, _require_filter, _run_ffmpeg, _timed_operation, _validate_input
 from .ffmpeg_helpers import _escape_ffmpeg_filter_value
 from .models import EditResult
 
@@ -24,24 +24,25 @@ def subtitles(
     escaped_sub_path = _escape_ffmpeg_filter_value(subtitle_path)
     escaped_style = _escape_ffmpeg_filter_value(style)
 
-    _run_ffmpeg(
-        [
-            "-i",
-            input_path,
-            "-vf",
-            f"subtitles={escaped_sub_path}:force_style={escaped_style}",
-            "-c:v",
-            "libx264",
-            "-preset",
-            "fast",
-            "-crf",
-            "23",
-            "-c:a",
-            "copy",
-            *_movflags_args(output),
-            output,
-        ]
-    )
+    with _timed_operation() as timing:
+        _run_ffmpeg(
+            [
+                "-i",
+                input_path,
+                "-vf",
+                f"subtitles={escaped_sub_path}:force_style={escaped_style}",
+                "-c:v",
+                "libx264",
+                "-preset",
+                "fast",
+                "-crf",
+                "23",
+                "-c:a",
+                "copy",
+                *_movflags_args(output),
+                output,
+            ]
+        )
 
     info = probe(output)
     return EditResult(
@@ -51,4 +52,5 @@ def subtitles(
         size_mb=info.size_mb,
         format="mp4",
         operation="subtitles",
+        elapsed_ms=timing["elapsed_ms"],
     )

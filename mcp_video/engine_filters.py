@@ -12,6 +12,7 @@ from .engine_runtime_utils import (
     _require_filter,
     _run_ffmpeg,
     _sanitize_ffmpeg_number,
+    _timed_operation,
 )
 from .errors import MCPVideoError
 from .ffmpeg_helpers import _escape_ffmpeg_filter_value, _validate_input_path
@@ -85,10 +86,11 @@ def apply_filter(
     filter_name, filter_string, is_audio = filter_map[filter_type]
     _require_filter(filter_name, f"Filter '{filter_type}'")
 
-    if is_audio:
-        _run_audio_filter(input_path, filter_type, filter_string, output)
-    else:
-        _run_video_filter(input_path, filter_string, output, crf, preset)
+    with _timed_operation() as timing:
+        if is_audio:
+            _run_audio_filter(input_path, filter_type, filter_string, output)
+        else:
+            _run_video_filter(input_path, filter_string, output, crf, preset)
 
     result_info = probe(output)
     return EditResult(
@@ -98,6 +100,7 @@ def apply_filter(
         size_mb=result_info.size_mb,
         format="mp4",
         operation=f"filter_{filter_type}",
+        elapsed_ms=timing["elapsed_ms"],
     )
 
 

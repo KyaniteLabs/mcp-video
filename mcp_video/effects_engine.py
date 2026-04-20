@@ -342,7 +342,7 @@ def layout_grid(
         Path to output video
     """
     if len(clips) == 0:
-        raise ValueError("At least one clip required")
+        raise MCPVideoError("At least one clip required", error_type="validation_error", code="invalid_parameter")
 
     if gap < 0 or padding < 0:
         raise MCPVideoError(
@@ -935,7 +935,7 @@ def video_info_detailed(video: str) -> dict[str, Any]:
             audio_stream = stream
 
     if not video_stream:
-        raise ValueError("No video stream found")
+        raise MCPVideoError("No video stream found", error_type="processing_error", code="no_video_stream")
 
     # Calculate duration
     duration = float(video_stream.get("duration", 0) or data.get("format", {}).get("duration", 0))

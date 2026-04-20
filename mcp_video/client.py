@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any, ClassVar, Literal
 
+from .errors import MCPVideoError
 from .engine import (
     add_audio as _add_audio,
     add_text as _add_text,
@@ -183,7 +184,7 @@ class Client:
     @staticmethod
     def _validate_choice(name: str, value: str, valid_values: set[str]) -> None:
         if value not in valid_values:
-            raise ValueError(f"{name} must be one of {sorted(valid_values)}, got {value}")
+            raise MCPVideoError(f"{name} must be one of {sorted(valid_values)}, got {value}", error_type="validation_error", code="invalid_parameter")
 
     def convert(
         self,
