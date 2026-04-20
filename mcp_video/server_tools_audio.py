@@ -394,7 +394,11 @@ def video_add_generated_audio(
     """
     try:
         if not isinstance(audio_config, dict) or not audio_config:
-            return _error_result(ValueError("audio_config must be a non-empty dict"))
+            raise MCPVideoError(
+                "audio_config must be a non-empty dict",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
         from .audio_engine import add_generated_audio as _add_gen_audio
 
         return _result(_add_gen_audio(input_path, audio_config, output_path))
@@ -435,4 +439,4 @@ def video_audio_spatial(
     except MCPVideoError as e:
         return _error_result(e)
     except Exception as e:
-        return {"success": False, "error": {"type": "internal_error", "code": "unexpected_error", "message": str(e)}}
+        return _error_result(e)
