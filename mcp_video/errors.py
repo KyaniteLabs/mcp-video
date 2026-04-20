@@ -141,12 +141,48 @@ class RemotionRenderError(MCPVideoError):
         self.full_stderr = stderr
 
 
+def _strip_ffmpeg_banner(stderr: str) -> str:
+    """Remove FFmpeg version banner and build configuration from stderr.
+
+    The banner includes version lines, build flags, and library versions
+    that clutter error messages. We keep everything from the first 'Input #'
+    or from the first line that doesn't look like banner noise.
+    """
+    lines = stderr.splitlines()
+    result_lines: list[str] = []
+    in_banner = True
+    for line in lines:
+        if in_banner:
+            # Heuristic: banner lines are indented or start with version info
+            stripped = line.strip()
+            if stripped.startswith("ffmpeg version") or stripped.startswith("ffprobe version"):
+                continue
+            if stripped.startswith("built with") or stripped.startswith("configuration:"):
+                continue
+            if stripped.startswith("lib") and "/" in stripped:
+                continue
+            if (
+                stripped.startswith("Stream mapping:")
+                or stripped.startswith("Input #")
+                or stripped.startswith("Output #")
+                or (stripped.startswith("[") and "Error" in stripped)
+                or "error" in stripped.lower()
+            ):
+                in_banner = False
+            else:
+                # Still looks like banner noise — skip it
+                continue
+        result_lines.append(line)
+    return "\n".join(result_lines) if result_lines else stderr
+
+
 class ProcessingError(MCPVideoError):
     """FFmpeg processing failed."""
 
     def __init__(self, command: str, returncode: int, stderr: str) -> None:
+        cleaned = _strip_ffmpeg_banner(stderr)
         # Truncate stderr to last 500 chars for readability
-        stderr_short = stderr[-500:] if len(stderr) > 500 else stderr
+        stderr_short = cleaned[-500:] if len(cleaned) > 500 else cleaned
         super().__init__(
             f"FFmpeg processing failed (exit code {returncode}): {stderr_short}",
             error_type="processing_error",
@@ -170,6 +206,7 @@ class ResourceError(MCPVideoError):
 
 def parse_ffmpeg_error(stderr: str) -> MCPVideoError:
     """Parse FFmpeg stderr and return the most specific error type."""
+    stderr = _strip_ffmpeg_banner(stderr)
     stderr_lower = stderr.lower()
 
     if "no such file or directory" in stderr_lower:

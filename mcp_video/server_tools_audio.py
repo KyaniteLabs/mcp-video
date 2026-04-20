@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+import tempfile
 from typing import Any
 
 from .errors import MCPVideoError
@@ -18,7 +20,7 @@ from .validation import (
 
 @mcp.tool()
 def audio_synthesize(
-    output_path: str,
+    output_path: str | None = None,
     waveform: str = "sine",
     frequency: float = 440.0,
     duration: float = 1.0,
@@ -76,12 +78,13 @@ def audio_synthesize(
                 f"Invalid volume: must be 0-1, got {volume}", error_type="validation_error", code="invalid_parameter"
             )
         )
+    output = output_path or os.path.join(tempfile.gettempdir(), f"mcp_audio_{waveform}.wav")
     try:
         from .audio_engine import audio_synthesize as _synth
 
         return _result(
             _synth(
-                output=output_path,
+                output=output,
                 waveform=waveform,
                 frequency=frequency,
                 duration=duration,
@@ -98,7 +101,7 @@ def audio_synthesize(
 @mcp.tool()
 def audio_preset(
     preset: str,
-    output_path: str,
+    output_path: str | None = None,
     pitch: str = "mid",
     duration: float | None = None,
     intensity: float = 0.5,
@@ -155,13 +158,14 @@ def audio_preset(
                 code="invalid_parameter",
             )
         )
+    output = output_path or os.path.join(tempfile.gettempdir(), f"mcp_audio_{preset}.wav")
     try:
         from .audio_engine import audio_preset as _preset
 
         return _result(
             _preset(
                 preset=preset,
-                output=output_path,
+                output=output,
                 pitch=pitch,
                 duration=duration,
                 intensity=intensity,

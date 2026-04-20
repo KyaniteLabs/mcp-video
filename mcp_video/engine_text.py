@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 
 from .engine_probe import probe
+from .errors import InputFileError, MCPVideoError
 from .engine_runtime_utils import (
     _auto_output,
     _default_font,
@@ -38,6 +39,12 @@ def add_text(
     """Overlay text on a video."""
     _validate_input(input_path)
     _require_filter("drawtext", "Text overlay")
+    if not text or not text.strip():
+        raise MCPVideoError(
+            "Text cannot be empty",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
     _validate_color(color)
     output = output_path or _auto_output(input_path, "titled")
 
@@ -46,7 +53,7 @@ def add_text(
 
     # Validate font file exists when explicitly provided
     if font is not None and not os.path.isfile(fontfile):
-        raise FileNotFoundError(f"Font file not found: {fontfile}")
+        raise InputFileError(fontfile, "Font file not found")
 
     # Escape font path for FFmpeg filter syntax
     escaped_fontfile = _escape_ffmpeg_filter_value(fontfile)

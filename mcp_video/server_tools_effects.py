@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 from typing import Any
 
+from .engine_runtime_utils import _auto_output
 from .errors import MCPVideoError
 from .server_app import _error_result, _result, mcp
 from .validation import VALID_MOGRAPH_STYLES
@@ -17,7 +18,7 @@ from .validation import VALID_MOGRAPH_STYLES
 @mcp.tool()
 def effect_vignette(
     input_path: str,
-    output_path: str,
+    output_path: str | None = None,
     intensity: float = 0.5,
     radius: float = 0.8,
     smoothness: float = 0.5,
@@ -45,7 +46,8 @@ def effect_vignette(
             return _error_result(ValueError(f"smoothness must be between 0.0 and 1.0, got {smoothness}"))
         from .effects_engine import effect_vignette as _vignette
 
-        return _result(_vignette(input_path, output_path, intensity, radius, smoothness))
+        output = output_path or _auto_output(input_path, "vignette")
+        return _result(_vignette(input_path, output, intensity, radius, smoothness))
     except MCPVideoError as e:
         return _error_result(e)
     except Exception as e:
@@ -297,7 +299,7 @@ def video_layout_pip(
 def video_text_animated(
     input_path: str,
     text: str,
-    output_path: str,
+    output_path: str | None = None,
     animation: str = "fade",
     font: str = "Arial",
     size: int = 48,
@@ -334,7 +336,8 @@ def video_text_animated(
             return _error_result(ValueError(f"start must be non-negative, got {start}"))
         from .effects_engine import text_animated as _text
 
-        return _result(_text(input_path, text, output_path, animation, font, size, color, position, start, duration))
+        output = output_path or _auto_output(input_path, "animated")
+        return _result(_text(input_path, text, output, animation, font, size, color, position, start, duration))
     except MCPVideoError as e:
         return _error_result(e)
     except Exception as e:
@@ -531,7 +534,7 @@ def video_auto_chapters(
 def transition_glitch(
     clip1_path: str,
     clip2_path: str,
-    output_path: str,
+    output_path: str | None = None,
     duration: float = 0.5,
     intensity: float = 0.3,
 ) -> dict[str, Any]:
@@ -563,7 +566,8 @@ def transition_glitch(
     try:
         from .transitions_engine import transition_glitch
 
-        return _result(transition_glitch(clip1_path, clip2_path, output_path, duration, intensity))
+        output = output_path or _auto_output(clip1_path, "transition")
+        return _result(transition_glitch(clip1_path, clip2_path, output, duration, intensity))
     except MCPVideoError as e:
         return _error_result(e)
     except Exception as e:
