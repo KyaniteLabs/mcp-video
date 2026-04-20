@@ -39,11 +39,23 @@ def effect_vignette(
     """
     try:
         if not (0.0 <= intensity <= 1.0):
-            return _error_result(ValueError(f"intensity must be between 0.0 and 1.0, got {intensity}"))
+            raise MCPVideoError(
+                f"intensity must be between 0.0 and 1.0, got {intensity}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
         if not (0.0 <= radius <= 1.0):
-            return _error_result(ValueError(f"radius must be between 0.0 and 1.0, got {radius}"))
+            raise MCPVideoError(
+                f"radius must be between 0.0 and 1.0, got {radius}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
         if not (0.0 <= smoothness <= 1.0):
-            return _error_result(ValueError(f"smoothness must be between 0.0 and 1.0, got {smoothness}"))
+            raise MCPVideoError(
+                f"smoothness must be between 0.0 and 1.0, got {smoothness}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
         from .effects_engine import effect_vignette as _vignette
 
         output = output_path or _auto_output(input_path, "vignette")
@@ -76,7 +88,11 @@ def effect_chromatic_aberration(
     """
     try:
         if intensity < 0:
-            return _error_result(ValueError(f"intensity must be non-negative, got {intensity}"))
+            raise MCPVideoError(
+                f"intensity must be non-negative, got {intensity}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
         from .effects_engine import effect_chromatic_aberration as _chroma
 
         return _result(_chroma(input_path, output_path, intensity, angle))
@@ -110,11 +126,23 @@ def effect_scanlines(
     """
     try:
         if line_height < 1:
-            return _error_result(ValueError(f"line_height must be at least 1, got {line_height}"))
+            raise MCPVideoError(
+                f"line_height must be at least 1, got {line_height}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
         if not (0.0 <= opacity <= 1.0):
-            return _error_result(ValueError(f"opacity must be between 0.0 and 1.0, got {opacity}"))
+            raise MCPVideoError(
+                f"opacity must be between 0.0 and 1.0, got {opacity}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
         if not (0.0 <= flicker <= 1.0):
-            return _error_result(ValueError(f"flicker must be between 0.0 and 1.0, got {flicker}"))
+            raise MCPVideoError(
+                f"flicker must be between 0.0 and 1.0, got {flicker}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
         from .effects_engine import effect_scanlines as _scanlines
 
         return _result(_scanlines(input_path, output_path, line_height, opacity, flicker))
@@ -148,9 +176,17 @@ def effect_noise(
     """
     try:
         if not (0.0 <= intensity <= 1.0):
-            return _error_result(ValueError(f"intensity must be between 0.0 and 1.0, got {intensity}"))
+            raise MCPVideoError(
+                f"intensity must be between 0.0 and 1.0, got {intensity}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
         if mode not in ("film", "digital", "color"):
-            return _error_result(ValueError(f"mode must be film, digital, or color, got {mode}"))
+            raise MCPVideoError(
+                f"mode must be film, digital, or color, got {mode}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
         from .effects_engine import effect_noise as _noise
 
         return _result(_noise(input_path, output_path, intensity, mode, animated))
@@ -184,11 +220,23 @@ def effect_glow(
     """
     try:
         if not (0.0 <= intensity <= 1.0):
-            return _error_result(ValueError(f"intensity must be between 0.0 and 1.0, got {intensity}"))
+            raise MCPVideoError(
+                f"intensity must be between 0.0 and 1.0, got {intensity}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
         if radius < 0:
-            return _error_result(ValueError(f"radius must be non-negative, got {radius}"))
+            raise MCPVideoError(
+                f"radius must be non-negative, got {radius}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
         if not (0.0 <= threshold <= 1.0):
-            return _error_result(ValueError(f"threshold must be between 0.0 and 1.0, got {threshold}"))
+            raise MCPVideoError(
+                f"threshold must be between 0.0 and 1.0, got {threshold}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
         from .effects_engine import effect_glow as _glow
 
         return _result(_glow(input_path, output_path, intensity, radius, threshold))
@@ -224,9 +272,17 @@ def video_layout_grid(
     """
     try:
         if gap < 0:
-            return _error_result(ValueError(f"gap must be non-negative, got {gap}"))
+            raise MCPVideoError(
+                f"gap must be non-negative, got {gap}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
         if padding < 0:
-            return _error_result(ValueError(f"padding must be non-negative, got {padding}"))
+            raise MCPVideoError(
+                f"padding must be non-negative, got {padding}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
         from .effects_engine import layout_grid as _grid
 
         return _result(_grid(clips, layout, output_path, gap, padding, background))
@@ -270,9 +326,17 @@ def video_layout_pip(
     """
     try:
         if not (0.0 < size <= 1.0):
-            return _error_result(ValueError(f"size must be between 0.0 and 1.0, got {size}"))
+            raise MCPVideoError(
+                f"size must be between 0.0 and 1.0, got {size}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
         if border_width < 0:
-            return _error_result(ValueError(f"border_width must be non-negative, got {border_width}"))
+            raise MCPVideoError(
+                f"border_width must be non-negative, got {border_width}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
         from .effects_engine import layout_pip as _pip
 
         return _result(
@@ -329,11 +393,23 @@ def video_text_animated(
     """
     try:
         if not (8 <= size <= 500):
-            return _error_result(ValueError(f"size must be between 8 and 500, got {size}"))
+            raise MCPVideoError(
+                f"size must be between 8 and 500, got {size}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
         if duration <= 0:
-            return _error_result(ValueError(f"duration must be positive, got {duration}"))
+            raise MCPVideoError(
+                f"duration must be positive, got {duration}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
         if start < 0:
-            return _error_result(ValueError(f"start must be non-negative, got {start}"))
+            raise MCPVideoError(
+                f"start must be non-negative, got {start}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
         from .effects_engine import text_animated as _text
 
         output = output_path or _auto_output(input_path, "animated")
@@ -408,9 +484,17 @@ def video_mograph_count(
     """
     try:
         if not (1 <= fps <= 120):
-            return _error_result(ValueError(f"fps must be between 1 and 120, got {fps}"))
+            raise MCPVideoError(
+                f"fps must be between 1 and 120, got {fps}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
         if duration <= 0:
-            return _error_result(ValueError(f"duration must be positive, got {duration}"))
+            raise MCPVideoError(
+                f"duration must be positive, got {duration}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
         from .effects_engine import mograph_count as _count
 
         return _result(_count(start, end, duration, output_path, style=style, fps=fps))
@@ -454,9 +538,17 @@ def video_mograph_progress(
         )
     try:
         if not (1 <= fps <= 120):
-            return _error_result(ValueError(f"fps must be between 1 and 120, got {fps}"))
+            raise MCPVideoError(
+                f"fps must be between 1 and 120, got {fps}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
         if duration <= 0:
-            return _error_result(ValueError(f"duration must be positive, got {duration}"))
+            raise MCPVideoError(
+                f"duration must be positive, got {duration}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
         from .effects_engine import mograph_progress as _progress
 
         return _result(_progress(duration, output_path, style=style, color=color, track_color=track_color, fps=fps))
