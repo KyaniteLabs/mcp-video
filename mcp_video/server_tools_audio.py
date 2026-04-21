@@ -373,7 +373,7 @@ def audio_effects(
                 )
             )
     try:
-        _validate_input_path(input_path)
+        input_path = _validate_input_path(input_path)
         from .audio_engine import audio_effects as _effects
 
         return _result(_effects(input_path=input_path, output=output_path, effects=effects))
@@ -404,7 +404,7 @@ def video_add_generated_audio(
         Dict with success status and output_path.
     """
     try:
-        _validate_input_path(input_path)
+        input_path = _validate_input_path(input_path)
         if not isinstance(audio_config, dict) or not audio_config:
             raise MCPVideoError(
                 "audio_config must be a non-empty dict",
@@ -445,7 +445,7 @@ def video_audio_spatial(
             )
         )
     try:
-        _validate_input_path(input_path)
+        input_path = _validate_input_path(input_path)
         from .ai_engine import audio_spatial
 
         return _result(audio_spatial(input_path, output_path, positions, method))

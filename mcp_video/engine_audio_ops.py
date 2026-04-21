@@ -26,8 +26,8 @@ def add_audio(
     output_path: str | None = None,
 ) -> EditResult:
     """Add or replace audio track on a video."""
-    _validate_input_path(video_path)
-    _validate_input_path(audio_path)
+    video_path = _validate_input_path(video_path)
+    audio_path = _validate_input_path(audio_path)
     output = output_path or _auto_output(video_path, "audio")
 
     video_info = probe(video_path)
@@ -41,8 +41,9 @@ def add_audio(
             if fade_in > 0:
                 audio_filters.append(f"afade=t=in:st=0:d={_escape_ffmpeg_filter_value(str(fade_in))}")
             if fade_out > 0:
+                fade_start = max(0, video_info.duration - fade_out)
                 audio_filters.append(
-                    f"afade=t=out:st={_escape_ffmpeg_filter_value(str(video_info.duration - fade_out))}:"
+                    f"afade=t=out:st={_escape_ffmpeg_filter_value(str(fade_start))}:"
                     f"d={_escape_ffmpeg_filter_value(str(fade_out))}"
                 )
 

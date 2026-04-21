@@ -10,6 +10,7 @@ import math
 
 from ..errors import ProcessingError
 from ..ffmpeg_helpers import _validate_input_path, _run_ffmpeg
+from ..engine_runtime_utils import _sanitize_ffmpeg_number
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +35,9 @@ def effect_vignette(
         Path to output video
     """
     input_path = _validate_input_path(input_path)
+    intensity = _sanitize_ffmpeg_number(intensity, "intensity")
+    radius = _sanitize_ffmpeg_number(radius, "radius")
+
     # FFmpeg vignette filter: angle (in radians) controls the radius
     # intensity maps to darkness
 
@@ -154,6 +158,10 @@ def effect_scanlines(
         Path to output video
     """
     input_path = _validate_input_path(input_path)
+    line_height = _sanitize_ffmpeg_number(line_height, "line_height")
+    opacity = _sanitize_ffmpeg_number(opacity, "opacity")
+    flicker = _sanitize_ffmpeg_number(flicker, "flicker")
+
     # Use drawgrid filter to create scanlines - simpler and more reliable
     # drawgrid creates horizontal lines with specified spacing
     grid_spacing = line_height * 2
@@ -263,6 +271,10 @@ def effect_glow(
         Path to output video
     """
     input_path = _validate_input_path(input_path)
+    radius = int(_sanitize_ffmpeg_number(radius, "radius"))
+    intensity = _sanitize_ffmpeg_number(intensity, "intensity")
+    threshold = _sanitize_ffmpeg_number(threshold, "threshold")
+
     # Extract highlights, blur them, overlay back
     threshold_8bit = int(threshold * 255)
 

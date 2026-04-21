@@ -14,7 +14,7 @@ def thumbnail(
     output_path: str | None = None,
 ) -> ThumbnailResult:
     """Extract a single frame from a video."""
-    _validate_input_path(input_path)
+    input_path = _validate_input_path(input_path)
 
     if timestamp is None:
         # Grab frame at 10% of video duration

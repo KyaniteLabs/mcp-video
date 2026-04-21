@@ -82,7 +82,7 @@ def ai_scene_detect(
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=DEFAULT_FFMPEG_TIMEOUT)
         except subprocess.TimeoutExpired:
-            raise ProcessingError("Operation timed out after 600 seconds") from None
+            raise ProcessingError(f"Operation timed out after {DEFAULT_FFMPEG_TIMEOUT}s") from None
         if result.returncode != 0:
             # Fall back to standard detection on error
             return _standard_scene_detect(video, threshold)

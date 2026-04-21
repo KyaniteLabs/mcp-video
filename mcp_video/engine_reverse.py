@@ -25,7 +25,7 @@ def reverse(
         input_path: Path to the input video.
         output_path: Where to save the output. Auto-generated if omitted.
     """
-    _validate_input_path(input_path)
+    input_path = _validate_input_path(input_path)
     output = output_path or _auto_output(input_path, "reversed")
 
     input_info = probe(input_path)

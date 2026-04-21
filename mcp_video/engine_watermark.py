@@ -26,8 +26,8 @@ def watermark(
     preset: str | None = None,
 ) -> EditResult:
     """Add an image watermark to a video."""
-    _validate_input_path(input_path)
-    _validate_input_path(image_path)
+    input_path = _validate_input_path(input_path)
+    image_path = _validate_input_path(image_path)
     output = output_path or _auto_output(input_path, "watermarked")
 
     # Position expressions for the overlay

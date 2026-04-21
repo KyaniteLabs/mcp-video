@@ -127,7 +127,7 @@ def auto_chapters(
     Raises:
         MCPVideoError: If *threshold* is not a number in [0.0, 1.0].
     """
-    _validate_input_path(video)
+    video = _validate_input_path(video)
 
     if not isinstance(threshold, (int, float)) or not (0.0 <= threshold <= 1.0):
         raise MCPVideoError(f"threshold must be a number between 0.0 and 1.0, got {threshold!r}")

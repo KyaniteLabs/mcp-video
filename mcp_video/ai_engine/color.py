@@ -114,7 +114,7 @@ def ai_color_grade(
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=DEFAULT_FFMPEG_TIMEOUT)
     except subprocess.TimeoutExpired:
-        raise ProcessingError("Operation timed out after 600 seconds") from None
+        raise ProcessingError(f"Operation timed out after {DEFAULT_FFMPEG_TIMEOUT}s") from None
     if result.returncode != 0:
         raise ProcessingError(" ".join(cmd), result.returncode, result.stderr)
 
@@ -141,7 +141,7 @@ def _match_reference_colors(video: str, reference: str) -> dict:
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=DEFAULT_FFMPEG_TIMEOUT)
         except subprocess.TimeoutExpired:
-            raise ProcessingError("Operation timed out after 600 seconds") from None
+            raise ProcessingError(f"Operation timed out after {DEFAULT_FFMPEG_TIMEOUT}s") from None
         if result.returncode != 0:
             raise ProcessingError(" ".join(cmd), result.returncode, result.stderr)
 
