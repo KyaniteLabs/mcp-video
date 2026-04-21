@@ -164,6 +164,7 @@ def build_parser() -> argparse.ArgumentParser:
     subs_p = subparsers.add_parser("subtitles", help="Burn subtitles into video")
     subs_p.add_argument("input", help="Input video file")
     subs_p.add_argument("subtitle", help="Subtitle file (.srt or .vtt)")
+    subs_p.add_argument("--style", help="Subtitle style as FFmpeg force_style string (e.g. FontSize=24,PrimaryColour=&H00FFFFFF)")
     subs_p.add_argument("-o", "--output", help="Output file path")
 
     # watermark
@@ -187,6 +188,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     wm_p.add_argument("--opacity", type=float, default=0.7, help="Watermark opacity (0.0-1.0)")
     wm_p.add_argument("--margin", type=int, default=20, help="Margin from edge in pixels")
+    wm_p.add_argument("--crf", type=int, help="Override CRF value (0-51)")
+    wm_p.add_argument("--preset", choices=["ultrafast", "fast", "medium", "slow", "veryslow"], help="FFmpeg encoding preset")
     wm_p.add_argument("-o", "--output", help="Output file path")
 
     # crop
@@ -213,6 +216,8 @@ def build_parser() -> argparse.ArgumentParser:
     fade_p.add_argument("input", help="Input video file")
     fade_p.add_argument("--fade-in", type=float, default=0.0, help="Fade in duration (seconds)")
     fade_p.add_argument("--fade-out", type=float, default=0.0, help="Fade out duration (seconds)")
+    fade_p.add_argument("--crf", type=int, help="Override CRF value (0-51)")
+    fade_p.add_argument("--preset", choices=["ultrafast", "fast", "medium", "slow", "veryslow"], help="FFmpeg encoding preset")
     fade_p.add_argument("-o", "--output", help="Output file path")
 
     # export
@@ -264,10 +269,17 @@ def build_parser() -> argparse.ArgumentParser:
             "color_preset",
             "denoise",
             "deinterlace",
+            "ken_burns",
+            "reverb",
+            "compressor",
+            "pitch_shift",
+            "noise_reduction",
         ],
         help="Filter type",
     )
     filter_p.add_argument("--params", help="Filter parameters as JSON")
+    filter_p.add_argument("--crf", type=int, help="Override CRF value (0-51)")
+    filter_p.add_argument("--preset", choices=["ultrafast", "fast", "medium", "slow", "veryslow"], help="FFmpeg encoding preset")
     filter_p.add_argument("-o", "--output", help="Output file path")
 
     # blur (convenience)
@@ -302,6 +314,7 @@ def build_parser() -> argparse.ArgumentParser:
     norm_p = subparsers.add_parser("normalize-audio", help="Normalize audio loudness")
     norm_p.add_argument("input", help="Input video file")
     norm_p.add_argument("-l", "--lufs", type=float, default=-16.0, help="Target LUFS (default: -16 for YouTube)")
+    norm_p.add_argument("--lra", type=float, help="Loudness Range target for broadcast compliance")
     norm_p.add_argument("-o", "--output", help="Output file path")
 
     # overlay-video
@@ -329,6 +342,8 @@ def build_parser() -> argparse.ArgumentParser:
     overlay_p.add_argument("--opacity", type=float, default=0.8, help="Overlay opacity (0.0-1.0)")
     overlay_p.add_argument("--start-time", type=float, help="When overlay appears (seconds)")
     overlay_p.add_argument("--duration", type=float, help="How long overlay is visible (seconds)")
+    overlay_p.add_argument("--crf", type=int, help="Override CRF value (0-51)")
+    overlay_p.add_argument("--preset", choices=["ultrafast", "fast", "medium", "slow", "veryslow"], help="FFmpeg encoding preset")
     overlay_p.add_argument("-o", "--output", help="Output file path")
 
     # split-screen

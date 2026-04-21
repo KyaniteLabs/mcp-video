@@ -25,6 +25,8 @@ def handle_media_commands(args: Any, *, use_json: bool) -> bool:
             filter_type=args.filter_type,
             params=params,
             output_path=args.output,
+            crf=args.crf,
+            preset=args.preset,
         )
         if use_json:
             output_json(result)
@@ -98,7 +100,12 @@ def handle_media_commands(args: Any, *, use_json: bool) -> bool:
         from ..engine import normalize_audio
 
         result = _with_spinner(
-            "Normalizing audio...", normalize_audio, args.input, target_lufs=args.lufs, output_path=args.output
+            "Normalizing audio...",
+            normalize_audio,
+            args.input,
+            target_lufs=args.lufs,
+            lra=args.lra,
+            output_path=args.output,
         )
         if use_json:
             output_json(result)
@@ -121,6 +128,8 @@ def handle_media_commands(args: Any, *, use_json: bool) -> bool:
             start_time=args.start_time,
             duration=args.duration,
             output_path=args.output,
+            crf=args.crf,
+            preset=args.preset,
         )
         if use_json:
             output_json(result)
