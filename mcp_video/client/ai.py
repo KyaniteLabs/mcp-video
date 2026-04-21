@@ -3,10 +3,6 @@
 from __future__ import annotations
 
 
-
-
-
-
 class ClientAiMixin:
     """Ai operations mixin."""
 
@@ -152,4 +148,3 @@ class ClientAiMixin:
         from ..ai_engine import ai_color_grade
 
         return ai_color_grade(video, output, reference, style)
-

@@ -18,6 +18,7 @@ from ..limits import DEFAULT_FFMPEG_TIMEOUT
 
 logger = logging.getLogger(__name__)
 
+
 def ai_color_grade(
     video: str,
     output: str,
@@ -202,5 +203,3 @@ def _match_reference_colors(video: str, reference: str) -> dict:
 # ---------------------------------------------------------------------------
 # Model Download Integrity Verification
 # ---------------------------------------------------------------------------
-
-

@@ -3,10 +3,6 @@
 from __future__ import annotations
 
 
-
-
-
-
 class ClientImageMixin:
     """Image operations mixin."""
 
@@ -45,4 +41,3 @@ class ClientImageMixin:
     # ------------------------------------------------------------------
     # Remotion Integration
     # ------------------------------------------------------------------
-

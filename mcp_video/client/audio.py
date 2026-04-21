@@ -12,8 +12,6 @@ from ..models import (
 )
 
 
-
-
 class ClientAudioMixin:
     """Audio operations mixin."""
 
@@ -180,4 +178,3 @@ class ClientAudioMixin:
         from ..ai_engine import audio_spatial
 
         return audio_spatial(video, output, positions, method)
-

@@ -21,6 +21,7 @@ from ..limits import DEFAULT_FFMPEG_TIMEOUT
 
 logger = logging.getLogger(__name__)
 
+
 def _standard_scene_detect(video: str, threshold: float) -> list[dict]:
     """Standard FFmpeg scene detection."""
     if "\x00" in video:
@@ -272,5 +273,3 @@ def _apply_simple_spatial(
                 raise ProcessingError(" ".join(cmd), result.returncode, result.stderr)
 
     return output
-
-

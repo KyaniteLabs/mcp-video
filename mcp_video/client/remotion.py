@@ -3,10 +3,6 @@
 from __future__ import annotations
 
 
-
-
-
-
 class ClientRemotionMixin:
     """Remotion operations mixin."""
 
@@ -141,4 +137,3 @@ class ClientRemotionMixin:
     # ------------------------------------------------------------------
     # Audio Synthesis (P1 Features)
     # ------------------------------------------------------------------
-

@@ -13,8 +13,6 @@ from ..models import (
 )
 
 
-
-
 class ClientBase:
     """Base client with core lifecycle methods."""
 
@@ -36,4 +34,3 @@ class ClientBase:
                 error_type="validation_error",
                 code="invalid_parameter",
             )
-

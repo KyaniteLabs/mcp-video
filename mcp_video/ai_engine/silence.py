@@ -20,6 +20,7 @@ from ..limits import DEFAULT_FFMPEG_TIMEOUT
 
 logger = logging.getLogger(__name__)
 
+
 def _detect_silence_regions(
     video: str,
     silence_threshold: float,
@@ -268,5 +269,3 @@ def ai_remove_silence(
 # ---------------------------------------------------------------------------
 # Audio Stem Separation (Demucs)
 # ---------------------------------------------------------------------------
-
-

@@ -30,13 +30,13 @@ from mcp_video.client import MCPVideoClient  # hypothetical client; adapt to act
 # ---------------------------------------------------------------------------
 INPUT_VIDEO = "/videos/my_long_video.mp4"
 OUTPUT_DIR = "/output"
-CLIP_START = "2:15"       # Timestamp where the highlight begins
-CLIP_DURATION = "45"      # Duration in seconds (YouTube Shorts max: 60s)
+CLIP_START = "2:15"  # Timestamp where the highlight begins
+CLIP_DURATION = "45"  # Duration in seconds (YouTube Shorts max: 60s)
 CAPTION_TEXT = "This changes everything."
-CAPTION_START = 2.0       # Seconds into the clip to show caption
-CAPTION_DURATION = 5.0    # How long the caption stays on screen
+CAPTION_START = 2.0  # Seconds into the clip to show caption
+CAPTION_DURATION = 5.0  # How long the caption stays on screen
 LOGO_PATH = "/assets/logo.png"
-TARGET_LUFS = -14         # Target loudness for TikTok/Shorts (-14 LUFS)
+TARGET_LUFS = -14  # Target loudness for TikTok/Shorts (-14 LUFS)
 
 
 async def main() -> None:

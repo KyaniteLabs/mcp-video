@@ -22,9 +22,9 @@ from mcp_video import Client
 
 
 def divider(title: str):
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"  {title}")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
 
 
 def step(n: int, description: str):
@@ -169,6 +169,7 @@ def main():
     divider("TEMPLATE WORKFLOW")
     step(14, "Using TikTok template...")
     from mcp_video.templates import tiktok_template
+
     timeline = tiktok_template(trimmed.output_path, caption="Built with mcp-video")
     print("  Template: TikTok (1080x1920)")
     print(f"  Tracks: {len(timeline['tracks'])} ({', '.join(t['type'] for t in timeline['tracks'])})")

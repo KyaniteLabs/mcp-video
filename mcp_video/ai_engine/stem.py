@@ -18,6 +18,7 @@ from ..limits import DEFAULT_FFMPEG_TIMEOUT
 
 logger = logging.getLogger(__name__)
 
+
 def ai_stem_separation(
     video: str,
     output_dir: str,
@@ -127,5 +128,3 @@ def ai_stem_separation(
     finally:
         # Clean up temp audio file
         Path(audio_path).unlink(missing_ok=True)
-
-

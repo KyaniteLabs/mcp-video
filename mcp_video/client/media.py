@@ -49,8 +49,6 @@ from ..models import (
 )
 
 
-
-
 class ClientMediaMixin:
     """Media operations mixin."""
 
@@ -566,4 +564,3 @@ class ClientMediaMixin:
     # ------------------------------------------------------------------
     # Image Analysis
     # ------------------------------------------------------------------
-

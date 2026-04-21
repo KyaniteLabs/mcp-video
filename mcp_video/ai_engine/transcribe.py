@@ -20,6 +20,7 @@ from ..limits import DEFAULT_FFMPEG_TIMEOUT
 
 logger = logging.getLogger(__name__)
 
+
 def ai_transcribe(
     video: str,
     output_srt: str | None = None,
@@ -201,5 +202,3 @@ def _format_json_transcript(
             for i, seg in enumerate(segments)
         ],
     }
-
-

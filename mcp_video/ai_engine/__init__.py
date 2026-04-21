@@ -23,7 +23,11 @@ from .upscale import ai_upscale as ai_upscale
 from .download import _is_url as _is_url, _url_host as _url_host
 import subprocess  # noqa: F401
 
-from .spatial import _azimuth_to_pan as _azimuth_to_pan, _elevation_to_volume as _elevation_to_volume, _standard_scene_detect as _standard_scene_detect
+from .spatial import (
+    _azimuth_to_pan as _azimuth_to_pan,
+    _elevation_to_volume as _elevation_to_volume,
+    _standard_scene_detect as _standard_scene_detect,
+)
 from .upscale import _ai_upscale_opencv as _ai_upscale_opencv
 from .download import _is_safe_url as _is_safe_url
 from .transcribe import (
@@ -32,6 +36,7 @@ from .transcribe import (
     _format_srt as _format_srt,
     _format_txt as _format_txt,
 )
+
 
 def analyze_video(
     video: str,

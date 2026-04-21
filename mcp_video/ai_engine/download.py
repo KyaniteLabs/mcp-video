@@ -20,6 +20,7 @@ from ..errors import MCPVideoError, ProcessingError
 
 logger = logging.getLogger(__name__)
 
+
 def _is_url(s: str) -> bool:
     """Return True if *s* looks like an http/https URL."""
     return s.lower().startswith(("http://", "https://"))
@@ -248,5 +249,3 @@ def _resolve_video_source(video: str) -> tuple[str, str | None, str | None]:
                 raise ProcessingError(str(video), 1, f"Failed to download {video}: {exc}") from exc
 
     return local, tmp, source_url
-
-

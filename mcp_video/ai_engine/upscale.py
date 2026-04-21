@@ -444,5 +444,3 @@ def _has_audio_stream(video_path: str) -> bool:
     except subprocess.TimeoutExpired:
         raise ProcessingError("Operation timed out after 600 seconds") from None
     return result.returncode == 0 and "audio" in result.stdout.lower()
-
-

@@ -20,6 +20,7 @@ from .spatial import _standard_scene_detect
 
 logger = logging.getLogger(__name__)
 
+
 def ai_scene_detect(
     video: str,
     threshold: float = 0.3,
@@ -126,5 +127,3 @@ def ai_scene_detect(
 # ---------------------------------------------------------------------------
 # Silence Detection and Removal
 # ---------------------------------------------------------------------------
-
-

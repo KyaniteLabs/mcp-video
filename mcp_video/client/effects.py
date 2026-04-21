@@ -5,9 +5,6 @@ from __future__ import annotations
 from typing import ClassVar
 
 
-
-
-
 class ClientEffectsMixin:
     """Effects operations mixin."""
 
@@ -298,4 +295,3 @@ class ClientEffectsMixin:
     # ------------------------------------------------------------------
     # AI Features (Wave 3)
     # ------------------------------------------------------------------
-
