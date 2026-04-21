@@ -23,14 +23,23 @@ def _cache_key(path: str) -> tuple[str, float, int]:
     return (path, stat.st_mtime, stat.st_size)
 
 
+def _parse_probe_duration(value: object) -> float | None:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def _build_video_info(path: str, data: dict) -> VideoInfo:
     """Construct a VideoInfo from raw ffprobe JSON data."""
     vs = _get_video_stream(data)
     if vs is None:
         raise InputFileError(path, "No video stream found")
 
-    # Duration
-    duration = float(data.get("format", {}).get("duration", 0) or vs.get("duration", 0))
+    # Duration: prefer container duration, then fall back to the video stream.
+    duration = _parse_probe_duration(data.get("format", {}).get("duration"))
+    if duration is None:
+        duration = _parse_probe_duration(vs.get("duration")) or 0.0
     if duration > MAX_VIDEO_DURATION:
         raise MCPVideoError(
             f"Video duration ({duration:.0f}s) exceeds maximum of {MAX_VIDEO_DURATION}s",
@@ -39,8 +48,11 @@ def _build_video_info(path: str, data: dict) -> VideoInfo:
         )
 
     # Resolution
-    width = int(vs.get("width", 0))
-    height = int(vs.get("height", 0))
+    try:
+        width = int(vs.get("width", 0))
+        height = int(vs.get("height", 0))
+    except (ValueError, TypeError):
+        width = height = 0
 
     # FPS — r_frame_rate is "num/den"
     rfr = vs.get("r_frame_rate", "30/1")
@@ -62,8 +74,11 @@ def _build_video_info(path: str, data: dict) -> VideoInfo:
 
     # Bitrate / size
     fmt = data.get("format", {})
-    bitrate = int(fmt.get("bit_rate", 0)) or None
-    size_bytes = int(fmt.get("size", 0)) or None
+    try:
+        bitrate = int(fmt.get("bit_rate", 0)) or None
+        size_bytes = int(fmt.get("size", 0)) or None
+    except (ValueError, TypeError):
+        bitrate = size_bytes = None
     fmt_name = fmt.get("format_name")
 
     return VideoInfo(

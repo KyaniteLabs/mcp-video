@@ -24,7 +24,7 @@ from mcp_video.engine import (
     thumbnail,
     trim,
 )
-from mcp_video.errors import InputFileError
+from mcp_video.errors import InputFileError, MCPVideoError
 from mcp_video.models import VideoInfo
 
 
@@ -34,6 +34,30 @@ def requires_filter(name: str, feature: str):
         not _check_filter_available(name),
         reason=f"FFmpeg filter '{name}' not available ({feature} requires it)",
     )
+
+
+
+
+def test_probe_duration_falls_back_to_stream_before_limit():
+    from mcp_video.engine_probe import _build_video_info
+    from mcp_video.limits import MAX_VIDEO_DURATION
+
+    data = {
+        "format": {"duration": "N/A"},
+        "streams": [
+            {
+                "codec_type": "video",
+                "duration": str(MAX_VIDEO_DURATION + 1),
+                "width": 640,
+                "height": 360,
+                "r_frame_rate": "30/1",
+                "codec_name": "h264",
+            }
+        ],
+    }
+
+    with pytest.raises(MCPVideoError, match="exceeds maximum"):
+        _build_video_info("video.mp4", data)
 
 
 class TestProbe:
@@ -338,6 +362,29 @@ class TestProgressCallbacks:
         # Verify progress was tracked and reached 100
         assert len(progress_values) > 0
         assert 100.0 in progress_values
+
+
+    def test_run_ffmpeg_with_progress_propagates_callback_failure(self, sample_video, tmp_path):
+        """Exceptions from progress callbacks must not disappear in stderr reader threads."""
+        from mcp_video.engine import _run_ffmpeg_with_progress
+
+        output = str(tmp_path / "callback_failure.mp4")
+        args = [
+            "-i",
+            sample_video,
+            "-t",
+            "1",
+            "-c",
+            "copy",
+            output,
+        ]
+
+        def fail_on_progress(pct):
+            raise RuntimeError(f"progress failed at {pct}")
+
+        with pytest.raises(RuntimeError, match="progress failed"):
+            _run_ffmpeg_with_progress(args, estimated_duration=1.0, on_progress=fail_on_progress)
+
 
     def test_convert_returns_progress_field(self, sample_video):
         """Verify that convert returns EditResult with progress=100.0."""

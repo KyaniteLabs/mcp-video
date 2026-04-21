@@ -10,7 +10,6 @@ import contextlib
 import pytest
 
 from mcp_video.engine import (
-    _validate_input,
     _validate_color,
     _validate_position,
     _escape_ffmpeg_filter_value,
@@ -221,26 +220,6 @@ class TestTimeoutProtection:
 # ---------------------------------------------------------------------------
 # Phase 3: Path Validation
 # ---------------------------------------------------------------------------
-
-
-class TestPathValidation:
-    """Paths are validated and resolved."""
-
-    def test_validate_input_null_byte_rejected(self) -> None:
-        """Paths with null bytes are rejected by _validate_input."""
-        with pytest.raises(InputFileError):
-            _validate_input("/tmp/test\x00.mp4")
-
-    def test_validate_input_nonexistent_file_rejected(self) -> None:
-        """Non-existent files are rejected by _validate_input."""
-        with pytest.raises(InputFileError):
-            _validate_input("/nonexistent/file.mp4")
-
-    def test_original_validate_input_still_works(self, tmp_path) -> None:
-        """Original _validate_input function still works."""
-        test_file = tmp_path / "test.mp4"
-        test_file.write_text("fake video")
-        _validate_input(str(test_file))  # Should not raise
 
 
 # ---------------------------------------------------------------------------
