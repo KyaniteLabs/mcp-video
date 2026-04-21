@@ -36,4 +36,3 @@ def add_parsers(subparsers: argparse._SubParsersAction) -> None:
     imgprod_p.add_argument(
         "-n", "--n-colors", type=int, default=5, help="Number of colors to extract (default: 5, max: 20)"
     )
-

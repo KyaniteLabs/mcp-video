@@ -81,4 +81,3 @@ def add_parsers(subparsers: argparse._SubParsersAction) -> None:
     aspat_p.add_argument(
         "--method", default="hrtf", choices=["hrtf", "vbap", "simple"], help="Spatialization method (default: hrtf)"
     )
-

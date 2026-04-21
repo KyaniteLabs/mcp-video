@@ -159,7 +159,9 @@ def video_add_text(
     """
     if crf is not None and not (MIN_CRF <= crf <= MAX_CRF):
         return _error_result(
-            MCPVideoError(f"crf must be {MIN_CRF}-{MAX_CRF}, got {crf}", error_type="validation_error", code="invalid_parameter")
+            MCPVideoError(
+                f"crf must be {MIN_CRF}-{MAX_CRF}, got {crf}", error_type="validation_error", code="invalid_parameter"
+            )
         )
     if preset is not None and preset not in VALID_PRESETS:
         return _error_result(

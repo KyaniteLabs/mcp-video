@@ -36,6 +36,7 @@ DEFAULT_SAMPLE_RATE = 44100
 DEFAULT_CHANNELS = 1
 DEFAULT_SAMPLE_WIDTH = 2  # 16-bit
 
+
 def audio_sequence(
     sequence: list[dict[str, Any]],
     output: str,
@@ -264,5 +265,3 @@ def audio_effects(
 # ---------------------------------------------------------------------------
 # Video Integration
 # ---------------------------------------------------------------------------
-
-

@@ -99,4 +99,3 @@ def add_parsers(subparsers: argparse._SubParsersAction) -> None:
     )
     gen_subs_p.add_argument("--burn", action="store_true", help="Burn subtitles into video")
     gen_subs_p.add_argument("-o", "--output", help="Output directory/path (default: auto-generated)")
-

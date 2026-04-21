@@ -11,6 +11,8 @@ from ..errors import MCPVideoError
 from ..ffmpeg_helpers import _validate_input_path, _run_ffmpeg, _escape_ffmpeg_filter_value
 
 logger = logging.getLogger(__name__)
+
+
 def layout_grid(
     clips: list[str],
     layout: str,
@@ -219,5 +221,3 @@ def layout_pip(
 # ---------------------------------------------------------------------------
 # Text & Typography
 # ---------------------------------------------------------------------------
-
-

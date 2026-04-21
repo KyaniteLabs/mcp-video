@@ -21,6 +21,8 @@ from ..ffmpeg_helpers import _escape_ffmpeg_filter_value
 from .models import DesignIssue, DesignQualityReport
 
 logger = logging.getLogger(__name__)
+
+
 class DesignQualityGuardrails:
     """Visual design quality guardrails with auto-fix capabilities.
 
@@ -989,5 +991,3 @@ class DesignQualityGuardrails:
 
 
 # ============== PUBLIC API ==============
-
-

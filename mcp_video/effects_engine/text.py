@@ -13,6 +13,8 @@ from ..errors import InputFileError
 from ..ffmpeg_helpers import _validate_input_path, _run_ffmpeg, _escape_ffmpeg_filter_value
 
 logger = logging.getLogger(__name__)
+
+
 def text_animated(
     video: str,
     text: str,
@@ -198,5 +200,3 @@ def text_subtitles(
 # ---------------------------------------------------------------------------
 # Motion Graphics
 # ---------------------------------------------------------------------------
-
-

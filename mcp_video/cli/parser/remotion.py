@@ -75,4 +75,3 @@ def add_parsers(subparsers: argparse._SubParsersAction) -> None:
     remotion_pipeline_p.add_argument("composition_id", help="Composition ID to render")
     remotion_pipeline_p.add_argument("--post-process", required=True, help="Post-processing operations as JSON list")
     remotion_pipeline_p.add_argument("-o", "--output", help="Final output file path")
-

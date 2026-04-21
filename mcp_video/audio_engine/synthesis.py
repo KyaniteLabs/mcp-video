@@ -32,6 +32,7 @@ DEFAULT_SAMPLE_RATE = 44100
 DEFAULT_CHANNELS = 1
 DEFAULT_SAMPLE_WIDTH = 2  # 16-bit
 
+
 def audio_synthesize(
     output: str,
     waveform: Literal["sine", "square", "sawtooth", "triangle", "noise"] = "sine",
@@ -333,5 +334,3 @@ def audio_preset(
         config["duration"] = duration
 
     return audio_synthesize(output=output, **config)
-
-

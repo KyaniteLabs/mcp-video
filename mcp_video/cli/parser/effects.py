@@ -232,4 +232,3 @@ def add_parsers(subparsers: argparse._SubParsersAction) -> None:
         "-d", "--duration", type=float, default=0.4, help="Transition duration in seconds (default: 0.4)"
     )
     tpxl_p.add_argument("--pixel-size", type=int, default=50, help="Pixel size (default: 50)")
-

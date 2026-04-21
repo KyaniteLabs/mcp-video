@@ -31,4 +31,3 @@ def add_parsers(subparsers: argparse._SubParsersAction) -> None:
     dfix_p = subparsers.add_parser("video-fix-design-issues", help="Auto-fix design issues in a video")
     dfix_p.add_argument("input", help="Input video file")
     dfix_p.add_argument("-o", "--output", help="Output file path (auto-generated if omitted)")
-

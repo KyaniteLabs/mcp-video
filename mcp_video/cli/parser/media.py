@@ -118,4 +118,3 @@ def add_parsers(subparsers: argparse._SubParsersAction) -> None:
         "-f", "--format", "--fmt", dest="audio_format", default="mp3", choices=["mp3", "aac", "wav", "ogg", "flac"]
     )
     extract_p.add_argument("-o", "--output", help="Output audio file path")
-

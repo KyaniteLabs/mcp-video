@@ -102,7 +102,19 @@ def add_audio(
             if audio_filters:
                 args.extend(["-af", ",".join(audio_filters)])
 
-            args.extend(["-c:v", "copy", "-c:a", "aac", "-b:a", DEFAULT_AUDIO_BITRATE, "-shortest", *_movflags_args(output), output])
+            args.extend(
+                [
+                    "-c:v",
+                    "copy",
+                    "-c:a",
+                    "aac",
+                    "-b:a",
+                    DEFAULT_AUDIO_BITRATE,
+                    "-shortest",
+                    *_movflags_args(output),
+                    output,
+                ]
+            )
             _run_ffmpeg(args)
 
     info = probe(output)

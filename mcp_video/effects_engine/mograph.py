@@ -13,6 +13,8 @@ from typing import Any
 from ..ffmpeg_helpers import _run_ffmpeg, _escape_ffmpeg_filter_value
 
 logger = logging.getLogger(__name__)
+
+
 def mograph_count(
     start: int,
     end: int,
@@ -196,5 +198,3 @@ def mograph_progress(
 # ---------------------------------------------------------------------------
 # Utility
 # ---------------------------------------------------------------------------
-
-

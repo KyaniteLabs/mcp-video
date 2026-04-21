@@ -13,6 +13,8 @@ from ..errors import MCPVideoError
 from ..ffmpeg_helpers import _validate_input_path, _run_ffmpeg
 
 logger = logging.getLogger(__name__)
+
+
 def video_info_detailed(video: str) -> dict[str, Any]:
     """Get extended video metadata.
 

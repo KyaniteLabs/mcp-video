@@ -15,6 +15,7 @@ from typing import Literal
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class DesignIssue:
     """A design quality issue with severity and fix recommendation."""
@@ -162,5 +163,3 @@ class DesignQualityReport:
                 print(f"   ✓ {fix}")
 
         print(f"\n{'=' * 70}")
-
-

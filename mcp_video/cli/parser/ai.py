@@ -89,4 +89,3 @@ def add_parsers(subparsers: argparse._SubParsersAction) -> None:
     airms_p.add_argument(
         "--keep-margin", type=float, default=0.1, help="Keep margin around silence in seconds (default: 0.1)"
     )
-

@@ -111,4 +111,3 @@ def add_parsers(subparsers: argparse._SubParsersAction) -> None:
     eframe_p.add_argument("-o", "--output", help="Output image path")
 
     # Image analysis commands
-

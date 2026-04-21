@@ -53,15 +53,11 @@ class TestVideoInfo:
         ],
     )
     def test_aspect_ratios(self, width, height, expected_ratio):
-        info = VideoInfo(
-            path="/tmp/v.mp4", duration=1.0, width=width, height=height, fps=30.0, codec="h264"
-        )
+        info = VideoInfo(path="/tmp/v.mp4", duration=1.0, width=width, height=height, fps=30.0, codec="h264")
         assert info.aspect_ratio == expected_ratio
 
     def test_optional_defaults(self):
-        info = VideoInfo(
-            path="/tmp/v.mp4", duration=5.0, width=640, height=480, fps=24.0, codec="h264"
-        )
+        info = VideoInfo(path="/tmp/v.mp4", duration=5.0, width=640, height=480, fps=24.0, codec="h264")
         assert info.audio_codec is None
         assert info.size_mb is None
 
@@ -149,9 +145,7 @@ class TestTimelineModels:
         assert elem.position == "top-center"
         assert elem.style["size"] == 48
 
-        custom = TimelineTextElement(
-            text="Title", position="bottom-center", style={"size": 36}
-        )
+        custom = TimelineTextElement(text="Title", position="bottom-center", style={"size": 36})
         assert custom.position == "bottom-center"
 
     def test_timeline_track(self):

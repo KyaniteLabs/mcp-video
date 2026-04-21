@@ -89,4 +89,3 @@ def add_parsers(subparsers: argparse._SubParsersAction) -> None:
     lpip_p.add_argument(
         "--no-rounded-corners", dest="rounded_corners", action="store_false", help="Disable rounded corners"
     )
-

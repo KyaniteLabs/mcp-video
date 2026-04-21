@@ -13,6 +13,7 @@ from ..ffmpeg_helpers import _validate_input_path, _run_ffmpeg
 
 logger = logging.getLogger(__name__)
 
+
 def effect_vignette(
     input_path: str,
     output: str,
@@ -310,5 +311,3 @@ def effect_glow(
 # ---------------------------------------------------------------------------
 # Layout & Composition
 # ---------------------------------------------------------------------------
-
-
