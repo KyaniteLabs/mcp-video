@@ -34,7 +34,7 @@ def test_validate_input_path_rejects_null_bytes():
 
     try:
         _validate_input_path("/tmp/video\x00.mp4")
-        assert False, "Expected InputFileError"
+        raise AssertionError("Expected InputFileError")
     except InputFileError as e:
         assert "null bytes" in str(e).lower()
 
@@ -45,6 +45,6 @@ def test_validate_input_path_rejects_nonexistent_file():
 
     try:
         _validate_input_path("/nonexistent/path/video.mp4")
-        assert False, "Expected InputFileError"
+        raise AssertionError("Expected InputFileError")
     except InputFileError:
         pass
