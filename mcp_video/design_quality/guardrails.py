@@ -425,7 +425,7 @@ class DesignQualityGuardrails:
         """Check for visual clutter: too many elements."""
         clutter_score = self._analyze_visual_clutter(video_path)
 
-        if clutter_score > 0.8:  # High clutter
+        if clutter_score is not None and clutter_score > 0.8:  # High clutter
             self.issues.append(
                 DesignIssue(
                     category="composition",
