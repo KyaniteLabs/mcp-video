@@ -27,9 +27,12 @@ def _diagnostic(stage: str, message: str, **extra: Any) -> dict[str, Any]:
 def _escape_lavfi_path(path: str) -> str:
     """Escape special characters in a file path for FFmpeg lavfi movie= filter.
 
-    Characters that must be escaped: \\ ' : [ ] ,
+    Characters that must be escaped: \\ ' : [ ] , ; =
     """
-    for char, escaped in [("\\", "\\\\"), ("'", "\\'"), (":", "\\:"), ("[", "\\["), ("]", "\\]"), (",", "\\,")]:
+    for char, escaped in [
+        ("\\", "\\\\"), ("'", "\\'"), (":", "\\:"), ("[", "\\["), ("]", "\\]"),
+        (",", "\\,"), (";", "\\;"), ("=", "\\="),
+    ]:
         path = path.replace(char, escaped)
     return path
 

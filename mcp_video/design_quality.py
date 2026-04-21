@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 from typing import ClassVar, Literal
 
 from .errors import ProcessingError
-from .ffmpeg_helpers import _validate_input_path
+from .ffmpeg_helpers import _escape_ffmpeg_filter_value, _validate_input_path
 from .limits import DEFAULT_FFMPEG_TIMEOUT
 
 logger = logging.getLogger(__name__)
@@ -934,7 +934,8 @@ class DesignQualityGuardrails:
         """Auto-fix saturation."""
         output_path = video_path.replace(".mp4", "_fixed.mp4")
 
-        cmd = ["ffmpeg", "-y", "-i", video_path, "-vf", f"eq=saturation={boost}", "-c:a", "copy", output_path]
+        safe_boost = _escape_ffmpeg_filter_value(str(boost))
+        cmd = ["ffmpeg", "-y", "-i", video_path, "-vf", f"eq=saturation={safe_boost}", "-c:a", "copy", output_path]
 
         try:
             subprocess.run(cmd, capture_output=True, check=True, timeout=DEFAULT_FFMPEG_TIMEOUT)
