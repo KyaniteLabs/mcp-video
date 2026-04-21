@@ -37,6 +37,7 @@ from ..engine import (
     watermark as _watermark,
     write_metadata as _write_metadata,
 )
+from ..errors import MCPVideoError
 from ..models import (
     EditResult,
     ImageSequenceResult,
@@ -80,6 +81,8 @@ class ClientMediaMixin:
                 the last type is repeated. Example: ["fade", "dissolve", "fade"].
             transition_duration: Duration of each transition in seconds.
         """
+        if not clips:
+            raise MCPVideoError("clips cannot be empty", error_type="validation_error", code="empty_clips")
         return _merge(clips, output_path=output, transitions=transitions, transition_duration=transition_duration)
 
     def add_text(
@@ -146,6 +149,10 @@ class ClientMediaMixin:
         output: str | None = None,
     ) -> EditResult:
         """Resize a video or change aspect ratio."""
+        if width is not None and width <= 0:
+            raise MCPVideoError("width must be > 0", error_type="validation_error", code="invalid_parameter")
+        if height is not None and height <= 0:
+            raise MCPVideoError("height must be > 0", error_type="validation_error", code="invalid_parameter")
         return _resize(
             video,
             width=width,
@@ -193,6 +200,8 @@ class ClientMediaMixin:
         output: str | None = None,
     ) -> EditResult:
         """Change playback speed."""
+        if factor <= 0:
+            raise MCPVideoError("factor must be > 0", error_type="validation_error", code="invalid_parameter")
         return _speed(video, factor=factor, output_path=output)
 
     def thumbnail(
@@ -482,6 +491,8 @@ class ClientMediaMixin:
         fps: float = 30.0,
     ) -> EditResult:
         """Create a video from a sequence of images."""
+        if not images:
+            raise MCPVideoError("images cannot be empty", error_type="validation_error", code="empty_images")
         return _create_from_images(images, output_path=output, fps=fps)
 
     def export_frames(

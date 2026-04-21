@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from ..errors import MCPVideoError
+
 
 class ClientRemotionMixin:
     """Remotion operations mixin."""
@@ -20,7 +22,7 @@ class ClientRemotionMixin:
         frames: str | None = None,
         props: dict | None = None,
         scale: float | None = None,
-    ):
+    ) -> dict:
         """Render a Remotion composition to video."""
         from ..remotion_engine import render
 
@@ -69,7 +71,7 @@ class ClientRemotionMixin:
         name: str,
         output_dir: str | None = None,
         template: str = "blank",
-    ) -> dict:  # already has dict, keeping
+    ) -> dict:
         """Scaffold a new Remotion project.
 
         Args:
@@ -80,6 +82,8 @@ class ClientRemotionMixin:
         Returns:
             dict with key "project_path" (str): absolute path to the new project
         """
+        if not name:
+            raise MCPVideoError("name cannot be empty", error_type="validation_error", code="empty_name")
         from ..remotion_engine import create_project
 
         return create_project(name, output_dir=output_dir, template=template)

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import ClassVar
 
+from ..errors import MCPVideoError
+
 
 class ClientEffectsMixin:
     """Effects operations mixin."""
