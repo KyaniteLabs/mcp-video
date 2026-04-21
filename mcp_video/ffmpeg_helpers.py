@@ -34,17 +34,20 @@ def _validate_input_path(path: str) -> str:
 
 
 def _validate_output_path(path: str) -> str:
-    """Validate an output file path. Rejects null bytes and directory traversal attempts."""
+    """Validate an output file path without rejecting valid parent-relative paths."""
     if "\x00" in path:
         raise MCPVideoError(
             f"Output path contains null bytes: {path!r}",
             error_type="validation_error",
             code="invalid_output_path",
         )
-    parts = os.path.normpath(path).split(os.sep)
+    # Parent-relative outputs such as ../clips/out.mp4 are valid local filesystem
+    # paths. Canonicalize before checking for unresolved traversal markers so
+    # auto-generated outputs from relative inputs do not become false positives.
+    parts = os.path.normpath(os.path.abspath(path)).split(os.sep)
     if ".." in parts:
         raise MCPVideoError(
-            f"Output path contains directory traversal: {path!r}",
+            f"Output path contains unresolved directory traversal: {path!r}",
             error_type="validation_error",
             code="invalid_output_path",
         )

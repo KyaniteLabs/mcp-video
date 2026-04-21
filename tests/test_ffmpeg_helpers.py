@@ -61,15 +61,10 @@ def test_validate_output_path_rejects_null_bytes():
         assert "null bytes" in str(e).lower()
 
 
-def test_validate_output_path_rejects_traversal():
-    from mcp_video.errors import MCPVideoError
+def test_validate_output_path_accepts_parent_relative_paths():
     from mcp_video.ffmpeg_helpers import _validate_output_path
 
-    try:
-        _validate_output_path("../../etc/passwd")
-        raise AssertionError("Expected MCPVideoError")
-    except MCPVideoError as e:
-        assert "traversal" in str(e).lower()
+    assert _validate_output_path("../clips/output.mp4") == "../clips/output.mp4"
 
 
 def test_validate_output_path_accepts_safe_paths():
