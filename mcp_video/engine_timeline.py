@@ -201,7 +201,7 @@ def _drawtext_filter(elem, width: int, height: int) -> str:
     color = elem.style.get("color", "white")
     _validate_color(color)
     coords = _position_coords(elem.position, width, height)
-    escaped_text = elem.text.replace("\\", "\\\\").replace("'", "'\\''").replace(":", "\\:")
+    escaped_text = _escape_ffmpeg_filter_value(elem.text)
     drawtext_parts = [
         f"drawtext=text='{escaped_text}'",
         f"fontsize={size}",
