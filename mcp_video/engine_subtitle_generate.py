@@ -115,6 +115,9 @@ def _build_srt_content(entries: list[dict]) -> str:
         start = entry["start"]
         end = entry["end"]
         text = entry["text"]
+        # Normalize newlines to spaces so each text line stays within its SRT entry.
+        # A literal "-->" is valid caption text; only timing lines are structural.
+        text = text.replace("\n", " ")
         srt_lines.append(str(i))
         srt_lines.append(_seconds_to_srt_time(start) + " --> " + _seconds_to_srt_time(end))
         srt_lines.append(text)
