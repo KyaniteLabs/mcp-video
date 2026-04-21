@@ -90,7 +90,25 @@ def _ai_upscale_opencv(video_path: str, output_path: str, scale: int) -> str:
 
         url = model_urls[scale]
         print(f"Downloading FSRCNN x{scale} model...")
-        urllib.request.urlretrieve(url, model_path)
+        tmp_model = model_path.with_suffix(".tmp")
+        max_model_bytes = 500 * (1 << 20)  # 500 MiB limit
+        req = urllib.request.Request(url)
+        with urllib.request.urlopen(req, timeout=120) as resp, open(tmp_model, "wb") as fh:
+            total = 0
+            while True:
+                chunk = resp.read(1 << 20)  # 1 MiB
+                if not chunk:
+                    break
+                total += len(chunk)
+                if total > max_model_bytes:
+                    tmp_model.unlink(missing_ok=True)
+                    raise MCPVideoError(
+                        f"Model download exceeded {max_model_bytes >> 20} MiB size limit",
+                        error_type="resource_error",
+                        code="download_size_limit",
+                    )
+                fh.write(chunk)
+        tmp_model.rename(model_path)
         print(f"Model saved to {model_path}")
 
     # Verify integrity of the model file (catches corrupted downloads or tampering)
