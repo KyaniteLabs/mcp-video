@@ -66,9 +66,9 @@ def merge(
     target_h = max(i.height for i in infos)
 
     working_clips: list[str] = []
-    tmpdir = tempfile.mkdtemp(prefix="mcp_video_")
 
     with _timed_operation() as timing:
+        tmpdir = tempfile.mkdtemp(prefix="mcp_video_")
         try:
             if needs_normalize:
                 for i, clip in enumerate(clips):
