@@ -13,6 +13,7 @@ import wave
 from pathlib import Path
 from typing import Any, Literal
 
+from .defaults import DEFAULT_FFMPEG_TIMEOUT
 from .errors import InputFileError, MCPVideoError, ProcessingError
 
 # ---------------------------------------------------------------------------
@@ -906,9 +907,9 @@ def add_generated_audio(
         ]
 
         try:
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=DEFAULT_FFMPEG_TIMEOUT)
         except subprocess.TimeoutExpired:
-            raise ProcessingError(" ".join(cmd), -1, "Audio processing command timed out after 600s") from None
+            raise ProcessingError(" ".join(cmd), -1, f"Audio processing command timed out after {DEFAULT_FFMPEG_TIMEOUT}s") from None
         if result.returncode != 0:
             raise ProcessingError(" ".join(cmd), result.returncode, result.stderr)
 

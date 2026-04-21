@@ -6,6 +6,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
+from .defaults import DEFAULT_CRF, DEFAULT_PRESET
+
 
 # --- Video metadata ---
 
@@ -156,11 +158,12 @@ class ThumbnailResult(BaseModel):
 
 QualityLevel = Literal["low", "medium", "high", "ultra"]
 
+# Derive quality presets from the canonical default CRF
 QUALITY_PRESETS: dict[QualityLevel, dict[str, Any]] = {
-    "low": {"crf": 35, "preset": "fast", "max_height": 480},
-    "medium": {"crf": 28, "preset": "medium", "max_height": 720},
-    "high": {"crf": 23, "preset": "slow", "max_height": 1080},
-    "ultra": {"crf": 18, "preset": "veryslow", "max_height": 1080},
+    "low": {"crf": DEFAULT_CRF + 12, "preset": "fast", "max_height": 480},
+    "medium": {"crf": DEFAULT_CRF + 5, "preset": "medium", "max_height": 720},
+    "high": {"crf": DEFAULT_CRF, "preset": "slow", "max_height": 1080},
+    "ultra": {"crf": DEFAULT_CRF - 5, "preset": "veryslow", "max_height": 1080},
 }
 
 PREVIEW_PRESETS: dict[str, Any] = {
