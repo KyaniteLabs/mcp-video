@@ -17,7 +17,8 @@ from typing import ClassVar
 
 from ..defaults import DEFAULT_FFMPEG_TIMEOUT
 from ..errors import ProcessingError
-from ..ffmpeg_helpers import _escape_ffmpeg_filter_value
+from ..ffmpeg_helpers import _escape_ffmpeg_filter_value, _validate_input_path
+from ..engine_runtime_utils import _auto_output
 from .models import DesignIssue, DesignQualityReport
 
 logger = logging.getLogger(__name__)
@@ -79,6 +80,7 @@ class DesignQualityGuardrails:
         Returns:
             DesignQualityReport with issues and applied fixes
         """
+        _validate_input_path(video_path)
         self.issues = []
         self._frame_data = []
         fixes_applied = []
@@ -727,7 +729,8 @@ class DesignQualityGuardrails:
 
     def _auto_fix_brightness(self, video_path: str, target: float = 128) -> str:
         """Auto-fix brightness by applying gamma correction."""
-        output_path = video_path.replace(".mp4", "_fixed.mp4")
+        _validate_input_path(video_path)
+        output_path = f"{os.path.splitext(video_path)[0]}_fixed{os.path.splitext(video_path)[1] or '.mp4'}"
 
         cmd = ["ffmpeg", "-y", "-i", video_path, "-vf", "eq=brightness=0.1:gamma=1.1", "-c:a", "copy", output_path]
 
@@ -740,7 +743,8 @@ class DesignQualityGuardrails:
 
     def _auto_fix_contrast(self, video_path: str) -> str:
         """Auto-fix contrast."""
-        output_path = video_path.replace(".mp4", "_fixed.mp4")
+        _validate_input_path(video_path)
+        output_path = f"{os.path.splitext(video_path)[0]}_fixed{os.path.splitext(video_path)[1] or '.mp4'}"
 
         cmd = ["ffmpeg", "-y", "-i", video_path, "-vf", "eq=contrast=1.1", "-c:a", "copy", output_path]
 
@@ -753,7 +757,8 @@ class DesignQualityGuardrails:
 
     def _auto_fix_saturation(self, video_path: str, boost: float = 1.2) -> str:
         """Auto-fix saturation."""
-        output_path = video_path.replace(".mp4", "_fixed.mp4")
+        _validate_input_path(video_path)
+        output_path = f"{os.path.splitext(video_path)[0]}_fixed{os.path.splitext(video_path)[1] or '.mp4'}"
 
         safe_boost = _escape_ffmpeg_filter_value(str(boost))
         cmd = ["ffmpeg", "-y", "-i", video_path, "-vf", f"eq=saturation={safe_boost}", "-c:a", "copy", output_path]
@@ -767,7 +772,8 @@ class DesignQualityGuardrails:
 
     def _auto_fix_color_cast(self, video_path: str) -> str:
         """Auto-fix color casts."""
-        output_path = video_path.replace(".mp4", "_fixed.mp4")
+        _validate_input_path(video_path)
+        output_path = f"{os.path.splitext(video_path)[0]}_fixed{os.path.splitext(video_path)[1] or '.mp4'}"
 
         cmd = [
             "ffmpeg",
@@ -790,7 +796,8 @@ class DesignQualityGuardrails:
 
     def _auto_normalize_audio(self, video_path: str) -> str:
         """Auto-normalize audio to -16 LUFS."""
-        output_path = video_path.replace(".mp4", "_fixed.mp4")
+        _validate_input_path(video_path)
+        output_path = f"{os.path.splitext(video_path)[0]}_fixed{os.path.splitext(video_path)[1] or '.mp4'}"
 
         cmd = ["ffmpeg", "-y", "-i", video_path, "-af", "loudnorm=I=-16:TP=-1.5:LRA=11", "-c:v", "copy", output_path]
 

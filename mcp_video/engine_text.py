@@ -52,8 +52,8 @@ def add_text(
     fontfile = font or _default_font()
 
     # Validate font file exists when explicitly provided
-    if font is not None and not os.path.isfile(fontfile):
-        raise InputFileError(fontfile, "Font file not found")
+    if font is not None:
+        _validate_input_path(fontfile)
 
     # Escape font path for FFmpeg filter syntax
     escaped_fontfile = _escape_ffmpeg_filter_value(fontfile)
