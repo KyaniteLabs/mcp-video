@@ -8,9 +8,10 @@ from .engine_runtime_utils import (
     _movflags_args,
     _quality_args,
     _run_ffmpeg,
+    _sanitize_ffmpeg_number,
     _timed_operation,
 )
-from .ffmpeg_helpers import _validate_input_path
+from .ffmpeg_helpers import _validate_input_path, _validate_output_path
 from .errors import MCPVideoError
 from .models import EditResult
 
@@ -24,11 +25,14 @@ def fade(
     preset: str | None = None,
 ) -> EditResult:
     """Add fade in/out effect to a video."""
-    _validate_input_path(input_path)
+    input_path = _validate_input_path(input_path)
+    fade_in = _sanitize_ffmpeg_number(fade_in, "fade_in")
+    fade_out = _sanitize_ffmpeg_number(fade_out, "fade_out")
     if fade_in <= 0 and fade_out <= 0:
         raise MCPVideoError("Specify fade_in and/or fade_out > 0", code="no_fade")
 
     output = output_path or _auto_output(input_path, "faded")
+    _validate_output_path(output)
     info = probe(input_path)
 
     vf_parts: list[str] = []

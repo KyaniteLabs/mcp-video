@@ -57,7 +57,6 @@ from .engine_runtime_utils import (
     _sanitize_ffmpeg_number as _sanitize_ffmpeg_number,
     _validate_chroma_color as _validate_chroma_color,
     _validate_color as _validate_color,
-    _validate_input as _validate_input,
     _validate_position as _validate_position,
 )
 from .engine_speed import speed as speed

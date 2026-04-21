@@ -11,7 +11,7 @@ from .engine_runtime_utils import (
     _run_ffmpeg,
     _timed_operation,
 )
-from .ffmpeg_helpers import _validate_input_path
+from .ffmpeg_helpers import _validate_input_path, _validate_output_path
 from .models import EditResult
 
 
@@ -25,8 +25,9 @@ def reverse(
         input_path: Path to the input video.
         output_path: Where to save the output. Auto-generated if omitted.
     """
-    _validate_input_path(input_path)
+    input_path = _validate_input_path(input_path)
     output = output_path or _auto_output(input_path, "reversed")
+    _validate_output_path(output)
 
     input_info = probe(input_path)
 

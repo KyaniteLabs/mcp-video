@@ -38,7 +38,7 @@ def video_batch(
 
     for input_path in inputs:
         try:
-            _validate_input_path(input_path)
+            input_path = _validate_input_path(input_path)
             if output_dir:
                 os.makedirs(output_dir, exist_ok=True)
 

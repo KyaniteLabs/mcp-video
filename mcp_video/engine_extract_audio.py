@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from .ffmpeg_helpers import _validate_input_path
+from .ffmpeg_helpers import _validate_input_path, _validate_output_path
 from .engine_runtime_utils import _auto_output, _run_ffmpeg
 from .errors import MCPVideoError
 
@@ -20,9 +20,10 @@ def extract_audio(
             error_type="validation_error",
             code="invalid_parameter",
         )
-    _validate_input_path(input_path)
+    input_path = _validate_input_path(input_path)
     ext = f".{format}" if not format.startswith(".") else format
     output = output_path or _auto_output(input_path, "audio", ext=ext)
+    _validate_output_path(output)
 
     codec_map = {
         "mp3": "libmp3lame",

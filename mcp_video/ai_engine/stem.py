@@ -14,6 +14,7 @@ import tempfile
 from pathlib import Path
 
 from ..errors import InputFileError, MCPVideoError, ProcessingError
+from ..ffmpeg_helpers import _validate_output_path
 from ..limits import DEFAULT_FFMPEG_TIMEOUT
 
 logger = logging.getLogger(__name__)
@@ -66,6 +67,7 @@ def ai_stem_separation(
     stems = stems or ["vocals", "drums", "bass", "other"]
 
     # Create output directory
+    _validate_output_path(output_dir)
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
 
@@ -92,7 +94,7 @@ def ai_stem_separation(
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=DEFAULT_FFMPEG_TIMEOUT)
         except subprocess.TimeoutExpired:
-            raise ProcessingError("Operation timed out after 600 seconds") from None
+            raise ProcessingError(f"Operation timed out after {DEFAULT_FFMPEG_TIMEOUT}s") from None
         if result.returncode != 0:
             raise ProcessingError(" ".join(cmd), result.returncode, result.stderr)
 

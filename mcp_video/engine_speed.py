@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from .defaults import DEFAULT_AUDIO_BITRATE, DEFAULT_CRF, DEFAULT_PRESET
-from .ffmpeg_helpers import _validate_input_path
+from .ffmpeg_helpers import _validate_input_path, _validate_output_path
 from .engine_probe import probe
-from .engine_runtime_utils import _auto_output, _movflags_args, _run_ffmpeg, _timed_operation
+from .engine_runtime_utils import _auto_output, _movflags_args, _run_ffmpeg, _sanitize_ffmpeg_number, _timed_operation
 from .errors import MCPVideoError
 from .limits import MAX_SPEED_CHAIN_COUNT
 from .models import EditResult
@@ -17,11 +17,13 @@ def speed(
     output_path: str | None = None,
 ) -> EditResult:
     """Change playback speed. factor > 1 = faster, < 1 = slower."""
-    _validate_input_path(input_path)
+    input_path = _validate_input_path(input_path)
+    factor = _sanitize_ffmpeg_number(factor, "factor")
     if factor <= 0:
         raise MCPVideoError("Speed factor must be positive")
 
     output = output_path or _auto_output(input_path, f"speed_{factor}x")
+    _validate_output_path(output)
 
     # Use setpts for video, atempo for audio
     video_filter = f"setpts={1 / factor}*PTS"

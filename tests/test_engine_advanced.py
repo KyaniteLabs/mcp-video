@@ -713,6 +713,19 @@ class TestGenerateSubtitles:
         assert result.video_path is not None
         assert os.path.isfile(result.video_path)
 
+
+    def test_directory_style_output_path_writes_subtitles_file(self, sample_video, tmp_path):
+        from mcp_video.engine import generate_subtitles
+
+        output_dir = str(tmp_path / "subtitle_dir") + os.sep
+        entries = [{"start": 0.0, "end": 1.0, "text": "Hello"}]
+
+        result = generate_subtitles(entries, sample_video, output_path=output_dir)
+
+        assert result.srt_path == os.path.join(output_dir, "subtitles.srt")
+        assert os.path.isfile(result.srt_path)
+
+
     def test_empty_entries_raises(self, sample_video):
         from mcp_video.engine import generate_subtitles
 

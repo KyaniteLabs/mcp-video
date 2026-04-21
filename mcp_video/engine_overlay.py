@@ -15,7 +15,7 @@ from .engine_runtime_utils import (
     _timed_operation,
 )
 from .errors import MCPVideoError
-from .ffmpeg_helpers import _validate_input_path, _escape_ffmpeg_filter_value
+from .ffmpeg_helpers import _validate_input_path, _validate_output_path, _escape_ffmpeg_filter_value
 from .models import EditResult, NamedPosition, Position
 
 
@@ -45,12 +45,13 @@ def overlay_video(
         duration: How long the overlay is visible (seconds).
         output_path: Where to save the output.
     """
-    _validate_input_path(background_path)
-    _validate_input_path(overlay_path)
+    background_path = _validate_input_path(background_path)
+    overlay_path = _validate_input_path(overlay_path)
     _require_filter("overlay", "Video overlay")
     _validate_dimensions(width, height)
     safe_opacity = _validate_opacity(opacity)
     output = output_path or _auto_output(background_path, "overlay")
+    _validate_output_path(output)
 
     scale_filter = _scale_filter(width, height)
     overlay_chain = _overlay_chain(scale_filter, safe_opacity)

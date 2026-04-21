@@ -23,7 +23,7 @@ from .engine_runtime_utils import (
     _validate_color,
 )
 from .errors import MCPVideoError
-from .ffmpeg_helpers import _escape_ffmpeg_filter_value, _validate_input_path
+from .ffmpeg_helpers import _escape_ffmpeg_filter_value, _validate_input_path, _validate_output_path
 from .models import EditResult, NamedPosition, Timeline, TimelineImageOverlay
 
 
@@ -56,6 +56,7 @@ def edit_timeline(timeline: Timeline | dict, output_path: str | None = None) -> 
                 current = resized
 
         output = output_path or _auto_output(video_clips[0], "timeline", ext=f".{timeline.export.format}")
+        _validate_output_path(output)
         return export_video(current, output_path=output, quality=timeline.export.quality, format=timeline.export.format)
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)

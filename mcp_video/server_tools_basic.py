@@ -20,7 +20,7 @@ def video_info(input_path: str) -> dict[str, Any]:
         input_path: Absolute path to the video file.
     """
     try:
-        _validate_input_path(input_path)
+        input_path = _validate_input_path(input_path)
         info = probe(input_path)
         return {"success": True, "info": info.model_dump()}
     except MCPVideoError as e:
@@ -47,7 +47,7 @@ def video_trim(
         output_path: Where to save the trimmed video. Auto-generated if omitted.
     """
     try:
-        _validate_input_path(input_path)
+        input_path = _validate_input_path(input_path)
         return _result(trim(input_path, start=start, duration=duration, end=end, output_path=output_path))
     except MCPVideoError as e:
         return _error_result(e)
@@ -168,7 +168,7 @@ def video_add_text(
             MCPVideoError(f"Invalid preset: {preset}", error_type="validation_error", code="invalid_parameter")
         )
     try:
-        _validate_input_path(input_path)
+        input_path = _validate_input_path(input_path)
         if size < 8 or size > 500:
             return _error_result(
                 MCPVideoError(
@@ -223,8 +223,8 @@ def video_add_audio(
         output_path: Where to save the output. Auto-generated if omitted.
     """
     try:
-        _validate_input_path(video_path)
-        _validate_input_path(audio_path)
+        video_path = _validate_input_path(video_path)
+        audio_path = _validate_input_path(audio_path)
         if not 0 <= volume <= 2.0:
             return _error_result(
                 MCPVideoError(
@@ -319,7 +319,7 @@ def video_resize(
             )
         )
     try:
-        _validate_input_path(input_path)
+        input_path = _validate_input_path(input_path)
         return _result(
             resize(
                 input_path,
@@ -360,7 +360,7 @@ def video_convert(
             )
         )
     try:
-        _validate_input_path(input_path)
+        input_path = _validate_input_path(input_path)
         return _result(
             convert(
                 input_path,
@@ -397,7 +397,7 @@ def video_speed(
             )
         )
     try:
-        _validate_input_path(input_path)
+        input_path = _validate_input_path(input_path)
         return _result(speed(input_path, factor=factor, output_path=output_path))
     except MCPVideoError as e:
         return _error_result(e)
