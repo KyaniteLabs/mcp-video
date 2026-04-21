@@ -6,9 +6,18 @@ import os
 import shutil
 import tempfile
 
+from .defaults import (
+    DEFAULT_AUDIO_CHANNELS,
+    DEFAULT_CRF,
+    DEFAULT_FPS,
+    DEFAULT_PRESET,
+    DEFAULT_SAMPLE_RATE,
+    DEFAULT_AUDIO_BITRATE,
+)
 from .engine_probe import get_duration, probe
-from .engine_runtime_utils import _auto_output, _movflags_args, _run_ffmpeg, _timed_operation, _validate_input
+from .engine_runtime_utils import _auto_output, _movflags_args, _run_ffmpeg, _timed_operation
 from .errors import InputFileError, MCPVideoError
+from .ffmpeg_helpers import _escape_ffmpeg_filter_value, _validate_input_path
 from .models import EditResult
 
 
@@ -33,7 +42,7 @@ def merge(
         raise InputFileError("", "No clips provided for merge")
     if len(clips) == 1:
         # Single clip — nothing to merge, just copy to output
-        _validate_input(clips[0])
+        _validate_input_path(clips[0])
         output = output_path or _auto_output(clips[0], "merged")
         input_ext = os.path.splitext(clips[0])[1].lower()
         output_ext = os.path.splitext(output)[1].lower()
@@ -54,7 +63,7 @@ def merge(
         )
 
     for c in clips:
-        _validate_input(c)
+        _validate_input_path(c)
 
     # Check if all clips have same resolution — if not, normalize
     infos = [probe(c) for c in clips]
@@ -66,9 +75,9 @@ def merge(
     target_h = max(i.height for i in infos)
 
     working_clips: list[str] = []
-    tmpdir = tempfile.mkdtemp(prefix="mcp_video_")
 
     with _timed_operation() as timing:
+        tmpdir = tempfile.mkdtemp(prefix="mcp_video_")
         try:
             if needs_normalize:
                 for i, clip in enumerate(clips):
@@ -82,19 +91,19 @@ def merge(
                             "-c:v",
                             "libx264",
                             "-preset",
-                            "fast",
+                            DEFAULT_PRESET,
                             "-crf",
-                            "23",
+                            str(DEFAULT_CRF),
                             "-c:a",
                             "aac",
                             "-b:a",
-                            "128k",
+                            DEFAULT_AUDIO_BITRATE,
                             "-r",
-                            "30",
+                            str(DEFAULT_FPS),
                             "-ar",
-                            "44100",
+                            str(DEFAULT_SAMPLE_RATE),
                             "-ac",
-                            "2",
+                            str(DEFAULT_AUDIO_CHANNELS),
                             norm_path,
                         ]
                     )
@@ -193,8 +202,11 @@ def _merge_with_transitions(
         in2 = labels[i + 1]
         out = f"xt{i}" if i < pairs - 1 else "vout"
         xfade_type = transition_types[i].replace("-", "")
+        safe_xfade = _escape_ffmpeg_filter_value(xfade_type)
+        safe_offset = _escape_ffmpeg_filter_value(f"{offsets[i]:.3f}")
+        safe_duration = _escape_ffmpeg_filter_value(f"{transition_duration:.3f}")
         filter_parts.append(
-            f"[{in1}][{in2}]xfade=transition={xfade_type}:offset={offsets[i]:.3f}:duration={transition_duration:.3f}[{out}]"
+            f"[{in1}][{in2}]xfade=transition={safe_xfade}:offset={safe_offset}:duration={safe_duration}[{out}]"
         )
         labels[i + 1] = out
 
@@ -209,7 +221,7 @@ def _merge_with_transitions(
         audio_filter = "".join(audio_parts) + f"concat=n={n}:v=0:a=1[aout]"
         filter_complex = f"{filter_str};{audio_filter}"
         map_args = ["-map", "[vout]", "-map", "[aout]"]
-        audio_codec_args = ["-c:a", "aac", "-b:a", "128k"]
+        audio_codec_args = ["-c:a", "aac", "-b:a", DEFAULT_AUDIO_BITRATE]
     else:
         filter_complex = filter_str
         map_args = ["-map", "[vout]"]
@@ -224,9 +236,9 @@ def _merge_with_transitions(
             "-c:v",
             "libx264",
             "-preset",
-            "fast",
+            DEFAULT_PRESET,
             "-crf",
-            "23",
+            str(DEFAULT_CRF),
             *audio_codec_args,
             *_movflags_args(output),
             output,

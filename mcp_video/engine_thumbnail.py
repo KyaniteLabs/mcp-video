@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from .ffmpeg_helpers import _validate_input_path
 from .engine_probe import get_duration
-from .engine_runtime_utils import _auto_output, _run_ffmpeg, _validate_input
+from .engine_runtime_utils import _auto_output, _run_ffmpeg
 from .models import ThumbnailResult
 
 
@@ -13,7 +14,7 @@ def thumbnail(
     output_path: str | None = None,
 ) -> ThumbnailResult:
     """Extract a single frame from a video."""
-    _validate_input(input_path)
+    _validate_input_path(input_path)
 
     if timestamp is None:
         # Grab frame at 10% of video duration

@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Any
 
 from .errors import InputFileError, MCPVideoError, ProcessingError
-from .ffmpeg_helpers import _seconds_to_srt_time
+from .ffmpeg_helpers import _get_video_duration, _seconds_to_srt_time
 from .ffmpeg_helpers import _run_ffprobe_json
 from .limits import DEFAULT_FFMPEG_TIMEOUT
 
@@ -348,7 +348,10 @@ def _apply_simple_spatial(
     sorted_positions = sorted(positions, key=lambda p: p.get("time", 0))
 
     # Get video duration for final position hold
-    duration = _get_video_duration(video) or sorted_positions[-1].get("time", 5) + 1
+    try:
+        duration = _get_video_duration(video)
+    except ProcessingError:
+        duration = sorted_positions[-1].get("time", 5) + 1
 
     # For multi-keyframe spatial audio with pan, we need to use a different approach
     # since pan doesn't support timeline enable. We'll segment the audio and apply
@@ -459,30 +462,6 @@ def _apply_simple_spatial(
                 raise ProcessingError(" ".join(cmd), result.returncode, result.stderr)
 
     return output
-
-
-def _get_video_duration(video_path: str) -> float | None:
-    """Get video duration in seconds using ffprobe."""
-    cmd = [
-        "ffprobe",
-        "-v",
-        "error",
-        "-show_entries",
-        "format=duration",
-        "-of",
-        "default=noprint_wrappers=1:nokey=1",
-        video_path,
-    ]
-    try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=DEFAULT_FFMPEG_TIMEOUT)
-    except subprocess.TimeoutExpired:
-        raise ProcessingError("Operation timed out after 600 seconds") from None
-    if result.returncode == 0:
-        try:
-            return float(result.stdout.strip())
-        except ValueError:
-            pass
-    return None
 
 
 def ai_scene_detect(

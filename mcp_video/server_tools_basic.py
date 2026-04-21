@@ -6,7 +6,7 @@ from typing import Any
 
 from .engine import add_audio, add_text, convert, merge, probe, resize, speed, trim
 from .errors import MCPVideoError
-from .limits import MAX_RESOLUTION, MAX_SPEED_FACTOR, MIN_SPEED_FACTOR
+from .limits import MAX_RESOLUTION, MAX_SPEED_FACTOR, MIN_SPEED_FACTOR, MIN_CRF, MAX_CRF
 from .server_app import _error_result, _result, mcp
 from .validation import VALID_FORMATS, VALID_PRESETS
 from .ffmpeg_helpers import _validate_input_path
@@ -157,9 +157,11 @@ def video_add_text(
         crf: Override CRF value (0-51, lower = better quality). Default 23.
         preset: Override FFmpeg encoding preset (ultrafast, fast, medium, slow, veryslow).
     """
-    if crf is not None and not (0 <= crf <= 51):
+    if crf is not None and not (MIN_CRF <= crf <= MAX_CRF):
         return _error_result(
-            MCPVideoError(f"crf must be 0-51, got {crf}", error_type="validation_error", code="invalid_parameter")
+            MCPVideoError(
+                f"crf must be {MIN_CRF}-{MAX_CRF}, got {crf}", error_type="validation_error", code="invalid_parameter"
+            )
         )
     if preset is not None and preset not in VALID_PRESETS:
         return _error_result(

@@ -10,10 +10,9 @@ from .engine_runtime_utils import (
     _run_ffmpeg,
     _sanitize_ffmpeg_number,
     _timed_operation,
-    _validate_input,
 )
 from .errors import MCPVideoError
-from .ffmpeg_helpers import _escape_ffmpeg_filter_value
+from .ffmpeg_helpers import _validate_input_path, _escape_ffmpeg_filter_value
 from .models import EditResult
 
 
@@ -32,7 +31,7 @@ def normalize_audio(
         lra: Loudness range target in LU. Default 11.0.
         output_path: Where to save the output.
     """
-    _validate_input(input_path)
+    _validate_input_path(input_path)
     if not isinstance(target_lufs, (int, float)) or not (-70 <= target_lufs <= -5):
         raise MCPVideoError(
             f"target_lufs must be -70 to -5, got {target_lufs}", error_type="validation_error", code="invalid_parameter"

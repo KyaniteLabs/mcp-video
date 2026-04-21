@@ -10,10 +10,9 @@ from .engine_runtime_utils import (
     _quality_args,
     _require_filter,
     _run_ffmpeg,
-    _validate_input,
 )
 from .errors import MCPVideoError
-from .ffmpeg_helpers import _escape_ffmpeg_filter_value, _seconds_to_srt_time
+from .ffmpeg_helpers import _validate_input_path, _escape_ffmpeg_filter_value, _seconds_to_srt_time
 from .models import SubtitleResult
 
 
@@ -24,7 +23,7 @@ def generate_subtitles(
     burn: bool = False,
 ) -> SubtitleResult:
     """Generate SRT subtitles from text entries and optionally burn into video."""
-    _validate_input(input_path)
+    _validate_input_path(input_path)
     _validate_entries(entries)
 
     srt_file = _write_srt(entries, input_path, output_path)

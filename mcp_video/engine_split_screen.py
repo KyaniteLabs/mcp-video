@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from .defaults import DEFAULT_AUDIO_BITRATE
 from .engine_probe import probe
 from .engine_runtime_utils import (
     _auto_output,
@@ -10,9 +11,8 @@ from .engine_runtime_utils import (
     _run_ffmpeg,
     _sanitize_ffmpeg_number,
     _timed_operation,
-    _validate_input,
 )
-from .ffmpeg_helpers import _escape_ffmpeg_filter_value
+from .ffmpeg_helpers import _validate_input_path, _escape_ffmpeg_filter_value
 from .models import EditResult, SplitLayout
 
 
@@ -30,8 +30,8 @@ def split_screen(
         layout: 'side-by-side' or 'top-bottom'.
         output_path: Where to save the output.
     """
-    _validate_input(left_path)
-    _validate_input(right_path)
+    _validate_input_path(left_path)
+    _validate_input_path(right_path)
     output = output_path or _auto_output(left_path, f"split_{layout}")
 
     left_info = probe(left_path)
@@ -57,7 +57,7 @@ def split_screen(
                 "-c:a",
                 "aac",
                 "-b:a",
-                "128k",
+                DEFAULT_AUDIO_BITRATE,
                 *_movflags_args(output),
                 output,
             ]

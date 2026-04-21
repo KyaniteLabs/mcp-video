@@ -250,11 +250,7 @@ class TestStripFFmpegBanner:
         assert "ffmpeg version" not in cleaned
 
     def test_preserves_no_such_file_in_banner(self):
-        stderr = (
-            "ffmpeg version 6.0\n"
-            "No such file or directory: missing.mp4\n"
-            "Stream mapping:\n"
-        )
+        stderr = "ffmpeg version 6.0\nNo such file or directory: missing.mp4\nStream mapping:\n"
         cleaned = _strip_ffmpeg_banner(stderr)
         assert "No such file or directory" in cleaned
         assert "ffmpeg version" not in cleaned

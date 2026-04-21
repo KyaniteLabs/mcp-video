@@ -7,6 +7,7 @@ import shutil
 import tempfile
 from collections.abc import Callable
 
+from .defaults import DEFAULT_AUDIO_BITRATE
 from .engine_probe import probe
 from .engine_runtime_utils import (
     _auto_output,
@@ -15,8 +16,8 @@ from .engine_runtime_utils import (
     _run_ffmpeg,
     _run_ffmpeg_with_progress,
     _timed_operation,
-    _validate_input,
 )
+from .ffmpeg_helpers import _validate_input_path
 from .errors import MCPVideoError
 from .models import QUALITY_PRESETS, EditResult, ExportFormat, QualityLevel
 
@@ -31,7 +32,7 @@ def convert(
     target_bitrate: int | None = None,
 ) -> EditResult:
     """Convert video to a different format."""
-    _validate_input(input_path)
+    _validate_input_path(input_path)
 
     if two_pass and format not in ("mp4", "mov"):
         raise MCPVideoError(
@@ -107,7 +108,7 @@ def _convert_two_pass(input_path: str, output: str, target_bitrate: int, preset:
                 "-c:a",
                 "aac",
                 "-b:a",
-                "128k",
+                DEFAULT_AUDIO_BITRATE,
                 *_movflags_args(output),
                 output,
             ]
@@ -132,7 +133,7 @@ def _convert_mp4(
             "-c:a",
             "aac",
             "-b:a",
-            "128k",
+            DEFAULT_AUDIO_BITRATE,
             "-movflags",
             "+faststart",
             output,

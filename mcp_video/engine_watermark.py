@@ -10,8 +10,8 @@ from .engine_runtime_utils import (
     _resolve_position,
     _run_ffmpeg,
     _timed_operation,
-    _validate_input,
 )
+from .ffmpeg_helpers import _validate_input_path
 from .models import EditResult, NamedPosition, Position
 
 
@@ -26,8 +26,8 @@ def watermark(
     preset: str | None = None,
 ) -> EditResult:
     """Add an image watermark to a video."""
-    _validate_input(input_path)
-    _validate_input(image_path)
+    _validate_input_path(input_path)
+    _validate_input_path(image_path)
     output = output_path or _auto_output(input_path, "watermarked")
 
     # Position expressions for the overlay

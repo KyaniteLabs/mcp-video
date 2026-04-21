@@ -5,8 +5,9 @@ from __future__ import annotations
 import os
 import shutil
 
+from .ffmpeg_helpers import _validate_input_path
 from .engine_probe import get_duration
-from .engine_runtime_utils import _auto_output_dir, _run_ffmpeg, _validate_input
+from .engine_runtime_utils import _auto_output_dir, _run_ffmpeg
 from .errors import MCPVideoError, ProcessingError
 from .models import StoryboardResult
 
@@ -17,7 +18,7 @@ def storyboard(
     frame_count: int = 8,
 ) -> StoryboardResult:
     """Extract key frames and create a storyboard grid for human review."""
-    _validate_input(input_path)
+    _validate_input_path(input_path)
     if frame_count < 1:
         raise MCPVideoError("frame_count must be at least 1", code="invalid_frame_count")
     dur = get_duration(input_path)

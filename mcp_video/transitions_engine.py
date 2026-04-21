@@ -1,6 +1,6 @@
 """Video transition effects using FFmpeg."""
 
-from .ffmpeg_helpers import _validate_input_path, _run_ffmpeg, _get_video_duration
+from .ffmpeg_helpers import _validate_input_path, _run_ffmpeg, _get_video_duration, _escape_ffmpeg_filter_value
 from .errors import MCPVideoError
 
 
@@ -46,10 +46,14 @@ def transition_glitch(
 
     # Use rgbashift filter for RGB channel shifting
     # More reliable than geq which has complex escaping requirements
+    safe_duration = _escape_ffmpeg_filter_value(str(duration))
+    safe_offset = _escape_ffmpeg_filter_value(str(offset))
+    safe_rgb_shift = _escape_ffmpeg_filter_value(str(rgb_shift))
+    safe_noise_amount = _escape_ffmpeg_filter_value(str(noise_amount))
     filter_complex = (
-        f"[0:v][1:v]xfade=transition=fade:duration={duration}:offset={offset}[faded];"
-        f"[faded]rgbashift=rh={rgb_shift}:gh=0:bh=-{rgb_shift}:ah=0[rgbshift];"
-        f"[rgbshift]noise=alls={noise_amount}:allf=t+u[glitched]"
+        f"[0:v][1:v]xfade=transition=fade:duration={safe_duration}:offset={safe_offset}[faded];"
+        f"[faded]rgbashift=rh={safe_rgb_shift}:gh=0:bh=-{safe_rgb_shift}:ah=0[rgbshift];"
+        f"[rgbshift]noise=alls={safe_noise_amount}:allf=t+u[glitched]"
     )
 
     cmd = [
@@ -131,11 +135,15 @@ def transition_pixelate(
 
     # Build scale expressions that ensure dimensions stay even
     # Use trunc to round down to integer, then ensure it's at least 2 and even
-    scale_w_expr = f"trunc(iw/max(1,min({pixel_size},1+({pixel_size}-1)*((1+cos((t-{mid})*PI/{duration}))/2)))/2)*2"
-    scale_h_expr = f"trunc(ih/max(1,min({pixel_size},1+({pixel_size}-1)*((1+cos((t-{mid})*PI/{duration}))/2)))/2)*2"
+    safe_duration = _escape_ffmpeg_filter_value(str(duration))
+    safe_offset = _escape_ffmpeg_filter_value(str(offset))
+    safe_pixel_size = _escape_ffmpeg_filter_value(str(pixel_size))
+    safe_mid = _escape_ffmpeg_filter_value(str(mid))
+    scale_w_expr = f"trunc(iw/max(1,min({safe_pixel_size},1+({safe_pixel_size}-1)*((1+cos((t-{safe_mid})*PI/{safe_duration}))/2)))/2)*2"
+    scale_h_expr = f"trunc(ih/max(1,min({safe_pixel_size},1+({safe_pixel_size}-1)*((1+cos((t-{safe_mid})*PI/{safe_duration}))/2)))/2)*2"
 
     filter_complex = (
-        f"[0:v][1:v]xfade=transition=fade:duration={duration}:offset={offset}[faded];"
+        f"[0:v][1:v]xfade=transition=fade:duration={safe_duration}:offset={safe_offset}[faded];"
         f"[faded]scale='{scale_w_expr}':'{scale_h_expr}':flags=neighbor:eval=frame,"
         f"scale=iw:ih:flags=neighbor[output]"
     )
@@ -205,7 +213,9 @@ def transition_morph(
 
     # Use xfade with pixelize transition for morph-like effect
     # pixelize creates a blocky dissolve that simulates mesh morphing
-    filter_complex = f"[0:v][1:v]xfade=transition=pixelize:duration={duration}:offset={offset}[output]"
+    safe_duration = _escape_ffmpeg_filter_value(str(duration))
+    safe_offset = _escape_ffmpeg_filter_value(str(offset))
+    filter_complex = f"[0:v][1:v]xfade=transition=pixelize:duration={safe_duration}:offset={safe_offset}[output]"
 
     cmd = [
         "ffmpeg",

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from .engine_runtime_utils import _validate_input
+from .ffmpeg_helpers import _validate_input_path
 from .models import EditResult, ExportFormat, QualityLevel
 
 
@@ -18,7 +18,7 @@ def export_video(
     target_bitrate: int | None = None,
 ) -> EditResult:
     """Export a video with specified quality and format settings."""
-    _validate_input(input_path)
+    _validate_input_path(input_path)
     from .engine_convert import convert
 
     result = convert(
