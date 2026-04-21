@@ -13,12 +13,29 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from ..errors import InputFileError, ProcessingError
+from ..errors import InputFileError, MCPVideoError, ProcessingError
 from ..ffmpeg_helpers import _run_ffprobe_json
-from ..limits import DEFAULT_FFMPEG_TIMEOUT
+from ..limits import DEFAULT_FFMPEG_TIMEOUT, MAX_AI_SCENE_FRAMES, MAX_VIDEO_DURATION
 from .spatial import _standard_scene_detect
 
 logger = logging.getLogger(__name__)
+
+
+def _validate_scene_threshold(threshold: float) -> float:
+    if not isinstance(threshold, (int, float)) or not (0.0 <= threshold <= 1.0):
+        raise MCPVideoError(
+            f"threshold must be between 0.0 and 1.0, got {threshold}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
+    return float(threshold)
+
+
+def _parse_duration(value: object) -> float:
+    try:
+        return float(value or 0)
+    except (TypeError, ValueError):
+        return 0.0
 
 
 def ai_scene_detect(
@@ -36,6 +53,7 @@ def ai_scene_detect(
     Returns:
         List of scene changes with timestamps and frame numbers
     """
+    threshold = _validate_scene_threshold(threshold)
     if not use_ai:
         # Standard FFmpeg scene detection
         return _standard_scene_detect(video, threshold)
@@ -56,13 +74,19 @@ def ai_scene_detect(
 
     # Step 1: Get video duration and frame rate
     info = _run_ffprobe_json(str(video_path))
-    duration = float(info.get("format", {}).get("duration", 0))
+    duration = _parse_duration(info.get("format", {}).get("duration", 0))
 
     if duration == 0:
         return []
+    if duration > MAX_VIDEO_DURATION:
+        raise MCPVideoError(
+            f"Video duration ({duration:.0f}s) exceeds maximum of {MAX_VIDEO_DURATION}s",
+            error_type="validation_error",
+            code="duration_too_long",
+        )
 
-    # Step 2: Extract frames at regular intervals (every 0.5 seconds)
-    frame_interval = 0.5  # seconds
+    # Step 2: Extract frames at a bounded interval.
+    frame_interval = max(0.5, duration / MAX_AI_SCENE_FRAMES)
     scenes = []
 
     with tempfile.TemporaryDirectory() as tmpdir:

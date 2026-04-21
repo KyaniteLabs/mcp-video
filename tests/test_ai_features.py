@@ -465,6 +465,91 @@ def test_ai_scene_detect_missing_file_does_not_create_parent_dir(tmp_path, monke
     assert not missing_video.parent.exists()
 
 
+
+
+def test_ai_scene_detect_ai_mode_rejects_invalid_threshold(sample_video, monkeypatch):
+    """AI mode should validate threshold before doing expensive frame extraction."""
+    from mcp_video.ai_engine import ai_scene_detect
+
+    imagehash_module = types.ModuleType("imagehash")
+    image_module = types.ModuleType("PIL.Image")
+    pil_module = types.ModuleType("PIL")
+    pil_module.Image = image_module
+    monkeypatch.setitem(sys.modules, "imagehash", imagehash_module)
+    monkeypatch.setitem(sys.modules, "PIL", pil_module)
+    monkeypatch.setitem(sys.modules, "PIL.Image", image_module)
+
+    with pytest.raises(MCPVideoError, match="threshold"):
+        ai_scene_detect(sample_video, threshold=5.0, use_ai=True)
+
+
+def test_ai_scene_detect_caps_ai_frame_extraction_rate(tmp_path, monkeypatch):
+    """Long AI scene scans should increase frame interval instead of extracting unbounded frames."""
+    from mcp_video.ai_engine import ai_scene_detect
+    from mcp_video.limits import MAX_AI_SCENE_FRAMES
+
+    video = tmp_path / "video.mp4"
+    video.write_bytes(b"not a real video; subprocess is mocked")
+
+    imagehash_module = types.ModuleType("imagehash")
+    image_module = types.ModuleType("PIL.Image")
+    pil_module = types.ModuleType("PIL")
+    pil_module.Image = image_module
+    monkeypatch.setitem(sys.modules, "imagehash", imagehash_module)
+    monkeypatch.setitem(sys.modules, "PIL", pil_module)
+    monkeypatch.setitem(sys.modules, "PIL.Image", image_module)
+    monkeypatch.setattr("mcp_video.ai_engine.scene._run_ffprobe_json", lambda _path: {"format": {"duration": "1200"}})
+
+    seen_cmds = []
+
+    def fake_run(cmd, capture_output, text, timeout):
+        seen_cmds.append(cmd)
+        return subprocess.CompletedProcess(cmd, 0, "", "")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    assert ai_scene_detect(str(video), threshold=0.3, use_ai=True) == []
+
+    vf_arg = seen_cmds[0][seen_cmds[0].index("-vf") + 1]
+    expected_interval = 1200 / MAX_AI_SCENE_FRAMES
+    assert vf_arg.startswith(f"fps=1/{expected_interval}")
+
+
+
+
+def test_require_audio_stream_propagates_probe_errors(monkeypatch):
+    from mcp_video.ai_engine.spatial import _require_audio_stream
+    from mcp_video.errors import ProcessingError
+
+    expected = ProcessingError("ffprobe video.mp4", 1, "corrupt input")
+    monkeypatch.setattr("mcp_video.ai_engine.spatial._run_ffprobe_json", lambda _video: (_ for _ in ()).throw(expected))
+
+    with pytest.raises(ProcessingError, match="corrupt input"):
+        _require_audio_stream("video.mp4")
+
+
+@requires_ffmpeg
+def test_spatial_audio_rejects_video_without_audio(sample_video_no_audio, tmp_path):
+    """Spatial audio should fail clearly before FFmpeg pan filters when audio is absent."""
+    from mcp_video.ai_engine import audio_spatial
+
+    with pytest.raises(MCPVideoError, match="audio stream"):
+        audio_spatial(
+            sample_video_no_audio,
+            str(tmp_path / "out.mp4"),
+            [{"time": 0, "azimuth": 0, "elevation": 0}],
+        )
+
+
+def test_apply_simple_spatial_rejects_empty_positions(monkeypatch, tmp_path):
+    from mcp_video.ai_engine.spatial import _apply_simple_spatial
+
+    monkeypatch.setattr("mcp_video.ai_engine.spatial._get_video_duration", lambda _video: 1.0)
+
+    with pytest.raises(MCPVideoError, match="position"):
+        _apply_simple_spatial("input.mp4", str(tmp_path / "out.mp4"), [])
+
+
 # ---------------------------------------------------------------------------
 # ai_color_grade Tests
 # ---------------------------------------------------------------------------
