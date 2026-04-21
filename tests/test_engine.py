@@ -339,6 +339,29 @@ class TestProgressCallbacks:
         assert len(progress_values) > 0
         assert 100.0 in progress_values
 
+
+    def test_run_ffmpeg_with_progress_propagates_callback_failure(self, sample_video, tmp_path):
+        """Exceptions from progress callbacks must not disappear in stderr reader threads."""
+        from mcp_video.engine import _run_ffmpeg_with_progress
+
+        output = str(tmp_path / "callback_failure.mp4")
+        args = [
+            "-i",
+            sample_video,
+            "-t",
+            "1",
+            "-c",
+            "copy",
+            output,
+        ]
+
+        def fail_on_progress(pct):
+            raise RuntimeError(f"progress failed at {pct}")
+
+        with pytest.raises(RuntimeError, match="progress failed"):
+            _run_ffmpeg_with_progress(args, estimated_duration=1.0, on_progress=fail_on_progress)
+
+
     def test_convert_returns_progress_field(self, sample_video):
         """Verify that convert returns EditResult with progress=100.0."""
         result = convert(sample_video, format="webm")

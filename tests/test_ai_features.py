@@ -1307,6 +1307,28 @@ def test_resolve_video_source_local_passthrough():
     assert url is None
 
 
+
+
+def test_is_safe_url_restores_socket_default_timeout(monkeypatch):
+    """SSRF DNS lookup timeout must not clobber an embedding app's global socket default."""
+    import socket
+
+    from mcp_video.ai_engine.download import _is_safe_url
+
+    previous_timeout = socket.getdefaulttimeout()
+    socket.setdefaulttimeout(3.5)
+
+    def fake_getaddrinfo(*args, **kwargs):
+        return [(socket.AF_INET, socket.SOCK_STREAM, 0, "", ("93.184.216.34", 80))]
+
+    monkeypatch.setattr(socket, "getaddrinfo", fake_getaddrinfo)
+    try:
+        assert _is_safe_url("https://example.com/video.mp4") is True
+        assert socket.getdefaulttimeout() == 3.5
+    finally:
+        socket.setdefaulttimeout(previous_timeout)
+
+
 def test_resolve_video_source_platform_url_requires_ytdlp(monkeypatch):
     """Platform URLs raise RuntimeError when yt-dlp is not installed."""
     import builtins
