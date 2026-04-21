@@ -1243,6 +1243,18 @@ def fix_design_issues(video: str, output: str | None = None) -> str:
             temp = guardrails._auto_fix_saturation(video)
             video = temp
 
+        # Apply contrast fix if needed
+        contrast_issues = [i for i in report.issues if "contrast" in i.message.lower()]
+        if contrast_issues:
+            temp = guardrails._auto_fix_contrast(video)
+            video = temp
+
+        # Apply color cast fix if needed
+        color_cast_issues = [i for i in report.issues if "color cast" in i.message.lower() or "color_cast" in i.message.lower()]
+        if color_cast_issues:
+            temp = guardrails._auto_fix_color_cast(video)
+            video = temp
+
         # Apply audio fix if needed
         audio_issues = [i for i in report.issues if "audio" in i.message.lower() or "lufs" in i.message.lower()]
         if audio_issues:
