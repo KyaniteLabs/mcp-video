@@ -77,6 +77,10 @@ class TestClientMerge:
 
 
 class TestClientAddText:
+    def test_add_text_rejects_empty_text(self, editor):
+        with pytest.raises(MCPVideoError, match=r"[Tt]ext"):
+            editor.add_text("/tmp/nonexistent.mp4", text="   ")
+
     @requires_filter("drawtext", "Text overlay")
     def test_add_text_returns_edit_result(self, editor, sample_video):
         result = editor.add_text(sample_video, text="Hello")
@@ -373,3 +377,19 @@ class TestClientValidators:
                 with pytest.raises(Exception) as exc_info:
                     editor.convert("/nonexistent/video.mp4", format=fmt, quality=q)
                 assert not isinstance(exc_info.value, ValueError)
+
+
+class TestClientAudioComposeValidation:
+    def test_audio_compose_rejects_empty_tracks(self, editor):
+        with pytest.raises(MCPVideoError, match="tracks"):
+            editor.audio_compose([], duration=1.0, output="/tmp/out.wav")
+
+    def test_audio_compose_rejects_non_positive_duration(self, editor):
+        with pytest.raises(MCPVideoError, match="duration"):
+            editor.audio_compose([{"file": "/tmp/a.wav"}], duration=0, output="/tmp/out.wav")
+
+
+class TestClientTextAnimatedValidation:
+    def test_text_animated_rejects_empty_text(self, editor):
+        with pytest.raises(MCPVideoError, match=r"[Tt]ext"):
+            editor.text_animated("/tmp/video.mp4", "", "/tmp/out.mp4")

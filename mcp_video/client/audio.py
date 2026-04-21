@@ -129,6 +129,10 @@ class ClientAudioMixin:
         Returns:
             Path to generated WAV file
         """
+        if not tracks:
+            raise MCPVideoError("tracks cannot be empty", error_type="validation_error", code="empty_tracks")
+        if duration <= 0:
+            raise MCPVideoError("duration must be > 0", error_type="validation_error", code="invalid_parameter")
         from ..audio_engine import audio_compose
 
         return audio_compose(tracks=tracks, duration=duration, output=output)

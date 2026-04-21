@@ -14,11 +14,10 @@ The prior P0 security pass was largely completed: output path validation now exi
 
 The remaining risks are now concentrated in a smaller set of areas:
 
-1. **Output-directory/write-surface gaps outside the main FFmpeg engines** — especially batch `output_dir` and Remotion project scaffolding.
-2. **Residual SSRF DNS rebinding gap** — URL safety check and fetch still use separate resolutions.
-3. **AI/resource bounds** — Whisper/Demucs/AI scene/upscale paths still need model/duration/disk-space/timeout guards beyond subprocess timeouts.
-4. **Client API validation/contract consistency** — several client mixins still forward invalid inputs or return raw `str`/`dict` values.
-5. **Subprocess architecture cleanup** — many subprocess calls now have timeouts, but duplicated direct handling remains.
+1. **Residual SSRF DNS rebinding gap** — URL safety check and fetch still use separate resolutions.
+2. **AI/resource bounds** — Whisper/Demucs/AI scene/upscale paths still need model/duration/disk-space/timeout guards beyond subprocess timeouts.
+3. **Client API contract consistency** — client-side empty-input validation has improved, but return-type consistency remains.
+4. **Subprocess architecture cleanup** — many subprocess calls now have timeouts, but duplicated direct handling remains.
 
 ---
 
@@ -28,17 +27,17 @@ The remaining risks are now concentrated in a smaller set of areas:
 
 | ID | Status | Finding | Evidence | Recommended fix |
 |---|---|---|---|---|
-| C-P0-1 | Open | `engine_batch.video_batch()` creates caller-provided `output_dir` without `_validate_output_path()` or canonical policy check. | `mcp_video/engine_batch.py:39-45` validates each input path, then calls `os.makedirs(output_dir, exist_ok=True)` directly. | Validate `output_dir` once before the loop, return/use the validated directory, and add regression tests for null bytes and unsafe paths. |
-| C-P0-2 | Open | Remotion project scaffolding writes arbitrary project files under caller-provided `output_dir` + `name` without output-path validation. | `mcp_video/remotion_engine.py:479-500` builds `project_dir = Path(output_dir) / name`, creates it, and writes `package.json`; `mcp_video/remotion_engine.py:647-659` writes generated composition files. | Add a Remotion-specific output/project path validator; reject null bytes, unsafe names, and unintended traversal before mkdir/write_text. |
+| C-P0-1 | Closed in follow-up branch | `engine_batch.video_batch()` previously created caller-provided `output_dir` without `_validate_output_path()` or canonical policy check. | Follow-up remediation validates `output_dir` before `os.makedirs()` and adds a null-byte regression test. | Keep regression coverage around batch output directories. |
+| C-P0-2 | Closed in follow-up branch | Remotion project scaffolding previously wrote project files under caller-provided `output_dir` + `name` without output-path validation. | Follow-up remediation validates `output_dir`, validates final `project_dir`, rejects unsafe project names, and adds engine-boundary tests. | Keep Remotion name/output validation in engine and server layers. |
 | C-P0-3 | Partial | SSRF protection still has a DNS rebinding gap: `_is_safe_url()` resolves/checks the host, but the actual `urlopen()` call can resolve again. | `_is_safe_url()` performs `socket.getaddrinfo()` at `mcp_video/ai_engine/download.py:30-53`; `_download_direct_url()` later calls `urllib.request.urlopen(req, timeout=120)` at `mcp_video/ai_engine/download.py:116-148`. | Fetch using the validated IP address with Host/SNI handling where possible, or re-check the connected peer address after connect before reading response bytes. |
 
 ### P1 / next reliability sprint
 
 | ID | Status | Finding | Evidence | Recommended fix |
 |---|---|---|---|---|
-| C-P1-1 | Open | Client `audio_compose()` still forwards empty `tracks` and non-positive `duration` to the engine. | `mcp_video/client/audio.py:110-134` imports and calls `audio_compose()` without local guards. | Add `tracks` non-empty and `duration > 0` validation with `MCPVideoError`; add client tests. |
-| C-P1-2 | Open | Client `add_text()` does not reject empty text before delegating to FFmpeg-backed engine. | `mcp_video/client/media.py:88-117` forwards `text` directly to `_add_text()`. | Add empty/whitespace text validation and tests. |
-| C-P1-3 | Open | Client `text_animated()` does not reject empty text. | `mcp_video/client/effects.py:154-170` forwards `text` directly to `effects_engine.text_animated()`. | Add empty/whitespace text validation and tests. |
+| C-P1-1 | Closed in follow-up branch | Client `audio_compose()` previously forwarded empty `tracks` and non-positive `duration` to the engine. | Follow-up remediation adds `tracks` and `duration > 0` validation with client tests. | Keep client-side validation aligned with engine semantics. |
+| C-P1-2 | Closed in follow-up branch | Client `add_text()` previously relied on deeper engine validation for empty text. | Follow-up remediation adds client-side empty/whitespace text validation before path/FFmpeg work. | Keep client validation fast and explicit. |
+| C-P1-3 | Closed in follow-up branch | Client `text_animated()` previously forwarded empty text to FFmpeg-backed implementation. | Follow-up remediation adds client-side empty/whitespace text validation with tests. | Keep client validation fast and explicit. |
 | C-P1-4 | Open | Demucs separation itself has no explicit timeout even though the preliminary FFmpeg extraction has one. | `mcp_video/ai_engine/stem.py:94-115` times out FFmpeg extraction, then calls `demucs.separate.main(demucs_args)` directly. | Execute Demucs through a timeout-capable subprocess or cancellable worker; surface timeout as `ProcessingError`. |
 | C-P1-5 | Open | Whisper model/duration/RAM guard remains incomplete. | `mcp_video/ai_engine/transcribe.py:94-102` loads arbitrary `model` and transcribes extracted audio without validating model name or bounding media duration. | Add allowlist/model validation, duration checks before extraction/transcription, and clearer dependency/resource errors. |
 | C-P1-6 | Open | AI scene detection still lacks AI-mode threshold validation and can extract many frames for long videos. | `mcp_video/ai_engine/scene.py:24-49` only routes standard mode through `_standard_scene_detect()`; AI mode proceeds without threshold validation. `mcp_video/ai_engine/scene.py:64-83` extracts frames every 0.5s until FFmpeg timeout. | Validate threshold before mode branching; add duration/frame-count cap or adaptive sampling. |
@@ -67,7 +66,7 @@ Legend:
 
 | Old # | Prior issue | Current status | Notes / evidence |
 |---:|---|---|---|
-| 1 | Arbitrary file overwrite via unvalidated `output_path` | Partial | `_validate_output_path()` exists and is widely called (`mcp_video/ffmpeg_helpers.py:36-54`; many engine call sites), but batch/remotion write surfaces remain open as C-P0-1/C-P0-2. |
+| 1 | Arbitrary file overwrite via unvalidated `output_path` | Mostly closed | `_validate_output_path()` exists and is widely called (`mcp_video/ffmpeg_helpers.py:36-54`; many engine call sites). Follow-up remediation closes the known batch/remotion write-surface gaps. |
 | 2 | Arbitrary file writes in AI engine | Mostly closed | AI/transcribe/stem/audio output paths now call `_validate_output_path()` in observed write paths (`mcp_video/ai_engine/transcribe.py:105-108`, `mcp_video/ai_engine/stem.py:69-72`, `mcp_video/audio_engine/core.py:299-300`). Remotion project writes remain separate C-P0-2. |
 | 3 | Unescaped numeric values in FFmpeg filter strings | Mostly closed | Current code uses `_sanitize_ffmpeg_number()` and/or `_escape_ffmpeg_filter_value()` in affected engine paths, e.g. `mcp_video/effects_engine/core.py:37-40`, `mcp_video/engine_fade.py:29-35`, `mcp_video/engine_timeline.py:189-228`. Keep future regression tests. |
 | 4 | `_validate_input_path` resolved path discarded | Mostly closed | Many core engine paths now assign returned values, e.g. merge `mcp_video/engine_merge.py:45-66`, audio ops `mcp_video/engine_audio_ops.py:29-30`. Some server helpers still validate list members without assignment; lower risk if engines revalidate. |
@@ -86,7 +85,7 @@ Legend:
 | 17 | ai_color_grade missing reference/FFmpeg errors | Closed | Reference path is validated (`mcp_video/ai_engine/color.py:65-69`) and reference analysis catches `ProcessingError` for neutral fallback (`mcp_video/ai_engine/color.py:203-205`). |
 | 18 | Inconsistent client mixin return types | Open | See C-P2-4. |
 | 19 | Missing client-side bounds/enum validation | Partial | Some media/remotion validations were added; remaining client gaps are C-P1-1 through C-P1-3. |
-| 20 | Empty list/string client edge cases | Partial | `merge([])` and `audio_sequence([])` are handled (`mcp_video/client/media.py:84-86`, `mcp_video/client/audio.py:104-108`), but text/audio_compose gaps remain. |
+| 20 | Empty list/string client edge cases | Mostly closed | `merge([])`, `audio_sequence([])`, `add_text("")`, `text_animated("")`, and invalid `audio_compose()` inputs are covered after follow-up remediation. |
 | 21 | Demucs runs without timeout | Open | See C-P1-4. |
 | 22 | Whisper model/RAM guard | Open | See C-P1-5. |
 | 23 | AI scene threshold validation | Open | See C-P1-6. |
@@ -95,7 +94,7 @@ Legend:
 | 26 | Dead `_validate_input` | Closed | No `def _validate_input` remains in `mcp_video/engine_runtime_utils.py`. |
 | 27 | Hardcoded timeout messages | Mostly closed | `"600 seconds"` no longer appears in `mcp_video`; remaining hardcoded timeout literals in non-FFmpeg contexts should be separately reviewed. |
 | 28 | Concat demuxer path escaping | Partial | Merge path uses escaping; AI spatial/silence concat behavior needs targeted tests. |
-| 29 | Unvalidated batch `output_dir` | Open | See C-P0-1. |
+| 29 | Unvalidated batch `output_dir` | Closed in follow-up branch | See C-P0-1. |
 | 30 | Lazy imports return generic optional-dep errors | Open | See C-P2-5. |
 | 31 | Missing remotion return type annotations | Mostly closed | `remotion_render()` and `remotion_to_mcpvideo()` now annotate `-> dict`; exact result type remains broad (`mcp_video/client/remotion.py:11-25`, `mcp_video/client/remotion.py:117-139`). |
 | 32 | Lazy imports in client effects/audio | Open | Still present in `mcp_video/client/audio.py` and `mcp_video/client/effects.py`; classify as low-risk style debt. |
@@ -115,15 +114,15 @@ Legend:
 
 ## Recommended next implementation bundle
 
-Smallest high-value bundle:
-
-1. Validate `engine_batch.output_dir` and Remotion project output paths.
-2. Add client validation for `add_text`, `text_animated`, and `audio_compose`.
-3. Add regression tests for those five cases.
-
-Second bundle:
+Next high-value bundle after this follow-up branch:
 
 1. Fix SSRF DNS rebinding gap in direct URL download.
 2. Add Whisper/Demucs/AI-scene resource guards.
 3. Add targeted tests around optional dependency and resource-bound behavior.
+
+Subsequent cleanup bundle:
+
+1. Standardize client return contracts or document intentional exceptions.
+2. Gradually route direct FFmpeg/ffprobe subprocess handling through canonical helpers.
+3. Re-audit AI upscaling disk/temp-frame resource guards.
 
