@@ -84,7 +84,7 @@ def _validate_entries(entries: list[dict]) -> None:
 
 def _write_srt(entries: list[dict], input_path: str, output_path: str | None) -> str:
     if output_path:
-        if os.path.isdir(output_path):
+        if os.path.isdir(output_path) or output_path.endswith(os.sep):
             srt_dir = output_path
             srt_file = os.path.join(srt_dir, "subtitles.srt")
         else:

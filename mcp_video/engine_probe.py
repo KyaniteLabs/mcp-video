@@ -23,17 +23,23 @@ def _cache_key(path: str) -> tuple[str, float, int]:
     return (path, stat.st_mtime, stat.st_size)
 
 
+def _parse_probe_duration(value: object) -> float | None:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def _build_video_info(path: str, data: dict) -> VideoInfo:
     """Construct a VideoInfo from raw ffprobe JSON data."""
     vs = _get_video_stream(data)
     if vs is None:
         raise InputFileError(path, "No video stream found")
 
-    # Duration
-    try:
-        duration = float(data.get("format", {}).get("duration", 0) or vs.get("duration", 0))
-    except (ValueError, TypeError):
-        duration = 0.0
+    # Duration: prefer container duration, then fall back to the video stream.
+    duration = _parse_probe_duration(data.get("format", {}).get("duration"))
+    if duration is None:
+        duration = _parse_probe_duration(vs.get("duration")) or 0.0
     if duration > MAX_VIDEO_DURATION:
         raise MCPVideoError(
             f"Video duration ({duration:.0f}s) exceeds maximum of {MAX_VIDEO_DURATION}s",
