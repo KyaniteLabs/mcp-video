@@ -56,7 +56,9 @@ def fetch_open_prs(owner: str, repo: str, limit: int) -> list[dict[str, Any]]:
     return _request_json(_repo_url(owner, repo, f"/pulls?state=open&per_page={limit}"))
 
 
-def fetch_pr_activity(owner: str, repo: str, pr_number: int) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
+def fetch_pr_activity(
+    owner: str, repo: str, pr_number: int
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
     issue_comments = _request_json(_repo_url(owner, repo, f"/issues/{pr_number}/comments?per_page=100"))
     review_comments = _request_json(_repo_url(owner, repo, f"/pulls/{pr_number}/comments?per_page=100"))
     reviews = _request_json(_repo_url(owner, repo, f"/pulls/{pr_number}/reviews?per_page=100"))
@@ -77,7 +79,11 @@ def print_ci_summary(runs: list[dict[str, Any]]) -> None:
         conclusion = run.get("conclusion", "-")
         url = run.get("html_url", "")
 
-        icon = "✅" if conclusion == "success" else ("❌" if conclusion in {"failure", "cancelled", "timed_out", "action_required"} else "⚠️")
+        icon = (
+            "✅"
+            if conclusion == "success"
+            else ("❌" if conclusion in {"failure", "cancelled", "timed_out", "action_required"} else "⚠️")
+        )
         print(f"{icon} {name} | branch={branch} | event={event} | status={status} | conclusion={conclusion}")
         print(f"   {url}")
 

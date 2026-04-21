@@ -287,13 +287,10 @@ def main() -> int:
         path = ROOT / relative_path
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
         definitions = [
-            node.name for node in tree.body
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+            node.name for node in tree.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
         ]
         if definitions:
-            failures.append(
-                f"{relative_path} should re-export/import behavior, not define {definitions}"
-            )
+            failures.append(f"{relative_path} should re-export/import behavior, not define {definitions}")
             print(f"FAIL {relative_path} defines {definitions}")
         else:
             print(f"PASS {relative_path} is a pure facade")

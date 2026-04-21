@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from .defaults import DEFAULT_AUDIO_BITRATE
+from .defaults import DEFAULT_AUDIO_BITRATE, DEFAULT_CRF, DEFAULT_PRESET
 from .ffmpeg_helpers import _validate_input_path
 from .engine_probe import probe
 from .engine_runtime_utils import _auto_output, _movflags_args, _run_ffmpeg, _timed_operation
@@ -105,9 +105,9 @@ def trim(
             "-c:v",
             "libx264",
             "-preset",
-            "fast",
+            DEFAULT_PRESET,
             "-crf",
-            "23",
+            str(DEFAULT_CRF),
             "-c:a",
             "aac",
             "-b:a",

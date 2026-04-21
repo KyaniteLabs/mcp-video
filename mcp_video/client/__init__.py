@@ -1,0 +1,33 @@
+"""mcp-video Python client — clean API for programmatic video editing."""
+
+from __future__ import annotations
+
+from .base import ClientBase
+from .media import ClientMediaMixin
+from .effects import ClientEffectsMixin
+from .audio import ClientAudioMixin
+from .ai import ClientAiMixin
+from .remotion import ClientRemotionMixin
+from .image import ClientImageMixin
+from .quality import ClientQualityMixin
+
+
+class Client(
+    ClientBase,
+    ClientMediaMixin,
+    ClientEffectsMixin,
+    ClientAudioMixin,
+    ClientAiMixin,
+    ClientRemotionMixin,
+    ClientImageMixin,
+    ClientQualityMixin,
+):
+    """mcp-video client for programmatic video editing.
+
+    Usage:
+        from mcp_video import Client
+        editor = Client()
+
+        result = editor.trim("input.mp4", start="00:00:30", duration="00:00:15")
+        print(result.output_path)
+    """

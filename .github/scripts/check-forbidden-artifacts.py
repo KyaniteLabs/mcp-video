@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import subprocess
-import sys
 
 FORBIDDEN_PREFIXES = (
     ".playwright-mcp/",
@@ -26,11 +25,7 @@ def main() -> int:
         text=True,
     )
     tracked = [line.strip() for line in proc.stdout.splitlines() if line.strip()]
-    offenders = [
-        path
-        for path in tracked
-        if path in FORBIDDEN_EXACT or path.startswith(FORBIDDEN_PREFIXES)
-    ]
+    offenders = [path for path in tracked if path in FORBIDDEN_EXACT or path.startswith(FORBIDDEN_PREFIXES)]
 
     if not offenders:
         print("No forbidden tracked artifacts found.")

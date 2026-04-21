@@ -10,7 +10,6 @@ Usage:
 The script chains multiple operations and prints results at each step.
 """
 
-import json
 import os
 import sys
 import time
@@ -23,9 +22,9 @@ from mcp_video import Client
 
 
 def divider(title: str):
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"  {title}")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
 
 
 def step(n: int, description: str):
@@ -170,8 +169,9 @@ def main():
     divider("TEMPLATE WORKFLOW")
     step(14, "Using TikTok template...")
     from mcp_video.templates import tiktok_template
+
     timeline = tiktok_template(trimmed.output_path, caption="Built with mcp-video")
-    print(f"  Template: TikTok (1080x1920)")
+    print("  Template: TikTok (1080x1920)")
     print(f"  Tracks: {len(timeline['tracks'])} ({', '.join(t['type'] for t in timeline['tracks'])})")
     print(f"  Export: {timeline['export']['format']} / {timeline['export']['quality']}")
 
@@ -184,14 +184,14 @@ def main():
     # ─── Summary ──────────────────────────────────────────────────
     total_time = time.time() - total_start
     divider("SUMMARY")
-    print(f"  Operations completed: 14")
+    print("  Operations completed: 14")
     print(f"  Total time: {total_time:.1f}s")
     print(f"  Input:  {os.path.basename(video)}")
-    print(f"  Outputs:")
+    print("  Outputs:")
     print(f"    Trimmed clip ({trimmed.resolution})")
     print(f"    Preview ({prev_info.resolution})")
     print(f"    Storyboard ({sb.count} frames)")
-    print(f"    Thumbnail")
+    print("    Thumbnail")
     print(f"    Slow-mo (0.5x, {slow_info.duration:.1f}s)")
     print(f"    WebM ({webm_size:.1f} MB)")
     print(f"    GIF ({gif_size:.1f} MB)")
