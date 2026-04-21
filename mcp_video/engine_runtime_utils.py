@@ -18,7 +18,6 @@ from typing import Any
 from .errors import (
     FFmpegNotFoundError,
     FFprobeNotFoundError,
-    InputFileError,
     MCPVideoError,
     ProcessingError,
     parse_ffmpeg_error,
