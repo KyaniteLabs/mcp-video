@@ -63,6 +63,9 @@ def ai_color_grade(
 
     # If reference provided, analyze and adjust to match
     if reference:
+        from ..ffmpeg_helpers import _validate_input_path
+
+        _validate_input_path(reference)
         params = _match_reference_colors(video, reference)
 
     # Build FFmpeg filter chain
@@ -134,11 +137,13 @@ def _match_reference_colors(video: str, reference: str) -> dict:
 
     def extract_mean_color(video_path: str) -> dict:
         """Extract mean RGB values from video using signalstats filter."""
-        cmd = ["ffmpeg", "-i", video_path, "-vf", "signalstats=out=JSON:stat=tout+vrep+brng", "-f", "null", "-"]
+        cmd = ["ffmpeg", "-i", video_path, "-vf", "signalstats", "-f", "null", "-"]
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=DEFAULT_FFMPEG_TIMEOUT)
         except subprocess.TimeoutExpired:
             raise ProcessingError(f"Operation timed out after {DEFAULT_FFMPEG_TIMEOUT}s") from None
+        if result.returncode != 0:
+            raise ProcessingError(" ".join(cmd), result.returncode, result.stderr)
 
         # Default values if extraction fails
         mean_rgb = {"r": 128, "g": 128, "b": 128}
@@ -195,7 +200,7 @@ def _match_reference_colors(video: str, reference: str) -> dict:
             "green": green_adj,
             "blue": blue_adj,
         }
-    except (subprocess.SubprocessError, ValueError, OSError):
+    except (subprocess.SubprocessError, ProcessingError, ValueError, OSError):
         # Fall back to neutral params if analysis fails
         return {"contrast": 1.0, "saturation": 1.0, "gamma": 1.0, "red": 1.0, "green": 1.0, "blue": 1.0}
 

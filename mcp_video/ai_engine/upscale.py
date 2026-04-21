@@ -311,7 +311,7 @@ def ai_upscale(
             scale=scale,
             model_path=None,  # Auto-download
             model=rrdb_net,
-            tile=0,  # No tiling - process whole image
+            tile=256,  # Process in 256x256 tiles to limit memory usage
             tile_pad=10,
             pre_pad=0,
             half=False,  # Use FP32
