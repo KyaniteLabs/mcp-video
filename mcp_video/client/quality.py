@@ -1,0 +1,85 @@
+"""mcp-video Python client — clean API for programmatic video editing."""
+
+from __future__ import annotations
+
+from typing import Any
+
+
+
+
+
+class ClientQualityMixin:
+    """Quality operations mixin."""
+
+    def quality_check(self, video: str, fail_on_warning: bool = False) -> dict:
+        """Run visual quality guardrails on a video.
+
+        Args:
+            video: Video file path
+            fail_on_warning: Treat warnings as failures
+
+        Returns:
+            dict with keys:
+                - video (str): input path
+                - overall_score (float): 0-100 average across all checks
+                - all_passed (bool): True if every check passed
+                - checks (list[dict]): per-check results with name, passed, score, message, details
+                - recommendations (list[str]): improvement suggestions
+        """
+        from ..quality_guardrails import quality_check
+
+        return quality_check(video, fail_on_warning)
+
+    def design_quality_check(
+        self,
+        video: str,
+        auto_fix: bool = False,
+        strict: bool = False,
+    ) -> Any:  # DesignQualityReport
+        """Run comprehensive design quality analysis.
+
+        Checks layout, typography, color, motion, and composition.
+        Can automatically fix issues where possible.
+
+        Args:
+            video: Video file path
+            auto_fix: If True, automatically apply fixes to the video file.
+                WARNING: This modifies the input video directly (overwrites in place).
+                Use fix_design_issues() with a separate output path for non-destructive fixes.
+            strict: If True, treat warnings as errors
+
+        Returns:
+            DesignQualityReport with fields:
+                - overall_score (float): 0-100
+                - technical_score (float): brightness, contrast, audio
+                - design_score (float): layout, typography, color, motion
+                - hierarchy_score (float): text size ratios
+                - motion_score (float): fps, smoothness
+                - issues (list[DesignIssue]): categorized issues with severity (error/warning/info)
+                - fixes_applied (list[str]): descriptions of auto-applied fixes
+                - recommendations (list[str]): improvement suggestions
+        """
+        from ..design_quality import design_quality_check
+
+        return design_quality_check(video, auto_fix=auto_fix, strict=strict)
+
+    def fix_design_issues(
+        self,
+        video: str,
+        output: str | None = None,
+    ) -> str:
+        """Auto-fix design issues in a video.
+
+        Args:
+            video: Input video path
+            output: Output path (auto-generated if None)
+
+        Returns:
+            Path to fixed video
+        """
+        from ..design_quality import fix_design_issues
+
+        return fix_design_issues(video, output=output)
+
+
+# Fix the circular import for resize
