@@ -203,6 +203,19 @@ def apply_lowpass(samples: list[float], cutoff: float, sample_rate: int = DEFAUL
     return result
 
 
+def apply_highpass(samples: list[float], cutoff: float, sample_rate: int = DEFAULT_SAMPLE_RATE) -> list[float]:
+    """Simple highpass filter."""
+    rc = 1.0 / (2 * math.pi * cutoff)
+    dt = 1.0 / sample_rate
+    alpha = rc / (rc + dt)
+
+    result = [samples[0]]
+    for i in range(1, len(samples)):
+        result.append(alpha * (result[-1] + samples[i] - samples[i - 1]))
+
+    return result
+
+
 def apply_reverb(
     samples: list[float],
     room_size: float = 0.5,
@@ -797,6 +810,10 @@ def audio_effects(
                 # Simple linear normalization (LUFS would require more complex analysis)
                 gain = 0.5 / max_val  # Approximate -6dB as baseline
                 samples = [s * gain for s in samples]
+
+        elif effect_type == "highpass":
+            cutoff = effect.get("frequency", 200)
+            samples = apply_highpass(samples, cutoff, sample_rate)
 
         elif effect_type == "fade":
             fade_in = effect.get("fade_in", 0)
