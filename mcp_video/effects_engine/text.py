@@ -76,9 +76,18 @@ def text_animated(
         pos = pos.replace("(h-text_h)/2", f"(h-text_h)/2{y_offset}")
         alpha_expr = "1"
     elif animation == "typewriter":
-        # Reveal characters over time
-        char_rate = max(1, int(len(text) / max(1, duration * 10)))
-        alpha_expr = f"if(lt(n*{char_rate},t*10),1,0)"
+        # True per-character reveal requires multiple drawtext filters with
+        # staggered enable times (one per character) — too expensive for
+        # arbitrary-length text. Using rapid linear fade-in as approximation:
+        # text appears quickly (like a typewriter keystroke burst) then
+        # stays visible. Distinct from "fade" which has slow in + slow out.
+        # TODO: Implement proper typewriter via overlay clipping mask.
+        reveal_duration = min(1.5, duration * 0.5)
+        alpha_expr = (
+            f"if(lt(t,{start}),0,"
+            f"if(lt(t,{start}+{reveal_duration}),"
+            f"(t-{start})/{reveal_duration},1))"
+        )
     elif animation == "glitch":
         # Random glitch opacity
         alpha_expr = "if(random(0)*lt(mod(t,0.2),0.1),0.8,1)"
