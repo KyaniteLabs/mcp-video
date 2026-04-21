@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import json
+import logging
 import sys
+
+logger = logging.getLogger(__name__)
 
 from .cli.handlers_advanced import handle_advanced_commands
 from .cli.handlers_ai import handle_ai_commands
@@ -69,7 +72,8 @@ def main() -> None:
             if isinstance(e, MCPVideoError):
                 try:
                     err_data = e.to_dict()
-                except Exception:
+                except Exception as exc:
+                    logger.warning("MCPVideoError.to_dict() failed: %s", exc)
                     err_data = {"type": "internal_error", "code": "to_dict_failed", "message": str(e)}
                 print(json.dumps({"success": False, "error": err_data}, indent=2), file=sys.stderr)
             else:

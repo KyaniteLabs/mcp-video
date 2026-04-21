@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import logging
 import math
 import os
 import re
@@ -13,6 +14,8 @@ import time
 from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 from .errors import (
     FFmpegNotFoundError,
@@ -458,7 +461,8 @@ def _generate_thumbnail_base64(video_path: str) -> str | None:
         with open(tmp_path, "rb") as f:
             data = f.read()
         return base64.b64encode(data).decode("ascii")
-    except Exception:
+    except Exception as exc:
+        logger.warning("Thumbnail generation failed: %s", exc)
         return None
     finally:
         if tmp_path and os.path.isfile(tmp_path):
