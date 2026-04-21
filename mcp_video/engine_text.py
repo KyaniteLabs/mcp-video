@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-import os
 
 from .engine_probe import probe
-from .errors import InputFileError, MCPVideoError
+from .errors import MCPVideoError
 from .engine_runtime_utils import (
     _auto_output,
     _default_font,

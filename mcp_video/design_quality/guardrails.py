@@ -18,7 +18,6 @@ from typing import ClassVar
 from ..defaults import DEFAULT_FFMPEG_TIMEOUT
 from ..errors import ProcessingError
 from ..ffmpeg_helpers import _escape_ffmpeg_filter_value, _validate_input_path
-from ..engine_runtime_utils import _auto_output
 from .models import DesignIssue, DesignQualityReport
 
 logger = logging.getLogger(__name__)
