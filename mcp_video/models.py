@@ -6,7 +6,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-from .defaults import DEFAULT_CRF, DEFAULT_PRESET
+from .defaults import DEFAULT_CRF
 
 
 # --- Video metadata ---

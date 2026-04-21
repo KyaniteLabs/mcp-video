@@ -5,19 +5,18 @@ Pure NumPy-based audio generation with no external dependencies.
 
 from __future__ import annotations
 
-import math
-import os
-import struct
+import tempfile
 import wave
-from typing import Any, Literal
+from pathlib import Path
+from typing import Any
 
-from ..errors import InputFileError, MCPVideoError, ProcessingError
+from ..errors import MCPVideoError
 
 from .core import (
     _float_to_pcm,
     _pcm_to_float,
-    apply_envelope,
     apply_fade,
+    apply_highpass,
     apply_lowpass,
     apply_reverb,
     generate_noise,
@@ -27,6 +26,7 @@ from .core import (
     generate_triangle,
     write_wav,
 )
+from .synthesis import audio_preset
 
 # ---------------------------------------------------------------------------
 # Audio Constants

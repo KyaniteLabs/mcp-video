@@ -5,15 +5,9 @@ Pure NumPy-based audio generation with no external dependencies.
 
 from __future__ import annotations
 
-import math
-import os
-import struct
-import tempfile
-import wave
 from typing import Any, Literal
 
-from ..defaults import DEFAULT_FFMPEG_TIMEOUT
-from ..errors import InputFileError, MCPVideoError, ProcessingError
+from ..errors import MCPVideoError
 
 from .core import (
     _float_to_pcm,

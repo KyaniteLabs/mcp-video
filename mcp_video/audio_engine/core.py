@@ -6,12 +6,9 @@ Pure NumPy-based audio generation with no external dependencies.
 from __future__ import annotations
 
 import math
-import os
 import struct
 import wave
-from typing import Any, Literal
 
-from ..errors import InputFileError, MCPVideoError, ProcessingError
 
 # ---------------------------------------------------------------------------
 # Audio Constants
@@ -27,16 +24,7 @@ Pure NumPy-based audio generation with no external dependencies.
 """
 
 
-import math
-import os
-import struct
-import tempfile
-import wave
-from pathlib import Path
-from typing import Any, Literal
 
-from ..defaults import DEFAULT_FFMPEG_TIMEOUT
-from ..errors import InputFileError, MCPVideoError, ProcessingError
 
 # ---------------------------------------------------------------------------
 # Audio Constants

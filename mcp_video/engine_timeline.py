@@ -20,7 +20,6 @@ from .engine_runtime_utils import (
     _quality_args,
     _run_ffmpeg,
     _validate_color,
-    _validate_input,
 )
 from .errors import MCPVideoError
 from .ffmpeg_helpers import _escape_ffmpeg_filter_value, _validate_input_path

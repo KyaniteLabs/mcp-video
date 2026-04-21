@@ -7,38 +7,11 @@ from __future__ import annotations
 
 import logging
 import math
-import os
-import subprocess
-import tempfile
-from pathlib import Path
-from typing import Any
 
-from ..errors import MCPVideoError, ProcessingError, InputFileError
-from ..ffmpeg_helpers import _validate_input_path, _run_ffmpeg, _escape_ffmpeg_filter_value
+from ..errors import ProcessingError
+from ..ffmpeg_helpers import _validate_input_path, _run_ffmpeg
 
 logger = logging.getLogger(__name__)
-"""Video effects and filters engine.
-
-Visual effects using FFmpeg filters and PIL for custom processing.
-"""
-
-
-import logging
-import math
-import os
-import subprocess
-import tempfile
-from pathlib import Path
-from typing import Any
-
-from ..errors import MCPVideoError, ProcessingError, InputFileError
-from ..ffmpeg_helpers import _validate_input_path, _run_ffmpeg, _escape_ffmpeg_filter_value
-
-
-# ---------------------------------------------------------------------------
-# FFmpeg-based Effects
-# ---------------------------------------------------------------------------
-
 
 def effect_vignette(
     input_path: str,

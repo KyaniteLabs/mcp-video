@@ -7,19 +7,11 @@ Includes auto-fix capabilities.
 
 from __future__ import annotations
 
-import contextlib
-import json
 import logging
-import os
-import subprocess
-import tempfile
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import ClassVar, Literal
+from typing import Literal
 
-from ..defaults import DEFAULT_FFMPEG_TIMEOUT
-from ..errors import ProcessingError
-from ..ffmpeg_helpers import _escape_ffmpeg_filter_value, _validate_input_path
 
 logger = logging.getLogger(__name__)
 

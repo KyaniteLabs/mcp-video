@@ -13,13 +13,12 @@ import logging
 import os
 import subprocess
 import tempfile
-from collections.abc import Callable
-from dataclasses import dataclass, field
-from typing import ClassVar, Literal
+from typing import ClassVar
 
 from ..defaults import DEFAULT_FFMPEG_TIMEOUT
 from ..errors import ProcessingError
-from ..ffmpeg_helpers import _escape_ffmpeg_filter_value, _validate_input_path
+from ..ffmpeg_helpers import _escape_ffmpeg_filter_value
+from .models import DesignIssue, DesignQualityReport
 
 logger = logging.getLogger(__name__)
 class DesignQualityGuardrails:
@@ -686,7 +685,6 @@ class DesignQualityGuardrails:
 
         Uses edge detection and region analysis to estimate text presence.
         """
-        import os
 
         # Extract frame securely
         with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp_file:

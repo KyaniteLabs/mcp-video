@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from ..ffmpeg_helpers import _validate_input_path
-from .guardrails import DesignQualityGuardrails
-from .models import DesignIssue, DesignQualityReport
+from ..ffmpeg_helpers import _validate_input_path as _validate_input_path
+from .guardrails import DesignQualityGuardrails as DesignQualityGuardrails
+from .models import DesignIssue as DesignIssue, DesignQualityReport as DesignQualityReport
 
 
 def design_quality_check(

@@ -5,41 +5,32 @@ Pure NumPy-based audio generation with no external dependencies.
 
 from __future__ import annotations
 
-import math
+# Re-exports for backward compatibility
+from .core import (
+    apply_envelope as apply_envelope,
+    apply_fade as apply_fade,
+    apply_highpass as apply_highpass,
+    apply_lowpass as apply_lowpass,
+    apply_reverb as apply_reverb,
+    generate_noise as generate_noise,
+    generate_sawtooth as generate_sawtooth,
+    generate_sine as generate_sine,
+    generate_square as generate_square,
+    generate_triangle as generate_triangle,
+    write_wav as write_wav,
+)
+from .sequencing import audio_compose as audio_compose, audio_effects as audio_effects, audio_sequence as audio_sequence
+from .synthesis import audio_preset as audio_preset, audio_synthesize as audio_synthesize
+
+# This is defined in __init__.py itself to avoid circular imports
+# add_generated_audio is re-exported at module level below
+
 import os
-import struct
-import tempfile
-import wave
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any
 
 from ..defaults import DEFAULT_FFMPEG_TIMEOUT
 from ..errors import InputFileError, MCPVideoError, ProcessingError
-
-# ---------------------------------------------------------------------------
-# Audio Constants
-# ---------------------------------------------------------------------------
-
-DEFAULT_SAMPLE_RATE = 44100
-DEFAULT_CHANNELS = 1
-DEFAULT_SAMPLE_WIDTH = 2  # 16-bit
-
-# Re-exports for backward compatibility
-from .core import (
-    apply_envelope,
-    apply_fade,
-    apply_highpass,
-    apply_lowpass,
-    apply_reverb,
-    generate_noise,
-    generate_sawtooth,
-    generate_sine,
-    generate_square,
-    generate_triangle,
-    write_wav,
-)
-from .sequencing import audio_compose, audio_effects, audio_sequence
-from .synthesis import audio_preset, audio_synthesize
 
 def add_generated_audio(
     video: str,
