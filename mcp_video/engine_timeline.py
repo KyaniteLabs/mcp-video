@@ -19,6 +19,7 @@ from .engine_runtime_utils import (
     _position_coords,
     _quality_args,
     _run_ffmpeg,
+    _sanitize_ffmpeg_number,
     _validate_color,
 )
 from .errors import MCPVideoError
@@ -184,11 +185,15 @@ def _image_enable_expression(img: TimelineImageOverlay) -> str:
     parts = []
     if img.start is not None and img.duration is not None:
         end = img.start + img.duration
-        parts.append(f"between(t,{img.start},{end})")
+        safe_start = _escape_ffmpeg_filter_value(str(_sanitize_ffmpeg_number(img.start, "img.start")))
+        safe_end = _escape_ffmpeg_filter_value(str(_sanitize_ffmpeg_number(end, "end")))
+        parts.append(f"between(t,{safe_start},{safe_end})")
     elif img.start is not None:
-        parts.append(f"gte(t,{img.start})")
+        safe_start = _escape_ffmpeg_filter_value(str(_sanitize_ffmpeg_number(img.start, "img.start")))
+        parts.append(f"gte(t,{safe_start})")
     elif img.duration is not None:
-        parts.append(f"lte(t,{img.duration})")
+        safe_dur = _escape_ffmpeg_filter_value(str(_sanitize_ffmpeg_number(img.duration, "img.duration")))
+        parts.append(f"lte(t,{safe_dur})")
     return f":enable='{parts[0]}'"
 
 
@@ -213,9 +218,12 @@ def _drawtext_filter(elem, width: int, height: int) -> str:
         drawtext_parts.append("shadowx=2")
         drawtext_parts.append("shadowy=2")
     if elem.start is not None and elem.duration is not None:
-        drawtext_parts.append(f"enable='between(t\\,{elem.start}\\,{elem.start + elem.duration})'")
+        safe_start = _escape_ffmpeg_filter_value(str(_sanitize_ffmpeg_number(elem.start, "elem.start")))
+        safe_end = _escape_ffmpeg_filter_value(str(_sanitize_ffmpeg_number(elem.start + elem.duration, "elem.start + elem.duration")))
+        drawtext_parts.append(f"enable='between(t\\,{safe_start}\\,{safe_end})'")
     elif elem.start is not None:
-        drawtext_parts.append(f"enable='gte(t\\,{elem.start})'")
+        safe_start = _escape_ffmpeg_filter_value(str(_sanitize_ffmpeg_number(elem.start, "elem.start")))
+        drawtext_parts.append(f"enable='gte(t\\,{safe_start})'")
     return ":".join(drawtext_parts)
 
 

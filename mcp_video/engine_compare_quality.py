@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import re
 import subprocess
 
@@ -48,6 +49,7 @@ def compare_quality(
         except Exception as e:
             if isinstance(e, ProcessingError):
                 raise
+            logging.warning("Quality metric %s failed: %s", metric_lower, e)
             raise ProcessingError(
                 _metric_command_label(original_path, distorted_path, metric_lower),
                 1,
