@@ -10,7 +10,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from ..ffmpeg_helpers import _validate_output_path, _run_ffmpeg, _escape_ffmpeg_filter_value
+from ..ffmpeg_helpers import _run_ffmpeg, _escape_ffmpeg_filter_value
 
 logger = logging.getLogger(__name__)
 

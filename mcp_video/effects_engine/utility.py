@@ -10,7 +10,7 @@ import subprocess
 from typing import Any
 
 from ..errors import MCPVideoError
-from ..ffmpeg_helpers import _validate_input_path, _validate_output_path, _run_ffmpeg
+from ..ffmpeg_helpers import _validate_input_path, _run_ffmpeg
 
 logger = logging.getLogger(__name__)
 
