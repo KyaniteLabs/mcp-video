@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import ClassVar
 
+from ..errors import MCPVideoError
+
 
 class ClientEffectsMixin:
     """Effects operations mixin."""
@@ -165,6 +167,8 @@ class ClientEffectsMixin:
         duration: float = 3.0,
     ) -> str:
         """Add animated text to video."""
+        if not text or not text.strip():
+            raise MCPVideoError("Text cannot be empty", error_type="validation_error", code="invalid_parameter")
         from ..effects_engine import text_animated
 
         return text_animated(video, text, output, animation, font, size, color, position, start, duration)

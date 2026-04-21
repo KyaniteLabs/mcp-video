@@ -526,6 +526,23 @@ class TestStill:
 class TestCreateProject:
     """Tests for create_project()."""
 
+
+    def test_rejects_invalid_project_name_at_engine_boundary(self, tmp_path):
+        with (
+            _mock_deps_ok(),
+            patch("mcp_video.remotion_engine.subprocess.run", return_value=_make_completed_process()),
+            pytest.raises(MCPVideoError, match="Invalid name"),
+        ):
+            create_project("../escape", output_dir=str(tmp_path))
+
+    def test_rejects_invalid_output_dir_at_engine_boundary(self):
+        with (
+            _mock_deps_ok(),
+            patch("mcp_video.remotion_engine.subprocess.run", return_value=_make_completed_process()),
+            pytest.raises(MCPVideoError, match="Output path contains null bytes"),
+        ):
+            create_project("safe-name", output_dir="bad\x00dir")
+
     def test_creates_directory_structure(self, tmp_path):
         """create_project() should create the expected directory structure."""
         with _mock_deps_ok(), patch("mcp_video.remotion_engine.subprocess.run") as mock_run:

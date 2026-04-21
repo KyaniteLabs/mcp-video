@@ -14,7 +14,7 @@ from .engine_filters import apply_filter
 from .engine_resize import resize
 from .engine_speed import speed
 from .engine_watermark import watermark
-from .ffmpeg_helpers import _validate_input_path
+from .ffmpeg_helpers import _validate_input_path, _validate_output_path
 from .models import EditResult
 
 
@@ -32,6 +32,9 @@ def video_batch(
         }
 
     params = params or {}
+    if output_dir:
+        output_dir = _validate_output_path(output_dir)
+
     results = []
     succeeded = 0
     failed = 0
@@ -41,7 +44,6 @@ def video_batch(
             input_path = _validate_input_path(input_path)
             if output_dir:
                 os.makedirs(output_dir, exist_ok=True)
-
             result = _run_batch_operation(input_path, operation, params, output_dir)
             if result is None:
                 results.append({"input": input_path, "success": False, "error": f"Unknown operation: {operation}"})

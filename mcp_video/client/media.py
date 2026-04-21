@@ -101,6 +101,8 @@ class ClientMediaMixin:
         preset: str | None = None,
     ) -> EditResult:
         """Overlay text on a video."""
+        if not text or not text.strip():
+            raise MCPVideoError("Text cannot be empty", error_type="validation_error", code="invalid_parameter")
         return _add_text(
             video,
             text=text,

@@ -24,6 +24,7 @@ from .errors import (
     RemotionProjectError,
     RemotionRenderError,
 )
+from .ffmpeg_helpers import _validate_output_path
 from .remotion_models import (
     CompositionInfo,
     CompositionsResult,
@@ -40,6 +41,16 @@ from .remotion_models import (
 # ---------------------------------------------------------------------------
 # Private helpers
 # ---------------------------------------------------------------------------
+
+
+def _validate_project_name(name: str) -> str:
+    if not re.fullmatch(r"[a-zA-Z0-9_-]+", name):
+        raise MCPVideoError(
+            "Invalid name: must match ^[a-zA-Z0-9_-]+$",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
+    return name
 
 
 def _require_remotion_deps() -> None:
@@ -482,11 +493,14 @@ def create_project(
     template: str = "blank",
 ) -> RemotionProjectResult:
     """Scaffold a new Remotion project."""
-    _require_remotion_deps()
-
+    name = _validate_project_name(name)
     if output_dir is None:
         output_dir = os.getcwd()
+    output_dir = _validate_output_path(output_dir)
     project_dir = Path(output_dir) / name
+    _validate_output_path(str(project_dir))
+
+    _require_remotion_deps()
 
     if project_dir.exists() and any(project_dir.iterdir()):
         print(f"Warning: Project directory already exists and is not empty — files will be overwritten: {project_dir}")

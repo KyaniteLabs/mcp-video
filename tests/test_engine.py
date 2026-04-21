@@ -478,3 +478,30 @@ class TestGifQualityScaling:
         assert high.success is True
         if low.size_mb and high.size_mb:
             assert low.size_mb <= high.size_mb
+
+
+class TestBatchOutputDirValidation:
+
+    def test_batch_output_dir_file_path_returns_structured_failures(self, sample_video, tmp_path):
+        from mcp_video.engine import video_batch
+
+        output_file = tmp_path / "not_a_dir"
+        output_file.write_text("not a directory")
+
+        result = video_batch(
+            [sample_video],
+            operation="trim",
+            params={"start": "0", "duration": "1"},
+            output_dir=str(output_file),
+        )
+
+        assert result["success"] is False
+        assert result["failed"] == 1
+        assert result["results"][0]["success"] is False
+
+
+    def test_batch_rejects_invalid_output_dir(self, sample_video):
+        from mcp_video.engine import video_batch
+
+        with pytest.raises(MCPVideoError, match="Output path contains null bytes"):
+            video_batch([sample_video], operation="trim", params={"start": "0", "duration": "1"}, output_dir="bad\x00dir")
