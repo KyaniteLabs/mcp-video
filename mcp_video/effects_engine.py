@@ -995,7 +995,7 @@ def video_info_detailed(video: str) -> dict[str, Any]:
         "bitrate": bitrate,
         "has_audio": audio_stream is not None,
         "scene_changes": scene_changes[:10],  # Limit to first 10
-        "dominant_colors": [],  # Would require frame analysis
+        "dominant_colors": None,  # Frame analysis not yet implemented
     }
 
 
