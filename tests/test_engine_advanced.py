@@ -713,6 +713,21 @@ class TestGenerateSubtitles:
         assert result.video_path is not None
         assert os.path.isfile(result.video_path)
 
+
+    def test_subtitle_text_allows_arrow_marker_content(self, sample_video, tmp_path):
+        from mcp_video.engine import generate_subtitles
+
+        out = str(tmp_path / "subs_arrow")
+        entries = [{"start": 0.0, "end": 1.5, "text": "Menu --> Settings"}]
+
+        result = generate_subtitles(entries, sample_video, output_path=out)
+
+        assert result.success is True
+        assert result.srt_path is not None
+        with open(result.srt_path, encoding="utf-8") as f:
+            assert "Menu --> Settings" in f.read()
+
+
     def test_empty_entries_raises(self, sample_video):
         from mcp_video.engine import generate_subtitles
 
