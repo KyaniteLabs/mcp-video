@@ -9,8 +9,8 @@ import logging
 import math
 
 from ..errors import ProcessingError
-from ..ffmpeg_helpers import _validate_input_path, _run_ffmpeg
 from ..engine_runtime_utils import _sanitize_ffmpeg_number
+from ..ffmpeg_helpers import _validate_input_path, _validate_output_path, _run_ffmpeg
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +35,7 @@ def effect_vignette(
         Path to output video
     """
     input_path = _validate_input_path(input_path)
+    _validate_output_path(output)
     intensity = _sanitize_ffmpeg_number(intensity, "intensity")
     radius = _sanitize_ffmpeg_number(radius, "radius")
 
@@ -95,6 +96,7 @@ def effect_chromatic_aberration(
         Path to output video
     """
     input_path = _validate_input_path(input_path)
+    _validate_output_path(output)
     # Convert angle to radians
     angle_rad = angle * 3.14159 / 180
 
@@ -158,6 +160,7 @@ def effect_scanlines(
         Path to output video
     """
     input_path = _validate_input_path(input_path)
+    _validate_output_path(output)
     line_height = _sanitize_ffmpeg_number(line_height, "line_height")
     opacity = _sanitize_ffmpeg_number(opacity, "opacity")
     flicker = _sanitize_ffmpeg_number(flicker, "flicker")
@@ -216,6 +219,7 @@ def effect_noise(
         Path to output video
     """
     input_path = _validate_input_path(input_path)
+    _validate_output_path(output)
     # Use noise filter if available, otherwise usegeq with random
     seed_expr = "random(0)" if animated else "0"
 
@@ -271,6 +275,7 @@ def effect_glow(
         Path to output video
     """
     input_path = _validate_input_path(input_path)
+    _validate_output_path(output)
     radius = int(_sanitize_ffmpeg_number(radius, "radius"))
     intensity = _sanitize_ffmpeg_number(intensity, "intensity")
     threshold = _sanitize_ffmpeg_number(threshold, "threshold")

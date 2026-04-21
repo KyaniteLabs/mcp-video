@@ -10,7 +10,7 @@ import os
 import subprocess
 from typing import Any
 
-from .errors import InputFileError, ProcessingError
+from .errors import InputFileError, MCPVideoError, ProcessingError
 from .limits import DEFAULT_FFMPEG_TIMEOUT, FFPROBE_TIMEOUT, MAX_FILE_SIZE_MB
 
 
@@ -31,6 +31,27 @@ def _validate_input_path(path: str) -> str:
             f"File size ({size_mb:.1f} MB) exceeds maximum of {MAX_FILE_SIZE_MB} MB",
         )
     return resolved
+
+
+def _validate_output_path(path: str) -> str:
+    """Validate an output file path without rejecting valid parent-relative paths."""
+    if "\x00" in path:
+        raise MCPVideoError(
+            f"Output path contains null bytes: {path!r}",
+            error_type="validation_error",
+            code="invalid_output_path",
+        )
+    # Parent-relative outputs such as ../clips/out.mp4 are valid local filesystem
+    # paths. Canonicalize before checking for unresolved traversal markers so
+    # auto-generated outputs from relative inputs do not become false positives.
+    parts = os.path.normpath(os.path.abspath(path)).split(os.sep)
+    if ".." in parts:
+        raise MCPVideoError(
+            f"Output path contains unresolved directory traversal: {path!r}",
+            error_type="validation_error",
+            code="invalid_output_path",
+        )
+    return path
 
 
 def _run_ffmpeg(cmd: list[str], timeout: int = DEFAULT_FFMPEG_TIMEOUT) -> subprocess.CompletedProcess[str]:

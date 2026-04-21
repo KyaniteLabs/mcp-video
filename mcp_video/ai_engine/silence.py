@@ -15,7 +15,7 @@ import tempfile
 from pathlib import Path
 
 from ..errors import InputFileError, MCPVideoError, ProcessingError
-from ..ffmpeg_helpers import _run_ffprobe_json
+from ..ffmpeg_helpers import _run_ffprobe_json, _validate_output_path
 from ..limits import DEFAULT_FFMPEG_TIMEOUT
 from ..engine_runtime_utils import _sanitize_ffmpeg_number
 
@@ -263,6 +263,7 @@ def ai_remove_silence(
     video_path = Path(video)
     if not video_path.exists():
         raise InputFileError(video)
+    _validate_output_path(output)
 
     # Step 1: Get video duration
     info = _run_ffprobe_json(str(video_path))

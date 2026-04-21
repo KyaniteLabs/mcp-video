@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from ..errors import InputFileError, MCPVideoError
+from ..ffmpeg_helpers import _validate_output_path
 
 # Public API re-exports
 from .color import ai_color_grade as ai_color_grade
@@ -176,12 +177,15 @@ def analyze_video(
                 json_path: str | None = None
 
                 if output_txt:
+                    _validate_output_path(output_txt)
                     Path(output_txt).write_text(_format_txt(segments), encoding="utf-8")
                     txt_path = output_txt
                 if output_md:
+                    _validate_output_path(output_md)
                     Path(output_md).write_text(_format_md(segments), encoding="utf-8")
                     md_path = output_md
                 if output_json:
+                    _validate_output_path(output_json)
                     json_data = _format_json_transcript(
                         raw.get("transcript", ""),
                         segments,

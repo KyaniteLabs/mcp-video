@@ -15,6 +15,7 @@ import tempfile
 from pathlib import Path
 
 from ..errors import InputFileError, MCPVideoError, ProcessingError
+from ..ffmpeg_helpers import _validate_output_path
 from ..limits import DEFAULT_FFMPEG_TIMEOUT
 
 logger = logging.getLogger(__name__)
@@ -125,6 +126,7 @@ def _ai_upscale_opencv(video_path: str, output_path: str, scale: int) -> str:
     sr.setModel("fsrcnn", scale)
 
     video_file = Path(video_path)
+    _validate_output_path(output_path)
     output_file = Path(output_path)
 
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -240,6 +242,7 @@ def ai_upscale(
             f"Scale must be 2 or 4, got {scale}", error_type="validation_error", code="invalid_parameter"
         )
 
+    _validate_output_path(output)
     output_path = Path(output)
 
     # Fallback: Use OpenCV DNN Super Resolution

@@ -20,7 +20,7 @@ from .engine_runtime_utils import (
     _timed_operation,
 )
 from .errors import ProcessingError, parse_ffmpeg_error
-from .ffmpeg_helpers import _validate_input_path, _escape_ffmpeg_filter_value
+from .ffmpeg_helpers import _validate_input_path, _validate_output_path, _escape_ffmpeg_filter_value
 from .limits import DEFAULT_FFMPEG_TIMEOUT
 from .models import EditResult
 
@@ -42,6 +42,7 @@ def stabilize(
     input_path = _validate_input_path(input_path)
     _require_filter("vidstabdetect", "Video stabilization")
     output = output_path or _auto_output(input_path, "stabilized")
+    _validate_output_path(output)
 
     safe_smoothing = _escape_ffmpeg_filter_value(str(_sanitize_ffmpeg_number(smoothing, "smoothing")))
     safe_zooming = _escape_ffmpeg_filter_value(str(_sanitize_ffmpeg_number(zooming, "zooming")))

@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from ..errors import InputFileError, MCPVideoError, ProcessingError
-from ..ffmpeg_helpers import _seconds_to_srt_time
+from ..ffmpeg_helpers import _seconds_to_srt_time, _validate_output_path
 from ..limits import DEFAULT_FFMPEG_TIMEOUT
 
 logger = logging.getLogger(__name__)
@@ -103,6 +103,7 @@ def ai_transcribe(
 
         # Step 4: Format as SRT if output_srt provided
         if output_srt:
+            _validate_output_path(output_srt)
             srt_content = _format_srt(result_data.get("segments", []))
             Path(output_srt).write_text(srt_content, encoding="utf-8")
 

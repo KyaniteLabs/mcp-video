@@ -12,7 +12,7 @@ from .engine_runtime_utils import (
     _sanitize_ffmpeg_number,
     _timed_operation,
 )
-from .ffmpeg_helpers import _validate_input_path, _escape_ffmpeg_filter_value
+from .ffmpeg_helpers import _validate_input_path, _validate_output_path, _escape_ffmpeg_filter_value
 from .models import EditResult, SplitLayout
 
 
@@ -33,6 +33,7 @@ def split_screen(
     left_path = _validate_input_path(left_path)
     right_path = _validate_input_path(right_path)
     output = output_path or _auto_output(left_path, f"split_{layout}")
+    _validate_output_path(output)
 
     left_info = probe(left_path)
     right_info = probe(right_path)

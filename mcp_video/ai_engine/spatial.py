@@ -16,7 +16,7 @@ import tempfile
 from pathlib import Path
 
 from ..errors import InputFileError, MCPVideoError, ProcessingError
-from ..ffmpeg_helpers import _get_video_duration
+from ..ffmpeg_helpers import _get_video_duration, _validate_output_path
 from ..limits import DEFAULT_FFMPEG_TIMEOUT
 
 logger = logging.getLogger(__name__)
@@ -95,6 +95,7 @@ def audio_spatial(
     if method not in valid_methods:
         raise MCPVideoError(f"Method must be one of {valid_methods}, got {method}", error_type="validation_error")
 
+    _validate_output_path(output)
     output_path = Path(output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 

@@ -11,7 +11,7 @@ from .engine_runtime_utils import (
     _run_ffmpeg,
     _timed_operation,
 )
-from .ffmpeg_helpers import _validate_input_path
+from .ffmpeg_helpers import _validate_input_path, _validate_output_path
 from .errors import MCPVideoError
 from .models import EditResult
 
@@ -51,6 +51,7 @@ def rotate(
 
     vf = ",".join(filters)
     output = output_path or _auto_output(input_path, f"rotated_{angle}")
+    _validate_output_path(output)
 
     with _timed_operation() as timing:
         _run_ffmpeg(

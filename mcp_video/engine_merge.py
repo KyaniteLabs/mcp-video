@@ -17,7 +17,7 @@ from .defaults import (
 from .engine_probe import get_duration, probe
 from .engine_runtime_utils import _auto_output, _movflags_args, _run_ffmpeg, _timed_operation
 from .errors import InputFileError, MCPVideoError
-from .ffmpeg_helpers import _escape_ffmpeg_filter_value, _validate_input_path
+from .ffmpeg_helpers import _escape_ffmpeg_filter_value, _validate_input_path, _validate_output_path
 from .models import EditResult
 
 
@@ -44,6 +44,7 @@ def merge(
         # Single clip — nothing to merge, just copy to output
         clip = _validate_input_path(clips[0])
         output = output_path or _auto_output(clip, "merged")
+        _validate_output_path(output)
         input_ext = os.path.splitext(clip)[1].lower()
         output_ext = os.path.splitext(output)[1].lower()
         if output_path is not None and input_ext != output_ext:
@@ -111,6 +112,7 @@ def merge(
                 working_clips = list(clips)
 
             output = output_path or _auto_output(clips[0], "merged")
+            _validate_output_path(output)
 
             # Resolve transition types list
             transition_types: list[str] | None = None

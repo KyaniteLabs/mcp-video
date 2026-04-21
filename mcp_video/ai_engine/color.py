@@ -14,6 +14,7 @@ import subprocess
 from pathlib import Path
 
 from ..errors import InputFileError, ProcessingError
+from ..ffmpeg_helpers import _validate_output_path
 from ..limits import DEFAULT_FFMPEG_TIMEOUT
 
 logger = logging.getLogger(__name__)
@@ -110,6 +111,7 @@ def ai_color_grade(
     ]
 
     # Execute FFmpeg
+    _validate_output_path(output)
     Path(output).parent.mkdir(parents=True, exist_ok=True)
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=DEFAULT_FFMPEG_TIMEOUT)
