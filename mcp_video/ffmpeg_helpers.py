@@ -21,7 +21,10 @@ def _validate_input_path(path: str) -> str:
     resolved = os.path.realpath(path)
     if not os.path.isfile(resolved):
         raise InputFileError(resolved)
-    size_mb = os.path.getsize(resolved) / (1024 * 1024)
+    try:
+        size_mb = os.path.getsize(resolved) / (1024 * 1024)
+    except OSError as e:
+        raise InputFileError(resolved, f"Cannot read file size: {e}") from None
     if size_mb > MAX_FILE_SIZE_MB:
         raise InputFileError(
             resolved,

@@ -179,6 +179,7 @@ def effect_noise(
         Dict with success status and output_path.
     """
     try:
+        _validate_input_path(input_path)
         if not (0.0 <= intensity <= 1.0):
             raise MCPVideoError(
                 f"intensity must be between 0.0 and 1.0, got {intensity}",
@@ -223,6 +224,7 @@ def effect_glow(
         Dict with success status and output_path.
     """
     try:
+        _validate_input_path(input_path)
         if not (0.0 <= intensity <= 1.0):
             raise MCPVideoError(
                 f"intensity must be between 0.0 and 1.0, got {intensity}",

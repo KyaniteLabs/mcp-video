@@ -159,6 +159,7 @@ def video_blur(
         output_path: Where to save the output. Auto-generated if omitted.
     """
     try:
+        _validate_input_path(input_path)
         return _result(
             apply_filter(
                 input_path,
@@ -187,6 +188,7 @@ def video_color_grade(
         output_path: Where to save the output. Auto-generated if omitted.
     """
     try:
+        _validate_input_path(input_path)
         return _result(
             apply_filter(
                 input_path,

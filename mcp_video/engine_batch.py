@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from typing import Any
 
@@ -13,6 +14,7 @@ from .engine_filters import apply_filter
 from .engine_resize import resize
 from .engine_speed import speed
 from .engine_watermark import watermark
+from .ffmpeg_helpers import _validate_input_path
 from .models import EditResult
 
 
@@ -36,6 +38,7 @@ def video_batch(
 
     for input_path in inputs:
         try:
+            _validate_input_path(input_path)
             if output_dir:
                 os.makedirs(output_dir, exist_ok=True)
 
@@ -48,6 +51,7 @@ def video_batch(
             results.append({"input": input_path, "success": True, "output_path": result.output_path})
             succeeded += 1
         except Exception as e:
+            logging.warning("Batch operation failed for %s: %s", input_path, e)
             results.append({"input": input_path, "success": False, "error": str(e)})
             failed += 1
 

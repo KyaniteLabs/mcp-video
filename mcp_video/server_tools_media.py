@@ -231,6 +231,7 @@ def video_export(
             )
         )
     try:
+        _validate_input_path(input_path)
         return _result(
             export_video(
                 input_path,
@@ -291,6 +292,7 @@ def video_rotate(
         output_path: Where to save the output. Auto-generated if omitted.
     """
     try:
+        _validate_input_path(input_path)
         return _result(
             rotate(
                 input_path,

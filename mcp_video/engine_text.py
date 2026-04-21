@@ -14,6 +14,7 @@ from .engine_runtime_utils import (
     _quality_args,
     _require_filter,
     _run_ffmpeg,
+    _sanitize_ffmpeg_number,
     _timed_operation,
     _validate_color,
 )
@@ -74,9 +75,14 @@ def add_text(
         filter_parts.append("shadowy=2")
 
     if start_time is not None and duration is not None:
-        filter_parts.append(f"enable='between(t\\,{start_time}\\,{start_time + duration})'")
+        safe_start = _escape_ffmpeg_filter_value(str(_sanitize_ffmpeg_number(start_time, "start_time")))
+        safe_end = _escape_ffmpeg_filter_value(
+            str(_sanitize_ffmpeg_number(start_time + duration, "start_time + duration"))
+        )
+        filter_parts.append(f"enable='between(t\\,{safe_start}\\,{safe_end})'")
     elif start_time is not None:
-        filter_parts.append(f"enable='gte(t\\,{start_time})'")
+        safe_start = _escape_ffmpeg_filter_value(str(_sanitize_ffmpeg_number(start_time, "start_time")))
+        filter_parts.append(f"enable='gte(t\\,{safe_start})'")
 
     vf = ":".join(filter_parts)
 

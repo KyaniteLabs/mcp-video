@@ -148,7 +148,10 @@ def video_analyze(
             )
         )
     try:
-        _validate_input_path(input_path)
+        from .ai_engine.download import _is_url
+
+        if not _is_url(input_path):
+            _validate_input_path(input_path)
         from .ai_engine import analyze_video
 
         return analyze_video(
@@ -287,7 +290,8 @@ def video_ai_color_grade(
         )
     try:
         _validate_input_path(input_path)
-        _validate_input_path(reference_path)
+        if reference_path is not None:
+            _validate_input_path(reference_path)
         from .ai_engine import ai_color_grade
 
         return _result(ai_color_grade(input_path, output_path, reference_path, style))

@@ -26,3 +26,25 @@ def test_run_ffprobe_json_uses_named_timeout(monkeypatch):
 
     assert ffmpeg_helpers._run_ffprobe_json("/tmp/video.mp4") == {"format": {}, "streams": []}
     assert captured["timeout"] == FFPROBE_TIMEOUT
+
+
+def test_validate_input_path_rejects_null_bytes():
+    from mcp_video.errors import InputFileError
+    from mcp_video.ffmpeg_helpers import _validate_input_path
+
+    try:
+        _validate_input_path("/tmp/video\x00.mp4")
+        assert False, "Expected InputFileError"
+    except InputFileError as e:
+        assert "null bytes" in str(e).lower()
+
+
+def test_validate_input_path_rejects_nonexistent_file():
+    from mcp_video.errors import InputFileError
+    from mcp_video.ffmpeg_helpers import _validate_input_path
+
+    try:
+        _validate_input_path("/nonexistent/path/video.mp4")
+        assert False, "Expected InputFileError"
+    except InputFileError:
+        pass
