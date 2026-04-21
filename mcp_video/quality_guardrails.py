@@ -12,6 +12,8 @@ from dataclasses import dataclass, field
 from typing import Any
 import contextlib
 
+from .ffmpeg_helpers import _validate_input_path
+
 logger = logging.getLogger(__name__)
 
 
@@ -630,6 +632,7 @@ def quality_check(video: str, fail_on_warning: bool = False) -> dict[str, Any]:
     Returns:
         Quality report dictionary
     """
+    _validate_input_path(video)
     guardrails = VisualQualityGuardrails()
     report = guardrails.generate_report(video)
 

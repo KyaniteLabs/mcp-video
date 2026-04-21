@@ -18,6 +18,7 @@ from dataclasses import dataclass, field
 from typing import ClassVar, Literal
 
 from .errors import ProcessingError
+from .ffmpeg_helpers import _validate_input_path
 from .limits import DEFAULT_FFMPEG_TIMEOUT
 
 logger = logging.getLogger(__name__)
@@ -1200,6 +1201,7 @@ def design_quality_check(
     Returns:
         DesignQualityReport with comprehensive analysis
     """
+    _validate_input_path(video)
     guardrails = DesignQualityGuardrails()
     report = guardrails.analyze(video, auto_fix=auto_fix)
 
@@ -1221,6 +1223,7 @@ def fix_design_issues(video: str, output: str | None = None) -> str:
     Returns:
         Path to fixed video
     """
+    _validate_input_path(video)
     if output is None:
         base, ext = video.rsplit(".", 1)
         output = f"{base}_design_fixed.{ext}"
