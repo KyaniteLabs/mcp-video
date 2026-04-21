@@ -28,7 +28,7 @@ FFPROBE_FULL = "/opt/homebrew/opt/ffmpeg-full/bin/ffprobe"
 SOURCE_VIDEO = "/Users/simongonzalezdecruz/Desktop/Workspaces/ceramics-instagram/data/archive/cerafica_media/2023-04-23_14-43-35_UTC.mp4"
 OUTPUT_DIR = tempfile.mkdtemp(prefix="mcp_video_comprehensive_")
 
-print(f"🎬 Comprehensive Integration Test")
+print("🎬 Comprehensive Integration Test")
 print(f"Source: {SOURCE_VIDEO}")
 print(f"Output dir: {OUTPUT_DIR}")
 print("=" * 60)
@@ -41,7 +41,7 @@ def test_feature(name, fn):
     try:
         result = fn()
         results[name] = ("✅ PASS", None, result)
-        print(f"   ✅ PASS")
+        print("   ✅ PASS")
         return True
     except Exception as e:
         results[name] = ("❌ FAIL", str(e)[:200], None)
@@ -55,11 +55,11 @@ def test_adversarial(name, fn, should_fail=False):
         result = fn()
         if should_fail:
             results[name] = ("❌ FAIL", "Expected an error but succeeded", None)
-            print(f"   ❌ FAIL: Expected error but got success")
+            print("   ❌ FAIL: Expected error but got success")
             return False
         else:
             results[name] = ("✅ PASS", None, result)
-            print(f"   ✅ PASS")
+            print("   ✅ PASS")
             return True
     except Exception as e:
         if should_fail:

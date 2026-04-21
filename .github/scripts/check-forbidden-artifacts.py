@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import subprocess
-import sys
 
 FORBIDDEN_PREFIXES = (
     ".playwright-mcp/",

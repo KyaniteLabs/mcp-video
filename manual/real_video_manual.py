@@ -11,7 +11,7 @@ from mcp_video import Client
 TEST_VIDEO = "/Users/simongonzalezdecruz/Desktop/Workspaces/ceramics-instagram/data/archive/cerafica_media/2023-04-23_14-43-35_UTC.mp4"
 OUTPUT_DIR = tempfile.mkdtemp(prefix="mcp_video_real_test_")
 
-print(f"🎬 Real Video Integration Test")
+print("🎬 Real Video Integration Test")
 print(f"Input: {TEST_VIDEO}")
 print(f"Output dir: {OUTPUT_DIR}")
 print("=" * 60)
@@ -24,7 +24,7 @@ def test_feature(name, fn):
     try:
         result = fn()
         results[name] = ("✅ PASS", None, result)
-        print(f"   ✅ PASS")
+        print("   ✅ PASS")
         return True
     except Exception as e:
         results[name] = ("❌ FAIL", str(e), None)
@@ -93,7 +93,7 @@ def test_stabilize():
         return editor.stabilize(TEST_VIDEO, smoothing=15, zooming=0, output=out)
     except Exception as e:
         if "vidstab" in str(e).lower():
-            print(f"   ⚠️  SKIPPED: vidstab not available")
+            print("   ⚠️  SKIPPED: vidstab not available")
             results["stabilize"] = ("⚠️  SKIP", "vidstab not available", None)
             return None
         raise
@@ -119,7 +119,6 @@ def test_apply_mask():
 # Wave 5: Subtitle generation, Audio waveform
 def test_generate_subtitles():
     entries = [{"start": 0.0, "end": 2.0, "text": "First subtitle"}, {"start": 2.0, "end": 4.0, "text": "Second subtitle"}, {"start": 4.0, "end": 6.0, "text": "Third subtitle"}]
-    out_dir = os.path.join(OUTPUT_DIR, "subtitles")
     return editor.generate_subtitles(TEST_VIDEO, entries=entries, burn=True)
 
 def test_audio_waveform():
