@@ -9,9 +9,8 @@ from .engine_runtime_utils import (
     _require_filter,
     _run_ffmpeg,
     _timed_operation,
-    _validate_input,
 )
-from .ffmpeg_helpers import _escape_ffmpeg_filter_value
+from .ffmpeg_helpers import _validate_input_path, _escape_ffmpeg_filter_value
 from .models import EditResult
 
 
@@ -22,8 +21,8 @@ def subtitles(
     style: str = "FontSize=22,PrimaryColour=&Hffffff&,OutlineColour=&H000000&,Outline=2,Shadow=1",
 ) -> EditResult:
     """Burn subtitles (SRT/VTT) into a video."""
-    _validate_input(input_path)
-    _validate_input(subtitle_path)
+    _validate_input_path(input_path)
+    _validate_input_path(subtitle_path)
     _require_filter("subtitles", "Subtitle burn-in")
     output = output_path or _auto_output(input_path, "subtitled")
 

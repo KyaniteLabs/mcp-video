@@ -15,8 +15,8 @@ from .engine_runtime_utils import (
     _run_ffmpeg,
     _run_ffmpeg_with_progress,
     _timed_operation,
-    _validate_input,
 )
+from .ffmpeg_helpers import _validate_input_path
 from .errors import MCPVideoError
 from .models import QUALITY_PRESETS, EditResult, ExportFormat, QualityLevel
 
@@ -31,7 +31,7 @@ def convert(
     target_bitrate: int | None = None,
 ) -> EditResult:
     """Convert video to a different format."""
-    _validate_input(input_path)
+    _validate_input_path(input_path)
 
     if two_pass and format not in ("mp4", "mov"):
         raise MCPVideoError(

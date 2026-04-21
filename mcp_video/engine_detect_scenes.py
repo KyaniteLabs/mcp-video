@@ -6,9 +6,9 @@ import re
 import subprocess
 
 from .engine_probe import probe
-from .engine_runtime_utils import _ffmpeg, _sanitize_ffmpeg_number, _validate_input
+from .engine_runtime_utils import _ffmpeg, _sanitize_ffmpeg_number
 from .errors import MCPVideoError, ProcessingError, parse_ffmpeg_error
-from .ffmpeg_helpers import _escape_ffmpeg_filter_value
+from .ffmpeg_helpers import _validate_input_path, _escape_ffmpeg_filter_value
 from .limits import DEFAULT_FFMPEG_TIMEOUT
 from .models import SceneDetectionResult
 
@@ -25,7 +25,7 @@ def detect_scenes(
         threshold: Scene detection sensitivity (0.0-1.0, lower = more sensitive).
         min_scene_duration: Minimum duration of a scene in seconds.
     """
-    _validate_input(input_path)
+    _validate_input_path(input_path)
     if not isinstance(threshold, (int, float)) or not (0.0 <= threshold <= 1.0):
         raise MCPVideoError(
             f"threshold must be 0.0-1.0, got {threshold}", error_type="validation_error", code="invalid_parameter"

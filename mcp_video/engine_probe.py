@@ -5,9 +5,9 @@ from __future__ import annotations
 import os
 
 from .errors import InputFileError, MCPVideoError
-from .ffmpeg_helpers import _run_ffprobe_json
+from .ffmpeg_helpers import _run_ffprobe_json, _validate_input_path
 from .models import VideoInfo
-from .engine_runtime_utils import _get_audio_stream, _get_video_stream, _validate_input
+from .engine_runtime_utils import _get_audio_stream, _get_video_stream
 from .limits import MAX_VIDEO_DURATION
 
 # ---------------------------------------------------------------------------
@@ -87,7 +87,7 @@ def probe(path: str) -> VideoInfo:
     Results are cached by (path, mtime, size) so repeated calls on the
     same unmodified file skip the ffprobe subprocess.
     """
-    _validate_input(path)
+    _validate_input_path(path)
     key = _cache_key(path)
 
     cached = _probe_cache.get(key)

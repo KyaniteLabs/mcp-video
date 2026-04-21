@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from .ffmpeg_helpers import _validate_input_path
 from .engine_probe import probe
-from .engine_runtime_utils import _auto_output, _movflags_args, _run_ffmpeg, _timed_operation, _validate_input
+from .engine_runtime_utils import _auto_output, _movflags_args, _run_ffmpeg, _timed_operation
 from .errors import MCPVideoError
 from .models import PREVIEW_PRESETS, EditResult
 
@@ -14,7 +15,7 @@ def preview(
     scale_factor: int = 4,
 ) -> EditResult:
     """Generate a fast low-resolution preview for quick review."""
-    _validate_input(input_path)
+    _validate_input_path(input_path)
     if scale_factor < 1:
         raise MCPVideoError("scale_factor must be at least 1", code="invalid_scale_factor")
     info = probe(input_path)

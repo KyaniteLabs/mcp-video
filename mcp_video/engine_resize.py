@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from .ffmpeg_helpers import _validate_input_path
 from .engine_probe import probe
-from .engine_runtime_utils import _auto_output, _movflags_args, _run_ffmpeg, _timed_operation, _validate_input
+from .engine_runtime_utils import _auto_output, _movflags_args, _run_ffmpeg, _timed_operation
 from .errors import MCPVideoError
 from .models import ASPECT_RATIOS, QUALITY_PRESETS, EditResult, QualityLevel
 
@@ -17,7 +18,7 @@ def resize(
     output_path: str | None = None,
 ) -> EditResult:
     """Resize a video. Use aspect_ratio for preset sizes (e.g. '9:16')."""
-    _validate_input(input_path)
+    _validate_input_path(input_path)
 
     info = probe(input_path)
     if info.width == 0 or info.height == 0:

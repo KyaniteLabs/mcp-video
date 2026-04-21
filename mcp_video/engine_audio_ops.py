@@ -9,9 +9,8 @@ from .engine_runtime_utils import (
     _movflags_args,
     _run_ffmpeg,
     _timed_operation,
-    _validate_input,
 )
-from .ffmpeg_helpers import _escape_ffmpeg_filter_value, _run_ffprobe_json
+from .ffmpeg_helpers import _validate_input_path, _escape_ffmpeg_filter_value, _run_ffprobe_json
 from .models import EditResult
 
 
@@ -26,8 +25,8 @@ def add_audio(
     output_path: str | None = None,
 ) -> EditResult:
     """Add or replace audio track on a video."""
-    _validate_input(video_path)
-    _validate_input(audio_path)
+    _validate_input_path(video_path)
+    _validate_input_path(audio_path)
     output = output_path or _auto_output(video_path, "audio")
 
     video_info = probe(video_path)

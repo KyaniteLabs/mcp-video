@@ -17,10 +17,9 @@ from .engine_runtime_utils import (
     _run_ffmpeg,
     _sanitize_ffmpeg_number,
     _timed_operation,
-    _validate_input,
 )
 from .errors import ProcessingError, parse_ffmpeg_error
-from .ffmpeg_helpers import _escape_ffmpeg_filter_value
+from .ffmpeg_helpers import _validate_input_path, _escape_ffmpeg_filter_value
 from .limits import DEFAULT_FFMPEG_TIMEOUT
 from .models import EditResult
 
@@ -39,7 +38,7 @@ def stabilize(
         zooming: Zoom percentage to avoid black borders.
         output_path: Optional output video path.
     """
-    _validate_input(input_path)
+    _validate_input_path(input_path)
     _require_filter("vidstabdetect", "Video stabilization")
     output = output_path or _auto_output(input_path, "stabilized")
 

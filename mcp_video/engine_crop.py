@@ -9,10 +9,9 @@ from .engine_runtime_utils import (
     _quality_args,
     _run_ffmpeg,
     _timed_operation,
-    _validate_input,
 )
 from .errors import MCPVideoError
-from .ffmpeg_helpers import _escape_ffmpeg_filter_value
+from .ffmpeg_helpers import _validate_input_path, _escape_ffmpeg_filter_value
 from .models import EditResult
 
 
@@ -25,7 +24,7 @@ def crop(
     output_path: str | None = None,
 ) -> EditResult:
     """Crop a video to a rectangular region."""
-    _validate_input(input_path)
+    _validate_input_path(input_path)
     if width <= 0 or height <= 0:
         raise MCPVideoError("Crop dimensions must be positive", code="invalid_crop")
 

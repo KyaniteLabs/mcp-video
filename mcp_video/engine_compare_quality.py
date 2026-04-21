@@ -5,8 +5,9 @@ from __future__ import annotations
 import re
 import subprocess
 
+from .ffmpeg_helpers import _validate_input_path
 from .engine_probe import probe
-from .engine_runtime_utils import _ffmpeg, _validate_input
+from .engine_runtime_utils import _ffmpeg
 from .errors import ProcessingError
 from .limits import DEFAULT_FFMPEG_TIMEOUT
 from .models import QualityMetricsResult
@@ -24,8 +25,8 @@ def compare_quality(
         distorted_path: Path to the distorted/processed video.
         metrics: List of metrics to compute (default: ["psnr", "ssim"]).
     """
-    _validate_input(original_path)
-    _validate_input(distorted_path)
+    _validate_input_path(original_path)
+    _validate_input_path(distorted_path)
     requested_metrics = metrics or ["psnr", "ssim"]
     supported_metrics = [metric.lower() for metric in requested_metrics if metric.lower() in ("psnr", "ssim")]
 

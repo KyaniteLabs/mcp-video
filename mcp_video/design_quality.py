@@ -643,34 +643,6 @@ class DesignQualityGuardrails:
                 )
             )
 
-    def _check_spacing_consistency(self, video_path: str):
-        """Check for consistent spacing between elements."""
-        spacing_variance = self._analyze_spacing(video_path)
-
-        if spacing_variance is not None and spacing_variance > 0.3:  # High variance
-            self.issues.append(
-                DesignIssue(
-                    category="layout",
-                    severity="info",
-                    message="Inconsistent spacing detected. Consider using a spacing scale for uniformity.",
-                    fix_available=False,
-                )
-            )
-
-    def _check_focal_points(self, video_path: str):
-        """Check for clear focal points in each scene."""
-        focal_score = self._analyze_focal_points(video_path)
-
-        if focal_score is not None and focal_score < 0.6:
-            self.issues.append(
-                DesignIssue(
-                    category="composition",
-                    severity="warning",
-                    message="Unclear focal points. Each scene should have one primary element that draws attention.",
-                    fix_available=False,
-                )
-            )
-
     # ============== SCORE CALCULATIONS ==============
 
     def _calculate_technical_score(self, video_path: str) -> float:
@@ -1098,11 +1070,6 @@ class DesignQualityGuardrails:
         # Not yet implemented - requires text detection
         return None
 
-    def _count_hierarchy_levels(self, video_path: str) -> int | None:
-        """Count number of distinct hierarchy levels."""
-        # Not yet implemented - requires text detection
-        return None
-
     def _detect_scene_changes(self, video_path: str) -> list[dict]:
         """Detect scene change timestamps."""
         cmd = ["ffmpeg", "-i", video_path, "-vf", "select='gt(scene,0.3)',showinfo", "-f", "null", "-"]
@@ -1153,16 +1120,6 @@ class DesignQualityGuardrails:
     def _analyze_visual_rhythm(self, video_path: str) -> float | None:
         """Analyze visual rhythm consistency (0-1)."""
         # Not yet implemented - requires frame difference analysis
-        return None
-
-    def _analyze_spacing(self, video_path: str) -> float | None:
-        """Analyze spacing consistency (variance, 0-1)."""
-        # Not yet implemented - requires layout analysis
-        return None
-
-    def _analyze_focal_points(self, video_path: str) -> float | None:
-        """Analyze focal point clarity (0-1)."""
-        # Not yet implemented - requires saliency detection
         return None
 
     def _calculate_audio_score(self, video_path: str) -> float:

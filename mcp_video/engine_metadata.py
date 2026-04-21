@@ -5,9 +5,9 @@ from __future__ import annotations
 import os
 
 from .engine_probe import probe
-from .engine_runtime_utils import _auto_output, _movflags_args, _run_ffmpeg, _timed_operation, _validate_input
+from .engine_runtime_utils import _auto_output, _movflags_args, _run_ffmpeg, _timed_operation
 from .errors import MCPVideoError
-from .ffmpeg_helpers import _run_ffprobe_json
+from .ffmpeg_helpers import _validate_input_path, _run_ffprobe_json
 from .models import EditResult, MetadataResult
 
 
@@ -17,7 +17,7 @@ def read_metadata(input_path: str) -> MetadataResult:
     Args:
         input_path: Path to the input file.
     """
-    _validate_input(input_path)
+    _validate_input_path(input_path)
     data = _run_ffprobe_json(input_path)
 
     # Extract tags from format
@@ -53,7 +53,7 @@ def write_metadata(
         metadata: Dict of tag key-value pairs (e.g. {"title": "My Video", "artist": "Me"}).
         output_path: Where to save the output. If None, overwrites in place with a temp file.
     """
-    _validate_input(input_path)
+    _validate_input_path(input_path)
     if not metadata:
         raise MCPVideoError(
             "No metadata provided",

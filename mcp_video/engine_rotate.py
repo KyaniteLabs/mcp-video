@@ -9,8 +9,8 @@ from .engine_runtime_utils import (
     _quality_args,
     _run_ffmpeg,
     _timed_operation,
-    _validate_input,
 )
+from .ffmpeg_helpers import _validate_input_path
 from .errors import MCPVideoError
 from .models import EditResult
 
@@ -29,7 +29,7 @@ def rotate(
         flip_horizontal: Mirror horizontally.
         flip_vertical: Mirror vertically.
     """
-    _validate_input(input_path)
+    _validate_input_path(input_path)
 
     if angle not in (0, 90, 180, 270):
         raise MCPVideoError("angle must be 0, 90, 180, or 270", code="invalid_angle")
