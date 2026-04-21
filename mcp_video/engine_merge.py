@@ -6,7 +6,7 @@ import os
 import shutil
 import tempfile
 
-from .defaults import DEFAULT_AUDIO_CHANNELS, DEFAULT_CRF, DEFAULT_FPS, DEFAULT_PRESET, DEFAULT_SAMPLE_RATE
+from .defaults import DEFAULT_AUDIO_CHANNELS, DEFAULT_CRF, DEFAULT_FPS, DEFAULT_PRESET, DEFAULT_SAMPLE_RATE, DEFAULT_AUDIO_BITRATE
 from .engine_probe import get_duration, probe
 from .engine_runtime_utils import _auto_output, _movflags_args, _run_ffmpeg, _timed_operation, _validate_input
 from .errors import InputFileError, MCPVideoError
@@ -90,7 +90,7 @@ def merge(
                             "-c:a",
                             "aac",
                             "-b:a",
-                            "128k",
+                            DEFAULT_AUDIO_BITRATE,
                             "-r",
                             str(DEFAULT_FPS),
                             "-ar",
@@ -214,7 +214,7 @@ def _merge_with_transitions(
         audio_filter = "".join(audio_parts) + f"concat=n={n}:v=0:a=1[aout]"
         filter_complex = f"{filter_str};{audio_filter}"
         map_args = ["-map", "[vout]", "-map", "[aout]"]
-        audio_codec_args = ["-c:a", "aac", "-b:a", "128k"]
+        audio_codec_args = ["-c:a", "aac", "-b:a", DEFAULT_AUDIO_BITRATE]
     else:
         filter_complex = filter_str
         map_args = ["-map", "[vout]"]

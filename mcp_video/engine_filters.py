@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from .defaults import DEFAULT_AUDIO_BITRATE
 from .engine_probe import probe
 from .engine_runtime_utils import (
     _auto_output,
@@ -183,7 +184,7 @@ def _run_audio_filter(input_path: str, filter_type: FilterType, filter_string: s
             "-c:a",
             "aac",
             "-b:a",
-            "128k",
+            DEFAULT_AUDIO_BITRATE,
             *_movflags_args(output),
             output,
         ]

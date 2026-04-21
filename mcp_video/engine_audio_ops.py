@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from .defaults import DEFAULT_AUDIO_BITRATE
 from .engine_probe import probe
 from .engine_runtime_utils import (
     _auto_output,
@@ -71,7 +72,7 @@ def add_audio(
                     "-c:a",
                     "aac",
                     "-b:a",
-                    "128k",
+                    DEFAULT_AUDIO_BITRATE,
                     *_movflags_args(output),
                     output,
                 ]
@@ -101,7 +102,7 @@ def add_audio(
             if audio_filters:
                 args.extend(["-af", ",".join(audio_filters)])
 
-            args.extend(["-c:v", "copy", "-c:a", "aac", "-b:a", "128k", "-shortest", *_movflags_args(output), output])
+            args.extend(["-c:v", "copy", "-c:a", "aac", "-b:a", DEFAULT_AUDIO_BITRATE, "-shortest", *_movflags_args(output), output])
             _run_ffmpeg(args)
 
     info = probe(output)

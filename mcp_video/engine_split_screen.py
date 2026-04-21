@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from .defaults import DEFAULT_AUDIO_BITRATE
 from .engine_probe import probe
 from .engine_runtime_utils import (
     _auto_output,
@@ -56,7 +57,7 @@ def split_screen(
                 "-c:a",
                 "aac",
                 "-b:a",
-                "128k",
+                DEFAULT_AUDIO_BITRATE,
                 *_movflags_args(output),
                 output,
             ]

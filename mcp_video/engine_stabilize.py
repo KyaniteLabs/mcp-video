@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import tempfile
 
+from .defaults import DEFAULT_AUDIO_BITRATE
 from .engine_probe import probe
 from .engine_runtime_utils import (
     _auto_output,
@@ -64,7 +65,7 @@ def stabilize(
                     "-c:a",
                     "aac",
                     "-b:a",
-                    "128k",
+                    DEFAULT_AUDIO_BITRATE,
                     *_movflags_args(output),
                     output,
                 ]

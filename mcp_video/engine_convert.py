@@ -7,6 +7,7 @@ import shutil
 import tempfile
 from collections.abc import Callable
 
+from .defaults import DEFAULT_AUDIO_BITRATE
 from .engine_probe import probe
 from .engine_runtime_utils import (
     _auto_output,
@@ -107,7 +108,7 @@ def _convert_two_pass(input_path: str, output: str, target_bitrate: int, preset:
                 "-c:a",
                 "aac",
                 "-b:a",
-                "128k",
+                DEFAULT_AUDIO_BITRATE,
                 *_movflags_args(output),
                 output,
             ]
@@ -132,7 +133,7 @@ def _convert_mp4(
             "-c:a",
             "aac",
             "-b:a",
-            "128k",
+            DEFAULT_AUDIO_BITRATE,
             "-movflags",
             "+faststart",
             output,
