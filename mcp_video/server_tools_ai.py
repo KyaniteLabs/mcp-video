@@ -53,7 +53,7 @@ def video_ai_remove_silence(
             )
         )
     try:
-        _validate_input_path(input_path)
+        input_path = _validate_input_path(input_path)
         from .ai_engine import ai_remove_silence
 
         return _result(ai_remove_silence(input_path, output_path, silence_threshold, min_silence_duration, keep_margin))
@@ -80,7 +80,7 @@ def video_ai_transcribe(
             )
         )
     try:
-        _validate_input_path(input_path)
+        input_path = _validate_input_path(input_path)
         from .ai_engine import ai_transcribe
 
         return _result(ai_transcribe(input_path, output_srt, model, language))
@@ -151,7 +151,7 @@ def video_analyze(
         from .ai_engine.download import _is_url
 
         if not _is_url(input_path):
-            _validate_input_path(input_path)
+            input_path = _validate_input_path(input_path)
         from .ai_engine import analyze_video
 
         return analyze_video(
@@ -192,7 +192,7 @@ def video_ai_scene_detect(
             )
         )
     try:
-        _validate_input_path(input_path)
+        input_path = _validate_input_path(input_path)
         from .ai_engine import ai_scene_detect
 
         return _result(ai_scene_detect(input_path, threshold, use_ai))
@@ -227,7 +227,7 @@ def video_ai_stem_separation(
             )
         )
     try:
-        _validate_input_path(input_path)
+        input_path = _validate_input_path(input_path)
         from .ai_engine import ai_stem_separation
 
         return _result(ai_stem_separation(input_path, output_dir, stems, model))
@@ -262,7 +262,7 @@ def video_ai_upscale(
             )
         )
     try:
-        _validate_input_path(input_path)
+        input_path = _validate_input_path(input_path)
         from .ai_engine import ai_upscale
 
         return _result(ai_upscale(input_path, output_path, scale, model))
@@ -289,9 +289,9 @@ def video_ai_color_grade(
             )
         )
     try:
-        _validate_input_path(input_path)
+        input_path = _validate_input_path(input_path)
         if reference_path is not None:
-            _validate_input_path(reference_path)
+            reference_path = _validate_input_path(reference_path)
         from .ai_engine import ai_color_grade
 
         return _result(ai_color_grade(input_path, output_path, reference_path, style))
@@ -316,7 +316,7 @@ def video_quality_check(
         fail_on_warning: If True, treat warnings as failures
     """
     try:
-        _validate_input_path(input_path)
+        input_path = _validate_input_path(input_path)
         from .quality_guardrails import quality_check
 
         return _result(quality_check(input_path, fail_on_warning))
@@ -343,7 +343,7 @@ def video_design_quality_check(
         strict: If True, treat warnings as errors
     """
     try:
-        _validate_input_path(input_path)
+        input_path = _validate_input_path(input_path)
         from .design_quality import design_quality_check
 
         return _result(design_quality_check(input_path, auto_fix=auto_fix, strict=strict))
@@ -368,7 +368,7 @@ def video_fix_design_issues(
         output_path: Absolute path for output (auto-generated if omitted)
     """
     try:
-        _validate_input_path(input_path)
+        input_path = _validate_input_path(input_path)
         from .design_quality import fix_design_issues
 
         return _result(fix_design_issues(input_path, output_path))

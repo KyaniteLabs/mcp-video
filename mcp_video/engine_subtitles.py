@@ -22,8 +22,8 @@ def subtitles(
     style: str = "FontSize=22,PrimaryColour=&Hffffff&,OutlineColour=&H000000&,Outline=2,Shadow=1",
 ) -> EditResult:
     """Burn subtitles (SRT/VTT) into a video."""
-    _validate_input_path(input_path)
-    _validate_input_path(subtitle_path)
+    input_path = _validate_input_path(input_path)
+    subtitle_path = _validate_input_path(subtitle_path)
     _require_filter("subtitles", "Subtitle burn-in")
     output = output_path or _auto_output(input_path, "subtitled")
 

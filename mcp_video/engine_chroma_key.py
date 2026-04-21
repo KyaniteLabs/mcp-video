@@ -38,7 +38,7 @@ def chroma_key(
     background). Non-MOV outputs will encode with libx264 which does not
     support transparency.
     """
-    _validate_input_path(input_path)
+    input_path = _validate_input_path(input_path)
     output = output_path or _auto_output(input_path, "chromakey")
 
     _require_filter("chromakey", "Chroma key filter")

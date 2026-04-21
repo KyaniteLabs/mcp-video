@@ -130,6 +130,52 @@ class TestMerge:
         # Probed output should be a valid video in the requested container
         assert info.duration > 0
 
+
+    def test_merge_persists_validated_multi_clip_paths(self, monkeypatch, tmp_path):
+        import types
+
+        import mcp_video.engine_merge as engine_merge
+
+        original_a = str(tmp_path / "a-link.mp4")
+        original_b = str(tmp_path / "b-link.mp4")
+        resolved_a = str(tmp_path / "a-real.mp4")
+        resolved_b = str(tmp_path / "b-real.mp4")
+        output = str(tmp_path / "merged.mp4")
+        seen_probe_paths = []
+
+        def fake_validate(path):
+            return {original_a: resolved_a, original_b: resolved_b}[path]
+
+        def fake_probe(path):
+            seen_probe_paths.append(path)
+            return types.SimpleNamespace(
+                duration=1.0,
+                resolution="320x240",
+                width=320,
+                height=240,
+                codec="h264",
+                size_mb=1.0,
+            )
+
+        def fake_run_ffmpeg(args):
+            concat_file = args[args.index("-i") + 1]
+            with open(concat_file, encoding="utf-8") as f:
+                concat_data = f.read()
+            assert resolved_a in concat_data
+            assert resolved_b in concat_data
+            assert original_a not in concat_data
+            assert original_b not in concat_data
+
+        monkeypatch.setattr(engine_merge, "_validate_input_path", fake_validate)
+        monkeypatch.setattr(engine_merge, "probe", fake_probe)
+        monkeypatch.setattr(engine_merge, "_run_ffmpeg", fake_run_ffmpeg)
+
+        result = engine_merge.merge([original_a, original_b], output_path=output)
+
+        assert result.output_path == output
+        assert seen_probe_paths[:2] == [resolved_a, resolved_b]
+
+
     def test_merge_no_clips_raises(self):
         with pytest.raises(InputFileError):
             merge([])

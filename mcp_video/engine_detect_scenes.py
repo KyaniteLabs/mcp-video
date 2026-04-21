@@ -25,7 +25,7 @@ def detect_scenes(
         threshold: Scene detection sensitivity (0.0-1.0, lower = more sensitive).
         min_scene_duration: Minimum duration of a scene in seconds.
     """
-    _validate_input_path(input_path)
+    input_path = _validate_input_path(input_path)
     if not isinstance(threshold, (int, float)) or not (0.0 <= threshold <= 1.0):
         raise MCPVideoError(
             f"threshold must be 0.0-1.0, got {threshold}", error_type="validation_error", code="invalid_parameter"

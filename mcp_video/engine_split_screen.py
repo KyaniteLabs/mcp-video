@@ -30,8 +30,8 @@ def split_screen(
         layout: 'side-by-side' or 'top-bottom'.
         output_path: Where to save the output.
     """
-    _validate_input_path(left_path)
-    _validate_input_path(right_path)
+    left_path = _validate_input_path(left_path)
+    right_path = _validate_input_path(right_path)
     output = output_path or _auto_output(left_path, f"split_{layout}")
 
     left_info = probe(left_path)

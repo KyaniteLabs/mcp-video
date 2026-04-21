@@ -18,7 +18,7 @@ def export_video(
     target_bitrate: int | None = None,
 ) -> EditResult:
     """Export a video with specified quality and format settings."""
-    _validate_input_path(input_path)
+    input_path = _validate_input_path(input_path)
     from .engine_convert import convert
 
     result = convert(
