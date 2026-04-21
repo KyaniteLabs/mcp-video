@@ -9,10 +9,13 @@ from __future__ import annotations
 
 import subprocess
 import json
+import logging
 import tempfile
 import os
 from dataclasses import dataclass, field
 from typing import ClassVar, Literal
+
+logger = logging.getLogger(__name__)
 from collections.abc import Callable
 import contextlib
 
@@ -287,8 +290,8 @@ class DesignQualityGuardrails:
         width = probe.get("width", 1920)
         height = probe.get("height", 1080)
 
-        width * self.SAFE_AREA_MARGIN
-        height * self.SAFE_AREA_MARGIN
+        safe_margin_w = width * self.SAFE_AREA_MARGIN
+        safe_margin_h = height * self.SAFE_AREA_MARGIN
 
         # Check aspect ratio consistency
         aspect = width / height
@@ -450,7 +453,7 @@ class DesignQualityGuardrails:
         # Analyze frame composition
         composition_score = self._analyze_composition(video_path)
 
-        if composition_score < 0.6:
+        if composition_score is not None and composition_score < 0.6:
             self.issues.append(
                 DesignIssue(
                     category="composition",
@@ -507,7 +510,7 @@ class DesignQualityGuardrails:
             # Fallback to estimated check
             hierarchy_score = self._analyze_text_hierarchy(video_path)
 
-            if hierarchy_score < 0.5:
+            if hierarchy_score is not None and hierarchy_score < 0.5:
                 self.issues.append(
                     DesignIssue(
                         category="hierarchy",
@@ -560,7 +563,7 @@ class DesignQualityGuardrails:
         # Check if video uses brand colors
         brand_score = self._analyze_brand_colors(video_path)
 
-        if brand_score < 0.3:
+        if brand_score is not None and brand_score < 0.3:
             self.issues.append(
                 DesignIssue(
                     category="color",
@@ -632,7 +635,7 @@ class DesignQualityGuardrails:
         """Check for consistent visual rhythm and pacing."""
         rhythm_score = self._analyze_visual_rhythm(video_path)
 
-        if rhythm_score < 0.5:
+        if rhythm_score is not None and rhythm_score < 0.5:
             self.issues.append(
                 DesignIssue(
                     category="timing",
@@ -646,7 +649,7 @@ class DesignQualityGuardrails:
         """Check for consistent spacing between elements."""
         spacing_variance = self._analyze_spacing(video_path)
 
-        if spacing_variance > 0.3:  # High variance
+        if spacing_variance is not None and spacing_variance > 0.3:  # High variance
             self.issues.append(
                 DesignIssue(
                     category="layout",
@@ -660,7 +663,7 @@ class DesignQualityGuardrails:
         """Check for clear focal points in each scene."""
         focal_score = self._analyze_focal_points(video_path)
 
-        if focal_score < 0.6:
+        if focal_score is not None and focal_score < 0.6:
             self.issues.append(
                 DesignIssue(
                     category="composition",
@@ -881,18 +884,12 @@ class DesignQualityGuardrails:
             cmd = ["ffmpeg", "-y", "-i", frame_path, "-vf", "signature=format=xml", "-f", "null", "-"]
             subprocess.run(cmd, capture_output=True, text=True, timeout=DEFAULT_FFMPEG_TIMEOUT)
 
-            # Return estimated text elements based on common video patterns
-            # In explainer videos, we typically see:
-            # - Large headlines (48-64px)
-            # - Medium subheadings (24-32px)
-            # - Body text (16-20px)
-            return [
-                {"size": 64, "type": "headline"},
-                {"size": 28, "type": "subheading"},
-                {"size": 18, "type": "body"},
-            ]
+            # Text detection is not yet implemented (would require OCR).
+            # Return empty list rather than fabricated data.
+            return []
 
-        except Exception:
+        except Exception as exc:
+            logger.debug("Frame text analysis failed for %s at %ss: %s", video_path, time_sec, exc)
             return []
         finally:
             if os.path.exists(frame_path):
@@ -986,11 +983,13 @@ class DesignQualityGuardrails:
 
     # ============== UTILITY METHODS ==============
 
-    def _collect_frame_data(self, video_path: str):
-        """Collect frame-by-frame data for analysis."""
-        # This would collect data from multiple frames
-        # For now, simplified implementation
-        pass
+    def _collect_frame_data(self, video_path: str) -> None:
+        """Collect frame-by-frame data for analysis.
+
+        Currently a no-op. Future implementation would extract key frames
+        and run computer-vision analysis (edge detection, saliency, OCR).
+        """
+        return None
 
     def _probe_video(self, video_path: str) -> dict:
         """Get video metadata."""
@@ -1035,7 +1034,8 @@ class DesignQualityGuardrails:
             if "lavfi.signalstats.YAVG" in line:
                 try:
                     return float(line.split("=")[-1].strip())
-                except Exception:
+                except Exception as exc:
+                    logger.debug("Luma parsing failed: %s", exc)
                     pass
         return 128
 
@@ -1048,7 +1048,8 @@ class DesignQualityGuardrails:
             if "lavfi.signalstats.YSTD" in line:
                 try:
                     return float(line.split("=")[-1].strip())
-                except Exception:
+                except Exception as exc:
+                    logger.debug("Contrast parsing failed: %s", exc)
                     pass
         return 50
 
@@ -1068,7 +1069,8 @@ class DesignQualityGuardrails:
                     val = float(line.split("=")[-1].strip()) + 128
                     rgb_means[0] = val  # Simplified conversion
                     rgb_means[2] = 255 - val
-                except Exception:
+                except Exception as exc:
+                    logger.debug("Color parsing failed: %s", exc)
                     pass
 
         # Calculate saturation estimate
@@ -1087,20 +1089,20 @@ class DesignQualityGuardrails:
         else:
             return 0.6
 
-    def _analyze_composition(self, video_path: str) -> float:
+    def _analyze_composition(self, video_path: str) -> float | None:
         """Analyze composition quality (0-1)."""
-        # Placeholder - would need computer vision
-        return 0.75
+        # Not yet implemented - requires computer vision
+        return None
 
-    def _analyze_text_hierarchy(self, video_path: str) -> float:
+    def _analyze_text_hierarchy(self, video_path: str) -> float | None:
         """Analyze text hierarchy (0-1)."""
-        # Placeholder - would need text detection
-        return 0.7
+        # Not yet implemented - requires text detection
+        return None
 
-    def _count_hierarchy_levels(self, video_path: str) -> int:
+    def _count_hierarchy_levels(self, video_path: str) -> int | None:
         """Count number of distinct hierarchy levels."""
-        # Placeholder
-        return 3
+        # Not yet implemented - requires text detection
+        return None
 
     def _detect_scene_changes(self, video_path: str) -> list[dict]:
         """Detect scene change timestamps."""
@@ -1113,23 +1115,24 @@ class DesignQualityGuardrails:
                 try:
                     time = float(line.split("pts_time:")[1].split()[0])
                     scenes.append({"time": time})
-                except Exception:
+                except Exception as exc:
+                    logger.debug("Scene timestamp parsing failed: %s", exc)
                     pass
         return scenes
 
-    def _analyze_brand_colors(self, video_path: str) -> float:
+    def _analyze_brand_colors(self, video_path: str) -> float | None:
         """Analyze brand color usage (0-1)."""
-        # Placeholder - would need color histogram analysis
-        return 0.5
+        # Not yet implemented - requires color histogram analysis
+        return None
 
-    def _analyze_visual_clutter(self, video_path: str) -> float:
+    def _analyze_visual_clutter(self, video_path: str) -> float | None:
         """Analyze visual clutter (0-1, higher = more cluttered)."""
-        # Placeholder - would need edge detection
-        return 0.4
+        # Not yet implemented - requires edge detection
+        return None
 
     def _detect_text_events(self, video_path: str) -> list[dict]:
         """Detect text events with durations."""
-        # Placeholder - would need OCR
+        # Not yet implemented - requires OCR
         return []
 
     def _detect_transitions(self, video_path: str) -> list[dict]:
@@ -1148,20 +1151,20 @@ class DesignQualityGuardrails:
 
         return transitions
 
-    def _analyze_visual_rhythm(self, video_path: str) -> float:
+    def _analyze_visual_rhythm(self, video_path: str) -> float | None:
         """Analyze visual rhythm consistency (0-1)."""
-        # Placeholder
-        return 0.7
+        # Not yet implemented - requires frame difference analysis
+        return None
 
-    def _analyze_spacing(self, video_path: str) -> float:
+    def _analyze_spacing(self, video_path: str) -> float | None:
         """Analyze spacing consistency (variance, 0-1)."""
-        # Placeholder
-        return 0.2
+        # Not yet implemented - requires layout analysis
+        return None
 
-    def _analyze_focal_points(self, video_path: str) -> float:
+    def _analyze_focal_points(self, video_path: str) -> float | None:
         """Analyze focal point clarity (0-1)."""
-        # Placeholder
-        return 0.75
+        # Not yet implemented - requires saliency detection
+        return None
 
     def _calculate_audio_score(self, video_path: str) -> float:
         """Calculate audio quality score."""
@@ -1177,7 +1180,8 @@ class DesignQualityGuardrails:
 
             distance = abs(input_lufs - (-16))
             return max(0, 100 - distance * 5)
-        except Exception:
+        except Exception as exc:
+            logger.debug("Audio score calculation failed: %s", exc)
             return 50
 
 
