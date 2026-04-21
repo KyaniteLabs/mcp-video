@@ -15,7 +15,7 @@ The prior P0 security pass was largely completed: output path validation now exi
 The remaining risks are now concentrated in a smaller set of areas:
 
 1. **Residual SSRF DNS rebinding gap** — URL safety check and fetch still use separate resolutions.
-2. **AI/resource bounds** — Whisper/Demucs/AI scene/upscale paths still need model/duration/disk-space/timeout guards beyond subprocess timeouts.
+2. **AI/resource bounds** — Whisper/Demucs/upscale paths still need model/duration/disk-space/timeout guards beyond subprocess timeouts.
 3. **Client API contract consistency** — client-side empty-input validation has improved, but return-type consistency remains.
 4. **Subprocess architecture cleanup** — many subprocess calls now have timeouts, but duplicated direct handling remains.
 
@@ -40,8 +40,8 @@ The remaining risks are now concentrated in a smaller set of areas:
 | C-P1-3 | Closed in follow-up branch | Client `text_animated()` previously forwarded empty text to FFmpeg-backed implementation. | Follow-up remediation adds client-side empty/whitespace text validation with tests. | Keep client validation fast and explicit. |
 | C-P1-4 | Open | Demucs separation itself has no explicit timeout even though the preliminary FFmpeg extraction has one. | `mcp_video/ai_engine/stem.py:94-115` times out FFmpeg extraction, then calls `demucs.separate.main(demucs_args)` directly. | Execute Demucs through a timeout-capable subprocess or cancellable worker; surface timeout as `ProcessingError`. |
 | C-P1-5 | Open | Whisper model/duration/RAM guard remains incomplete. | `mcp_video/ai_engine/transcribe.py:94-102` loads arbitrary `model` and transcribes extracted audio without validating model name or bounding media duration. | Add allowlist/model validation, duration checks before extraction/transcription, and clearer dependency/resource errors. |
-| C-P1-6 | Open | AI scene detection still lacks AI-mode threshold validation and can extract many frames for long videos. | `mcp_video/ai_engine/scene.py:24-49` only routes standard mode through `_standard_scene_detect()`; AI mode proceeds without threshold validation. `mcp_video/ai_engine/scene.py:64-83` extracts frames every 0.5s until FFmpeg timeout. | Validate threshold before mode branching; add duration/frame-count cap or adaptive sampling. |
-| C-P1-7 | Open | Spatial audio simple path can crash on empty positions and gives unclear behavior for missing audio. | `mcp_video/ai_engine/spatial.py:159-166` sorts positions then indexes `sorted_positions[-1]` in the fallback path. | Reject empty `positions` before processing; probe/validate audio stream before pan/concat workflow. |
+| C-P1-6 | Closed in follow-up branch | AI scene detection previously lacked AI-mode threshold validation and could extract unbounded frames for long videos. | Follow-up remediation validates threshold before mode branching, enforces the global video-duration limit, and caps AI frame extraction with `MAX_AI_SCENE_FRAMES`. | Keep threshold and frame-cap regression tests. |
+| C-P1-7 | Closed in follow-up branch | Spatial audio simple path previously had unclear no-audio behavior and a private empty-position crash path. | Follow-up remediation validates audio streams before pan filters and rejects empty positions inside `_apply_simple_spatial()`. | Keep no-audio and empty-position regression tests. |
 
 ### P2 / robustness and cleanup
 
@@ -88,7 +88,7 @@ Legend:
 | 20 | Empty list/string client edge cases | Mostly closed | `merge([])`, `audio_sequence([])`, `add_text("")`, `text_animated("")`, and invalid `audio_compose()` inputs are covered after follow-up remediation. |
 | 21 | Demucs runs without timeout | Open | See C-P1-4. |
 | 22 | Whisper model/RAM guard | Open | See C-P1-5. |
-| 23 | AI scene threshold validation | Open | See C-P1-6. |
+| 23 | AI scene threshold validation | Closed in follow-up branch | See C-P1-6. |
 | 24 | `_generate_thumbnail_base64` missing input validation | Closed | Thumbnail helper validates and uses named timeout (`mcp_video/engine_runtime_utils.py:439-463`). |
 | 25 | Hardcoded thumbnail timeout | Closed | `DOCTOR_COMMAND_TIMEOUT` is used for thumbnail probe generation (`mcp_video/engine_runtime_utils.py:26`, `mcp_video/engine_runtime_utils.py:463`). |
 | 26 | Dead `_validate_input` | Closed | No `def _validate_input` remains in `mcp_video/engine_runtime_utils.py`. |
@@ -105,10 +105,10 @@ Legend:
 | 37 | `_sanitize_params` over-sanitizes future string params | Open | Current `engine_filters.py` still sanitizes every key except `preset`; future string params would fail. |
 | 38 | Duplicated subprocess handling | Open | See C-P2-1. |
 | 39 | Subprocess.Popen policy violation | Partial | `engine_runtime_utils.py` uses `Popen` with `wait(timeout=...)`; `remotion_engine.py` still uses `Popen`. See C-P2-3. |
-| 40 | AI scene temp bloat | Open | See C-P1-6. |
+| 40 | AI scene temp bloat | Closed in follow-up branch | See C-P1-6. |
 | 41 | AI upscale disk-space guard | Open | Needs targeted check for temp-frame path. |
-| 42 | Spatial no-audio check | Open | See C-P1-7. |
-| 43 | Spatial empty positions crash | Open | See C-P1-7. |
+| 42 | Spatial no-audio check | Closed in follow-up branch | See C-P1-7. |
+| 43 | Spatial empty positions crash | Closed in follow-up branch | See C-P1-7. |
 
 ---
 
@@ -117,7 +117,7 @@ Legend:
 Next high-value bundle after this follow-up branch:
 
 1. Fix SSRF DNS rebinding gap in direct URL download.
-2. Add Whisper/Demucs/AI-scene resource guards.
+2. Add Whisper/Demucs/upscale resource guards.
 3. Add targeted tests around optional dependency and resource-bound behavior.
 
 Subsequent cleanup bundle:

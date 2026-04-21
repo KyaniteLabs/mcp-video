@@ -16,10 +16,21 @@ import tempfile
 from pathlib import Path
 
 from ..errors import InputFileError, MCPVideoError, ProcessingError
-from ..ffmpeg_helpers import _get_video_duration, _validate_output_path
+from ..ffmpeg_helpers import _get_video_duration, _run_ffprobe_json, _validate_output_path
 from ..limits import DEFAULT_FFMPEG_TIMEOUT
+from ..engine_runtime_utils import _get_audio_stream
 
 logger = logging.getLogger(__name__)
+
+
+def _require_audio_stream(video: str) -> None:
+    data = _run_ffprobe_json(video)
+    if _get_audio_stream(data) is None:
+        raise MCPVideoError(
+            "Input video must contain an audio stream for spatial audio",
+            error_type="validation_error",
+            code="missing_audio_stream",
+        )
 
 
 def _standard_scene_detect(video: str, threshold: float) -> list[dict]:
@@ -90,6 +101,8 @@ def audio_spatial(
     if not positions:
         raise MCPVideoError("At least one position must be provided", error_type="validation_error")
 
+    _require_audio_stream(str(video_path))
+
     # Validate method
     valid_methods = ("hrtf", "vbap", "simple")
     if method not in valid_methods:
@@ -156,6 +169,9 @@ def _apply_simple_spatial(
     Returns:
         Path to output video
     """
+    if not positions:
+        raise MCPVideoError("At least one position must be provided", error_type="validation_error")
+
     # Sort positions by time
     sorted_positions = sorted(positions, key=lambda p: p.get("time", 0))
 

@@ -11,6 +11,7 @@ DOCTOR_COMMAND_TIMEOUT = 10  # Short version/probe commands should not hang
 FFPROBE_TIMEOUT = 30  # Metadata probes should fail quickly
 MAX_BATCH_SIZE = 50
 MAX_EXPORT_FRAMES_FPS = 60
+MAX_AI_SCENE_FRAMES = 600
 
 # Audio limits
 MAX_AUDIO_DURATION = 3600  # 1 hour
