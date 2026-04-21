@@ -9,6 +9,8 @@ import math
 import struct
 import wave
 
+from mcp_video.ffmpeg_helpers import _validate_output_path
+
 
 # ---------------------------------------------------------------------------
 # Audio Constants
@@ -294,6 +296,7 @@ def write_wav(
     channels: int = DEFAULT_CHANNELS,
 ) -> str:
     """Write PCM data to a WAV file."""
+    _validate_output_path(output_path)
     with wave.open(output_path, "wb") as wav_file:
         wav_file.setnchannels(channels)
         wav_file.setsampwidth(DEFAULT_SAMPLE_WIDTH)

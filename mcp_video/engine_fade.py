@@ -10,7 +10,7 @@ from .engine_runtime_utils import (
     _run_ffmpeg,
     _timed_operation,
 )
-from .ffmpeg_helpers import _validate_input_path
+from .ffmpeg_helpers import _validate_input_path, _validate_output_path
 from .errors import MCPVideoError
 from .models import EditResult
 
@@ -29,6 +29,7 @@ def fade(
         raise MCPVideoError("Specify fade_in and/or fade_out > 0", code="no_fade")
 
     output = output_path or _auto_output(input_path, "faded")
+    _validate_output_path(output)
     info = probe(input_path)
 
     vf_parts: list[str] = []

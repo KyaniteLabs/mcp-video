@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 
 from .errors import InputFileError, MCPVideoError
-from .ffmpeg_helpers import _run_ffprobe_json, _validate_input_path
+from .ffmpeg_helpers import _run_ffprobe_json, _validate_input_path, _validate_output_path
 from .models import VideoInfo
 from .engine_runtime_utils import _get_audio_stream, _get_video_stream
 from .limits import MAX_VIDEO_DURATION

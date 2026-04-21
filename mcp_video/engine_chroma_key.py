@@ -14,7 +14,7 @@ from .engine_runtime_utils import (
     _timed_operation,
     _validate_chroma_color,
 )
-from .ffmpeg_helpers import _validate_input_path, _escape_ffmpeg_filter_value
+from .ffmpeg_helpers import _validate_input_path, _validate_output_path, _escape_ffmpeg_filter_value
 from .models import EditResult
 
 
@@ -40,6 +40,7 @@ def chroma_key(
     """
     _validate_input_path(input_path)
     output = output_path or _auto_output(input_path, "chromakey")
+    _validate_output_path(output)
 
     _require_filter("chromakey", "Chroma key filter")
 

@@ -14,7 +14,7 @@ from .engine_filters import apply_filter
 from .engine_resize import resize
 from .engine_speed import speed
 from .engine_watermark import watermark
-from .ffmpeg_helpers import _validate_input_path
+from .ffmpeg_helpers import _validate_input_path, _validate_output_path
 from .models import EditResult
 
 

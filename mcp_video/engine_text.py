@@ -18,7 +18,7 @@ from .engine_runtime_utils import (
     _timed_operation,
     _validate_color,
 )
-from .ffmpeg_helpers import _validate_input_path, _escape_ffmpeg_filter_value
+from .ffmpeg_helpers import _validate_input_path, _validate_output_path, _escape_ffmpeg_filter_value
 from .models import EditResult, Position
 
 
@@ -47,6 +47,7 @@ def add_text(
         )
     _validate_color(color)
     output = output_path or _auto_output(input_path, "titled")
+    _validate_output_path(output)
 
     coords = _position_coords(position)
     fontfile = font or _default_font()

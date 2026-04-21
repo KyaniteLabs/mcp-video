@@ -11,7 +11,7 @@ from .engine_runtime_utils import (
     _timed_operation,
 )
 from .defaults import DEFAULT_CRF, DEFAULT_PRESET
-from .ffmpeg_helpers import _validate_input_path, _escape_ffmpeg_filter_value
+from .ffmpeg_helpers import _validate_input_path, _validate_output_path, _escape_ffmpeg_filter_value
 from .models import EditResult
 
 
@@ -26,6 +26,7 @@ def subtitles(
     _validate_input_path(subtitle_path)
     _require_filter("subtitles", "Subtitle burn-in")
     output = output_path or _auto_output(input_path, "subtitled")
+    _validate_output_path(output)
 
     # Escape special characters for FFmpeg subtitle filter path
     escaped_sub_path = _escape_ffmpeg_filter_value(subtitle_path)

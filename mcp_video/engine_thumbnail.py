@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from .ffmpeg_helpers import _validate_input_path
+from .ffmpeg_helpers import _validate_input_path, _validate_output_path
 from .engine_probe import get_duration
 from .engine_runtime_utils import _auto_output, _run_ffmpeg
 from .models import ThumbnailResult
@@ -26,6 +26,7 @@ def thumbnail(
         timestamp = min(timestamp, dur * 0.99)
 
     output = output_path or _auto_output(input_path, f"frame_{timestamp:.1f}s", ext=".jpg")
+    _validate_output_path(output)
 
     _run_ffmpeg(
         [

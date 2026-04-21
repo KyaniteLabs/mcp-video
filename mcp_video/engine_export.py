@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from .ffmpeg_helpers import _validate_input_path
+from .ffmpeg_helpers import _validate_input_path, _validate_output_path
 from .models import EditResult, ExportFormat, QualityLevel
 
 

@@ -48,3 +48,33 @@ def test_validate_input_path_rejects_nonexistent_file():
         raise AssertionError("Expected InputFileError")
     except InputFileError:
         pass
+
+
+def test_validate_output_path_rejects_null_bytes():
+    from mcp_video.errors import MCPVideoError
+    from mcp_video.ffmpeg_helpers import _validate_output_path
+
+    try:
+        _validate_output_path("/tmp/video\x00.mp4")
+        raise AssertionError("Expected MCPVideoError")
+    except MCPVideoError as e:
+        assert "null bytes" in str(e).lower()
+
+
+def test_validate_output_path_rejects_traversal():
+    from mcp_video.errors import MCPVideoError
+    from mcp_video.ffmpeg_helpers import _validate_output_path
+
+    try:
+        _validate_output_path("../../etc/passwd")
+        raise AssertionError("Expected MCPVideoError")
+    except MCPVideoError as e:
+        assert "traversal" in str(e).lower()
+
+
+def test_validate_output_path_accepts_safe_paths():
+    from mcp_video.ffmpeg_helpers import _validate_output_path
+
+    assert _validate_output_path("output.mp4") == "output.mp4"
+    assert _validate_output_path("/tmp/output.mp4") == "/tmp/output.mp4"
+    assert _validate_output_path("foo/bar/baz.mp4") == "foo/bar/baz.mp4"

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from .defaults import DEFAULT_AUDIO_BITRATE, DEFAULT_CRF, DEFAULT_PRESET
-from .ffmpeg_helpers import _validate_input_path
+from .ffmpeg_helpers import _validate_input_path, _validate_output_path
 from .engine_probe import probe
 from .engine_runtime_utils import _auto_output, _movflags_args, _run_ffmpeg, _timed_operation
 from .errors import MCPVideoError
@@ -22,6 +22,7 @@ def speed(
         raise MCPVideoError("Speed factor must be positive")
 
     output = output_path or _auto_output(input_path, f"speed_{factor}x")
+    _validate_output_path(output)
 
     # Use setpts for video, atempo for audio
     video_filter = f"setpts={1 / factor}*PTS"

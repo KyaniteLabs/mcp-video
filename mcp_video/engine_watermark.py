@@ -11,7 +11,7 @@ from .engine_runtime_utils import (
     _run_ffmpeg,
     _timed_operation,
 )
-from .ffmpeg_helpers import _validate_input_path
+from .ffmpeg_helpers import _validate_input_path, _validate_output_path
 from .models import EditResult, NamedPosition, Position
 
 
@@ -29,6 +29,7 @@ def watermark(
     _validate_input_path(input_path)
     _validate_input_path(image_path)
     output = output_path or _auto_output(input_path, "watermarked")
+    _validate_output_path(output)
 
     # Position expressions for the overlay
     position_map: dict[NamedPosition, str] = {

@@ -9,7 +9,7 @@ import logging
 import math
 
 from ..errors import ProcessingError
-from ..ffmpeg_helpers import _validate_input_path, _run_ffmpeg
+from ..ffmpeg_helpers import _validate_input_path, _validate_output_path, _run_ffmpeg
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +34,7 @@ def effect_vignette(
         Path to output video
     """
     input_path = _validate_input_path(input_path)
+    _validate_output_path(output)
     # FFmpeg vignette filter: angle (in radians) controls the radius
     # intensity maps to darkness
 
@@ -91,6 +92,7 @@ def effect_chromatic_aberration(
         Path to output video
     """
     input_path = _validate_input_path(input_path)
+    _validate_output_path(output)
     # Convert angle to radians
     angle_rad = angle * 3.14159 / 180
 
@@ -154,6 +156,7 @@ def effect_scanlines(
         Path to output video
     """
     input_path = _validate_input_path(input_path)
+    _validate_output_path(output)
     # Use drawgrid filter to create scanlines - simpler and more reliable
     # drawgrid creates horizontal lines with specified spacing
     grid_spacing = line_height * 2
@@ -208,6 +211,7 @@ def effect_noise(
         Path to output video
     """
     input_path = _validate_input_path(input_path)
+    _validate_output_path(output)
     # Use noise filter if available, otherwise usegeq with random
     seed_expr = "random(0)" if animated else "0"
 
@@ -263,6 +267,7 @@ def effect_glow(
         Path to output video
     """
     input_path = _validate_input_path(input_path)
+    _validate_output_path(output)
     # Extract highlights, blur them, overlay back
     threshold_8bit = int(threshold * 255)
 

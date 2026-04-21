@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 
-from .ffmpeg_helpers import _validate_input_path
+from .ffmpeg_helpers import _validate_input_path, _validate_output_path
 from .engine_probe import probe
 from .engine_runtime_utils import _auto_output_dir, _run_ffmpeg
 from .errors import MCPVideoError
