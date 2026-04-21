@@ -60,7 +60,7 @@ def video_ai_remove_silence(
     except MCPVideoError as e:
         return _error_result(e)
     except Exception as e:
-        return {"success": False, "error": {"type": "internal_error", "code": "unexpected_error", "message": str(e)}}
+        return _error_result(e)
 
 
 @mcp.tool()
@@ -87,7 +87,7 @@ def video_ai_transcribe(
     except MCPVideoError as e:
         return _error_result(e)
     except Exception as e:
-        return {"success": False, "error": {"type": "internal_error", "code": "unexpected_error", "message": str(e)}}
+        return _error_result(e)
 
 
 @mcp.tool()
@@ -170,7 +170,7 @@ def video_analyze(
     except MCPVideoError as e:
         return _error_result(e)
     except Exception as e:
-        return {"success": False, "error": {"type": "internal_error", "code": "unexpected_error", "message": str(e)}}
+        return _error_result(e)
 
 
 @mcp.tool()
@@ -196,7 +196,7 @@ def video_ai_scene_detect(
     except MCPVideoError as e:
         return _error_result(e)
     except Exception as e:
-        return {"success": False, "error": {"type": "internal_error", "code": "unexpected_error", "message": str(e)}}
+        return _error_result(e)
 
 
 @mcp.tool()
@@ -231,7 +231,7 @@ def video_ai_stem_separation(
     except MCPVideoError as e:
         return _error_result(e)
     except Exception as e:
-        return {"success": False, "error": {"type": "internal_error", "code": "unexpected_error", "message": str(e)}}
+        return _error_result(e)
 
 
 @mcp.tool()
@@ -266,7 +266,7 @@ def video_ai_upscale(
     except MCPVideoError as e:
         return _error_result(e)
     except Exception as e:
-        return {"success": False, "error": {"type": "internal_error", "code": "unexpected_error", "message": str(e)}}
+        return _error_result(e)
 
 
 @mcp.tool()
@@ -294,7 +294,7 @@ def video_ai_color_grade(
     except MCPVideoError as e:
         return _error_result(e)
     except Exception as e:
-        return {"success": False, "error": {"type": "internal_error", "code": "unexpected_error", "message": str(e)}}
+        return _error_result(e)
 
 
 @mcp.tool()
@@ -319,7 +319,7 @@ def video_quality_check(
     except MCPVideoError as e:
         return _error_result(e)
     except Exception as e:
-        return {"success": False, "error": {"type": "internal_error", "code": "unexpected_error", "message": str(e)}}
+        return _error_result(e)
 
 
 @mcp.tool()
@@ -346,7 +346,7 @@ def video_design_quality_check(
     except MCPVideoError as e:
         return _error_result(e)
     except Exception as e:
-        return {"success": False, "error": {"type": "internal_error", "code": "unexpected_error", "message": str(e)}}
+        return _error_result(e)
 
 
 @mcp.tool()
@@ -371,4 +371,4 @@ def video_fix_design_issues(
     except MCPVideoError as e:
         return _error_result(e)
     except Exception as e:
-        return {"success": False, "error": {"type": "internal_error", "code": "unexpected_error", "message": str(e)}}
+        return _error_result(e)
