@@ -540,6 +540,28 @@ class TestColorGrade:
                 assert os.path.exists(result), f"Output not created for style: {style}"
                 assert os.path.getsize(result) > 0, f"Output is empty for style: {style}"
 
+
+    def test_reference_color_analysis_failure_falls_back_to_neutral(self, monkeypatch):
+        """Reference matching should remain best-effort when FFmpeg analysis fails."""
+        import subprocess
+
+        from mcp_video.ai_engine.color import _match_reference_colors
+
+        def fake_run(cmd, capture_output, text, timeout):
+            return subprocess.CompletedProcess(cmd, 1, "", "signalstats unavailable")
+
+        monkeypatch.setattr(subprocess, "run", fake_run)
+
+        assert _match_reference_colors("input.mp4", "reference.mp4") == {
+            "contrast": 1.0,
+            "saturation": 1.0,
+            "gamma": 1.0,
+            "red": 1.0,
+            "green": 1.0,
+            "blue": 1.0,
+        }
+
+
     @requires_ffmpeg
     def test_color_grade_with_reference(self):
         """Test color grading with reference video."""

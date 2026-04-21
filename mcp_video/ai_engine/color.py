@@ -200,7 +200,7 @@ def _match_reference_colors(video: str, reference: str) -> dict:
             "green": green_adj,
             "blue": blue_adj,
         }
-    except (subprocess.SubprocessError, ValueError, OSError):
+    except (subprocess.SubprocessError, ProcessingError, ValueError, OSError):
         # Fall back to neutral params if analysis fails
         return {"contrast": 1.0, "saturation": 1.0, "gamma": 1.0, "red": 1.0, "green": 1.0, "blue": 1.0}
 
