@@ -13,6 +13,8 @@ from mcp_video.server import (
     mcp,
     templates_resource,
     video_audio_resource,
+    effect_noise,
+    effect_glow,
     transition_glitch,
     transition_pixelate,
     video_add_audio,
@@ -55,6 +57,8 @@ from mcp_video.server import (
     video_trim,
     video_watermark,
     video_write_metadata,
+    video_analyze,
+    video_ai_color_grade,
 )
 from mcp_video.errors import InputFileError
 
@@ -705,3 +709,53 @@ class TestServerValidationMograph:
     def test_progress_rejects_bad_style(self):
         result = video_mograph_progress(duration=2, output_path="/tmp/out.mp4", style="invalid")
         assert result["success"] is False
+
+
+class TestServerToolPathValidation:
+    def test_blur_rejects_nonexistent_file(self):
+        result = video_blur("/nonexistent/video.mp4")
+        assert result["success"] is False
+        assert "error" in result
+
+    def test_export_rejects_nonexistent_file(self):
+        result = video_export("/nonexistent/video.mp4")
+        assert result["success"] is False
+        assert "error" in result
+
+    def test_rotate_rejects_nonexistent_file(self):
+        result = video_rotate("/nonexistent/video.mp4")
+        assert result["success"] is False
+        assert "error" in result
+
+    def test_noise_rejects_nonexistent_file(self):
+        result = effect_noise("/nonexistent/video.mp4", "/tmp/out.mp4")
+        assert result["success"] is False
+        assert "error" in result
+
+    def test_glow_rejects_nonexistent_file(self):
+        result = effect_glow("/nonexistent/video.mp4", "/tmp/out.mp4")
+        assert result["success"] is False
+        assert "error" in result
+
+
+class TestServerAIEdgeCases:
+    def test_analyze_url_skips_path_validation(self, monkeypatch):
+        def fake_is_url(url):
+            return True
+
+        call_log = []
+
+        def fake_analyze(*args, **kwargs):
+            call_log.append(args[0])
+            return {"summary": "test"}
+
+        monkeypatch.setattr("mcp_video.ai_engine.download._is_url", fake_is_url)
+        monkeypatch.setattr("mcp_video.ai_engine.analyze_video", fake_analyze)
+        # Should not raise InputFileError for a URL
+        result = video_analyze("https://example.com/video.mp4")
+        assert call_log == ["https://example.com/video.mp4"]
+        assert "error" not in result
+
+    def test_color_grade_none_reference_does_not_crash(self, sample_video):
+        result = video_ai_color_grade(sample_video, output_path="/tmp/out.mp4", reference_path=None)
+        assert result["success"] is True

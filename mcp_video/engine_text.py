@@ -76,7 +76,9 @@ def add_text(
 
     if start_time is not None and duration is not None:
         safe_start = _escape_ffmpeg_filter_value(str(_sanitize_ffmpeg_number(start_time, "start_time")))
-        safe_end = _escape_ffmpeg_filter_value(str(_sanitize_ffmpeg_number(start_time + duration, "start_time + duration")))
+        safe_end = _escape_ffmpeg_filter_value(
+            str(_sanitize_ffmpeg_number(start_time + duration, "start_time + duration"))
+        )
         filter_parts.append(f"enable='between(t\\,{safe_start}\\,{safe_end})'")
     elif start_time is not None:
         safe_start = _escape_ffmpeg_filter_value(str(_sanitize_ffmpeg_number(start_time, "start_time")))

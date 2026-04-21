@@ -219,7 +219,9 @@ def _drawtext_filter(elem, width: int, height: int) -> str:
         drawtext_parts.append("shadowy=2")
     if elem.start is not None and elem.duration is not None:
         safe_start = _escape_ffmpeg_filter_value(str(_sanitize_ffmpeg_number(elem.start, "elem.start")))
-        safe_end = _escape_ffmpeg_filter_value(str(_sanitize_ffmpeg_number(elem.start + elem.duration, "elem.start + elem.duration")))
+        safe_end = _escape_ffmpeg_filter_value(
+            str(_sanitize_ffmpeg_number(elem.start + elem.duration, "elem.start + elem.duration"))
+        )
         drawtext_parts.append(f"enable='between(t\\,{safe_start}\\,{safe_end})'")
     elif elem.start is not None:
         safe_start = _escape_ffmpeg_filter_value(str(_sanitize_ffmpeg_number(elem.start, "elem.start")))
