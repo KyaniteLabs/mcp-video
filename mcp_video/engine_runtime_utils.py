@@ -384,6 +384,7 @@ def _run_ffmpeg_with_progress(
     )
 
     stderr_lines: list[str] = []
+    progress_errors: list[BaseException] = []
     _MAX_STDERR_LINES = 10_000
     _MAX_STDERR_BYTES = 1_000_000  # ~1 MB hard cap
     _stderr_bytes = 0
@@ -403,7 +404,13 @@ def _run_ffmpeg_with_progress(
             if match:
                 current_time = _parse_ffmpeg_time(match.group(1))
                 pct = min(100.0, (current_time / estimated_duration) * 100)
-                on_progress(pct)
+                try:
+                    on_progress(pct)
+                except BaseException as exc:  # propagate callback failures from the reader thread
+                    progress_errors.append(exc)
+                    if proc.poll() is None:
+                        proc.terminate()
+                    break
 
     reader = threading.Thread(target=_read_stderr)
     reader.start()
@@ -419,6 +426,8 @@ def _run_ffmpeg_with_progress(
         reader.join(timeout=5)
 
     stderr = "".join(stderr_lines)
+    if progress_errors:
+        raise progress_errors[0]
     if proc.returncode != 0:
         raise parse_ffmpeg_error(stderr)
 

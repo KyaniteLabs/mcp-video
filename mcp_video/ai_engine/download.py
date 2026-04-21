@@ -36,12 +36,13 @@ def _is_safe_url(url: str) -> bool:
         hostname = parsed.hostname
         if not hostname:
             return False
-        # Resolve hostname to IP addresses (with timeout to prevent hangs)
+        # Resolve hostname to IP addresses (with timeout to prevent hangs).
+        previous_timeout = _socket.getdefaulttimeout()
         _socket.setdefaulttimeout(10)
         try:
             addrinfos = _socket.getaddrinfo(hostname, parsed.port or 80, proto=_socket.IPPROTO_TCP)
         finally:
-            _socket.setdefaulttimeout(None)
+            _socket.setdefaulttimeout(previous_timeout)
         for _family, _type, _proto, _canonname, sockaddr in addrinfos:
             ip_str = sockaddr[0]
             addr = _ipaddress.ip_address(ip_str)
