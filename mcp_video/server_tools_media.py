@@ -428,7 +428,7 @@ def video_edit(
     except MCPVideoError as e:
         return _error_result(e)
     except Exception as e:
-        return {"success": False, "error": {"type": "internal_error", "code": "unexpected_error", "message": str(e)}}
+        return _error_result(e)
 
 
 @mcp.tool()

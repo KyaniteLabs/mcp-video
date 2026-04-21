@@ -591,6 +591,13 @@ def text_animated(
         y_offset = f"+50*(1-min(1,(t-{start})/0.3))"
         pos = pos.replace("(h-text_h)/2", f"(h-text_h)/2{y_offset}")
         alpha_expr = "1"
+    elif animation == "typewriter":
+        # Reveal characters over time
+        char_rate = max(1, int(len(text) / max(1, duration * 10)))
+        alpha_expr = f"if(lt(n*{char_rate},t*10),1,0)"
+    elif animation == "glitch":
+        # Random glitch opacity
+        alpha_expr = "if(random(0)*lt(mod(t,0.2),0.1),0.8,1)"
     else:
         alpha_expr = "1"
 
@@ -988,7 +995,7 @@ def video_info_detailed(video: str) -> dict[str, Any]:
         "bitrate": bitrate,
         "has_audio": audio_stream is not None,
         "scene_changes": scene_changes[:10],  # Limit to first 10
-        "dominant_colors": [],  # Would require frame analysis
+        "dominant_colors": None,  # Frame analysis not yet implemented
     }
 
 

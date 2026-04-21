@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from rich.console import Console
 from rich.markup import escape
 from rich.panel import Panel
 from rich.table import Table
+
+logger = logging.getLogger(__name__)
 
 console = Console()
 err_console = Console(stderr=True)
@@ -128,7 +131,8 @@ def _format_error(e: Exception) -> None:
     if isinstance(e, MCPVideoError):
         try:
             data = e.to_dict()
-        except Exception:
+        except Exception as exc:
+            logger.debug("MCPVideoError.to_dict() failed in CLI formatting: %s", exc)
             data = {}
         msg = data.get("message", str(e))
         code = data.get("code", "")

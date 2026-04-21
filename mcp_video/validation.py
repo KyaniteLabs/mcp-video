@@ -25,7 +25,7 @@ VALID_XFADE_TRANSITIONS = {
     "smoothdown",
 }
 VALID_WAVEFORMS = {"sine", "square", "sawtooth", "triangle", "noise"}
-VALID_AUDIO_EFFECT_TYPES = {"lowpass", "reverb", "normalize", "fade"}
+VALID_AUDIO_EFFECT_TYPES = {"lowpass", "highpass", "reverb", "normalize", "fade"}
 VALID_SPATIAL_METHODS = {"hrtf", "panning"}
 VALID_MOGRAPH_STYLES = {"bar", "circle", "dots"}
 VALID_LAYOUTS = {"side-by-side", "top-bottom"}
@@ -44,6 +44,7 @@ VALID_AUDIO_PRESETS = {
     "drone-low",
     "drone-mid",
     "drone-tech",
+    "drone-ominous",
     "chime-success",
     "chime-error",
     "chime-notification",
@@ -51,4 +52,6 @@ VALID_AUDIO_PRESETS = {
     "typing",
     "scan",
     "processing",
+    "upload",
+    "download",
 }

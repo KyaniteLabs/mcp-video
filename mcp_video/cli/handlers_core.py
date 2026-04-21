@@ -213,9 +213,10 @@ def handle_initial_command(args: Any, *, use_json: bool) -> bool:
     if args.command == "subtitles":
         from ..engine import subtitles
 
-        result = _with_spinner(
-            "Burning subtitles...", subtitles, args.input, subtitle_path=args.subtitle, output_path=args.output
-        )
+        sub_kwargs = {"subtitle_path": args.subtitle, "output_path": args.output}
+        if args.style is not None:
+            sub_kwargs["style"] = args.style
+        result = _with_spinner("Burning subtitles...", subtitles, args.input, **sub_kwargs)
         if use_json:
             output_json(result)
         else:
@@ -234,6 +235,8 @@ def handle_initial_command(args: Any, *, use_json: bool) -> bool:
             opacity=args.opacity,
             margin=args.margin,
             output_path=args.output,
+            crf=args.crf,
+            preset=args.preset,
         )
         if use_json:
             output_json(result)
@@ -288,6 +291,8 @@ def handle_initial_command(args: Any, *, use_json: bool) -> bool:
             fade_in=args.fade_in,
             fade_out=args.fade_out,
             output_path=args.output,
+            crf=args.crf,
+            preset=args.preset,
         )
         if use_json:
             output_json(result)

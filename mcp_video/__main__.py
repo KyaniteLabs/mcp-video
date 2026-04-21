@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import sys
 
 from .cli.handlers_advanced import handle_advanced_commands
@@ -17,6 +18,8 @@ from .cli.handlers_remotion import handle_remotion_commands
 from .cli.handlers_transitions import handle_transition_command
 from .cli.parser import build_parser
 from .cli.formatting import _format_error, console, err_console
+
+logger = logging.getLogger(__name__)
 
 
 def main() -> None:
@@ -69,7 +72,8 @@ def main() -> None:
             if isinstance(e, MCPVideoError):
                 try:
                     err_data = e.to_dict()
-                except Exception:
+                except Exception as exc:
+                    logger.warning("MCPVideoError.to_dict() failed: %s", exc)
                     err_data = {"type": "internal_error", "code": "to_dict_failed", "message": str(e)}
                 print(json.dumps({"success": False, "error": err_data}, indent=2), file=sys.stderr)
             else:

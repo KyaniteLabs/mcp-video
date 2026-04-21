@@ -317,6 +317,7 @@ def video_resize(
             )
         )
     try:
+        _validate_input_path(input_path)
         return _result(
             resize(
                 input_path,
@@ -357,6 +358,7 @@ def video_convert(
             )
         )
     try:
+        _validate_input_path(input_path)
         return _result(
             convert(
                 input_path,
