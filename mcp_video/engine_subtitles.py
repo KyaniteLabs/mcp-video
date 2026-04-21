@@ -10,6 +10,7 @@ from .engine_runtime_utils import (
     _run_ffmpeg,
     _timed_operation,
 )
+from .defaults import DEFAULT_CRF, DEFAULT_PRESET
 from .ffmpeg_helpers import _validate_input_path, _escape_ffmpeg_filter_value
 from .models import EditResult
 
@@ -40,9 +41,9 @@ def subtitles(
                 "-c:v",
                 "libx264",
                 "-preset",
-                "fast",
+                DEFAULT_PRESET,
                 "-crf",
-                "23",
+                str(DEFAULT_CRF),
                 "-c:a",
                 "copy",
                 *_movflags_args(output),
