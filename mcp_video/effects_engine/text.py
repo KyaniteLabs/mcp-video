@@ -83,11 +83,7 @@ def text_animated(
         # stays visible. Distinct from "fade" which has slow in + slow out.
         # TODO: Implement proper typewriter via overlay clipping mask.
         reveal_duration = min(1.5, duration * 0.5)
-        alpha_expr = (
-            f"if(lt(t,{start}),0,"
-            f"if(lt(t,{start}+{reveal_duration}),"
-            f"(t-{start})/{reveal_duration},1))"
-        )
+        alpha_expr = f"if(lt(t,{start}),0,if(lt(t,{start}+{reveal_duration}),(t-{start})/{reveal_duration},1))"
     elif animation == "glitch":
         # Random glitch opacity
         alpha_expr = "if(random(0)*lt(mod(t,0.2),0.1),0.8,1)"
