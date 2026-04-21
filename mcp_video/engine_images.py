@@ -10,7 +10,7 @@ import tempfile
 from .engine_probe import probe
 from .engine_runtime_utils import _auto_output, _movflags_args, _quality_args, _run_ffmpeg, _timed_operation
 from .errors import MCPVideoError
-from .ffmpeg_helpers import _validate_input_path
+from .ffmpeg_helpers import _validate_input_path, _validate_output_path
 from .models import EditResult
 
 
@@ -35,6 +35,7 @@ def create_from_images(
     validated_images = [_validate_input_path(img) for img in images]
 
     output = output_path or _auto_output(images[0], "from_images")
+    _validate_output_path(output)
     with _timed_operation() as timing:
         tmpdir = tempfile.mkdtemp(prefix="mcp_video_imgseq_")
         try:

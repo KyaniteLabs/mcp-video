@@ -16,7 +16,7 @@ import tempfile
 from pathlib import Path
 
 from ..errors import InputFileError, MCPVideoError, ProcessingError
-from ..ffmpeg_helpers import _get_video_duration
+from ..ffmpeg_helpers import _get_video_duration, _validate_output_path
 from ..limits import DEFAULT_FFMPEG_TIMEOUT
 
 logger = logging.getLogger(__name__)
@@ -39,7 +39,7 @@ def _standard_scene_detect(video: str, threshold: float) -> list[dict]:
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=DEFAULT_FFMPEG_TIMEOUT)
     except subprocess.TimeoutExpired:
-        raise ProcessingError("Operation timed out after 600 seconds") from None
+        raise ProcessingError(f"Operation timed out after {DEFAULT_FFMPEG_TIMEOUT}s") from None
 
     scenes = []
     for line in result.stderr.split("\n"):
@@ -95,6 +95,7 @@ def audio_spatial(
     if method not in valid_methods:
         raise MCPVideoError(f"Method must be one of {valid_methods}, got {method}", error_type="validation_error")
 
+    _validate_output_path(output)
     output_path = Path(output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -234,7 +235,7 @@ def _apply_simple_spatial(
             try:
                 result = subprocess.run(cmd, capture_output=True, text=True, timeout=DEFAULT_FFMPEG_TIMEOUT)
             except subprocess.TimeoutExpired:
-                raise ProcessingError("Operation timed out after 600 seconds") from None
+                raise ProcessingError(f"Operation timed out after {DEFAULT_FFMPEG_TIMEOUT}s") from None
             if result.returncode != 0:
                 raise ProcessingError(" ".join(cmd), result.returncode, result.stderr)
 
@@ -268,7 +269,7 @@ def _apply_simple_spatial(
             try:
                 result = subprocess.run(cmd, capture_output=True, text=True, timeout=DEFAULT_FFMPEG_TIMEOUT)
             except subprocess.TimeoutExpired:
-                raise ProcessingError("Operation timed out after 600 seconds") from None
+                raise ProcessingError(f"Operation timed out after {DEFAULT_FFMPEG_TIMEOUT}s") from None
             if result.returncode != 0:
                 raise ProcessingError(" ".join(cmd), result.returncode, result.stderr)
 

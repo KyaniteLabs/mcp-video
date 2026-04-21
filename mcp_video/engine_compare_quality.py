@@ -26,8 +26,8 @@ def compare_quality(
         distorted_path: Path to the distorted/processed video.
         metrics: List of metrics to compute (default: ["psnr", "ssim"]).
     """
-    _validate_input_path(original_path)
-    _validate_input_path(distorted_path)
+    original_path = _validate_input_path(original_path)
+    distorted_path = _validate_input_path(distorted_path)
     requested_metrics = metrics or ["psnr", "ssim"]
     supported_metrics = [metric.lower() for metric in requested_metrics if metric.lower() in ("psnr", "ssim")]
 

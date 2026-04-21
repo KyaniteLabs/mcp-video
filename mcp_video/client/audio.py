@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from ..errors import MCPVideoError
+
 from typing import Literal
 
 from ..engine import (
@@ -99,6 +101,8 @@ class ClientAudioMixin:
         Returns:
             Path to generated WAV file
         """
+        if not sequence:
+            raise MCPVideoError("sequence cannot be empty", error_type="validation_error", code="empty_sequence")
         from ..audio_engine import audio_sequence
 
         return audio_sequence(sequence=sequence, output=output)

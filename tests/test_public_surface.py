@@ -235,7 +235,6 @@ def test_module_reexports():
         "_parse_ffmpeg_time",
         "_run_ffmpeg_with_progress",
         "_validate_color",
-        "_validate_input",
         "_validate_position",
         "add_text",
         "convert",

@@ -39,7 +39,7 @@ def effect_vignette(
         Dict with success status and output_path.
     """
     try:
-        _validate_input_path(input_path)
+        input_path = _validate_input_path(input_path)
         if not (0.0 <= intensity <= 1.0):
             raise MCPVideoError(
                 f"intensity must be between 0.0 and 1.0, got {intensity}",
@@ -89,7 +89,7 @@ def effect_chromatic_aberration(
         Dict with success status and output_path.
     """
     try:
-        _validate_input_path(input_path)
+        input_path = _validate_input_path(input_path)
         if intensity < 0:
             raise MCPVideoError(
                 f"intensity must be non-negative, got {intensity}",
@@ -128,7 +128,7 @@ def effect_scanlines(
         Dict with success status and output_path.
     """
     try:
-        _validate_input_path(input_path)
+        input_path = _validate_input_path(input_path)
         if line_height < 1:
             raise MCPVideoError(
                 f"line_height must be at least 1, got {line_height}",
@@ -179,7 +179,7 @@ def effect_noise(
         Dict with success status and output_path.
     """
     try:
-        _validate_input_path(input_path)
+        input_path = _validate_input_path(input_path)
         if not (0.0 <= intensity <= 1.0):
             raise MCPVideoError(
                 f"intensity must be between 0.0 and 1.0, got {intensity}",
@@ -224,7 +224,7 @@ def effect_glow(
         Dict with success status and output_path.
     """
     try:
-        _validate_input_path(input_path)
+        input_path = _validate_input_path(input_path)
         if not (0.0 <= intensity <= 1.0):
             raise MCPVideoError(
                 f"intensity must be between 0.0 and 1.0, got {intensity}",
@@ -333,8 +333,8 @@ def video_layout_pip(
         Dict with success status and output_path.
     """
     try:
-        _validate_input_path(main_path)
-        _validate_input_path(pip_path)
+        main_path = _validate_input_path(main_path)
+        pip_path = _validate_input_path(pip_path)
         if not (0.0 < size <= 1.0):
             raise MCPVideoError(
                 f"size must be between 0.0 and 1.0, got {size}",
@@ -402,7 +402,7 @@ def video_text_animated(
         Dict with success status and output_path.
     """
     try:
-        _validate_input_path(input_path)
+        input_path = _validate_input_path(input_path)
         if not (8 <= size <= 500):
             raise MCPVideoError(
                 f"size must be between 8 and 500, got {size}",
@@ -460,8 +460,8 @@ def video_text_subtitles(
             )
         )
     try:
-        _validate_input_path(input_path)
-        _validate_input_path(subtitles_path)
+        input_path = _validate_input_path(input_path)
+        subtitles_path = _validate_input_path(subtitles_path)
         from .effects_engine import text_subtitles as _subs
 
         return _result(_subs(input_path, subtitles_path, output_path, style))
@@ -587,7 +587,7 @@ def video_info_detailed(
         Dict with duration, fps, resolution, bitrate, has_audio, scene_changes.
     """
     try:
-        _validate_input_path(input_path)
+        input_path = _validate_input_path(input_path)
         from .effects_engine import video_info_detailed as _info
 
         return _result(_info(input_path))
@@ -622,7 +622,7 @@ def video_auto_chapters(
             )
         )
     try:
-        _validate_input_path(input_path)
+        input_path = _validate_input_path(input_path)
         from .effects_engine import auto_chapters as _chapters
 
         return _result(_chapters(input_path, threshold))
@@ -671,8 +671,8 @@ def transition_glitch(
             )
         )
     try:
-        _validate_input_path(clip1_path)
-        _validate_input_path(clip2_path)
+        clip1_path = _validate_input_path(clip1_path)
+        clip2_path = _validate_input_path(clip2_path)
         from .transitions_engine import transition_glitch
 
         output = output_path or _auto_output(clip1_path, "transition")
@@ -709,8 +709,8 @@ def transition_pixelate(
             )
         )
     try:
-        _validate_input_path(clip1_path)
-        _validate_input_path(clip2_path)
+        clip1_path = _validate_input_path(clip1_path)
+        clip2_path = _validate_input_path(clip2_path)
         from .transitions_engine import transition_pixelate
 
         return _result(transition_pixelate(clip1_path, clip2_path, output_path, duration, pixel_size))
@@ -746,8 +746,8 @@ def transition_morph(
             )
         )
     try:
-        _validate_input_path(clip1_path)
-        _validate_input_path(clip2_path)
+        clip1_path = _validate_input_path(clip1_path)
+        clip2_path = _validate_input_path(clip2_path)
         from .transitions_engine import transition_morph
 
         return _result(transition_morph(clip1_path, clip2_path, output_path, duration, mesh_size))

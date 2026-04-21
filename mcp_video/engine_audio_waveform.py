@@ -22,7 +22,7 @@ def audio_waveform(
         input_path: Path to the input video/audio file.
         bins: Number of time segments to analyze (default 50).
     """
-    _validate_input_path(input_path)
+    input_path = _validate_input_path(input_path)
     if not isinstance(bins, int) or bins < 1 or bins > 1000:
         raise MCPVideoError(
             f"bins must be between 1 and 1000, got {bins}",

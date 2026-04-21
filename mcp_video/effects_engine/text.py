@@ -10,7 +10,7 @@ import os
 from typing import Any
 
 from ..errors import InputFileError
-from ..ffmpeg_helpers import _validate_input_path, _run_ffmpeg, _escape_ffmpeg_filter_value
+from ..ffmpeg_helpers import _validate_input_path, _validate_output_path, _run_ffmpeg, _escape_ffmpeg_filter_value
 
 logger = logging.getLogger(__name__)
 
@@ -144,6 +144,7 @@ def text_subtitles(
         Path to output video
     """
     video = _validate_input_path(video)
+    _validate_output_path(output)
 
     if not os.path.isfile(subtitles):
         raise InputFileError(f"Subtitles file not found: {subtitles}")
