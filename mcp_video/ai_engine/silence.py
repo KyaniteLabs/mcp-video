@@ -17,6 +17,7 @@ from pathlib import Path
 from ..errors import InputFileError, MCPVideoError, ProcessingError
 from ..ffmpeg_helpers import _run_ffprobe_json
 from ..limits import DEFAULT_FFMPEG_TIMEOUT
+from ..engine_runtime_utils import _sanitize_ffmpeg_number
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +32,21 @@ def _detect_silence_regions(
     Returns:
         List of (start, end) tuples for silent regions.
     """
+    silence_threshold = _sanitize_ffmpeg_number(silence_threshold, "silence_threshold")
+    min_silence_duration = _sanitize_ffmpeg_number(min_silence_duration, "min_silence_duration")
+    if silence_threshold > 0:
+        raise MCPVideoError(
+            f"silence_threshold must be <= 0 dB, got {silence_threshold}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
+    if min_silence_duration <= 0:
+        raise MCPVideoError(
+            f"min_silence_duration must be > 0, got {min_silence_duration}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
+
     # Run silencedetect filter
     cmd = [
         "ffmpeg",
@@ -82,6 +98,13 @@ def _build_keep_segments(
     Returns:
         List of (start, end) tuples for segments to keep.
     """
+    keep_margin = _sanitize_ffmpeg_number(keep_margin, "keep_margin")
+    if keep_margin < 0:
+        raise MCPVideoError(
+            f"keep_margin must be >= 0, got {keep_margin}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
     if not silence_regions:
         # No silence detected, keep entire video
         return [(0, video_duration)]
