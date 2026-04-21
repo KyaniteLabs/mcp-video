@@ -46,7 +46,7 @@ def _detect_silence_regions(
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=DEFAULT_FFMPEG_TIMEOUT)
     except subprocess.TimeoutExpired:
-        raise ProcessingError("Operation timed out after 600 seconds") from None
+        raise ProcessingError(f"Operation timed out after {DEFAULT_FFMPEG_TIMEOUT}s") from None
 
     # Parse silence_start and silence_end from stderr
     silence_regions = []
@@ -144,7 +144,7 @@ def _concat_segments(
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=DEFAULT_FFMPEG_TIMEOUT)
         except subprocess.TimeoutExpired:
-            raise ProcessingError("Operation timed out after 600 seconds") from None
+            raise ProcessingError(f"Operation timed out after {DEFAULT_FFMPEG_TIMEOUT}s") from None
         if result.returncode != 0:
             raise ProcessingError(" ".join(cmd), result.returncode, result.stderr)
         return output
@@ -173,7 +173,7 @@ def _concat_segments(
             try:
                 result = subprocess.run(cmd, capture_output=True, text=True, timeout=DEFAULT_FFMPEG_TIMEOUT)
             except subprocess.TimeoutExpired:
-                raise ProcessingError("Operation timed out after 600 seconds") from None
+                raise ProcessingError(f"Operation timed out after {DEFAULT_FFMPEG_TIMEOUT}s") from None
             if result.returncode != 0:
                 raise ProcessingError(" ".join(cmd), result.returncode, result.stderr)
 
@@ -204,7 +204,7 @@ def _concat_segments(
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=DEFAULT_FFMPEG_TIMEOUT)
         except subprocess.TimeoutExpired:
-            raise ProcessingError("Operation timed out after 600 seconds") from None
+            raise ProcessingError(f"Operation timed out after {DEFAULT_FFMPEG_TIMEOUT}s") from None
         if result.returncode != 0:
             raise ProcessingError(" ".join(cmd), result.returncode, result.stderr)
 

@@ -144,7 +144,7 @@ def _ai_upscale_opencv(video_path: str, output_path: str, scale: int) -> str:
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=DEFAULT_FFMPEG_TIMEOUT)
         except subprocess.TimeoutExpired:
-            raise ProcessingError("Operation timed out after 600 seconds") from None
+            raise ProcessingError(f"Operation timed out after {DEFAULT_FFMPEG_TIMEOUT}s") from None
         if result.returncode != 0:
             raise ProcessingError(" ".join(cmd), result.returncode, result.stderr)
 
@@ -186,7 +186,7 @@ def _ai_upscale_opencv(video_path: str, output_path: str, scale: int) -> str:
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=DEFAULT_FFMPEG_TIMEOUT)
         except subprocess.TimeoutExpired:
-            raise ProcessingError("Operation timed out after 600 seconds") from None
+            raise ProcessingError(f"Operation timed out after {DEFAULT_FFMPEG_TIMEOUT}s") from None
         if result.returncode != 0:
             raise ProcessingError(" ".join(cmd), result.returncode, result.stderr)
 
@@ -285,7 +285,7 @@ def ai_upscale(
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=DEFAULT_FFMPEG_TIMEOUT)
         except subprocess.TimeoutExpired:
-            raise ProcessingError("Operation timed out after 600 seconds") from None
+            raise ProcessingError(f"Operation timed out after {DEFAULT_FFMPEG_TIMEOUT}s") from None
         if result.returncode != 0:
             raise ProcessingError(" ".join(cmd), result.returncode, result.stderr)
 
@@ -351,7 +351,7 @@ def ai_upscale(
             try:
                 result = subprocess.run(cmd, capture_output=True, text=True, timeout=DEFAULT_FFMPEG_TIMEOUT)
             except subprocess.TimeoutExpired:
-                raise ProcessingError("Operation timed out after 600 seconds") from None
+                raise ProcessingError(f"Operation timed out after {DEFAULT_FFMPEG_TIMEOUT}s") from None
             if result.returncode != 0:
                 audio_path = None  # Continue without audio
 
@@ -400,7 +400,7 @@ def ai_upscale(
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=DEFAULT_FFMPEG_TIMEOUT)
         except subprocess.TimeoutExpired:
-            raise ProcessingError("Operation timed out after 600 seconds") from None
+            raise ProcessingError(f"Operation timed out after {DEFAULT_FFMPEG_TIMEOUT}s") from None
         if result.returncode != 0:
             raise ProcessingError(" ".join(cmd), result.returncode, result.stderr)
 
@@ -424,7 +424,7 @@ def _get_video_fps(video_path: str) -> float | None:
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=DEFAULT_FFMPEG_TIMEOUT)
     except subprocess.TimeoutExpired:
-        raise ProcessingError("Operation timed out after 600 seconds") from None
+        raise ProcessingError(f"Operation timed out after {DEFAULT_FFMPEG_TIMEOUT}s") from None
     if result.returncode != 0:
         return None
 
@@ -460,5 +460,5 @@ def _has_audio_stream(video_path: str) -> bool:
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=DEFAULT_FFMPEG_TIMEOUT)
     except subprocess.TimeoutExpired:
-        raise ProcessingError("Operation timed out after 600 seconds") from None
+        raise ProcessingError(f"Operation timed out after {DEFAULT_FFMPEG_TIMEOUT}s") from None
     return result.returncode == 0 and "audio" in result.stdout.lower()

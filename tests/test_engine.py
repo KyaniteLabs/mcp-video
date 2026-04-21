@@ -24,7 +24,7 @@ from mcp_video.engine import (
     thumbnail,
     trim,
 )
-from mcp_video.errors import InputFileError
+from mcp_video.errors import InputFileError, MCPVideoError
 from mcp_video.models import VideoInfo
 
 
@@ -34,6 +34,30 @@ def requires_filter(name: str, feature: str):
         not _check_filter_available(name),
         reason=f"FFmpeg filter '{name}' not available ({feature} requires it)",
     )
+
+
+
+
+def test_probe_duration_falls_back_to_stream_before_limit():
+    from mcp_video.engine_probe import _build_video_info
+    from mcp_video.limits import MAX_VIDEO_DURATION
+
+    data = {
+        "format": {"duration": "N/A"},
+        "streams": [
+            {
+                "codec_type": "video",
+                "duration": str(MAX_VIDEO_DURATION + 1),
+                "width": 640,
+                "height": 360,
+                "r_frame_rate": "30/1",
+                "codec_name": "h264",
+            }
+        ],
+    }
+
+    with pytest.raises(MCPVideoError, match="exceeds maximum"):
+        _build_video_info("video.mp4", data)
 
 
 class TestProbe:

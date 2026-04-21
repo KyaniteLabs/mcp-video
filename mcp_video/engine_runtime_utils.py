@@ -19,12 +19,11 @@ from typing import Any
 from .errors import (
     FFmpegNotFoundError,
     FFprobeNotFoundError,
-    InputFileError,
     MCPVideoError,
     ProcessingError,
     parse_ffmpeg_error,
 )
-from .limits import DEFAULT_CRF, DEFAULT_FFMPEG_TIMEOUT, DEFAULT_PRESET
+from .limits import DEFAULT_CRF, DEFAULT_FFMPEG_TIMEOUT, DEFAULT_PRESET, DOCTOR_COMMAND_TIMEOUT
 from .models import NamedPosition, Position
 
 logger = logging.getLogger(__name__)
@@ -97,13 +96,6 @@ def _require_filter(name: str, feature: str) -> None:
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-
-def _validate_input(path: str) -> None:
-    if "\x00" in path:
-        raise InputFileError(path, "Path contains null bytes")
-    if not os.path.isfile(path):
-        raise InputFileError(path)
 
 
 def _sanitize_ffmpeg_number(value: Any, name: str) -> float:
@@ -468,7 +460,7 @@ def _generate_thumbnail_base64(video_path: str) -> str | None:
             ],
             capture_output=True,
             text=True,
-            timeout=15,
+            timeout=DOCTOR_COMMAND_TIMEOUT,
         )
 
         if proc.returncode != 0 or not os.path.isfile(tmp_path):
