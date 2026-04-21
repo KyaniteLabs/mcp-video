@@ -39,7 +39,7 @@ def stabilize(
         zooming: Zoom percentage to avoid black borders.
         output_path: Optional output video path.
     """
-    _validate_input_path(input_path)
+    input_path = _validate_input_path(input_path)
     _require_filter("vidstabdetect", "Video stabilization")
     output = output_path or _auto_output(input_path, "stabilized")
     _validate_output_path(output)

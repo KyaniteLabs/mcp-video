@@ -32,7 +32,7 @@ def convert(
     target_bitrate: int | None = None,
 ) -> EditResult:
     """Convert video to a different format."""
-    _validate_input_path(input_path)
+    input_path = _validate_input_path(input_path)
 
     if two_pass and format not in ("mp4", "mov"):
         raise MCPVideoError(

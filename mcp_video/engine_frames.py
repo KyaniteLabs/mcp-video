@@ -6,7 +6,7 @@ import os
 
 from .ffmpeg_helpers import _validate_input_path
 from .engine_probe import probe
-from .engine_runtime_utils import _auto_output_dir, _run_ffmpeg
+from .engine_runtime_utils import _auto_output_dir, _run_ffmpeg, _sanitize_ffmpeg_number
 from .errors import MCPVideoError
 from .models import ImageSequenceResult
 
@@ -25,7 +25,8 @@ def export_frames(
         fps: Frames per second to extract (1.0 = 1 frame per second).
         format: Output image format (jpg, png).
     """
-    _validate_input_path(input_path)
+    input_path = _validate_input_path(input_path)
+    fps = _sanitize_ffmpeg_number(fps, "fps")
     if format == "mjpeg":
         format = "jpg"
     if format not in ("jpg", "png"):

@@ -28,7 +28,7 @@ def generate_subtitles(
     burn: bool = False,
 ) -> SubtitleResult:
     """Generate SRT subtitles from text entries and optionally burn into video."""
-    _validate_input_path(input_path)
+    input_path = _validate_input_path(input_path)
     if output_path:
         _validate_output_path(output_path)
     _validate_entries(entries)
@@ -92,13 +92,18 @@ def _validate_entries(entries: list[dict]) -> None:
 
 def _write_srt(entries: list[dict], input_path: str, output_path: str | None) -> str:
     if output_path:
-        srt_dir = output_path if os.path.isdir(output_path) else os.path.dirname(output_path) or "."
+        if os.path.isdir(output_path) or output_path.endswith(os.sep):
+            srt_dir = output_path
+            srt_file = os.path.join(srt_dir, "subtitles.srt")
+        else:
+            srt_dir = os.path.dirname(output_path) or "."
+            srt_file = output_path
         os.makedirs(srt_dir, exist_ok=True)
     else:
         srt_dir = _auto_output_dir(input_path, "subtitles")
         os.makedirs(srt_dir, exist_ok=True)
+        srt_file = os.path.join(srt_dir, "subtitles.srt")
 
-    srt_file = os.path.join(srt_dir, "subtitles.srt")
     with open(srt_file, "w", encoding="utf-8") as f:
         f.write(_build_srt_content(entries))
     return srt_file

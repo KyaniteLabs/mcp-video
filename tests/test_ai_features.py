@@ -540,6 +540,28 @@ class TestColorGrade:
                 assert os.path.exists(result), f"Output not created for style: {style}"
                 assert os.path.getsize(result) > 0, f"Output is empty for style: {style}"
 
+
+    def test_reference_color_analysis_failure_falls_back_to_neutral(self, monkeypatch):
+        """Reference matching should remain best-effort when FFmpeg analysis fails."""
+        import subprocess
+
+        from mcp_video.ai_engine.color import _match_reference_colors
+
+        def fake_run(cmd, capture_output, text, timeout):
+            return subprocess.CompletedProcess(cmd, 1, "", "signalstats unavailable")
+
+        monkeypatch.setattr(subprocess, "run", fake_run)
+
+        assert _match_reference_colors("input.mp4", "reference.mp4") == {
+            "contrast": 1.0,
+            "saturation": 1.0,
+            "gamma": 1.0,
+            "red": 1.0,
+            "green": 1.0,
+            "blue": 1.0,
+        }
+
+
     @requires_ffmpeg
     def test_color_grade_with_reference(self):
         """Test color grading with reference video."""
@@ -1305,6 +1327,28 @@ def test_resolve_video_source_local_passthrough():
     assert local == "/some/local/file.mp4"
     assert tmp is None
     assert url is None
+
+
+
+
+def test_is_safe_url_restores_socket_default_timeout(monkeypatch):
+    """SSRF DNS lookup timeout must not clobber an embedding app's global socket default."""
+    import socket
+
+    from mcp_video.ai_engine.download import _is_safe_url
+
+    previous_timeout = socket.getdefaulttimeout()
+    socket.setdefaulttimeout(3.5)
+
+    def fake_getaddrinfo(*args, **kwargs):
+        return [(socket.AF_INET, socket.SOCK_STREAM, 0, "", ("93.184.216.34", 80))]
+
+    monkeypatch.setattr(socket, "getaddrinfo", fake_getaddrinfo)
+    try:
+        assert _is_safe_url("https://example.com/video.mp4") is True
+        assert socket.getdefaulttimeout() == 3.5
+    finally:
+        socket.setdefaulttimeout(previous_timeout)
 
 
 def test_resolve_video_source_platform_url_requires_ytdlp(monkeypatch):

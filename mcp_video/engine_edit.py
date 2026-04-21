@@ -35,7 +35,7 @@ def trim(
     output_path: str | None = None,
 ) -> EditResult:
     """Trim a video by start time and duration or end time."""
-    _validate_input_path(input_path)
+    input_path = _validate_input_path(input_path)
     output = output_path or _auto_output(input_path, "trimmed")
     _validate_output_path(output)
 

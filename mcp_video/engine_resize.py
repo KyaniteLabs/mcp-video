@@ -19,7 +19,7 @@ def resize(
     output_path: str | None = None,
 ) -> EditResult:
     """Resize a video. Use aspect_ratio for preset sizes (e.g. '9:16')."""
-    _validate_input_path(input_path)
+    input_path = _validate_input_path(input_path)
 
     info = probe(input_path)
     if info.width == 0 or info.height == 0:

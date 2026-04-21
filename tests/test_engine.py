@@ -24,7 +24,7 @@ from mcp_video.engine import (
     thumbnail,
     trim,
 )
-from mcp_video.errors import InputFileError
+from mcp_video.errors import InputFileError, MCPVideoError
 from mcp_video.models import VideoInfo
 
 
@@ -34,6 +34,30 @@ def requires_filter(name: str, feature: str):
         not _check_filter_available(name),
         reason=f"FFmpeg filter '{name}' not available ({feature} requires it)",
     )
+
+
+
+
+def test_probe_duration_falls_back_to_stream_before_limit():
+    from mcp_video.engine_probe import _build_video_info
+    from mcp_video.limits import MAX_VIDEO_DURATION
+
+    data = {
+        "format": {"duration": "N/A"},
+        "streams": [
+            {
+                "codec_type": "video",
+                "duration": str(MAX_VIDEO_DURATION + 1),
+                "width": 640,
+                "height": 360,
+                "r_frame_rate": "30/1",
+                "codec_name": "h264",
+            }
+        ],
+    }
+
+    with pytest.raises(MCPVideoError, match="exceeds maximum"):
+        _build_video_info("video.mp4", data)
 
 
 class TestProbe:
@@ -105,6 +129,52 @@ class TestMerge:
         info = probe(result.output_path)
         # Probed output should be a valid video in the requested container
         assert info.duration > 0
+
+
+    def test_merge_persists_validated_multi_clip_paths(self, monkeypatch, tmp_path):
+        import types
+
+        import mcp_video.engine_merge as engine_merge
+
+        original_a = str(tmp_path / "a-link.mp4")
+        original_b = str(tmp_path / "b-link.mp4")
+        resolved_a = str(tmp_path / "a-real.mp4")
+        resolved_b = str(tmp_path / "b-real.mp4")
+        output = str(tmp_path / "merged.mp4")
+        seen_probe_paths = []
+
+        def fake_validate(path):
+            return {original_a: resolved_a, original_b: resolved_b}[path]
+
+        def fake_probe(path):
+            seen_probe_paths.append(path)
+            return types.SimpleNamespace(
+                duration=1.0,
+                resolution="320x240",
+                width=320,
+                height=240,
+                codec="h264",
+                size_mb=1.0,
+            )
+
+        def fake_run_ffmpeg(args):
+            concat_file = args[args.index("-i") + 1]
+            with open(concat_file, encoding="utf-8") as f:
+                concat_data = f.read()
+            assert resolved_a in concat_data
+            assert resolved_b in concat_data
+            assert original_a not in concat_data
+            assert original_b not in concat_data
+
+        monkeypatch.setattr(engine_merge, "_validate_input_path", fake_validate)
+        monkeypatch.setattr(engine_merge, "probe", fake_probe)
+        monkeypatch.setattr(engine_merge, "_run_ffmpeg", fake_run_ffmpeg)
+
+        result = engine_merge.merge([original_a, original_b], output_path=output)
+
+        assert result.output_path == output
+        assert seen_probe_paths[:2] == [resolved_a, resolved_b]
+
 
     def test_merge_no_clips_raises(self):
         with pytest.raises(InputFileError):
@@ -292,6 +362,29 @@ class TestProgressCallbacks:
         # Verify progress was tracked and reached 100
         assert len(progress_values) > 0
         assert 100.0 in progress_values
+
+
+    def test_run_ffmpeg_with_progress_propagates_callback_failure(self, sample_video, tmp_path):
+        """Exceptions from progress callbacks must not disappear in stderr reader threads."""
+        from mcp_video.engine import _run_ffmpeg_with_progress
+
+        output = str(tmp_path / "callback_failure.mp4")
+        args = [
+            "-i",
+            sample_video,
+            "-t",
+            "1",
+            "-c",
+            "copy",
+            output,
+        ]
+
+        def fail_on_progress(pct):
+            raise RuntimeError(f"progress failed at {pct}")
+
+        with pytest.raises(RuntimeError, match="progress failed"):
+            _run_ffmpeg_with_progress(args, estimated_duration=1.0, on_progress=fail_on_progress)
+
 
     def test_convert_returns_progress_field(self, sample_video):
         """Verify that convert returns EditResult with progress=100.0."""

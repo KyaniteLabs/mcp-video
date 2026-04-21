@@ -20,7 +20,7 @@ def extract_audio(
             error_type="validation_error",
             code="invalid_parameter",
         )
-    _validate_input_path(input_path)
+    input_path = _validate_input_path(input_path)
     ext = f".{format}" if not format.startswith(".") else format
     output = output_path or _auto_output(input_path, "audio", ext=ext)
     _validate_output_path(output)

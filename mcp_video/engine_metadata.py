@@ -17,7 +17,7 @@ def read_metadata(input_path: str) -> MetadataResult:
     Args:
         input_path: Path to the input file.
     """
-    _validate_input_path(input_path)
+    input_path = _validate_input_path(input_path)
     data = _run_ffprobe_json(input_path)
 
     # Extract tags from format
@@ -53,7 +53,7 @@ def write_metadata(
         metadata: Dict of tag key-value pairs (e.g. {"title": "My Video", "artist": "Me"}).
         output_path: Where to save the output. If None, overwrites in place with a temp file.
     """
-    _validate_input_path(input_path)
+    input_path = _validate_input_path(input_path)
     if not metadata:
         raise MCPVideoError(
             "No metadata provided",

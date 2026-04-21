@@ -24,7 +24,7 @@ def crop(
     output_path: str | None = None,
 ) -> EditResult:
     """Crop a video to a rectangular region."""
-    _validate_input_path(input_path)
+    input_path = _validate_input_path(input_path)
     if width <= 0 or height <= 0:
         raise MCPVideoError("Crop dimensions must be positive", code="invalid_crop")
 

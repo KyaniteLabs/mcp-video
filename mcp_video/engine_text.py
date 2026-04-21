@@ -37,7 +37,7 @@ def add_text(
     preset: str | None = None,
 ) -> EditResult:
     """Overlay text on a video."""
-    _validate_input_path(input_path)
+    input_path = _validate_input_path(input_path)
     _require_filter("drawtext", "Text overlay")
     if not text or not text.strip():
         raise MCPVideoError(

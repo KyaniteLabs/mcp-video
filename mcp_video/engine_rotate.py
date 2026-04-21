@@ -30,7 +30,7 @@ def rotate(
         flip_horizontal: Mirror horizontally.
         flip_vertical: Mirror vertically.
     """
-    _validate_input_path(input_path)
+    input_path = _validate_input_path(input_path)
 
     if angle not in (0, 90, 180, 270):
         raise MCPVideoError("angle must be 0, 90, 180, or 270", code="invalid_angle")

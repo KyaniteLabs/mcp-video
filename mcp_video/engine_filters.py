@@ -71,7 +71,7 @@ def apply_filter(
     preset: str | None = None,
 ) -> EditResult:
     """Apply a visual or audio filter to a video."""
-    _validate_input_path(input_path)
+    input_path = _validate_input_path(input_path)
     params = _sanitize_params(params or {})
     output = output_path or _auto_output(input_path, f"filter_{filter_type}")
     _validate_output_path(output)

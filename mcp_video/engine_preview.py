@@ -15,7 +15,7 @@ def preview(
     scale_factor: int = 4,
 ) -> EditResult:
     """Generate a fast low-resolution preview for quick review."""
-    _validate_input_path(input_path)
+    input_path = _validate_input_path(input_path)
     if scale_factor < 1:
         raise MCPVideoError("scale_factor must be at least 1", code="invalid_scale_factor")
     info = probe(input_path)

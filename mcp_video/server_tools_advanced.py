@@ -60,7 +60,7 @@ def video_filter(
             MCPVideoError(f"Invalid preset: {preset}", error_type="validation_error", code="invalid_parameter")
         )
     try:
-        _validate_input_path(input_path)
+        input_path = _validate_input_path(input_path)
         return _result(
             apply_filter(
                 input_path,
@@ -89,7 +89,7 @@ def video_reverse(
         output_path: Where to save the output. Auto-generated if omitted.
     """
     try:
-        _validate_input_path(input_path)
+        input_path = _validate_input_path(input_path)
         return _result(reverse(input_path, output_path=output_path))
     except MCPVideoError as e:
         return _error_result(e)
@@ -115,7 +115,7 @@ def video_chroma_key(
         output_path: Where to save the output. Auto-generated if omitted.
     """
     try:
-        _validate_input_path(input_path)
+        input_path = _validate_input_path(input_path)
         _validate_chroma_color(color)
     except MCPVideoError as e:
         return _error_result(e)
@@ -159,7 +159,7 @@ def video_blur(
         output_path: Where to save the output. Auto-generated if omitted.
     """
     try:
-        _validate_input_path(input_path)
+        input_path = _validate_input_path(input_path)
         return _result(
             apply_filter(
                 input_path,
@@ -188,7 +188,7 @@ def video_color_grade(
         output_path: Where to save the output. Auto-generated if omitted.
     """
     try:
-        _validate_input_path(input_path)
+        input_path = _validate_input_path(input_path)
         return _result(
             apply_filter(
                 input_path,
@@ -219,7 +219,7 @@ def video_normalize_audio(
         output_path: Where to save the output. Auto-generated if omitted.
     """
     try:
-        _validate_input_path(input_path)
+        input_path = _validate_input_path(input_path)
         if not -70 <= target_lufs <= -5:
             return _error_result(
                 MCPVideoError(
@@ -289,8 +289,8 @@ def video_overlay(
             MCPVideoError(f"Invalid preset: {preset}", error_type="validation_error", code="invalid_parameter")
         )
     try:
-        _validate_input_path(background_path)
-        _validate_input_path(overlay_path)
+        background_path = _validate_input_path(background_path)
+        overlay_path = _validate_input_path(overlay_path)
         if not 0 <= opacity <= 1:
             return _error_result(
                 MCPVideoError(
@@ -344,8 +344,8 @@ def video_split_screen(
             )
         )
     try:
-        _validate_input_path(left_path)
-        _validate_input_path(right_path)
+        left_path = _validate_input_path(left_path)
+        right_path = _validate_input_path(right_path)
         return _result(split_screen(left_path, right_path=right_path, layout=layout, output_path=output_path))
     except MCPVideoError as e:
         return _error_result(e)
@@ -367,7 +367,7 @@ def video_detect_scenes(
         min_scene_duration: Minimum scene duration in seconds (default 1.0).
     """
     try:
-        _validate_input_path(input_path)
+        input_path = _validate_input_path(input_path)
         if not 0 <= threshold <= 1:
             return _error_result(
                 MCPVideoError(
@@ -454,7 +454,7 @@ def video_export_frames(
             )
         )
     try:
-        _validate_input_path(input_path)
+        input_path = _validate_input_path(input_path)
         return _result(export_frames(input_path, output_dir=output_dir, fps=fps, format=format))
     except MCPVideoError as e:
         return _error_result(e)
@@ -484,7 +484,7 @@ def video_generate_subtitles(
             )
         )
     try:
-        _validate_input_path(input_path)
+        input_path = _validate_input_path(input_path)
         return _result(generate_subtitles(entries, input_path, burn=burn))
     except MCPVideoError as e:
         return _error_result(e)
@@ -506,8 +506,8 @@ def video_compare_quality(
         metrics: Metrics to compute (default: ['psnr', 'ssim']).
     """
     try:
-        _validate_input_path(original_path)
-        _validate_input_path(distorted_path)
+        original_path = _validate_input_path(original_path)
+        distorted_path = _validate_input_path(distorted_path)
         return _result(compare_quality(original_path, distorted_path, metrics=metrics))
     except MCPVideoError as e:
         return _error_result(e)
@@ -525,7 +525,7 @@ def video_read_metadata(
         input_path: Absolute path to the video or audio file.
     """
     try:
-        _validate_input_path(input_path)
+        input_path = _validate_input_path(input_path)
         return _result(read_metadata(input_path))
     except MCPVideoError as e:
         return _error_result(e)
@@ -547,7 +547,7 @@ def video_write_metadata(
         output_path: Where to save the output. Auto-generated if omitted.
     """
     try:
-        _validate_input_path(input_path)
+        input_path = _validate_input_path(input_path)
         return _result(write_metadata(input_path, metadata=metadata, output_path=output_path))
     except MCPVideoError as e:
         return _error_result(e)
@@ -571,7 +571,7 @@ def video_stabilize(
         output_path: Where to save the output. Auto-generated if omitted.
     """
     try:
-        _validate_input_path(input_path)
+        input_path = _validate_input_path(input_path)
         if smoothing < 0:
             return _error_result(
                 MCPVideoError(
@@ -611,8 +611,8 @@ def video_apply_mask(
         output_path: Where to save the output. Auto-generated if omitted.
     """
     try:
-        _validate_input_path(input_path)
-        _validate_input_path(mask_path)
+        input_path = _validate_input_path(input_path)
+        mask_path = _validate_input_path(mask_path)
         if feather < 0:
             return _error_result(
                 MCPVideoError(
@@ -640,7 +640,7 @@ def video_audio_waveform(
         bins: Number of time segments to analyze (default 50).
     """
     try:
-        _validate_input_path(input_path)
+        input_path = _validate_input_path(input_path)
         if bins < 1 or bins > 1000:
             return _error_result(
                 MCPVideoError(
@@ -721,7 +721,7 @@ def video_extract_frame(
         output_path: Where to save the frame image. Auto-generated if omitted.
     """
     try:
-        _validate_input_path(input_path)
+        input_path = _validate_input_path(input_path)
         return _result(thumbnail(input_path, timestamp=timestamp, output_path=output_path))
     except MCPVideoError as e:
         return _error_result(e)
