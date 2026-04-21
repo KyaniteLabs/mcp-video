@@ -45,7 +45,7 @@ def video_filter(
 
     Args:
         input_path: Absolute path to the input video.
-        filter_type: Filter type (blur, sharpen, brightness, contrast, saturation, grayscale, sepia, invert, vignette, color_preset).
+        filter_type: Filter type (blur, sharpen, brightness, contrast, saturation, grayscale, sepia, invert, vignette, color_preset, denoise, deinterlace, ken_burns, reverb, compressor, pitch_shift, noise_reduction).
         params: Optional filter parameters (e.g. radius for blur, preset for color_preset).
         output_path: Where to save the output. Auto-generated if omitted.
         crf: Override CRF value (0-51, lower = better quality). Default 23.
