@@ -23,7 +23,7 @@ from .engine_runtime_utils import (
     _validate_input,
 )
 from .errors import MCPVideoError
-from .ffmpeg_helpers import _escape_ffmpeg_filter_value
+from .ffmpeg_helpers import _escape_ffmpeg_filter_value, _validate_input_path
 from .models import EditResult, NamedPosition, Timeline, TimelineImageOverlay
 
 
@@ -70,7 +70,7 @@ def _collect_tracks(timeline: Timeline, tmpdir: str):
     for track in timeline.tracks:
         if track.type == "video":
             for clip in track.clips:
-                _validate_input(clip.source)
+                _validate_input_path(clip.source)
                 if clip.trim_start > 0 or clip.trim_end:
                     trimmed = os.path.join(tmpdir, f"v_{len(video_clips):04d}.mp4")
                     trim_kwargs = {"start": clip.trim_start}
@@ -85,13 +85,13 @@ def _collect_tracks(timeline: Timeline, tmpdir: str):
             text_elements.extend(track.elements)
         elif track.type == "audio":
             for clip in track.clips:
-                _validate_input(clip.source)
+                _validate_input_path(clip.source)
                 audio_clips.append(clip.source)
         elif track.type == "text":
             text_elements.extend(track.elements)
         elif track.type == "image":
             for img in track.images:
-                _validate_input(img.source)
+                _validate_input_path(img.source)
                 image_overlays.append(img)
     return video_clips, audio_clips, text_elements, image_overlays
 
