@@ -22,7 +22,7 @@ class ClientRemotionMixin:
         scale: float | None = None,
     ):
         """Render a Remotion composition to video."""
-        from .remotion_engine import render
+        from ..remotion_engine import render
 
         return render(
             project_path,
@@ -41,13 +41,13 @@ class ClientRemotionMixin:
 
     def remotion_compositions(self, project_path: str) -> list[dict]:
         """List compositions in a Remotion project."""
-        from .remotion_engine import compositions
+        from ..remotion_engine import compositions
 
         return compositions(project_path)
 
     def remotion_studio(self, project_path: str, port: int = 3000) -> dict:
         """Launch Remotion Studio for live preview."""
-        from .remotion_engine import studio
+        from ..remotion_engine import studio
 
         return studio(project_path, port=port)
 
@@ -60,7 +60,7 @@ class ClientRemotionMixin:
         image_format: str = "png",
     ) -> dict:
         """Render a single frame as image."""
-        from .remotion_engine import still
+        from ..remotion_engine import still
 
         return still(project_path, composition_id, output_path=output, frame=frame, image_format=image_format)
 
@@ -80,7 +80,7 @@ class ClientRemotionMixin:
         Returns:
             dict with key "project_path" (str): absolute path to the new project
         """
-        from .remotion_engine import create_project
+        from ..remotion_engine import create_project
 
         return create_project(name, output_dir=output_dir, template=template)
 
@@ -91,7 +91,7 @@ class ClientRemotionMixin:
         slug: str,
     ) -> None:
         """Generate composition from spec."""
-        from .remotion_engine import scaffold_template
+        from ..remotion_engine import scaffold_template
 
         return scaffold_template(project_path, spec, slug)
 
@@ -106,7 +106,7 @@ class ClientRemotionMixin:
         Returns:
             RemotionValidationResult with pass/fail status and issues list
         """
-        from .remotion_engine import validate
+        from ..remotion_engine import validate
 
         return validate(project_path, composition_id=composition_id)
 
@@ -130,7 +130,7 @@ class ClientRemotionMixin:
         Returns:
             RemotionPipelineResult with output path and applied operations
         """
-        from .remotion_engine import render_and_post
+        from ..remotion_engine import render_and_post
 
         return render_and_post(project_path, composition_id, post_process, output_path=output)
 

@@ -258,7 +258,7 @@ class ClientEffectsMixin:
             duration: Transition duration in seconds. CLI: -d/--duration
             intensity: Glitch intensity 0-1. CLI: -i/--intensity
         """
-        from .transitions_engine import transition_glitch
+        from ..transitions_engine import transition_glitch
 
         return transition_glitch(clip1, clip2, output, duration, intensity)
 
@@ -274,7 +274,7 @@ class ClientEffectsMixin:
             duration: Transition duration in seconds. CLI: -d/--duration
             pixel_size: Maximum pixel size during transition. CLI: -p/--pixel-size
         """
-        from .transitions_engine import transition_pixelate
+        from ..transitions_engine import transition_pixelate
 
         return transition_pixelate(clip1, clip2, output, duration, pixel_size)
 
@@ -288,7 +288,7 @@ class ClientEffectsMixin:
             duration: Transition duration in seconds. CLI: -d/--duration
             mesh_size: Grid subdivisions. CLI: -m/--mesh-size
         """
-        from .transitions_engine import transition_morph
+        from ..transitions_engine import transition_morph
 
         return transition_morph(clip1, clip2, output, duration, mesh_size)
 
