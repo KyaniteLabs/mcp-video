@@ -41,8 +41,9 @@ def add_audio(
             if fade_in > 0:
                 audio_filters.append(f"afade=t=in:st=0:d={_escape_ffmpeg_filter_value(str(fade_in))}")
             if fade_out > 0:
+                fade_start = max(0, video_info.duration - fade_out)
                 audio_filters.append(
-                    f"afade=t=out:st={_escape_ffmpeg_filter_value(str(video_info.duration - fade_out))}:"
+                    f"afade=t=out:st={_escape_ffmpeg_filter_value(str(fade_start))}:"
                     f"d={_escape_ffmpeg_filter_value(str(fade_out))}"
                 )
 

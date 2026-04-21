@@ -30,7 +30,10 @@ def _build_video_info(path: str, data: dict) -> VideoInfo:
         raise InputFileError(path, "No video stream found")
 
     # Duration
-    duration = float(data.get("format", {}).get("duration", 0) or vs.get("duration", 0))
+    try:
+        duration = float(data.get("format", {}).get("duration", 0) or vs.get("duration", 0))
+    except (ValueError, TypeError):
+        duration = 0.0
     if duration > MAX_VIDEO_DURATION:
         raise MCPVideoError(
             f"Video duration ({duration:.0f}s) exceeds maximum of {MAX_VIDEO_DURATION}s",
@@ -39,8 +42,11 @@ def _build_video_info(path: str, data: dict) -> VideoInfo:
         )
 
     # Resolution
-    width = int(vs.get("width", 0))
-    height = int(vs.get("height", 0))
+    try:
+        width = int(vs.get("width", 0))
+        height = int(vs.get("height", 0))
+    except (ValueError, TypeError):
+        width = height = 0
 
     # FPS — r_frame_rate is "num/den"
     rfr = vs.get("r_frame_rate", "30/1")
@@ -62,8 +68,11 @@ def _build_video_info(path: str, data: dict) -> VideoInfo:
 
     # Bitrate / size
     fmt = data.get("format", {})
-    bitrate = int(fmt.get("bit_rate", 0)) or None
-    size_bytes = int(fmt.get("size", 0)) or None
+    try:
+        bitrate = int(fmt.get("bit_rate", 0)) or None
+        size_bytes = int(fmt.get("size", 0)) or None
+    except (ValueError, TypeError):
+        bitrate = size_bytes = None
     fmt_name = fmt.get("format_name")
 
     return VideoInfo(
