@@ -99,14 +99,10 @@ def handle_media_commands(args: Any, *, use_json: bool) -> bool:
     if args.command == "normalize-audio":
         from ..engine import normalize_audio
 
-        result = _with_spinner(
-            "Normalizing audio...",
-            normalize_audio,
-            args.input,
-            target_lufs=args.lufs,
-            lra=args.lra,
-            output_path=args.output,
-        )
+        norm_kwargs = {"target_lufs": args.lufs, "output_path": args.output}
+        if args.lra is not None:
+            norm_kwargs["lra"] = args.lra
+        result = _with_spinner("Normalizing audio...", normalize_audio, args.input, **norm_kwargs)
         if use_json:
             output_json(result)
         else:

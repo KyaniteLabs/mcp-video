@@ -20,12 +20,12 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-logger = logging.getLogger(__name__)
-
 from .errors import InputFileError, MCPVideoError, ProcessingError
 from .ffmpeg_helpers import _seconds_to_srt_time
 from .ffmpeg_helpers import _run_ffprobe_json
 from .limits import DEFAULT_FFMPEG_TIMEOUT
+
+logger = logging.getLogger(__name__)
 
 
 def ai_transcribe(

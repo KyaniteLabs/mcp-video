@@ -7,20 +7,20 @@ Includes auto-fix capabilities.
 
 from __future__ import annotations
 
-import subprocess
+import contextlib
 import json
 import logging
-import tempfile
 import os
+import subprocess
+import tempfile
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import ClassVar, Literal
 
-logger = logging.getLogger(__name__)
-from collections.abc import Callable
-import contextlib
-
 from .errors import ProcessingError
 from .limits import DEFAULT_FFMPEG_TIMEOUT
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -289,9 +289,6 @@ class DesignQualityGuardrails:
         probe = self._probe_video(video_path)
         width = probe.get("width", 1920)
         height = probe.get("height", 1080)
-
-        safe_margin_w = width * self.SAFE_AREA_MARGIN
-        safe_margin_h = height * self.SAFE_AREA_MARGIN
 
         # Check aspect ratio consistency
         aspect = width / height
@@ -1254,7 +1251,9 @@ def fix_design_issues(video: str, output: str | None = None) -> str:
             video = temp
 
         # Apply color cast fix if needed
-        color_cast_issues = [i for i in report.issues if "color cast" in i.message.lower() or "color_cast" in i.message.lower()]
+        color_cast_issues = [
+            i for i in report.issues if "color cast" in i.message.lower() or "color_cast" in i.message.lower()
+        ]
         if color_cast_issues:
             temp = guardrails._auto_fix_color_cast(video)
             video = temp

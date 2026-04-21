@@ -6,8 +6,6 @@ import json
 import logging
 import sys
 
-logger = logging.getLogger(__name__)
-
 from .cli.handlers_advanced import handle_advanced_commands
 from .cli.handlers_ai import handle_ai_commands
 from .cli.handlers_audio import handle_audio_commands
@@ -20,6 +18,8 @@ from .cli.handlers_remotion import handle_remotion_commands
 from .cli.handlers_transitions import handle_transition_command
 from .cli.parser import build_parser
 from .cli.formatting import _format_error, console, err_console
+
+logger = logging.getLogger(__name__)
 
 
 def main() -> None:

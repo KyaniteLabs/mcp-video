@@ -15,8 +15,6 @@ from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from typing import Any
 
-logger = logging.getLogger(__name__)
-
 from .errors import (
     FFmpegNotFoundError,
     FFprobeNotFoundError,
@@ -27,6 +25,8 @@ from .errors import (
 )
 from .limits import DEFAULT_CRF, DEFAULT_FFMPEG_TIMEOUT, DEFAULT_PRESET
 from .models import NamedPosition, Position
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # FFmpeg / FFprobe availability
