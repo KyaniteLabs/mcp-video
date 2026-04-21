@@ -32,8 +32,8 @@ def apply_mask(
         feather: Feather/blur amount at mask edges in pixels (default 5).
         output_path: Where to save the output.
     """
-    _validate_input_path(input_path)
-    _validate_input_path(mask_path)
+    input_path = _validate_input_path(input_path)
+    mask_path = _validate_input_path(mask_path)
     _require_filter("alphamerge", "Advanced masking")
     output = output_path or _auto_output(input_path, "masked")
 

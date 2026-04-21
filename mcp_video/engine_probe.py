@@ -87,7 +87,7 @@ def probe(path: str) -> VideoInfo:
     Results are cached by (path, mtime, size) so repeated calls on the
     same unmodified file skip the ffprobe subprocess.
     """
-    _validate_input_path(path)
+    path = _validate_input_path(path)
     key = _cache_key(path)
 
     cached = _probe_cache.get(key)

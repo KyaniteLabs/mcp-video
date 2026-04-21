@@ -63,7 +63,7 @@ def merge(
         )
 
     for c in clips:
-        _validate_input_path(c)
+        c = _validate_input_path(c)
 
     # Check if all clips have same resolution — if not, normalize
     infos = [probe(c) for c in clips]

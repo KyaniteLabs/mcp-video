@@ -18,7 +18,7 @@ def storyboard(
     frame_count: int = 8,
 ) -> StoryboardResult:
     """Extract key frames and create a storyboard grid for human review."""
-    _validate_input_path(input_path)
+    input_path = _validate_input_path(input_path)
     if frame_count < 1:
         raise MCPVideoError("frame_count must be at least 1", code="invalid_frame_count")
     dur = get_duration(input_path)

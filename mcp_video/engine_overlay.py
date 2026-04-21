@@ -45,8 +45,8 @@ def overlay_video(
         duration: How long the overlay is visible (seconds).
         output_path: Where to save the output.
     """
-    _validate_input_path(background_path)
-    _validate_input_path(overlay_path)
+    background_path = _validate_input_path(background_path)
+    overlay_path = _validate_input_path(overlay_path)
     _require_filter("overlay", "Video overlay")
     _validate_dimensions(width, height)
     safe_opacity = _validate_opacity(opacity)

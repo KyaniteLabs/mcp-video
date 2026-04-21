@@ -26,8 +26,8 @@ def add_audio(
     output_path: str | None = None,
 ) -> EditResult:
     """Add or replace audio track on a video."""
-    _validate_input_path(video_path)
-    _validate_input_path(audio_path)
+    video_path = _validate_input_path(video_path)
+    audio_path = _validate_input_path(audio_path)
     output = output_path or _auto_output(video_path, "audio")
 
     video_info = probe(video_path)
