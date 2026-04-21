@@ -1,0 +1,206 @@
+"""Video effects and filters engine.
+
+Visual effects using FFmpeg filters and PIL for custom processing.
+"""
+
+from __future__ import annotations
+
+import logging
+import math
+import os
+import subprocess
+import tempfile
+from pathlib import Path
+from typing import Any
+
+from ..errors import MCPVideoError, ProcessingError, InputFileError
+from ..ffmpeg_helpers import _validate_input_path, _run_ffmpeg, _escape_ffmpeg_filter_value
+
+logger = logging.getLogger(__name__)
+def text_animated(
+    video: str,
+    text: str,
+    output: str,
+    animation: str = "fade",
+    font: str = "Arial",
+    size: int = 48,
+    color: str = "white",
+    position: str = "center",
+    start: float = 0,
+    duration: float = 3.0,
+) -> str:
+    """Add animated text to video.
+
+    Args:
+        video: Input video path
+        text: Text to display
+        output: Output video path
+        animation: "fade", "slide-up", "typewriter", "glitch"
+        font: Font family
+        size: Font size
+        color: Text color
+        position: Text position
+        start: Start time in seconds
+        duration: Display duration
+
+    Returns:
+        Path to output video
+    """
+    # Map positions
+    pos_map = {
+        "center": "(w-text_w)/2:(h-text_h)/2",
+        "top": "(w-text_w)/2:20",
+        "bottom": "(w-text_w)/2:h-text_h-20",
+        "top-left": "20:20",
+        "top-right": "w-text_w-20:20",
+        "bottom-left": "20:h-text_h-20",
+        "bottom-right": "w-text_w-20:h-text_h-20",
+    }
+    pos = pos_map.get(position, pos_map["center"])
+
+    # Build animation expression
+    fade_start = start
+    fade_end = start + 0.5
+    fade_out_start = start + duration - 0.5
+    fade_out_end = start + duration
+
+    if animation == "fade":
+        # Fade in/out opacity
+        alpha_expr = (
+            f"if(lt(t,{fade_start}),0,"
+            f"if(lt(t,{fade_end}),(t-{fade_start})/0.5,"
+            f"if(lt(t,{fade_out_start}),1,"
+            f"if(lt(t,{fade_out_end}),({fade_out_end}-t)/0.5,0))))"
+        )
+    elif animation == "slide-up":
+        # Slide up from bottom
+        y_offset = f"+50*(1-min(1,(t-{start})/0.3))"
+        pos = pos.replace("(h-text_h)/2", f"(h-text_h)/2{y_offset}")
+        alpha_expr = "1"
+    elif animation == "typewriter":
+        # Reveal characters over time
+        char_rate = max(1, int(len(text) / max(1, duration * 10)))
+        alpha_expr = f"if(lt(n*{char_rate},t*10),1,0)"
+    elif animation == "glitch":
+        # Random glitch opacity
+        alpha_expr = "if(random(0)*lt(mod(t,0.2),0.1),0.8,1)"
+    else:
+        alpha_expr = "1"
+
+    # Escape text for FFmpeg — handle all filter-special characters
+    safe_text = _escape_ffmpeg_filter_value(text)
+    safe_font = _escape_ffmpeg_filter_value(font) if font is not None else font
+    safe_color = _escape_ffmpeg_filter_value(color) if color is not None else color
+
+    filter_complex = (
+        f"drawtext=text='{safe_text}':font={safe_font}:fontsize={size}:fontcolor={safe_color}:"
+        f"x={pos.split(':')[0]}:y={pos.split(':')[1]}:"
+        f"enable='between(t\\,{start}\\,{start + duration})':"
+        f"alpha='{alpha_expr}'"
+    )
+
+    cmd = [
+        "ffmpeg",
+        "-y",
+        "-i",
+        video,
+        "-vf",
+        filter_complex,
+        "-c:v",
+        "libx264",
+        "-c:a",
+        "copy",
+        "-pix_fmt",
+        "yuv420p",
+        "-crf",
+        "23",
+        output,
+    ]
+
+    _run_ffmpeg(cmd)
+
+    return output
+
+
+def text_subtitles(
+    video: str,
+    subtitles: str,
+    output: str,
+    style: dict[str, Any] | None = None,
+) -> str:
+    """Burn subtitles from SRT/VTT into video with styling.
+
+    Args:
+        video: Input video path
+        subtitles: Subtitle file path (SRT or VTT)
+        output: Output video path
+        style: Style dict with keys:
+            - font, size, color, outline, outline_color, background, position
+
+    Returns:
+        Path to output video
+    """
+    video = _validate_input_path(video)
+
+    if not os.path.isfile(subtitles):
+        raise InputFileError(f"Subtitles file not found: {subtitles}")
+
+    style = style or {}
+
+    # Build subtitle filter options
+    font = style.get("font", "Arial")
+    size = style.get("size", 32)
+    color = style.get("color", "white")
+    outline = style.get("outline", 2)
+    outline_color = style.get("outline_color", "black")
+
+    # Convert hex colors to FFmpeg format
+    if color.startswith("#"):
+        color = f"0x{color[1:]}"
+    if outline_color.startswith("#"):
+        outline_color = f"0x{outline_color[1:]}"
+
+    # Escape subtitle path for FFmpeg filter syntax
+    safe_subtitles = _escape_ffmpeg_filter_value(subtitles)
+    safe_font = _escape_ffmpeg_filter_value(font)
+    safe_color = _escape_ffmpeg_filter_value(color)
+    safe_outline_color = _escape_ffmpeg_filter_value(outline_color)
+
+    filter_complex = (
+        f"subtitles={safe_subtitles}:force_style='"
+        f"FontName={safe_font},"
+        f"FontSize={size},"
+        f"PrimaryColour={safe_color},"
+        f"OutlineColour={safe_outline_color},"
+        f"Outline={outline},"
+        f"BorderStyle=1'"
+    )
+
+    cmd = [
+        "ffmpeg",
+        "-y",
+        "-i",
+        video,
+        "-vf",
+        filter_complex,
+        "-c:v",
+        "libx264",
+        "-c:a",
+        "copy",
+        "-pix_fmt",
+        "yuv420p",
+        "-crf",
+        "23",
+        output,
+    ]
+
+    _run_ffmpeg(cmd)
+
+    return output
+
+
+# ---------------------------------------------------------------------------
+# Motion Graphics
+# ---------------------------------------------------------------------------
+
+
