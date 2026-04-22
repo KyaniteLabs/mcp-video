@@ -13,7 +13,10 @@ The script runs 7 stages and outputs the final video to output/final_video.mp4.
 
 import os
 
-from PIL import Image, ImageDraw, ImageFont
+try:
+    from PIL import Image, ImageDraw, ImageFont
+except ImportError as exc:
+    raise ImportError("Pillow is required for the explainer workflow. Install it with: pip install Pillow") from exc
 
 from mcp_video import Client
 
@@ -35,14 +38,26 @@ FPS = 30
 WIDTH, HEIGHT = 1920, 1080
 
 
+def _load_font(size: int):
+    """Try common system fonts across platforms, fallback to default."""
+    candidates = [
+        "/System/Library/Fonts/Helvetica.ttc",  # macOS
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",  # Linux
+        "C:/Windows/Fonts/arial.ttf",  # Windows
+    ]
+    for path in candidates:
+        try:
+            return ImageFont.truetype(path, size)
+        except OSError:
+            continue
+    return ImageFont.load_default()
+
+
 def _create_scene_image(color: str, text: str, output: str) -> str:
     """Create a branded scene image using Pillow."""
     img = Image.new("RGB", (WIDTH, HEIGHT), color)
     draw = ImageDraw.Draw(img)
-    try:
-        font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 64)
-    except OSError:
-        font = ImageFont.load_default()
+    font = _load_font(64)
     bbox = draw.textbbox((0, 0), text, font=font)
     text_w = bbox[2] - bbox[0]
     text_h = bbox[3] - bbox[1]
