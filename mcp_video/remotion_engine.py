@@ -292,6 +292,7 @@ def compositions(
 def studio(
     project_path: str,
     port: int = 3000,
+    startup_timeout: int = 10,
 ) -> RemotionStudioResult:
     """Launch Remotion Studio for live preview (non-blocking)."""
     _require_remotion_deps()
@@ -305,6 +306,13 @@ def studio(
         stderr=subprocess.PIPE,
         text=True,
     )
+
+    # Brief grace period to catch immediate startup crashes without blocking
+    # for the full timeout on healthy launches.
+    time.sleep(min(startup_timeout, 2))
+    if proc.poll() is not None:
+        stderr = proc.stderr.read() if proc.stderr else ""
+        raise RemotionProjectError(f"Remotion Studio exited immediately. stderr: {stderr[:500]}")
 
     return RemotionStudioResult(
         url=f"http://localhost:{port}",
