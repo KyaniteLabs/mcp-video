@@ -48,6 +48,7 @@ editor = Client()
 | `generate_subtitles(entries, output?, burn?)` | `SubtitleResult` | Create SRT subtitles |
 | `audio_waveform(video, bins?)` | `WaveformResult` | Extract audio waveform |
 | `batch(inputs, operation, params?)` | `dict` | Apply operation to multiple files |
+| `search_tools(query)` | `dict` | Search MCP tools by keyword — returns matching names, descriptions, required params |
 | `extract_colors(image_path, n_colors?)` | `ColorExtractionResult` | Extract dominant colors |
 | `generate_palette(image_path, harmony?, n_colors?)` | `PaletteResult` | Generate color harmony palette |
 | `analyze_product(image_path, use_ai?, n_colors?)` | `ProductAnalysisResult` | Extract colors + optional AI description |

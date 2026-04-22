@@ -14,7 +14,7 @@
 <p align="center">
   <a href="https://pypi.org/project/mcp-video/"><img src="https://img.shields.io/pypi/v/mcp-video.svg" alt="PyPI"></a>
   <a href="https://github.com/pastorsimon1798/mcp-video/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/pastorsimon1798/mcp-video/.github/workflows/ci.yml?branch=master&label=CI" alt="CI"></a>
-  <img src="https://img.shields.io/badge/tools-83%20MCP%20tools-orange.svg" alt="Tools">
+  <img src="https://img.shields.io/badge/tools-81%20MCP%20tools-orange.svg" alt="Tools">
   <img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="License">
   <img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python">
 </p>
@@ -144,15 +144,23 @@ mcp-video template tiktok video.mp4 --caption "Check this out!"
 
 | Category | Count | Highlights |
 |----------|-------|------------|
-| **Core Video** | 40 | trim, merge, text, audio, resize, convert, filters, stabilize, chroma key, subtitles, watermark, batch |
-| **AI-Powered** | 8 | transcribe (Whisper), scene detect, stem separation (Demucs), upscale, color grade |
+| **Core Video** | 26 | trim, merge, text, audio, resize, convert, filters, stabilize, chroma key, subtitles, watermark, batch |
+| **AI-Powered** | 10 | transcribe (Whisper), scene detect, stem separation (Demucs), upscale, color grade |
 | **Remotion** | 8 | create project, scaffold, render, studio preview, pipeline |
-| **Audio Synthesis** | 6 | generate waveforms, presets, sequences, effects — pure NumPy |
+| **Audio Synthesis** | 7 | generate waveforms, presets, sequences, effects, spatial audio — pure NumPy |
 | **Visual Effects** | 5 | vignette, chromatic aberration, scanlines, noise, glow |
 | **Transitions** | 3 | glitch, pixelate, morph |
-| **Layout & Motion** | 7 | grid, pip, animated text, counters, progress bars, auto-chapters |
-| **Quality** | 3 | brightness/contrast/audio checks, design analysis, auto-fix |
+| **Layout & Motion** | 6 | grid, pip, animated text, counters, progress bars, auto-chapters |
+| **Analysis** | 8 | scene detect, thumbnail, preview, storyboard, quality compare, metadata, waveform |
 | **Image Analysis** | 3 | color extraction, palette generation, product analysis |
+| **Meta** | 1 | `search_tools` — keyword search across all tools |
+
+**Tool discovery:**
+```python
+from mcp_video import Client
+editor = Client()
+results = editor.search_tools("subtitle")  # Find subtitle-related tools
+```
 
 ---
 
@@ -262,13 +270,33 @@ Structured, actionable errors with auto-fix suggestions:
 
 ---
 
+## Workflows
+
+ICM-style staged pipelines for common productions — with `CONTEXT.md` stage contracts, `references/` factory config, and runnable `workflow.py` scripts.
+
+```bash
+cd workflows/01-social-media-clip
+python workflow.py /path/to/video.mp4
+```
+
+| Workflow | Stages | Description |
+|----------|--------|-------------|
+| `01-social-media-clip` | 5 | Landscape → TikTok / Short / Reel |
+| `02-podcast-clip` | 6 | Highlight with chapters + burned captions |
+| `03-explainer-video` | 7 | Branded explainer from scratch |
+
+See [`workflows/CONTEXT.md`](workflows/CONTEXT.md) for the routing table.
+
 ## Architecture
 
 ```
 mcp_video/
-  client.py              # Python Client API
-  server.py              # MCP server (81 tools + 4 resources)
+  client/                # Python Client API (mixins per domain)
+  client/meta.py         # Client discovery mixin (search_tools)
+  server.py              # MCP server (81 tools + 4 resources + search_tools meta-tool)
+  server_tools_*.py      # Tool registration by category
   engine.py              # Core FFmpeg engine
+  engine_*.py            # Specialized engines (thumbnail, edit, probe, etc.)
   models.py              # Pydantic models
   errors.py              # Error hierarchy + FFmpeg stderr parser
   ffmpeg_helpers.py      # Shared FFmpeg utilities
@@ -279,6 +307,11 @@ mcp_video/
   remotion_engine.py     # Remotion CLI wrapper
   image_engine.py        # Image color analysis
   quality_guardrails.py  # Automated quality checks
+workflows/               # ICM staged pipelines
+  CONTEXT.md             # Layer 1 routing table
+  01-social-media-clip/  # Stage contract + runnable script
+  02-podcast-clip/       # Stage contract + runnable script
+  03-explainer-video/    # Stage contract + runnable script
 ```
 
 ---

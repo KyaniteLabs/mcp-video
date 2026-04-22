@@ -36,11 +36,14 @@ claude mcp add mcp-video -- uvx mcp-video
 ## Important Files
 
 - `README.md` - user documentation, install guide, tool list, CLI and Python examples.
+- `CLAUDE.md` - Layer 0 identity file for agent context routing.
 - `docs/AI_AGENT_DISCOVERY.md` - agent and answer-engine discovery map.
-- `mcp_video/server.py` - MCP tool registration layer.
+- `mcp_video/server.py` - MCP tool registration layer (81 tools + search_tools meta-tool).
 - `mcp_video/engine.py` - core FFmpeg editing operations.
 - `mcp_video/client.py` - Python client API.
+- `mcp_video/client/meta.py` - Client-side tool discovery (`search_tools`).
 - `mcp_video/__main__.py` - CLI command surface.
+- `workflows/CONTEXT.md` - Layer 1 routing: which ICM workflow to use.
 - `server.json` - MCP Registry metadata for `io.github.pastorsimon1798/mcp-video`.
 - `mcp_video/ffmpeg_helpers.py` - shared FFmpeg subprocess, path, duration, SRT, and escaping helpers.
 - `mcp_video/limits.py` - resource limits.
@@ -55,6 +58,9 @@ claude mcp add mcp-video -- uvx mcp-video
 - Keep subprocess timeouts.
 - Preserve public MCP tool signatures.
 - Do not commit generated media, local caches, virtualenvs, rendered output, or workspace state.
+- Use `search_tools("keyword")` to discover tools instead of loading all 81 descriptions into context.
+- Use `workflows/` for staged productions; read `CONTEXT.md` before starting.
+- Write temporary frames to temp directories, not next to source files.
 
 ## Canonical Links
 
