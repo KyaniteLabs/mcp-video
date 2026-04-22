@@ -185,6 +185,16 @@ class ClientEffectsMixin:
 
         return text_subtitles(video=video, subtitles=subtitles, output=output, style=style)
 
+    def subtitles_styled(
+        self,
+        video: str,
+        subtitles: str,
+        output: str,
+        style: dict | None = None,
+    ) -> str:
+        """Burn subtitles from SRT/VTT with styling (alias for text_subtitles)."""
+        return self.text_subtitles(video, subtitles, output, style)
+
     # ------------------------------------------------------------------
     # Motion Graphics
     # ------------------------------------------------------------------

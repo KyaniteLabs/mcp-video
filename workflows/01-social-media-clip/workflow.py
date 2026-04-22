@@ -38,7 +38,7 @@ def main() -> None:
         INPUT_VIDEO,
         start=f"{int(start // 60):02d}:{int(start % 60):02d}",
         duration=f"{int(clip_duration)}",
-        output_path=os.path.join(OUTPUT_DIR, "01_trimmed.mp4"),
+        output=os.path.join(OUTPUT_DIR, "01_trimmed.mp4"),
     )
     print(f"   -> {trimmed.output_path} ({clip_duration:.1f}s)")
 
@@ -47,7 +47,7 @@ def main() -> None:
     vertical = client.resize(
         trimmed.output_path,
         aspect_ratio="9:16",
-        output_path=os.path.join(OUTPUT_DIR, "02_vertical.mp4"),
+        output=os.path.join(OUTPUT_DIR, "02_vertical.mp4"),
     )
     print(f"   -> {vertical.output_path}")
 
@@ -61,7 +61,7 @@ def main() -> None:
         color="#CCFF00",
         start_time=0,
         duration=3,
-        output_path=os.path.join(OUTPUT_DIR, "03_captioned.mp4"),
+        output=os.path.join(OUTPUT_DIR, "03_captioned.mp4"),
     )
     print(f"   -> {hooked.output_path}")
 
@@ -70,7 +70,7 @@ def main() -> None:
     normalized = client.normalize_audio(
         hooked.output_path,
         target_lufs=-14.0,
-        output_path=os.path.join(OUTPUT_DIR, "04_normalized.mp4"),
+        output=os.path.join(OUTPUT_DIR, "04_normalized.mp4"),
     )
     print(f"   -> {normalized.output_path}")
 
@@ -80,7 +80,7 @@ def main() -> None:
         normalized.output_path,
         format="mp4",
         quality="high",
-        output_path=os.path.join(OUTPUT_DIR, "final_clip.mp4"),
+        output=os.path.join(OUTPUT_DIR, "final_clip.mp4"),
     )
     print(f"   -> {final.output_path}")
 

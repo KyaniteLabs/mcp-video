@@ -4,7 +4,23 @@
 
 ---
 
-## Core Editing (27 tools)
+## Meta / Discovery (1 tool)
+
+| Tool | Description |
+|------|-------------|
+| `search_tools` | Search all registered MCP tools by keyword. Returns matching tool names, descriptions, and required parameters. Use this when you need to find the right tool without loading all 81 descriptions into context. |
+
+**Python Client:**
+```python
+from mcp_video import Client
+editor = Client()
+results = editor.search_tools("subtitle")
+# Returns: {"success": True, "count": 3, "tools": [...]}
+```
+
+---
+
+## Core Editing (26 tools)
 
 | Tool | Description |
 |------|-------------|
@@ -81,7 +97,7 @@ Create videos programmatically using [Remotion](https://www.remotion.dev/) — a
 
 ---
 
-## Audio Synthesis (6 tools)
+## Audio Synthesis (7 tools)
 
 Generate audio from code — no external audio files needed. Pure NumPy, no extra dependencies.
 

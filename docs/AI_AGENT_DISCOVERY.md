@@ -19,12 +19,18 @@ This document is the short, explicit discovery map for agents, answer engines, a
 
 ## Best Entry Points
 
-- `README.md` - install, quick start, tools, CLI, Python client.
+- `README.md` - install, quick start, tools, CLI, Python client, workflows.
+- `CLAUDE.md` - Layer 0 identity: what this project is, where to find staged pipelines.
 - `llms.txt` - compact machine-readable project map.
-- `mcp_video/server.py` - MCP tool registration layer.
+- `mcp_video/server.py` - MCP tool registration layer (81 tools + search_tools meta-tool).
 - `mcp_video/engine.py` - core FFmpeg operations.
 - `mcp_video/client.py` - Python client.
+- `mcp_video/client/meta.py` - Client-side tool discovery (`search_tools`).
 - `mcp_video/__main__.py` - CLI.
+- `workflows/CONTEXT.md` - Layer 1 routing: which ICM workflow to use.
+- `workflows/01-social-media-clip/CONTEXT.md` - Stage contract for social clip production.
+- `workflows/02-podcast-clip/CONTEXT.md` - Stage contract for podcast highlight production.
+- `workflows/03-explainer-video/CONTEXT.md` - Stage contract for explainer video production.
 - `server.json` - MCP Registry metadata for the PyPI package.
 - `CONTRIBUTING.md` - contribution and testing rules.
 - `SECURITY.md` - private vulnerability reporting.
@@ -70,6 +76,8 @@ Cursor:
 - Do not break existing MCP tool signatures.
 - Do not move business logic into `server.py`; keep it in engine modules.
 - Do not add dependencies just to wrap a single command.
+- Do not write output next to source files; use temp directories or explicit output paths.
+- Do not claim ICM folder structure is used for core code; it is layered on top (`workflows/`).
 
 ## Registry And Directory Targets
 
