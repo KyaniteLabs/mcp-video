@@ -134,7 +134,7 @@ class ClientAiMixin:
             video: Input video path
             output: Output video path
             scale: Upscale factor (2 or 4). CLI: -s/--scale accepts {2, 4}
-            model: Model name (realesrgan, bsrgan, swinir)
+            model: Model name (realesrgan, bsrgan)
 
         Raises:
             ValueError: If scale is not 2 or 4

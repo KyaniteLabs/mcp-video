@@ -21,6 +21,49 @@ from ..errors import MCPVideoError, ProcessingError
 logger = logging.getLogger(__name__)
 
 
+def _is_blocked_ip(ip_str: str) -> bool:
+    addr = _ipaddress.ip_address(ip_str)
+    return addr.is_private or addr.is_loopback or addr.is_link_local or addr.is_reserved
+
+
+def _response_peer_ip(resp) -> str | None:
+    for path in (("fp", "raw", "_sock"), ("fp", "_sock"), ("raw", "_sock"), ("_sock",)):
+        obj = resp
+        for attr in path:
+            obj = getattr(obj, attr, None)
+            if obj is None:
+                break
+        if obj is None or not hasattr(obj, "getpeername"):
+            continue
+        peer = obj.getpeername()
+        if peer:
+            return peer[0]
+    return None
+
+
+def _validate_response_peer(resp) -> None:
+    peer_ip = _response_peer_ip(resp)
+    if peer_ip is None:
+        raise MCPVideoError(
+            "URL blocked (SSRF protection): could not verify connected peer address",
+            error_type="validation_error",
+            code="ssrf_peer_unknown",
+        )
+    try:
+        if _is_blocked_ip(peer_ip):
+            raise MCPVideoError(
+                f"URL blocked (SSRF protection): connected peer {peer_ip}",
+                error_type="validation_error",
+                code="ssrf_blocked",
+            )
+    except ValueError:
+        raise MCPVideoError(
+            f"URL blocked (SSRF protection): invalid connected peer {peer_ip!r}",
+            error_type="validation_error",
+            code="ssrf_blocked",
+        ) from None
+
+
 def _is_url(s: str) -> bool:
     """Return True if *s* looks like an http/https URL."""
     return s.lower().startswith(("http://", "https://"))
@@ -45,8 +88,7 @@ def _is_safe_url(url: str) -> bool:
             _socket.setdefaulttimeout(previous_timeout)
         for _family, _type, _proto, _canonname, sockaddr in addrinfos:
             ip_str = sockaddr[0]
-            addr = _ipaddress.ip_address(ip_str)
-            if addr.is_private or addr.is_loopback or addr.is_link_local or addr.is_reserved:
+            if _is_blocked_ip(ip_str):
                 return False
     except (_socket.gaierror, ValueError, OSError):
         return False
@@ -130,21 +172,24 @@ def _download_direct_url(url: str, dest_dir: str) -> str:
     headers = {"User-Agent": "mcp-video/1.0 (+https://github.com/pastorsimon1798/mcp-video)"}
     req = urllib.request.Request(url, headers=headers)
     max_download_bytes = 2 * (1 << 30)  # 2 GiB limit
-    with urllib.request.urlopen(req, timeout=120) as resp, open(dest, "wb") as fh:
-        total = 0
-        while True:
-            chunk = resp.read(1 << 20)  # 1 MiB
-            if not chunk:
-                break
-            total += len(chunk)
-            if total > max_download_bytes:
-                Path(dest).unlink(missing_ok=True)
-                raise MCPVideoError(
-                    f"Download exceeded {max_download_bytes >> 30} GiB size limit",
-                    error_type="resource_error",
-                    code="download_size_limit",
-                )
-            fh.write(chunk)
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    with opener.open(req, timeout=120) as resp:
+        _validate_response_peer(resp)
+        with open(dest, "wb") as fh:
+            total = 0
+            while True:
+                chunk = resp.read(1 << 20)  # 1 MiB
+                if not chunk:
+                    break
+                total += len(chunk)
+                if total > max_download_bytes:
+                    Path(dest).unlink(missing_ok=True)
+                    raise MCPVideoError(
+                        f"Download exceeded {max_download_bytes >> 30} GiB size limit",
+                        error_type="resource_error",
+                        code="download_size_limit",
+                    )
+                fh.write(chunk)
     return dest
 
 

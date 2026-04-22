@@ -9,16 +9,40 @@ Optional dependencies:
 from __future__ import annotations
 
 import hashlib
+import math
 import logging
 import subprocess
 import tempfile
 from pathlib import Path
 
 from ..errors import InputFileError, MCPVideoError, ProcessingError
-from ..ffmpeg_helpers import _validate_output_path
-from ..limits import DEFAULT_FFMPEG_TIMEOUT
+from ..ffmpeg_helpers import _get_video_duration, _validate_output_path
+from ..limits import DEFAULT_FFMPEG_TIMEOUT, MAX_AI_UPSCALE_FRAMES
 
 logger = logging.getLogger(__name__)
+
+
+def _estimate_frame_count(video_path: str) -> int:
+    duration = _get_video_duration(video_path)
+    fps = _get_video_fps(video_path)
+    if fps is None:
+        raise MCPVideoError(
+            "Could not determine video frame rate for AI upscaling resource check",
+            error_type="validation_error",
+            code="unknown_frame_rate",
+        )
+    return math.ceil(duration * fps)
+
+
+def _validate_upscale_resource_limits(video_path: str) -> None:
+    frame_count = _estimate_frame_count(video_path)
+    if frame_count > MAX_AI_UPSCALE_FRAMES:
+        raise MCPVideoError(
+            f"Video frame count ({frame_count}) exceeds AI upscaling maximum of {MAX_AI_UPSCALE_FRAMES}",
+            error_type="resource_error",
+            code="frame_count_too_large",
+        )
+
 
 # Expected SHA256 hashes for downloaded model files.
 _MODEL_HASHES: dict[str, str] = {
@@ -207,7 +231,7 @@ def ai_upscale(
         video: Input video path
         output: Output video path
         scale: Upscaling factor (2 or 4)
-        model: Model to use (realesrgan, bsrgan, swinir)
+        model: Model to use (realesrgan, bsrgan)
 
     Returns:
         Path to output video
@@ -224,6 +248,26 @@ def ai_upscale(
     if not video_path.exists():
         raise InputFileError(video)
 
+    model_configs = {
+        "realesrgan": {"num_block": 23, "num_feat": 64},
+        "bsrgan": {"num_block": 23, "num_feat": 64},
+    }
+
+    if model not in model_configs:
+        raise MCPVideoError(
+            f"Unknown model: {model}. Choose from: {list(model_configs.keys())}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
+
+    # Validate scale parameter before metadata/resource probes.
+    if scale not in (2, 4):
+        raise MCPVideoError(
+            f"Scale must be 2 or 4, got {scale}", error_type="validation_error", code="invalid_parameter"
+        )
+
+    _validate_upscale_resource_limits(str(video_path))
+
     # Try to use Real-ESRGAN if available, otherwise use OpenCV DNN fallback
     # NOTE: basicsr <= 1.4.2 has CVE-2024-27763 (command injection via SLURM_NODELIST).
     # Our usage only imports the RRDBNet architecture class for inference.
@@ -235,12 +279,6 @@ def ai_upscale(
         has_realesrgan = True
     except ImportError:
         has_realesrgan = False
-
-    # Validate scale parameter
-    if scale not in (2, 4):
-        raise MCPVideoError(
-            f"Scale must be 2 or 4, got {scale}", error_type="validation_error", code="invalid_parameter"
-        )
 
     _validate_output_path(output)
     output_path = Path(output)
@@ -256,20 +294,6 @@ def ai_upscale(
                 error_type="dependency_error",
                 code="missing_upscale_dep",
             ) from None
-
-    # Map model names to RRDBNet configurations
-    model_configs = {
-        "realesrgan": {"num_block": 23, "num_feat": 64},
-        "bsrgan": {"num_block": 23, "num_feat": 64},
-        "swinir": {"num_block": 23, "num_feat": 64},  # Simplified - swinir uses different arch
-    }
-
-    if model not in model_configs:
-        raise MCPVideoError(
-            f"Unknown model: {model}. Choose from: {list(model_configs.keys())}",
-            error_type="validation_error",
-            code="invalid_parameter",
-        )
 
     with tempfile.TemporaryDirectory() as tmpdir:
         tmpdir_path = Path(tmpdir)

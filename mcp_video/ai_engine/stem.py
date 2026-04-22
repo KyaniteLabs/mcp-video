@@ -10,14 +10,36 @@ from __future__ import annotations
 
 import logging
 import subprocess
+import importlib
+import sys
 import tempfile
 from pathlib import Path
 
 from ..errors import InputFileError, MCPVideoError, ProcessingError
-from ..ffmpeg_helpers import _validate_output_path
-from ..limits import DEFAULT_FFMPEG_TIMEOUT
+from ..ffmpeg_helpers import _get_video_duration, _validate_output_path
+from ..limits import DEFAULT_FFMPEG_TIMEOUT, MAX_AUDIO_DURATION
+from ..validation import VALID_DEMUCS_MODELS
 
 logger = logging.getLogger(__name__)
+
+
+def _validate_demucs_model(model: str) -> None:
+    if model not in VALID_DEMUCS_MODELS:
+        raise MCPVideoError(
+            f"Invalid model: must be one of {sorted(VALID_DEMUCS_MODELS)}, got {model!r}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
+
+
+def _validate_stem_duration(video_path: str) -> None:
+    duration = _get_video_duration(video_path)
+    if duration > MAX_AUDIO_DURATION:
+        raise MCPVideoError(
+            f"Video duration ({duration:.0f}s) exceeds stem separation maximum of {MAX_AUDIO_DURATION}s",
+            error_type="validation_error",
+            code="duration_too_long",
+        )
 
 
 def ai_stem_separation(
@@ -41,12 +63,13 @@ def ai_stem_separation(
         RuntimeError: If demucs is not installed
         FileNotFoundError: If video file doesn't exist
     """
+    _validate_demucs_model(model)
     if "\x00" in video:
         raise InputFileError(video, "Invalid path: contains null bytes")
 
     # Check for demucs availability
     try:
-        import demucs.separate
+        importlib.import_module("demucs.separate")
     except ImportError:
         raise MCPVideoError(
             "Demucs not installed. Install with: pip install demucs",
@@ -62,6 +85,7 @@ def ai_stem_separation(
     video_path = Path(video)
     if not video_path.exists():
         raise InputFileError(video)
+    _validate_stem_duration(str(video_path))
 
     # Default stems if not provided
     stems = stems or ["vocals", "drums", "bass", "other"]
@@ -111,8 +135,16 @@ def ai_stem_separation(
             audio_path,
         ]
 
-        # Run demucs separation
-        demucs.separate.main(demucs_args)
+        # Run demucs separation with a timeout.
+        demucs_cmd = [sys.executable, "-m", "demucs.separate", *demucs_args]
+        try:
+            result = subprocess.run(demucs_cmd, capture_output=True, text=True, timeout=DEFAULT_FFMPEG_TIMEOUT)
+        except subprocess.TimeoutExpired:
+            raise ProcessingError(
+                " ".join(demucs_cmd), -1, f"Demucs command timed out after {DEFAULT_FFMPEG_TIMEOUT}s"
+            ) from None
+        if result.returncode != 0:
+            raise ProcessingError(" ".join(demucs_cmd), result.returncode, result.stderr)
 
         # Step 3: Collect output paths
         # Output structure: output_dir/model/audio_name/stem.wav

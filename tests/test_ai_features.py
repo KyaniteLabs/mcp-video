@@ -1145,6 +1145,35 @@ def test_ai_stem_separation_missing_demucs_dependency(monkeypatch, sample_video,
     assert exc_info.value.code == "missing_demucs"
 
 
+
+
+def test_ai_stem_separation_demucs_timeout(monkeypatch, sample_video, tmp_path):
+    from mcp_video.ai_engine import ai_stem_separation
+    from mcp_video.errors import ProcessingError
+
+    fake_demucs = types.ModuleType("demucs")
+    fake_separate = types.ModuleType("demucs.separate")
+    fake_demucs.separate = fake_separate
+    monkeypatch.setitem(sys.modules, "demucs", fake_demucs)
+    monkeypatch.setitem(sys.modules, "demucs.separate", fake_separate)
+    monkeypatch.setattr("mcp_video.ai_engine.stem._get_video_duration", lambda _path: 1.0)
+
+    calls = []
+
+    def fake_run(cmd, *args, **kwargs):
+        calls.append(cmd)
+        if cmd[0] == "ffmpeg":
+            return subprocess.CompletedProcess(cmd, 0, "", "")
+        raise subprocess.TimeoutExpired(cmd, timeout=kwargs.get("timeout"))
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    with pytest.raises(ProcessingError, match="Demucs command timed out"):
+        ai_stem_separation(sample_video, str(tmp_path))
+
+    assert any(cmd[:3] == [sys.executable, "-m", "demucs.separate"] for cmd in calls)
+
+
 @requires_ffmpeg
 @pytest.mark.skipif(importlib.util.find_spec("demucs") is None, reason="Demucs not installed")
 def test_ai_stem_separation_ffmpeg_extraction_failure(monkeypatch, sample_video, tmp_path):
@@ -1434,6 +1463,135 @@ def test_is_safe_url_restores_socket_default_timeout(monkeypatch):
         assert socket.getdefaulttimeout() == 3.5
     finally:
         socket.setdefaulttimeout(previous_timeout)
+
+
+
+
+def test_direct_download_rechecks_connected_peer_ip(monkeypatch, tmp_path):
+    from mcp_video.ai_engine.download import _download_direct_url
+
+    class FakeSock:
+        def getpeername(self):
+            return ("127.0.0.1", 443)
+
+    class FakeResponse:
+        def __init__(self):
+            self.fp = types.SimpleNamespace(raw=types.SimpleNamespace(_sock=FakeSock()))
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def read(self, _size):
+            return b"video"
+
+    class FakeOpener:
+        def open(self, *_args, **_kwargs):
+            return FakeResponse()
+
+    proxy_handlers = []
+
+    def fake_build_opener(handler):
+        proxy_handlers.append(handler)
+        return FakeOpener()
+
+    monkeypatch.setattr("mcp_video.ai_engine.download._is_safe_url", lambda _url: True)
+    monkeypatch.setattr("urllib.request.build_opener", fake_build_opener)
+
+    with pytest.raises(MCPVideoError, match="SSRF"):
+        _download_direct_url("https://example.com/video.mp4", str(tmp_path))
+
+    assert not (tmp_path / "video.mp4").exists()
+    assert proxy_handlers and proxy_handlers[0].proxies == {}
+
+
+def test_direct_ai_transcribe_rejects_invalid_model_before_dependency():
+    from mcp_video.ai_engine import ai_transcribe
+
+    with pytest.raises(MCPVideoError, match="Invalid model"):
+        ai_transcribe("/tmp/missing.mp4", model="not-a-model")
+
+
+def test_direct_ai_stem_separation_rejects_invalid_model_before_dependency(tmp_path):
+    from mcp_video.ai_engine import ai_stem_separation
+
+    with pytest.raises(MCPVideoError, match="Invalid model"):
+        ai_stem_separation("/tmp/missing.mp4", str(tmp_path), model="not-a-model")
+
+
+def test_ai_transcribe_rejects_overlong_media_before_extraction(monkeypatch, sample_video):
+    from mcp_video.ai_engine import ai_transcribe
+    from mcp_video.limits import MAX_AI_TRANSCRIBE_DURATION
+
+    class FakeWhisper:
+        @staticmethod
+        def load_model(_model):
+            raise AssertionError("Whisper model should not load for overlong media")
+
+    monkeypatch.setitem(sys.modules, "whisper", FakeWhisper)
+    monkeypatch.setattr("mcp_video.ai_engine.transcribe._get_video_duration", lambda _path: MAX_AI_TRANSCRIBE_DURATION + 1)
+
+    with pytest.raises(MCPVideoError, match="duration"):
+        ai_transcribe(sample_video)
+
+
+def test_ai_stem_rejects_overlong_media_before_demucs(monkeypatch, sample_video, tmp_path):
+    from mcp_video.ai_engine import ai_stem_separation
+    from mcp_video.limits import MAX_AUDIO_DURATION
+
+    fake_demucs = types.ModuleType("demucs")
+    fake_separate = types.ModuleType("demucs.separate")
+
+    def fail_main(_args):
+        raise AssertionError("Demucs should not run for overlong media")
+
+    fake_separate.main = fail_main
+    fake_demucs.separate = fake_separate
+    monkeypatch.setitem(sys.modules, "demucs", fake_demucs)
+    monkeypatch.setitem(sys.modules, "demucs.separate", fake_separate)
+    monkeypatch.setattr("mcp_video.ai_engine.stem._get_video_duration", lambda _path: MAX_AUDIO_DURATION + 1)
+
+    with pytest.raises(MCPVideoError, match="duration"):
+        ai_stem_separation(sample_video, str(tmp_path))
+
+
+def test_ai_upscale_rejects_invalid_model_before_dependency(sample_video, tmp_path):
+    from mcp_video.ai_engine import ai_upscale
+
+    with pytest.raises(MCPVideoError, match="Unknown model"):
+        ai_upscale(sample_video, str(tmp_path / "out.mp4"), model="not-a-model")
+
+
+def test_ai_upscale_rejects_excessive_frame_count(monkeypatch, sample_video, tmp_path):
+    from mcp_video.ai_engine import ai_upscale
+    from mcp_video.limits import MAX_AI_UPSCALE_FRAMES
+
+    monkeypatch.setattr("mcp_video.ai_engine.upscale._estimate_frame_count", lambda _path: MAX_AI_UPSCALE_FRAMES + 1)
+    monkeypatch.setattr("mcp_video.ai_engine.upscale._ai_upscale_opencv", lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("upscale should not run")))
+
+    with pytest.raises(MCPVideoError, match="frame"):
+        ai_upscale(sample_video, str(tmp_path / "out.mp4"), scale=2)
+
+
+
+
+def test_ai_upscale_rejects_unknown_fps_for_resource_guard(monkeypatch, sample_video, tmp_path):
+    from mcp_video.ai_engine import ai_upscale
+
+    monkeypatch.setattr("mcp_video.ai_engine.upscale._get_video_duration", lambda _path: 10.0)
+    monkeypatch.setattr("mcp_video.ai_engine.upscale._get_video_fps", lambda _path: None)
+
+    with pytest.raises(MCPVideoError, match="frame rate"):
+        ai_upscale(sample_video, str(tmp_path / "out.mp4"), scale=2)
+
+
+def test_ai_upscale_rejects_swinir_until_supported(sample_video, tmp_path):
+    from mcp_video.ai_engine import ai_upscale
+
+    with pytest.raises(MCPVideoError, match="Unknown model"):
+        ai_upscale(sample_video, str(tmp_path / "out.mp4"), model="swinir")
 
 
 def test_resolve_video_source_platform_url_requires_ytdlp(monkeypatch):
