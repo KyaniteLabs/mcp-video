@@ -15,10 +15,30 @@ from pathlib import Path
 from typing import Any
 
 from ..errors import InputFileError, MCPVideoError, ProcessingError
-from ..ffmpeg_helpers import _seconds_to_srt_time, _validate_output_path
-from ..limits import DEFAULT_FFMPEG_TIMEOUT
+from ..ffmpeg_helpers import _get_video_duration, _seconds_to_srt_time, _validate_output_path
+from ..limits import DEFAULT_FFMPEG_TIMEOUT, MAX_AI_TRANSCRIBE_DURATION
+from ..validation import VALID_WHISPER_MODELS
 
 logger = logging.getLogger(__name__)
+
+
+def _validate_whisper_model(model: str) -> None:
+    if model not in VALID_WHISPER_MODELS:
+        raise MCPVideoError(
+            f"Invalid model: must be one of {sorted(VALID_WHISPER_MODELS)}, got {model!r}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
+
+
+def _validate_transcribe_duration(video_path: str) -> None:
+    duration = _get_video_duration(video_path)
+    if duration > MAX_AI_TRANSCRIBE_DURATION:
+        raise MCPVideoError(
+            f"Video duration ({duration:.0f}s) exceeds transcription maximum of {MAX_AI_TRANSCRIBE_DURATION}s",
+            error_type="validation_error",
+            code="duration_too_long",
+        )
 
 
 def ai_transcribe(
@@ -42,6 +62,7 @@ def ai_transcribe(
         RuntimeError: If whisper is not installed
         FileNotFoundError: If video file doesn't exist
     """
+    _validate_whisper_model(model)
     if "\x00" in video:
         raise InputFileError(video, "Invalid path: contains null bytes")
 
@@ -63,6 +84,7 @@ def ai_transcribe(
     video_path = Path(video)
     if not video_path.exists():
         raise InputFileError(video)
+    _validate_transcribe_duration(str(video_path))
 
     # Step 1: Extract audio to temp WAV file
     with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
