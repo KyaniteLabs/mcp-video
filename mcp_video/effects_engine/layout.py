@@ -165,7 +165,8 @@ def layout_pip(
         main,
     ]
     probe = _run_ffmpeg(probe_cmd)
-    main_w, main_h = map(int, probe.stdout.strip().split("x"))
+    dims = [d for d in probe.stdout.strip().split("x") if d]
+    main_w, main_h = map(int, dims)
 
     # Calculate PIP dimensions
     pip_w = int(main_w * size)

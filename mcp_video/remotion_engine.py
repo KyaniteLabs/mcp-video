@@ -376,7 +376,7 @@ export const TARGET_DURATION = {target_duration};
 
 _ROOT_TSX = """import {{ Composition }} from "remotion";
 import React from "react";
-import {{ {slug}Composition }} from "./compositions/{slug}";
+import {slug}Composition from "./compositions/{slug}";
 
 export const RemotionRoot: React.FC = () => {{
   return (
@@ -386,8 +386,8 @@ export const RemotionRoot: React.FC = () => {{
         component={{{slug}Composition}}
         durationInFrames={{{target_fps} * {target_duration}}}
         fps={{{target_fps}}}
-        compositionWidth={{1920}}
-        compositionHeight={{1080}}
+        width={{1920}}
+        height={{1080}}
       />
     </>
   );
@@ -450,8 +450,8 @@ _PACKAGE_JSON = """{{
 }}
 """
 
-_TS_CONFIG = """{{
-  "compilerOptions": {{
+_TS_CONFIG = """{
+  "compilerOptions": {
     "target": "ES2018",
     "module": "commonjs",
     "jsx": "react-jsx",
@@ -461,37 +461,37 @@ _TS_CONFIG = """{{
     "forceConsistentCasingInFileNames": true,
     "outDir": "./dist",
     "rootDir": "./src"
-  }},
+  },
   "include": ["src/**/*"]
-}}
+}
 """
 
 _HELLO_WORLD_TSX = """import React from "react";
-import {{ AbsoluteFill, useCurrentFrame, interpolate, spring }} from "remotion";
+import { AbsoluteFill, useCurrentFrame, interpolate, spring } from "remotion";
 
-export const HelloWorld: React.FC = () => {{
+export const HelloWorld: React.FC = () => {
   const frame = useCurrentFrame();
-  const scale = spring({{ frame, fps: 30, config: {{ damping: 200 }} }});
-  const opacity = interpolate(frame, [0, 30], [0, 1], {{ extrapolateRight: "clamp" }});
+  const scale = spring({ frame, fps: 30, config: { damping: 200 } });
+  const opacity = interpolate(frame, [0, 30], [0, 1], { extrapolateRight: "clamp" });
 
   return (
     <AbsoluteFill
-      style={{{{ backgroundColor: "#0b1215", justifyContent: "center", alignItems: "center" }}}}
+      style={{ backgroundColor: "#0b1215", justifyContent: "center", alignItems: "center" }}
     >
       <div
-        style={{{{
+        style={{
           opacity,
-          transform: `scale(${{scale}})`,
+          transform: `scale(${scale})`,
           fontSize: 80,
           fontWeight: "bold",
           color: "white",
-        }}}}
+        }}
       >
         Hello, Remotion!
       </div>
     </AbsoluteFill>
   );
-}};
+};
 """
 
 
@@ -552,8 +552,8 @@ export const RemotionRoot: React.FC = () => {
         component={HelloWorld}
         durationInFrames={150}
         fps={30}
-        compositionWidth={1920}
-        compositionHeight={1080}
+        width={1920}
+        height={1080}
       />
     </>
   );
@@ -746,7 +746,7 @@ def render_and_post(
     """Render a Remotion composition, then apply mcp-video post-processing."""
     # Step 1: Render with Remotion
     render_result = render(project_path, composition_id)
-    remotion_output = render_result.output_path
+    remotion_output = os.path.join(project_path, render_result.output_path)
 
     # Step 2: Post-process with mcp-video engine
     from . import engine as video_engine

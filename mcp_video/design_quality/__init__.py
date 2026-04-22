@@ -13,11 +13,13 @@ def design_quality_check(
     strict: bool = False,
 ) -> DesignQualityReport:
     _validate_input_path(video)
-    guardrails = DesignQualityGuardrails(strict=strict)
-    return guardrails.check(video, auto_fix=auto_fix)
+    guardrails = DesignQualityGuardrails()
+    return guardrails.analyze(video, auto_fix=auto_fix)
 
 
 def fix_design_issues(video: str, output: str | None = None) -> str:
     _validate_input_path(video)
     guardrails = DesignQualityGuardrails()
-    return guardrails.fix_all(video, output=output)
+    report = guardrails.analyze(video, auto_fix=True)
+    # Return output path if provided, otherwise the report
+    return output or report
