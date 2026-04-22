@@ -13,6 +13,7 @@ from .server_resources import (
 )
 from .server_tools_basic import (
     VALID_XFADE_TRANSITIONS as VALID_XFADE_TRANSITIONS,
+    search_tools as search_tools,
     video_add_audio as video_add_audio,
     video_add_text as video_add_text,
     video_convert as video_convert,
@@ -39,14 +40,11 @@ from .server_tools_advanced import (
     video_apply_mask as video_apply_mask,
     video_audio_waveform as video_audio_waveform,
     video_batch as video_batch,
-    video_blur as video_blur,
     video_chroma_key as video_chroma_key,
-    video_color_grade as video_color_grade,
     video_compare_quality as video_compare_quality,
     video_create_from_images as video_create_from_images,
     video_detect_scenes as video_detect_scenes,
     video_export_frames as video_export_frames,
-    video_extract_frame as video_extract_frame,
     video_filter as video_filter,
     video_generate_subtitles as video_generate_subtitles,
     video_normalize_audio as video_normalize_audio,
@@ -97,7 +95,7 @@ from .server_tools_effects import (
     video_mograph_count as video_mograph_count,
     video_mograph_progress as video_mograph_progress,
     video_text_animated as video_text_animated,
-    video_text_subtitles as video_text_subtitles,
+    video_subtitles_styled as video_subtitles_styled,
 )
 from .server_tools_ai import (
     video_ai_color_grade as video_ai_color_grade,

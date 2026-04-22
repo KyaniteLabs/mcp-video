@@ -432,13 +432,13 @@ def video_text_animated(
 
 
 @mcp.tool()
-def video_text_subtitles(
+def video_subtitles_styled(
     input_path: str,
     subtitles_path: str,
     output_path: str,
     style: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Burn subtitles from SRT/VTT with styling.
+    """Burn subtitles from SRT/VTT with custom styling.
 
     Embeds subtitle file into video with customizable appearance.
 

@@ -403,3 +403,41 @@ def video_speed(
         return _error_result(e)
     except Exception as e:
         return _error_result(e)
+
+
+@mcp.tool()
+def search_tools(query: str) -> dict[str, Any]:
+    """Search registered MCP tools by keyword.
+
+    Use this when you need to find the right tool for a task without reading
+    all 80 tool descriptions. Returns matching tools with their names,
+    descriptions, and required parameters.
+
+    Args:
+        query: Search term — e.g. "blur", "resize", "subtitle", "audio", "trim".
+    """
+    try:
+        # Ensure all tool modules are loaded so the registry is complete.
+        # We import sibling modules (not the facade) to populate the registry.
+        from . import server_tools_advanced, server_tools_effects, server_tools_image, server_tools_media  # noqa: F401
+
+        query_lower = query.lower()
+        matches: list[dict[str, Any]] = []
+        for name, tool in mcp._tool_manager._tools.items():
+            if name == "search_tools":
+                continue
+            desc = (tool.description or "").lower()
+            if query_lower in name.lower() or query_lower in desc:
+                # Extract required params from JSON schema
+                params = tool.parameters or {}
+                required = params.get("required", [])
+                matches.append(
+                    {
+                        "name": name,
+                        "description": (tool.description or "").split("\n")[0].strip(),
+                        "required_params": required,
+                    }
+                )
+        return {"success": True, "query": query, "count": len(matches), "tools": matches}
+    except Exception as e:
+        return _error_result(e)

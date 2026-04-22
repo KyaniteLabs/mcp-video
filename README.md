@@ -140,7 +140,7 @@ mcp-video template tiktok video.mp4 --caption "Check this out!"
 
 ## MCP Tools
 
-83 tools across 9 categories. All return structured JSON. See the [full tool reference](docs/TOOLS.md) for complete details.
+81 unique MCP tools across 12 categories, plus a `search_tools` meta-tool for fast discovery. All return structured JSON. See the [full tool reference](docs/TOOLS.md) for complete details.
 
 | Category | Count | Highlights |
 |----------|-------|------------|
@@ -267,7 +267,7 @@ Structured, actionable errors with auto-fix suggestions:
 ```
 mcp_video/
   client.py              # Python Client API
-  server.py              # MCP server (83 tools + 4 resources)
+  server.py              # MCP server (81 tools + 4 resources)
   engine.py              # Core FFmpeg engine
   models.py              # Pydantic models
   errors.py              # Error hierarchy + FFmpeg stderr parser

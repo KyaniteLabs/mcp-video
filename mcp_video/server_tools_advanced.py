@@ -21,7 +21,6 @@ from .engine import (
     reverse,
     split_screen,
     stabilize,
-    thumbnail,
     write_metadata,
 )
 from .engine import video_batch as _video_batch
@@ -42,6 +41,10 @@ def video_filter(
     preset: str | None = None,
 ) -> dict[str, Any]:
     """Apply a visual filter to a video.
+
+    Common presets:
+        - blur: params={"radius": 5, "strength": 1}
+        - color_preset: params={"preset": "warm"} (warm, cool, vintage, cinematic, noir)
 
     Args:
         input_path: Absolute path to the input video.
@@ -137,66 +140,6 @@ def video_chroma_key(
         )
     try:
         return _result(chroma_key(input_path, color=color, similarity=similarity, blend=blend, output_path=output_path))
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
-
-
-@mcp.tool()
-def video_blur(
-    input_path: str,
-    radius: int = 5,
-    strength: int = 1,
-    output_path: str | None = None,
-) -> dict[str, Any]:
-    """Apply blur effect to a video.
-
-    Args:
-        input_path: Absolute path to the input video.
-        radius: Blur radius in pixels (default 5).
-        strength: Blur strength (default 1).
-        output_path: Where to save the output. Auto-generated if omitted.
-    """
-    try:
-        input_path = _validate_input_path(input_path)
-        return _result(
-            apply_filter(
-                input_path,
-                filter_type="blur",
-                params={"radius": radius, "strength": strength},
-                output_path=output_path,
-            )
-        )
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
-
-
-@mcp.tool()
-def video_color_grade(
-    input_path: str,
-    preset: str = "warm",
-    output_path: str | None = None,
-) -> dict[str, Any]:
-    """Apply a color grading preset to a video.
-
-    Args:
-        input_path: Absolute path to the input video.
-        preset: Color preset (warm, cool, vintage, cinematic, noir).
-        output_path: Where to save the output. Auto-generated if omitted.
-    """
-    try:
-        input_path = _validate_input_path(input_path)
-        return _result(
-            apply_filter(
-                input_path,
-                filter_type="color_preset",
-                params={"preset": preset},
-                output_path=output_path,
-            )
-        )
     except MCPVideoError as e:
         return _error_result(e)
     except Exception as e:
@@ -701,28 +644,6 @@ def video_batch(
         )
     try:
         return _result(_video_batch(inputs, operation, params, output_dir))
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
-
-
-@mcp.tool()
-def video_extract_frame(
-    input_path: str,
-    timestamp: float | None = None,
-    output_path: str | None = None,
-) -> dict[str, Any]:
-    """Extract a single frame from a video. Alias for video_thumbnail.
-
-    Args:
-        input_path: Absolute path to the input video.
-        timestamp: Time in seconds to extract frame. Defaults to 10% of video duration.
-        output_path: Where to save the frame image. Auto-generated if omitted.
-    """
-    try:
-        input_path = _validate_input_path(input_path)
-        return _result(thumbnail(input_path, timestamp=timestamp, output_path=output_path))
     except MCPVideoError as e:
         return _error_result(e)
     except Exception as e:

@@ -133,7 +133,7 @@ v1.2.0 shipped. 82 MCP tools, 832 tests, security hardened. Here's what's next.
 
 ## Medium Impact (Makes the API less frustrating)
 
-- [x] **Video effects/filters** — Blur, sharpen, color grading, color presets (warm/cool/vintage/cinematic/noir), grayscale, sepia, invert, vignette. *(Shipped in v0.3.0 as `video_filter`, `video_blur`, `video_color_grade`)*
+- [x] **Video effects/filters** — Blur, sharpen, color grading, color presets (warm/cool/vintage/cinematic/noir), grayscale, sepia, invert, vignette. *(Shipped in v0.3.0 as `video_filter` with `filter_type` presets)*
 - [x] **Audio editing** — Audio normalization to LUFS targets (YouTube -16, broadcast -23, Spotify -14). *(Shipped in v0.3.0 as `video_normalize_audio`)*
 - [x] **Reverse playback** — Reverse video and audio so it plays backwards. *(Shipped in v0.4.0)*
 - [x] **Green screen / chroma key** — Remove solid color backgrounds using `chromakey` filter. *(Shipped in v0.4.0)*

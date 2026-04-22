@@ -112,7 +112,7 @@ Chapter titles orient the viewer and make the demo scannable. The 4-second durat
 
 ### Step 6: Apply cinematic color grading
 
-Use **video_color_grade** with the cinematic preset for a professional, polished look.
+Use **video_filter** with `filter_type="color_preset"` and `params={"preset": "cinematic"}` for a professional, polished look.
 ```
 input_path: /tmp/demo_ch3.mp4
 preset: cinematic

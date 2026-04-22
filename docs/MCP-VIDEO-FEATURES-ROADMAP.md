@@ -72,7 +72,7 @@ Fully tested and working:
 
 ### Text & Typography (Shipped v0.9.0)
 - ✅ `video_text_animated` - Animated text with presets
-- ✅ `video_text_subtitles` - Burn subtitles with styling
+- ✅ `video_subtitles_styled` - Burn subtitles with custom styling
 
 ### Motion Graphics (Shipped v0.9.0)
 - ✅ `video_mograph_count` - Animated number counter
@@ -300,11 +300,11 @@ video_text_animated(
 )
 ```
 
-### `video_text_subtitles`
+### `video_subtitles_styled`
 Burn subtitles from SRT/VTT with styling.
 
 ```python
-video_text_subtitles(
+video_subtitles_styled(
     "video.mp4",
     subtitles="captions.srt",
     output="output.mp4",
