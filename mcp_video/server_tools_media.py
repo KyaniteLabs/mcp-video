@@ -27,10 +27,10 @@ from .ffmpeg_helpers import _validate_input_path
 @mcp.tool()
 def video_thumbnail(
     input_path: str,
-    timestamp: float | None = None,
+    timestamp: float | str | None = None,
     output_path: str | None = None,
 ) -> dict[str, Any]:
-    """Extract a single frame (thumbnail) from a video.
+    """Extract a single frame (thumbnail / frame grab) from a video.
 
     Args:
         input_path: Absolute path to the input video.

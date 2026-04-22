@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from .engine_edit import _time_to_seconds
+from .errors import MCPVideoError
 from .ffmpeg_helpers import _validate_input_path, _validate_output_path
 from .engine_probe import get_duration
 from .engine_runtime_utils import _auto_output, _run_ffmpeg
@@ -10,7 +12,7 @@ from .models import ThumbnailResult
 
 def thumbnail(
     input_path: str,
-    timestamp: float | None = None,
+    timestamp: float | str | None = None,
     output_path: str | None = None,
 ) -> ThumbnailResult:
     """Extract a single frame from a video."""
@@ -23,7 +25,14 @@ def thumbnail(
     else:
         # Clamp to valid range
         dur = get_duration(input_path)
-        timestamp = min(timestamp, dur * 0.99)
+        try:
+            timestamp = min(_time_to_seconds(timestamp), dur * 0.99)
+        except ValueError as exc:
+            raise MCPVideoError(
+                f"Invalid timestamp: '{timestamp}'. Expected seconds or HH:MM:SS format.",
+                error_type="validation_error",
+                code="invalid_parameter",
+            ) from exc
 
     output = output_path or _auto_output(input_path, f"frame_{timestamp:.1f}s", ext=".jpg")
     _validate_output_path(output)

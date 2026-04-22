@@ -42,21 +42,37 @@ def _require_image_deps() -> None:
         ) from None
 
 
+VIDEO_EXTENSIONS = frozenset({".mp4", ".mov", ".webm", ".m4v", ".mkv", ".avi"})
+
+
 def _validate_image(path: str) -> None:
-    """Check file exists and is a supported image format."""
+    """Check file exists and is a supported image or video format."""
     if not os.path.isfile(path):
         raise MCPVideoError(
-            f"Image file not found: {path}",
+            f"File not found: {path}",
             error_type="input_error",
             code="file_not_found",
         )
     ext = os.path.splitext(path)[1].lower()
-    if ext not in SUPPORTED_EXTENSIONS:
+    if ext not in SUPPORTED_EXTENSIONS and ext not in VIDEO_EXTENSIONS:
         raise MCPVideoError(
-            f"Unsupported image format: {ext}. Supported: {', '.join(sorted(SUPPORTED_EXTENSIONS))}",
+            f"Unsupported format: {ext}. Supported images: {', '.join(sorted(SUPPORTED_EXTENSIONS))}. Supported videos: {', '.join(sorted(VIDEO_EXTENSIONS))}",
             error_type="validation_error",
             code="unsupported_format",
         )
+
+
+def _extract_frame_if_video(path: str) -> str:
+    """If path is a video, extract a frame and return the temp frame path."""
+    ext = os.path.splitext(path)[1].lower()
+    if ext not in VIDEO_EXTENSIONS:
+        return path
+    from .engine_thumbnail import thumbnail
+    import tempfile
+
+    frame_path = os.path.join(tempfile.gettempdir(), f"mcp_video_frame_{os.path.basename(path)}.jpg")
+    result = thumbnail(path, output_path=frame_path)
+    return result.frame_path
 
 
 def _rgb_to_hex(r: int, g: int, b: int) -> str:
@@ -118,6 +134,11 @@ def extract_colors(
     _require_image_deps()
     _validate_image(image_path)
 
+    # If video input, extract a representative frame
+    frame_path = _extract_frame_if_video(image_path)
+    if frame_path != image_path:
+        image_path = frame_path
+
     if n_colors < 1 or n_colors > 20:
         raise MCPVideoError(
             "n_colors must be between 1 and 20",
@@ -177,6 +198,11 @@ def generate_palette(
     """Generate a color harmony palette from an image's dominant color."""
     _require_image_deps()
     _validate_image(image_path)
+
+    # If video input, extract a representative frame
+    frame_path = _extract_frame_if_video(image_path)
+    if frame_path != image_path:
+        image_path = frame_path
 
     valid_harmonies = {"complementary", "analogous", "triadic", "split_complementary"}
     if harmony not in valid_harmonies:
@@ -239,6 +265,11 @@ def analyze_product(
     """Analyze a product image — colors + optional AI description."""
     _require_image_deps()
     _validate_image(image_path)
+
+    # If video input, extract a representative frame
+    frame_path = _extract_frame_if_video(image_path)
+    if frame_path != image_path:
+        image_path = frame_path
 
     colors_result = extract_colors(image_path, n_colors=n_colors)
 

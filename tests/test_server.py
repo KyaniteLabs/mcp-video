@@ -20,12 +20,11 @@ from mcp_video.server import (
     video_add_audio,
     video_add_text,
     video_ai_scene_detect,
+    search_tools,
     video_ai_transcribe,
     video_ai_upscale,
     video_apply_mask,
     video_batch,
-    video_blur,
-    video_color_grade,
     video_compare_quality,
     video_convert,
     video_chroma_key,
@@ -96,8 +95,6 @@ class TestServerInitialization:
         assert "video_rotate" in tool_names
         assert "video_fade" in tool_names
         assert "video_filter" in tool_names
-        assert "video_blur" in tool_names
-        assert "video_color_grade" in tool_names
         assert "video_normalize_audio" in tool_names
         assert "video_overlay" in tool_names
         assert "video_split_screen" in tool_names
@@ -413,23 +410,23 @@ class TestVideoFilterTool:
             assert "error" in result
 
 
-class TestVideoBlurTool:
+class TestVideoFilterBlur:
     @requires_filter("boxblur", "Blur filter")
     def test_blur_default(self, sample_video):
-        result = video_blur(sample_video)
+        result = video_filter(sample_video, filter_type="blur")
         assert result["success"] is True
         assert os.path.isfile(result["output_path"])
 
     @requires_filter("boxblur", "Blur filter")
     def test_blur_custom_radius(self, sample_video):
-        result = video_blur(sample_video, radius=10, strength=2)
+        result = video_filter(sample_video, filter_type="blur", params={"radius": 10, "strength": 2})
         assert result["success"] is True
 
 
-class TestVideoColorGradeTool:
+class TestVideoFilterColorGrade:
     @requires_filter("eq", "Color preset filter")
     def test_warm_preset(self, sample_video):
-        result = video_color_grade(sample_video, preset="warm")
+        result = video_filter(sample_video, filter_type="color_preset", params={"preset": "warm"})
         assert result["success"] is True
         assert os.path.isfile(result["output_path"])
 
@@ -712,8 +709,8 @@ class TestServerValidationMograph:
 
 
 class TestServerToolPathValidation:
-    def test_blur_rejects_nonexistent_file(self):
-        result = video_blur("/nonexistent/video.mp4")
+    def test_filter_blur_rejects_nonexistent_file(self):
+        result = video_filter("/nonexistent/video.mp4", filter_type="blur")
         assert result["success"] is False
         assert "error" in result
 
@@ -759,3 +756,32 @@ class TestServerAIEdgeCases:
     def test_color_grade_none_reference_does_not_crash(self, sample_video):
         result = video_ai_color_grade(sample_video, output_path="/tmp/out.mp4", reference_path=None)
         assert result["success"] is True
+
+
+
+class TestSearchTools:
+    def test_search_by_name(self):
+        result = search_tools("trim")
+        assert result["success"] is True
+        assert result["count"] >= 1
+        names = [t["name"] for t in result["tools"]]
+        assert "video_trim" in names
+
+    def test_search_by_description(self):
+        result = search_tools("resize")
+        assert result["success"] is True
+        assert result["count"] >= 1
+        names = [t["name"] for t in result["tools"]]
+        assert "video_resize" in names
+
+    def test_search_excludes_itself(self):
+        result = search_tools("search")
+        assert result["success"] is True
+        names = [t["name"] for t in result["tools"]]
+        assert "search_tools" not in names
+
+    def test_search_returns_required_params(self):
+        result = search_tools("merge")
+        assert result["success"] is True
+        merge_tool = next(t for t in result["tools"] if t["name"] == "video_merge")
+        assert "clips" in merge_tool["required_params"]

@@ -46,7 +46,7 @@ mcp-video includes 7 AI features: silence removal, Whisper transcription, scene 
 
 ## How many tools does it have?
 
-83 tools across 9 categories: basic editing, media operations, advanced editing, AI tools, audio synthesis, visual effects, image analysis, Remotion integration, and transitions.
+81 unique MCP tools across 12 categories: core editing, analysis, generation, AI-powered, effects, transitions, layout, audio effects, image, Remotion, batch, and templates. Plus a `search_tools` meta-tool for fast discovery.
 
 ## Is it free?
 
