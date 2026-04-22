@@ -9,6 +9,17 @@ This project follows a simple release-note style:
 - `Fixed` for bug fixes.
 - `Security` for vulnerability fixes.
 
+## 1.2.4 - 2026-04-22
+
+### Added
+- `Client.subtitles_styled()` alias for `text_subtitles()` to match MCP tool rename.
+- Runnable `workflow.py` for `02-podcast-clip` (6 stages).
+- Runnable `workflow.py` for `03-explainer-video` (7 stages, client-only, no raw FFmpeg).
+
+### Changed
+- Documentation updated for `search_tools`, `workflows/`, and ICM alignment.
+- `workflows/01-social-media-clip/workflow.py` fixed client arg names.
+
 ## 1.2.3 - 2026-04-22
 
 ### Changed

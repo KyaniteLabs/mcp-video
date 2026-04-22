@@ -3,7 +3,7 @@
   "name": "io.github.pastorsimon1798/mcp-video",
   "title": "mcp-video",
   "description": "Video editing MCP server for AI agents using FFmpeg and Remotion structured tools.",
-  "version": "1.2.3",
+  "version": "1.2.4",
   "repository": {
     "url": "https://github.com/pastorsimon1798/mcp-video",
     "source": "github"
@@ -12,7 +12,7 @@
     {
       "registryType": "pypi",
       "identifier": "mcp-video",
-      "version": "1.2.3",
+      "version": "1.2.4",
       "transport": {
         "type": "stdio"
       }
