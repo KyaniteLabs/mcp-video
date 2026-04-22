@@ -10,6 +10,7 @@ from .ai import ClientAiMixin
 from .remotion import ClientRemotionMixin
 from .image import ClientImageMixin
 from .quality import ClientQualityMixin
+from .meta import ClientMetaMixin
 
 
 class Client(
@@ -21,6 +22,7 @@ class Client(
     ClientRemotionMixin,
     ClientImageMixin,
     ClientQualityMixin,
+    ClientMetaMixin,
 ):
     """mcp-video client for programmatic video editing.
 

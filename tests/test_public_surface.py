@@ -104,6 +104,7 @@ EXPECTED_SERVER_TOOLS = {
     "video_resize",
     "video_convert",
     "video_speed",
+    "search_tools",
     "video_thumbnail",
     "video_preview",
     "video_storyboard",
@@ -118,8 +119,6 @@ EXPECTED_SERVER_TOOLS = {
     "video_filter",
     "video_reverse",
     "video_chroma_key",
-    "video_blur",
-    "video_color_grade",
     "video_normalize_audio",
     "video_overlay",
     "video_split_screen",
@@ -134,7 +133,6 @@ EXPECTED_SERVER_TOOLS = {
     "video_stabilize",
     "video_apply_mask",
     "video_audio_waveform",
-    "video_extract_frame",
     "remotion_render",
     "remotion_compositions",
     "remotion_studio",
@@ -155,7 +153,7 @@ EXPECTED_SERVER_TOOLS = {
     "effect_noise",
     "effect_glow",
     "video_text_animated",
-    "video_text_subtitles",
+    "video_subtitles_styled",
     "video_mograph_count",
     "video_mograph_progress",
     "video_layout_grid",
@@ -205,7 +203,7 @@ def test_server_tool_registry_keeps_public_tool_names():
     tool_names = {tool.name for tool in asyncio.run(mcp.list_tools())}
 
     assert tool_names >= EXPECTED_SERVER_TOOLS
-    assert len(tool_names) == 83
+    assert len(tool_names) == 81
 
 
 def test_module_reexports():

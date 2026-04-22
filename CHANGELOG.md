@@ -9,7 +9,24 @@ This project follows a simple release-note style:
 - `Fixed` for bug fixes.
 - `Security` for vulnerability fixes.
 
-## Unreleased
+## 1.2.3 - 2026-04-22
+
+### Changed
+
+- Consolidated duplicate tools: removed `video_blur`, `video_color_grade`, and `video_extract_frame` as standalone tools. Functionality preserved through `video_filter` and `video_thumbnail`.
+- Renamed `video_text_subtitles` to `video_subtitles_styled` for clearer naming.
+- Added `search_tools` meta-tool for fast tool discovery by keyword.
+- Updated public tool count from 83 to 81 unique tools.
+- Reorganized docs/TOOLS.md into 12 functional categories.
+
+### Fixed
+
+- Image analysis tools (`image_extract_colors`, `image_generate_palette`, `image_analyze_product`) now accept video input by auto-extracting a representative frame.
+
+### Added
+
+- Added ICM-style `workflows/` directory with 3 production-ready pipelines: social-media-clip, podcast-clip, and explainer-video.
+- Added `CLAUDE.md` and `workflows/CONTEXT.md` for agent context routing.
 
 ## 1.2.2 - 2026-04-21
 
