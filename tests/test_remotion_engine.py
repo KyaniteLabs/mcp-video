@@ -406,6 +406,7 @@ class TestStudio:
         """studio() should return a URL with the specified port."""
         project = str(sample_remotion_project)
         mock_proc = MagicMock()
+        mock_proc.poll.return_value = None
 
         with _mock_deps_ok(), patch("mcp_video.remotion_engine.subprocess.Popen", return_value=mock_proc):
             result = studio(project, port=3000)
@@ -416,6 +417,7 @@ class TestStudio:
         """studio() should accept a custom port."""
         project = str(sample_remotion_project)
         mock_proc = MagicMock()
+        mock_proc.poll.return_value = None
 
         with _mock_deps_ok(), patch("mcp_video.remotion_engine.subprocess.Popen", return_value=mock_proc):
             result = studio(project, port=8080)
@@ -426,6 +428,7 @@ class TestStudio:
         """studio() should launch npx remotion studio with --port."""
         project = str(sample_remotion_project)
         mock_proc = MagicMock()
+        mock_proc.poll.return_value = None
 
         with _mock_deps_ok(), patch("mcp_video.remotion_engine.subprocess.Popen", return_value=mock_proc) as mock_popen:
             studio(project, port=3001)
@@ -438,6 +441,16 @@ class TestStudio:
             assert "--port" in cmd
             idx = cmd.index("--port")
             assert cmd[idx + 1] == "3001"
+
+    def test_raises_when_process_exits_immediately(self, sample_remotion_project):
+        """studio() should raise RemotionProjectError if the process crashes on startup."""
+        project = str(sample_remotion_project)
+        mock_proc = MagicMock()
+        mock_proc.poll.return_value = 1
+        mock_proc.stderr.read.return_value = "some error"
+
+        with _mock_deps_ok(), patch("mcp_video.remotion_engine.subprocess.Popen", return_value=mock_proc), pytest.raises(RemotionProjectError):
+            studio(project, port=3000)
 
 
 # ---------------------------------------------------------------------------
