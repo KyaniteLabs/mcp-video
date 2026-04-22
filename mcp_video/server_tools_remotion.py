@@ -9,7 +9,7 @@ from .errors import MCPVideoError
 from .limits import MAX_CONCURRENCY, MAX_CRF, MAX_PORT, MAX_RESOLUTION, MIN_CRF, MIN_PORT
 from .server_app import _error_result, _result, mcp
 from .validation import VALID_CODECS, VALID_REMOTION_TEMPLATES
-from .ffmpeg_helpers import _validate_input_path
+from .ffmpeg_helpers import _validate_project_path
 
 
 @mcp.tool()
@@ -90,7 +90,7 @@ def remotion_render(
             )
         )
     try:
-        project_path = _validate_input_path(project_path)
+        project_path = _validate_project_path(project_path)
         from .remotion_engine import render
 
         return _result(
@@ -125,7 +125,7 @@ def remotion_compositions(
         project_path: Absolute path to the Remotion project directory.
     """
     try:
-        project_path = _validate_input_path(project_path)
+        project_path = _validate_project_path(project_path)
         from .remotion_engine import compositions
 
         return _result(compositions(project_path))
@@ -155,7 +155,7 @@ def remotion_studio(
             )
         )
     try:
-        project_path = _validate_input_path(project_path)
+        project_path = _validate_project_path(project_path)
         from .remotion_engine import studio
 
         return _result(studio(project_path, port=port))
@@ -183,7 +183,7 @@ def remotion_still(
         image_format: Image format (png, jpeg, webp). Default png.
     """
     try:
-        project_path = _validate_input_path(project_path)
+        project_path = _validate_project_path(project_path)
         from .remotion_engine import still
 
         return _result(
@@ -252,7 +252,7 @@ def remotion_scaffold_template(
             )
         )
     try:
-        project_path = _validate_input_path(project_path)
+        project_path = _validate_project_path(project_path)
         from .remotion_engine import scaffold_template
 
         return _result(scaffold_template(project_path, spec, slug))
@@ -274,7 +274,7 @@ def remotion_validate(
         composition_id: Optional specific composition ID to validate.
     """
     try:
-        project_path = _validate_input_path(project_path)
+        project_path = _validate_project_path(project_path)
         from .remotion_engine import validate
 
         return _result(validate(project_path, composition_id=composition_id))
@@ -309,7 +309,7 @@ def remotion_to_mcpvideo(
             )
         )
     try:
-        project_path = _validate_input_path(project_path)
+        project_path = _validate_project_path(project_path)
         from .remotion_engine import render_and_post
 
         return _result(render_and_post(project_path, composition_id, post_process, output_path=output_path))

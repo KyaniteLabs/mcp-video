@@ -33,6 +33,16 @@ def _validate_input_path(path: str) -> str:
     return resolved
 
 
+def _validate_project_path(path: str) -> str:
+    """Validate a Remotion project directory path."""
+    if "\x00" in path:
+        raise InputFileError(path, "Path contains null bytes")
+    resolved = os.path.realpath(path)
+    if not os.path.isdir(resolved):
+        raise InputFileError(resolved, "Directory does not exist")
+    return resolved
+
+
 def _validate_output_path(path: str) -> str:
     """Validate an output file path without rejecting valid parent-relative paths."""
     if "\x00" in path:
