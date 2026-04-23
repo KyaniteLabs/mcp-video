@@ -754,6 +754,33 @@ class TestServerReleaseGuardrails:
         assert result["warnings"]
         assert "not a polished music bed" in result["warnings"][0]
 
+    def test_add_audio_replacement_warning_surfaces_in_mcp_result(self, monkeypatch, tmp_path):
+        from mcp_video import server_tools_basic
+        from mcp_video.models import EditResult
+
+        video = tmp_path / "video.mp4"
+        audio = tmp_path / "audio.wav"
+        output = tmp_path / "out.mp4"
+        video.write_bytes(b"video")
+        audio.write_bytes(b"audio")
+
+        monkeypatch.setattr(server_tools_basic, "_validate_input_path", lambda path: path)
+        monkeypatch.setattr(
+            server_tools_basic,
+            "add_audio",
+            lambda *args, **kwargs: EditResult(
+                output_path=str(output),
+                operation="add_audio",
+                warnings=["This operation will replace existing audio; listen before publishing."],
+            ),
+        )
+
+        result = server_tools_basic.video_add_audio(str(video), str(audio), mix=False)
+
+        assert result["success"] is True
+        assert result["warnings"]
+        assert "replace existing audio" in result["warnings"][0]
+
     def test_video_quality_check_fail_on_warning_returns_tool_failure(self, monkeypatch, tmp_path):
         from mcp_video import server_tools_ai
 

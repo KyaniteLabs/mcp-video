@@ -2,7 +2,7 @@
 
 ## What is mcp-video?
 
-mcp-video is an open-source MCP server, Python library, and CLI that wraps FFmpeg and Remotion to give AI agents 83 video editing tools. It runs locally, requires no cloud services, and is free under the Apache-2.0 license.
+mcp-video is an open-source MCP server, Python library, and CLI that wraps FFmpeg and Remotion to give AI agents 82 video editing tools. It runs locally, requires no cloud services, and is free under the Apache-2.0 license.
 
 ## What is MCP?
 
@@ -46,7 +46,7 @@ mcp-video includes 7 AI features: silence removal, Whisper transcription, scene 
 
 ## How many tools does it have?
 
-81 unique MCP tools across 12 categories: core editing, analysis, generation, AI-powered, effects, transitions, layout, audio effects, image, Remotion, batch, and templates. Plus a `search_tools` meta-tool for fast discovery.
+82 unique MCP tools across 12 categories: core editing, analysis, generation, AI-powered, effects, transitions, layout, audio effects, image, Remotion, batch, and templates. Plus a `search_tools` meta-tool for fast discovery.
 
 ## Is it free?
 
@@ -58,7 +58,7 @@ Very fast. Since it wraps FFmpeg directly, operations like trimming, merging, an
 
 ## Can I use it in production?
 
-Yes. mcp-video has 902 tests, comprehensive error handling with structured error types, input validation, and FFmpeg timeout protection. It's used in CI/CD pipelines for automated video quality checks.
+Yes. mcp-video has 900+ tests, comprehensive error handling with structured error types, input validation, and FFmpeg timeout protection. It's used in CI/CD pipelines for automated video quality checks.
 
 ## How do I contribute?
 

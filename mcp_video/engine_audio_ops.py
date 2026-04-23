@@ -33,8 +33,10 @@ def add_audio(
 
     video_info = probe(video_path)
 
+    source_has_audio = _has_audio(_run_ffprobe_json(video_path))
+
     with _timed_operation() as timing:
-        if mix and _has_audio(_run_ffprobe_json(video_path)):
+        if mix and source_has_audio:
             # Mix new audio with existing audio
             audio_filters: list[str] = []
             if volume != 1.0:
@@ -120,6 +122,12 @@ def add_audio(
             _run_ffmpeg(args)
 
     info = probe(output)
+    warnings = []
+    if source_has_audio and not mix:
+        warnings.append(
+            "This operation will replace existing audio. Use mix=True to preserve source audio and listen before publishing."
+        )
+
     return EditResult(
         output_path=output,
         duration=info.duration,
@@ -128,4 +136,5 @@ def add_audio(
         format="mp4",
         operation="add_audio",
         elapsed_ms=timing["elapsed_ms"],
+        warnings=warnings,
     )

@@ -1,6 +1,6 @@
 # MCP Tools Reference
 
-81 unique MCP tools across 12 categories, plus a `search_tools` meta-tool. All return structured JSON with `success`, `output_path`, and operation metadata. On failure, they return `{"success": false, "error": {...}}` with auto-fix suggestions.
+82 unique MCP tools across 12 categories, plus a `search_tools` meta-tool. All return structured JSON with `success`, `output_path`, and operation metadata. On failure, they return `{"success": false, "error": {...}}` with auto-fix suggestions.
 
 ---
 
@@ -8,7 +8,7 @@
 
 | Tool | Description |
 |------|-------------|
-| `search_tools` | Search all registered MCP tools by keyword. Returns matching tool names, descriptions, and required parameters. Use this when you need to find the right tool without loading all 81 descriptions into context. |
+| `search_tools` | Search all registered MCP tools by keyword. Returns matching tool names, descriptions, and required parameters. Use this when you need to find the right tool without loading all 82 descriptions into context. |
 
 **Python Client:**
 ```python
@@ -53,7 +53,7 @@ results = editor.search_tools("subtitle")
 
 ---
 
-## AI-Powered (10 tools)
+## AI-Powered (11 tools)
 
 | Tool | Description | Dependencies |
 |------|-------------|--------------|
@@ -67,6 +67,7 @@ results = editor.search_tools("subtitle")
 | `video_quality_check` | Check brightness, contrast, saturation, audio levels, color balance |
 | `video_design_quality_check` | Full design quality analysis: layout, typography, color, motion, composition |
 | `video_fix_design_issues` | Auto-fix brightness, contrast, saturation, and audio level issues |
+| `video_release_checkpoint` | Hard quality gate plus thumbnail/storyboard artifacts before publishing |
 
 Install only the AI dependencies you need:
 

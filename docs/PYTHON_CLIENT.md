@@ -8,6 +8,18 @@ editor = Client()
 
 ## Methods
 
+Agent-safe helpers:
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `inspect(method_name)` | `dict` | Real signature, aliases, method category, and return type |
+| `pipeline(steps, output_path?)` | `EditResult` | Chain media operations with `.output_path` propagation and guardrail warnings |
+| `assert_quality(video, min_score?)` | `dict` | Hard quality gate; raises if quality is below threshold |
+| `release_checkpoint(video, output_dir?, min_score?, frame_count?)` | `dict` | Hard quality gate plus thumbnail/storyboard review artifacts |
+
+Media-producing methods return an `EditResult`-compatible object with `.output_path`.
+Analysis methods return report models or dictionaries.
+
 | Method | Returns | Description |
 |--------|---------|-------------|
 | `info(path)` | `VideoInfo` | Video metadata (duration, resolution, codec, fps, size) |
@@ -18,9 +30,9 @@ editor = Client()
 | `resize(video, width?, height?, aspect_ratio?, quality?, output?)` | `EditResult` | Resize or change aspect ratio |
 | `convert(video, format?, quality?, output?)` | `EditResult` | Convert format (mp4/webm/gif/mov) |
 | `speed(video, factor?, output?)` | `EditResult` | Change playback speed |
-| `thumbnail(video, timestamp?, output?)` | `ThumbnailResult` | Extract single frame |
+| `thumbnail(video, timestamp?, output?)` | `EditResult` / `ThumbnailResult` | Extract single frame; exposes `.output_path` and `.frame_path` |
 | `preview(video, output?, scale_factor?)` | `EditResult` | Fast low-res preview |
-| `storyboard(video, output_dir?, frame_count?)` | `StoryboardResult` | Key frames + grid |
+| `storyboard(video, output_dir?, frame_count?)` | `EditResult` / `StoryboardResult` | Key frames + grid; exposes `.output_path`, `.frames`, `.grid` |
 | `subtitles(video, subtitle_file, output?)` | `EditResult` | Burn subtitles into video |
 | `watermark(video, image, position?, opacity?, margin?, output?)` | `EditResult` | Add image watermark |
 | `crop(video, width, height, x?, y?, output?)` | `EditResult` | Crop to rectangular region |
@@ -40,12 +52,12 @@ editor = Client()
 | `stabilize(video, smoothing?, zoom?, output?)` | `EditResult` | Stabilize shaky footage |
 | `apply_mask(video, mask, feather?, output?)` | `EditResult` | Apply image mask with feathering |
 | `detect_scenes(video, threshold?, output?)` | `SceneDetectionResult` | Auto-detect scene changes |
-| `create_from_images(images, fps?, output?)` | `ImageSequenceResult` | Create video from images |
+| `create_from_images(images, fps?, output?)` | `EditResult` | Create video from images |
 | `export_frames(video, fps?, output_dir?)` | `ImageSequenceResult` | Export video as frames |
 | `compare_quality(video, reference, output?)` | `QualityMetricsResult` | Compare PSNR/SSIM metrics |
 | `read_metadata(video)` | `MetadataResult` | Read video metadata tags |
 | `write_metadata(video, metadata, output?)` | `EditResult` | Write video metadata tags |
-| `generate_subtitles(entries, output?, burn?)` | `SubtitleResult` | Create SRT subtitles |
+| `generate_subtitles(entries, output?, burn?)` | `EditResult` / `SubtitleResult` | Create SRT subtitles; exposes `.output_path` |
 | `audio_waveform(video, bins?)` | `WaveformResult` | Extract audio waveform |
 | `batch(inputs, operation, params?)` | `dict` | Apply operation to multiple files |
 | `search_tools(query)` | `dict` | Search MCP tools by keyword — returns matching names, descriptions, required params |
@@ -61,17 +73,17 @@ VideoInfo(path, duration, width, height, fps, codec, audio_codec, ...)
 # .aspect_ratio -> "16:9"
 # .size_mb -> 5.42
 
-EditResult(success=True, output_path, duration, resolution, size_mb, format, operation)
+EditResult(success=True, output_path, duration, resolution, size_mb, format, operation, warnings=[])
 
-ThumbnailResult(success=True, frame_path, timestamp)
+ThumbnailResult(success=True, output_path, frame_path, timestamp)
 
-StoryboardResult(success=True, frames=["f1.jpg", ...], grid="grid.jpg", count=8)
+StoryboardResult(success=True, output_path, frames=["f1.jpg", ...], grid="grid.jpg", count=8)
 
 SceneDetectionResult(success=True, scenes=[(start, end), ...], scene_count=5)
 
 ImageSequenceResult(success=True, frame_count=120, fps=30, duration=4.0, output_path)
 
-SubtitleResult(success=True, subtitle_path, entries_count=15)
+SubtitleResult(success=True, output_path, srt_path, video_path, entry_count=15)
 
 WaveformResult(success=True, peaks=[...], silence_regions=[...], bin_count=50)
 

@@ -113,6 +113,11 @@ class TestClientAddAudio:
         result = editor.add_audio(sample_video, sample_audio, mix=True)
         assert isinstance(result, EditResult)
 
+    def test_add_audio_replacement_warns_when_source_has_audio(self, editor, sample_video, sample_audio):
+        result = editor.add_audio(sample_video, sample_audio, mix=False)
+
+        assert any("replace existing audio" in warning.lower() for warning in result.warnings)
+
     def test_add_audio_with_fade(self, editor, sample_video, sample_audio):
         result = editor.add_audio(
             sample_video,
