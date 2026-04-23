@@ -141,10 +141,18 @@ class ClientBase:
         self, steps: list[dict[str, Any]], output_path: str | None = None, output: str | None = None
     ) -> EditResult:
         """Run a simple chained media pipeline with EditResult normalization."""
-        if not steps:
-            raise MCPVideoError("pipeline steps cannot be empty", error_type="validation_error", code="empty_pipeline")
+        self._validate_pipeline_steps(steps)
         final_output = self._resolve_alias("output_path", output_path, "output", output)
         result, warnings, saw_quality_gate = self._run_pipeline_steps(steps, final_output)
+        return self._finalize_pipeline_result(result, warnings, saw_quality_gate)
+
+    @staticmethod
+    def _validate_pipeline_steps(steps: list[dict[str, Any]]) -> None:
+        if not steps:
+            raise MCPVideoError("pipeline steps cannot be empty", error_type="validation_error", code="empty_pipeline")
+
+    @staticmethod
+    def _finalize_pipeline_result(result: EditResult, warnings: list[str], saw_quality_gate: bool) -> EditResult:
         if not saw_quality_gate:
             warnings.append(
                 "Pipeline did not include a release checkpoint; run assert_quality/release_checkpoint before publishing."
@@ -162,33 +170,44 @@ class ClientBase:
         previous_op: str | None = None
         saw_quality_gate = False
         for index, step in enumerate(steps):
-            op = step.get("op")
-            if not op:
-                raise MCPVideoError("pipeline step missing 'op'", error_type="validation_error", code="missing_op")
-            params = {k: v for k, v in step.items() if k != "op"}
+            op, params = self._prepare_pipeline_step(step, current, final_output, index == len(steps) - 1)
             if op in QUALITY_GATE_OPS:
                 saw_quality_gate = True
-            if current and not any(k in params for k in ("input_path", "video", "background", "main")):
-                params["input_path"] = current
-            if final_output and index == len(steps) - 1 and not any(k in params for k in ("output_path", "output")):
-                params["output_path"] = final_output
-            raw_result = getattr(self, op)(**params)
-            if op in QUALITY_GATE_OPS:
-                previous_op = op
-                continue
-            if op in DESTRUCTIVE_POLISH_OPS and previous_op in DESTRUCTIVE_POLISH_OPS:
-                warnings.append(
-                    "Stacked visual polish effects detected; inspect thumbnail/storyboard before publishing."
-                )
-            result = self._to_edit_result(raw_result, operation=op)
-            warnings.extend(result.warnings)
-            current = result.output_path
+            step_result = self._execute_pipeline_media_step(op, params, previous_op, warnings)
+            if step_result is not None:
+                result = step_result
+                current = result.output_path
             previous_op = op
         if result is None:
             raise MCPVideoError(
                 "pipeline produced no media output", error_type="validation_error", code="no_media_output"
             )
         return result, warnings, saw_quality_gate
+
+    def _prepare_pipeline_step(
+        self, step: dict[str, Any], current: str | None, final_output: str | None, is_last: bool
+    ) -> tuple[str, dict[str, Any]]:
+        op = step.get("op")
+        if not op:
+            raise MCPVideoError("pipeline step missing 'op'", error_type="validation_error", code="missing_op")
+        params = {k: v for k, v in step.items() if k != "op"}
+        if current and not any(k in params for k in ("input_path", "video", "background", "main")):
+            params["input_path"] = current
+        if final_output and is_last and not any(k in params for k in ("output_path", "output")):
+            params["output_path"] = final_output
+        return op, params
+
+    def _execute_pipeline_media_step(
+        self, op: str, params: dict[str, Any], previous_op: str | None, warnings: list[str]
+    ) -> EditResult | None:
+        raw_result = getattr(self, op)(**params)
+        if op in QUALITY_GATE_OPS:
+            return None
+        if op in DESTRUCTIVE_POLISH_OPS and previous_op in DESTRUCTIVE_POLISH_OPS:
+            warnings.append("Stacked visual polish effects detected; inspect thumbnail/storyboard before publishing.")
+        result = self._to_edit_result(raw_result, operation=op)
+        warnings.extend(result.warnings)
+        return result
 
     @staticmethod
     def _validate_choice(name: str, value: str, valid_values: set[str]) -> None:
