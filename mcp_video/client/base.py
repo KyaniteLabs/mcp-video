@@ -115,7 +115,6 @@ class ClientBase:
             raise MCPVideoError(hint, error_type="validation_error", code="unexpected_parameter") from exc
         raise exc
 
-
     @staticmethod
     def _resolve_alias(primary: str, primary_value: Any, legacy: str, legacy_value: Any) -> Any:
         """Resolve primary/legacy parameter aliases."""
@@ -144,10 +143,13 @@ class ClientBase:
                 if name != "self" and param.kind is not inspect.Parameter.VAR_KEYWORD
             },
             "aliases": contract.get("aliases", {}),
-            "return_type": contract.get("return_type") or getattr(return_type, "__name__", str(return_type).replace("'", "")),
+            "return_type": contract.get("return_type")
+            or getattr(return_type, "__name__", str(return_type).replace("'", "")),
         }
 
-    def pipeline(self, steps: list[dict[str, Any]], output_path: str | None = None, output: str | None = None) -> EditResult:
+    def pipeline(
+        self, steps: list[dict[str, Any]], output_path: str | None = None, output: str | None = None
+    ) -> EditResult:
         """Run a simple chained media pipeline with EditResult normalization."""
         if not steps:
             raise MCPVideoError("pipeline steps cannot be empty", error_type="validation_error", code="empty_pipeline")
@@ -173,15 +175,21 @@ class ClientBase:
                 previous_op = op
                 continue
             if op in DESTRUCTIVE_POLISH_OPS and previous_op in DESTRUCTIVE_POLISH_OPS:
-                warnings.append("Stacked visual polish effects detected; inspect thumbnail/storyboard before publishing.")
+                warnings.append(
+                    "Stacked visual polish effects detected; inspect thumbnail/storyboard before publishing."
+                )
             result = self._to_edit_result(raw_result, operation=op)
             warnings.extend(result.warnings)
             current = result.output_path
             previous_op = op
         if result is None:
-            raise MCPVideoError("pipeline produced no media output", error_type="validation_error", code="no_media_output")
+            raise MCPVideoError(
+                "pipeline produced no media output", error_type="validation_error", code="no_media_output"
+            )
         if not saw_quality_gate:
-            warnings.append("Pipeline did not include a release checkpoint; run assert_quality/release_checkpoint before publishing.")
+            warnings.append(
+                "Pipeline did not include a release checkpoint; run assert_quality/release_checkpoint before publishing."
+            )
         result.warnings = list(dict.fromkeys(warnings))
         return result  # type: ignore[return-value]
 

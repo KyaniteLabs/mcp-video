@@ -73,13 +73,14 @@ def _prepare_safe_subtitle_file(subtitles: str, max_chars_per_line: int) -> str:
         return subtitles
     source = Path(subtitles).read_text(encoding="utf-8")
     wrapped = _wrap_subtitle_payload_for_safe_area(source, max_chars_per_line=max_chars_per_line)
-    tmp = tempfile.NamedTemporaryFile("w", suffix=suffix, delete=False, encoding="utf-8")
-    with tmp:
+    with tempfile.NamedTemporaryFile("w", suffix=suffix, delete=False, encoding="utf-8") as tmp:
         tmp.write(wrapped)
-    return tmp.name
+        return tmp.name
 
 
-def _subtitle_filter(prepared_subtitles: str, font: str, size: int, color: str, outline: int, outline_color: str) -> str:
+def _subtitle_filter(
+    prepared_subtitles: str, font: str, size: int, color: str, outline: int, outline_color: str
+) -> str:
     """Build a safe subtitles filter string."""
     safe_subtitles = _escape_ffmpeg_filter_value(prepared_subtitles)
     safe_font = _escape_ffmpeg_filter_value(font)

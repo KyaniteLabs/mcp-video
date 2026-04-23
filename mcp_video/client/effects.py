@@ -147,7 +147,9 @@ class ClientEffectsMixin:
         self._validate_choice("layout", layout, self._VALID_LAYOUTS)
         from ..effects_engine import layout_grid
 
-        return self._to_edit_result(layout_grid(clips, layout, output, gap, padding, background), operation="layout_grid")
+        return self._to_edit_result(
+            layout_grid(clips, layout, output, gap, padding, background), operation="layout_grid"
+        )
 
     def layout_pip(
         self,
