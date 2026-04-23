@@ -108,4 +108,5 @@ from .server_tools_ai import (
     video_design_quality_check as video_design_quality_check,
     video_fix_design_issues as video_fix_design_issues,
     video_quality_check as video_quality_check,
+    video_release_checkpoint as video_release_checkpoint,
 )

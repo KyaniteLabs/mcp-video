@@ -9,6 +9,7 @@ import logging
 import math
 
 from ..errors import ProcessingError
+from ..defaults import DEFAULT_GLOW_MAX_SAFE_INTENSITY
 from ..engine_runtime_utils import _sanitize_ffmpeg_number
 from ..ffmpeg_helpers import _validate_input_path, _validate_output_path, _run_ffmpeg
 
@@ -278,6 +279,10 @@ def effect_glow(
     _validate_output_path(output)
     radius = int(_sanitize_ffmpeg_number(radius, "radius"))
     intensity = _sanitize_ffmpeg_number(intensity, "intensity")
+    # Guardrail: additive bloom can flood a channel and color-wash whole
+    # frames. Keep the public default safe for autonomous agents unless a
+    # future explicit "destructive" option is added.
+    safe_intensity = min(intensity, DEFAULT_GLOW_MAX_SAFE_INTENSITY)
     threshold = _sanitize_ffmpeg_number(threshold, "threshold")
 
     # Extract highlights, blur them, overlay back
@@ -287,7 +292,7 @@ def effect_glow(
         f"split[original][highlights];"
         f"[highlights]geq=lum='if(lt(lum(X,Y),{threshold_8bit}),0,lum(X,Y))',"
         f"gblur=sigma={radius}[glow];"
-        f"[original][glow]blend=all_mode='addition':all_opacity={intensity}"
+        f"[original][glow]blend=all_mode='screen':all_opacity={safe_intensity}"
     )
 
     cmd = [
@@ -317,7 +322,7 @@ def effect_glow(
             f"split[original][highlights];"
             f"[highlights]geq=lum='if(lt(lum(X,Y),{threshold_8bit}),0,lum(X,Y))',"
             f"boxblur={radius}:{radius}[glow];"
-            f"[original][glow]blend=all_mode='addition':all_opacity={intensity}"
+            f"[original][glow]blend=all_mode='screen':all_opacity={safe_intensity}"
         )
         cmd[5] = filters
         _run_ffmpeg(cmd)

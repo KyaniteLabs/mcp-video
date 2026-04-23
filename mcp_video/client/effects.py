@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import warnings
 from typing import ClassVar
 
 from ..errors import MCPVideoError
+from ..models import EditResult
 
 
 class ClientEffectsMixin:
@@ -17,12 +19,13 @@ class ClientEffectsMixin:
         intensity: float = 0.5,
         radius: float = 0.8,
         smoothness: float = 0.5,
-    ) -> str:
+    ) -> EditResult:
         """Apply vignette effect - darkened edges."""
         from ..effects_engine import effect_vignette
 
-        return effect_vignette(
-            input_path=video, output=output, intensity=intensity, radius=radius, smoothness=smoothness
+        return self._to_edit_result(
+            effect_vignette(input_path=video, output=output, intensity=intensity, radius=radius, smoothness=smoothness),
+            operation="effect_vignette",
         )
 
     def effect_chromatic_aberration(
@@ -31,25 +34,48 @@ class ClientEffectsMixin:
         output: str,
         intensity: float = 2.0,
         angle: float = 0,
-    ) -> str:
+    ) -> EditResult:
         """Apply RGB channel separation effect."""
         from ..effects_engine import effect_chromatic_aberration
 
-        return effect_chromatic_aberration(input_path=video, output=output, intensity=intensity, angle=angle)
+        return self._to_edit_result(
+            effect_chromatic_aberration(input_path=video, output=output, intensity=intensity, angle=angle),
+            operation="effect_chromatic_aberration",
+        )
 
     def effect_scanlines(
         self,
-        video: str,
-        output: str,
+        video: str | None = None,
+        output: str | None = None,
         line_height: int = 2,
         opacity: float = 0.3,
         flicker: float = 0.1,
-    ) -> str:
+        *,
+        input_path: str | None = None,
+        output_path: str | None = None,
+        intensity: float | None = None,
+    ) -> EditResult:
         """Apply CRT-style scanline overlay."""
+        if intensity is not None:
+            warnings.warn(
+                "effect_scanlines(intensity=...) is accepted as an alias; use opacity=... for scanlines.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            opacity = intensity
+        video = self._resolve_alias("input_path", input_path, "video", video)
+        output = self._resolve_alias("output_path", output_path, "output", output)
         from ..effects_engine import effect_scanlines
 
-        return effect_scanlines(
-            input_path=video, output=output, line_height=line_height, opacity=opacity, flicker=flicker
+        return self._to_edit_result(
+            effect_scanlines(
+                input_path=video,
+                output=output,
+                line_height=line_height,
+                opacity=opacity,
+                flicker=flicker,
+            ),
+            operation="effect_scanlines",
         )
 
     def effect_noise(
@@ -59,24 +85,35 @@ class ClientEffectsMixin:
         intensity: float = 0.05,
         mode: str = "film",
         animated: bool = True,
-    ) -> str:
+    ) -> EditResult:
         """Apply film grain / digital noise."""
         from ..effects_engine import effect_noise
 
-        return effect_noise(input_path=video, output=output, intensity=intensity, mode=mode, animated=animated)
+        return self._to_edit_result(
+            effect_noise(input_path=video, output=output, intensity=intensity, mode=mode, animated=animated),
+            operation="effect_noise",
+        )
 
     def effect_glow(
         self,
-        video: str,
-        output: str,
+        video: str | None = None,
+        output: str | None = None,
         intensity: float = 0.5,
         radius: int = 10,
         threshold: float = 0.7,
-    ) -> str:
+        *,
+        input_path: str | None = None,
+        output_path: str | None = None,
+    ) -> EditResult:
         """Apply bloom/glow effect for highlights."""
+        video = self._resolve_alias("input_path", input_path, "video", video)
+        output = self._resolve_alias("output_path", output_path, "output", output)
         from ..effects_engine import effect_glow
 
-        return effect_glow(input_path=video, output=output, intensity=intensity, radius=radius, threshold=threshold)
+        return self._to_edit_result(
+            effect_glow(input_path=video, output=output, intensity=intensity, radius=radius, threshold=threshold),
+            operation="effect_glow",
+        )
 
     # ------------------------------------------------------------------
     # Layout & Composition
@@ -93,7 +130,7 @@ class ClientEffectsMixin:
         gap: int = 10,
         padding: int = 20,
         background: str = "#141414",
-    ) -> str:
+    ) -> EditResult:
         """Create grid-based multi-video layout.
 
         Args:
@@ -110,7 +147,9 @@ class ClientEffectsMixin:
         self._validate_choice("layout", layout, self._VALID_LAYOUTS)
         from ..effects_engine import layout_grid
 
-        return layout_grid(clips, layout, output, gap, padding, background)
+        return self._to_edit_result(
+            layout_grid(clips, layout, output, gap, padding, background), operation="layout_grid"
+        )
 
     def layout_pip(
         self,
@@ -124,7 +163,7 @@ class ClientEffectsMixin:
         border: bool = True,
         border_color: str = "#CCFF00",
         border_width: int = 2,
-    ) -> str:
+    ) -> EditResult:
         """Picture-in-picture overlay.
 
         Args:
@@ -145,8 +184,9 @@ class ClientEffectsMixin:
         self._validate_choice("position", position, self._VALID_PIP_POSITIONS)
         from ..effects_engine import layout_pip
 
-        return layout_pip(
-            main, pip, output, position, size, margin, rounded_corners, border, border_color, border_width
+        return self._to_edit_result(
+            layout_pip(main, pip, output, position, size, margin, rounded_corners, border, border_color, border_width),
+            operation="layout_pip",
         )
 
     # ------------------------------------------------------------------
@@ -165,13 +205,16 @@ class ClientEffectsMixin:
         position: str = "center",
         start: float = 0,
         duration: float = 3.0,
-    ) -> str:
+    ) -> EditResult:
         """Add animated text to video."""
         if not text or not text.strip():
             raise MCPVideoError("Text cannot be empty", error_type="validation_error", code="invalid_parameter")
         from ..effects_engine import text_animated
 
-        return text_animated(video, text, output, animation, font, size, color, position, start, duration)
+        return self._to_edit_result(
+            text_animated(video, text, output, animation, font, size, color, position, start, duration),
+            operation="text_animated",
+        )
 
     def text_subtitles(
         self,
@@ -179,11 +222,14 @@ class ClientEffectsMixin:
         subtitles: str,
         output: str,
         style: dict | None = None,
-    ) -> str:
+    ) -> EditResult:
         """Burn subtitles from SRT/VTT with styling."""
         from ..effects_engine import text_subtitles
 
-        return text_subtitles(video=video, subtitles=subtitles, output=output, style=style)
+        return self._to_edit_result(
+            text_subtitles(video=video, subtitles=subtitles, output=output, style=style),
+            operation="text_subtitles",
+        )
 
     def subtitles_styled(
         self,
@@ -191,7 +237,7 @@ class ClientEffectsMixin:
         subtitles: str,
         output: str,
         style: dict | None = None,
-    ) -> str:
+    ) -> EditResult:
         """Burn subtitles from SRT/VTT with styling (alias for text_subtitles)."""
         return self.text_subtitles(video, subtitles, output, style)
 
@@ -207,7 +253,7 @@ class ClientEffectsMixin:
         output: str,
         style: dict | None = None,
         fps: int = 30,
-    ) -> str:
+    ) -> EditResult:
         """Generate animated number counter video.
 
         Args:
@@ -224,7 +270,10 @@ class ClientEffectsMixin:
         """
         from ..effects_engine import mograph_count
 
-        return mograph_count(start, end, duration, output, style, fps)
+        return self._to_edit_result(
+            mograph_count(start, end, duration, output, style, fps),
+            operation="mograph_count",
+        )
 
     def mograph_progress(
         self,
@@ -234,11 +283,14 @@ class ClientEffectsMixin:
         color: str = "#CCFF00",
         track_color: str = "#333333",
         fps: int = 30,
-    ) -> str:
+    ) -> EditResult:
         """Generate progress bar / loading animation."""
         from ..effects_engine import mograph_progress
 
-        return mograph_progress(duration, output, style, color, track_color, fps)
+        return self._to_edit_result(
+            mograph_progress(duration, output, style, color, track_color, fps),
+            operation="mograph_progress",
+        )
 
     # ------------------------------------------------------------------
     # Utility
@@ -262,7 +314,7 @@ class ClientEffectsMixin:
 
     def transition_glitch(
         self, clip1: str, clip2: str, output: str, duration: float = 0.5, intensity: float = 0.3
-    ) -> str:
+    ) -> EditResult:
         """Apply glitch transition between two video clips.
 
         Args:
@@ -274,11 +326,14 @@ class ClientEffectsMixin:
         """
         from ..transitions_engine import transition_glitch
 
-        return transition_glitch(clip1, clip2, output, duration, intensity)
+        return self._to_edit_result(
+            transition_glitch(clip1, clip2, output, duration, intensity),
+            operation="transition_glitch",
+        )
 
     def transition_pixelate(
         self, clip1: str, clip2: str, output: str, duration: float = 0.4, pixel_size: int = 50
-    ) -> str:
+    ) -> EditResult:
         """Apply pixelate transition between two video clips.
 
         Args:
@@ -290,9 +345,14 @@ class ClientEffectsMixin:
         """
         from ..transitions_engine import transition_pixelate
 
-        return transition_pixelate(clip1, clip2, output, duration, pixel_size)
+        return self._to_edit_result(
+            transition_pixelate(clip1, clip2, output, duration, pixel_size),
+            operation="transition_pixelate",
+        )
 
-    def transition_morph(self, clip1: str, clip2: str, output: str, duration: float = 0.6, mesh_size: int = 10) -> str:
+    def transition_morph(
+        self, clip1: str, clip2: str, output: str, duration: float = 0.6, mesh_size: int = 10
+    ) -> EditResult:
         """Apply morph transition between two video clips.
 
         Args:
@@ -304,7 +364,10 @@ class ClientEffectsMixin:
         """
         from ..transitions_engine import transition_morph
 
-        return transition_morph(clip1, clip2, output, duration, mesh_size)
+        return self._to_edit_result(
+            transition_morph(clip1, clip2, output, duration, mesh_size),
+            operation="transition_morph",
+        )
 
     # ------------------------------------------------------------------
     # AI Features (Wave 3)

@@ -1,10 +1,12 @@
 """Tests for the Python client — needs FFmpeg."""
 
 import os
+import inspect
 
 import pytest
 
 from mcp_video import Client
+from mcp_video.client.contracts import CLIENT_METHOD_CONTRACTS
 from mcp_video.engine import _check_filter_available
 from mcp_video.errors import MCPVideoError
 from mcp_video.models import EditResult, StoryboardResult, ThumbnailResult, VideoInfo
@@ -110,6 +112,11 @@ class TestClientAddAudio:
     def test_add_audio_with_mix(self, editor, sample_video, sample_audio):
         result = editor.add_audio(sample_video, sample_audio, mix=True)
         assert isinstance(result, EditResult)
+
+    def test_add_audio_replacement_warns_when_source_has_audio(self, editor, sample_video, sample_audio):
+        result = editor.add_audio(sample_video, sample_audio, mix=False)
+
+        assert any("replace existing audio" in warning.lower() for warning in result.warnings)
 
     def test_add_audio_with_fade(self, editor, sample_video, sample_audio):
         result = editor.add_audio(
@@ -393,3 +400,145 @@ class TestClientTextAnimatedValidation:
     def test_text_animated_rejects_empty_text(self, editor):
         with pytest.raises(MCPVideoError, match=r"[Tt]ext"):
             editor.text_animated("/tmp/video.mp4", "", "/tmp/out.mp4")
+
+
+class TestClientAgentApiConsistency:
+    def test_every_public_client_method_has_contract(self, editor):
+        public_methods = {
+            name
+            for name, value in inspect.getmembers(editor, predicate=callable)
+            if not name.startswith("_")
+        }
+
+        assert public_methods == set(CLIENT_METHOD_CONTRACTS)
+
+    def test_media_contracts_advertise_edit_result(self):
+        for name, contract in CLIENT_METHOD_CONTRACTS.items():
+            if contract["category"] == "media":
+                assert contract["return_type"] == "EditResult", name
+
+    def test_unexpected_keyword_errors_are_agent_helpful(self, editor):
+        with pytest.raises(MCPVideoError, match="Valid parameters"):
+            editor.effect_noise(bogus=True)
+
+    def test_primary_output_path_alias_maps_to_legacy_effect_signature(self, editor, monkeypatch):
+        monkeypatch.setattr("mcp_video.effects_engine.effect_noise", lambda **kwargs: kwargs["output"])
+
+        result = editor.effect_noise(input_path="/tmp/in.mp4", output_path="/tmp/out.mp4")
+
+        assert result.output_path == "/tmp/out.mp4"
+
+    def test_public_methods_are_wrapped_without_getattribute_override(self, editor):
+        assert "__getattribute__" not in Client.__dict__
+        assert getattr(editor.effect_noise, "_mcp_video_guarded", False) is True
+
+    def test_effect_methods_return_edit_result(self, editor, monkeypatch):
+        monkeypatch.setattr("mcp_video.effects_engine.effect_glow", lambda **kwargs: kwargs["output"])
+
+        result = editor.effect_glow(input_path="/tmp/in.mp4", output_path="/tmp/out.mp4")
+
+        assert result.output_path == "/tmp/out.mp4"
+        assert result.operation == "effect_glow"
+
+    def test_audio_preset_returns_edit_result(self, editor, monkeypatch):
+        monkeypatch.setattr("mcp_video.audio_engine.audio_preset", lambda **kwargs: kwargs["output"])
+
+        result = editor.audio_preset("drone-tech", output_path="/tmp/drone.wav")
+
+        assert result.output_path == "/tmp/drone.wav"
+        assert result.operation == "audio_preset"
+
+    def test_audio_preset_requires_output_path(self, editor):
+        with pytest.raises(MCPVideoError, match="audio_preset\\(\\) requires output_path"):
+            editor.audio_preset("ui-blip")
+
+    def test_scanlines_accepts_intensity_alias_with_warning(self, editor, monkeypatch):
+        monkeypatch.setattr("mcp_video.effects_engine.effect_scanlines", lambda **kwargs: kwargs["output"])
+
+        with pytest.warns(DeprecationWarning, match="opacity"):
+            result = editor.effect_scanlines(input_path="/tmp/in.mp4", output_path="/tmp/out.mp4", intensity=0.2)
+
+        assert result.output_path == "/tmp/out.mp4"
+        assert result.operation == "effect_scanlines"
+
+    def test_create_from_images_rejects_inputs_alias_with_helpful_message(self, editor):
+        with pytest.raises(MCPVideoError, match="Use 'images=' not 'inputs='"):
+            editor.create_from_images(inputs=["frame1.png"], output_path="/tmp/out.mp4")
+
+    def test_inspect_returns_real_signature(self, editor):
+        info = editor.inspect("create_from_images")
+
+        assert info["name"] == "create_from_images"
+        assert "images" in info["parameters"]
+        assert info["return_type"] == "EditResult"
+
+    def test_pipeline_chains_edit_results(self, editor, monkeypatch):
+        calls = []
+
+        def fake_create_from_images(*, images, output_path=None, **kwargs):
+            calls.append(("create_from_images", images, output_path))
+            return editor._to_edit_result(output_path or "/tmp/scene.mp4", operation="create_from_images")
+
+        def fake_effect_glow(*, input_path, output_path=None, **kwargs):
+            calls.append(("effect_glow", input_path, output_path))
+            return editor._to_edit_result(output_path or "/tmp/glow.mp4", operation="effect_glow")
+
+        monkeypatch.setattr(editor, "create_from_images", fake_create_from_images)
+        monkeypatch.setattr(editor, "effect_glow", fake_effect_glow)
+
+        result = editor.pipeline(
+            [
+                {"op": "create_from_images", "images": ["a.png"], "output_path": "/tmp/scene.mp4"},
+                {"op": "effect_glow", "intensity": 0.2},
+            ],
+            output_path="/tmp/final.mp4",
+        )
+
+        assert result.output_path == "/tmp/final.mp4"
+        assert calls == [
+            ("create_from_images", ["a.png"], "/tmp/scene.mp4"),
+            ("effect_glow", "/tmp/scene.mp4", "/tmp/final.mp4"),
+        ]
+
+    def test_pipeline_warns_on_stacked_polish_without_checkpoint(self, editor, monkeypatch):
+        monkeypatch.setattr(
+            editor,
+            "effect_noise",
+            lambda **kwargs: editor._to_edit_result(kwargs["output_path"], operation="effect_noise"),
+        )
+        monkeypatch.setattr(
+            editor,
+            "effect_glow",
+            lambda **kwargs: editor._to_edit_result(kwargs["output_path"], operation="effect_glow"),
+        )
+
+        result = editor.pipeline(
+            [
+                {"op": "effect_noise", "input_path": "/tmp/in.mp4", "output_path": "/tmp/noise.mp4"},
+                {"op": "effect_glow", "output_path": "/tmp/glow.mp4"},
+            ]
+        )
+
+        assert any("Stacked visual polish effects" in warning for warning in result.warnings)
+        assert any("release checkpoint" in warning for warning in result.warnings)
+
+    def test_release_checkpoint_runs_quality_then_preview_artifacts(self, editor, monkeypatch, tmp_path):
+        video = tmp_path / "video.mp4"
+        video.write_bytes(b"placeholder")
+        monkeypatch.setattr(editor, "assert_quality", lambda input_path, min_score=80.0: {"overall_score": 99.0})
+        monkeypatch.setattr(
+            editor,
+            "thumbnail",
+            lambda input_path, output=None, **kwargs: editor._to_edit_result(output or "/tmp/thumb.jpg", operation="thumbnail"),
+        )
+        monkeypatch.setattr(
+            editor,
+            "storyboard",
+            lambda input_path, output_path=None, **kwargs: editor._to_edit_result(output_path or "/tmp/storyboard.jpg", operation="storyboard"),
+        )
+
+        result = editor.release_checkpoint(str(video), output_dir=str(tmp_path / "review"))
+
+        assert result["quality"]["overall_score"] == 99.0
+        assert result["thumbnail"].endswith("thumbnail.jpg")
+        assert result["review_required"] is True

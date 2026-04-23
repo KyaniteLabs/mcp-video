@@ -13,6 +13,8 @@ from typing import Any
 import contextlib
 
 from .ffmpeg_helpers import _validate_input_path
+from .errors import MCPVideoError
+from .defaults import DEFAULT_QUALITY_GATE_SCORE
 
 logger = logging.getLogger(__name__)
 
@@ -649,4 +651,22 @@ def quality_check(video: str, fail_on_warning: bool = False) -> dict[str, Any]:
         # Any score below 80 is considered a failure
         report["all_passed"] = report["overall_score"] >= 80
 
+    return report
+
+
+def assert_quality(video: str, min_score: float = DEFAULT_QUALITY_GATE_SCORE) -> dict[str, Any]:
+    """Hard quality gate for agent workflows before publishing output."""
+    report = quality_check(video, fail_on_warning=False)
+    report["all_passed"] = report["overall_score"] >= min_score
+    if not report["all_passed"]:
+        recommendations = "; ".join(report.get("recommendations", []))
+        raise MCPVideoError(
+            f"Quality gate failed: score {report['overall_score']:.1f} < {min_score:.1f}. {recommendations}",
+            error_type="quality_error",
+            code="quality_gate_failed",
+            suggested_action={
+                "auto_fix": False,
+                "description": "Inspect storyboard/thumbnail, fix visual/audio issues, then rerun quality checks.",
+            },
+        )
     return report

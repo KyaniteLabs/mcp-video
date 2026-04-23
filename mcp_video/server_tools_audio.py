@@ -7,6 +7,7 @@ import tempfile
 from typing import Any
 
 from .errors import MCPVideoError
+from .defaults import DEFAULT_PROCEDURAL_AUDIO_BED_WARNING_SECONDS
 from .limits import MAX_FREQUENCY, MIN_FREQUENCY
 from .server_app import _error_result, _result, mcp
 from .ffmpeg_helpers import _validate_input_path
@@ -17,6 +18,20 @@ from .validation import (
     VALID_SPATIAL_METHODS,
     VALID_WAVEFORMS,
 )
+
+_PROCEDURAL_MUSIC_PRESETS = {"drone-low", "drone-mid", "drone-tech", "drone-ominous"}
+
+
+def _audio_preset_warnings(preset: str, duration: float | None) -> list[str]:
+    """Warnings for autonomous agents using primitives as music beds."""
+    if preset in _PROCEDURAL_MUSIC_PRESETS and (duration or 0) >= DEFAULT_PROCEDURAL_AUDIO_BED_WARNING_SECONDS:
+        return [
+            (
+                f"{preset} is a procedural primitive, not a polished music bed. "
+                "Use as a texture only, keep volume low, and listen before publishing."
+            )
+        ]
+    return []
 
 
 @mcp.tool()
@@ -163,7 +178,7 @@ def audio_preset(
     try:
         from .audio_engine import audio_preset as _preset
 
-        return _result(
+        result = _result(
             _preset(
                 preset=preset,
                 output=output,
@@ -172,6 +187,10 @@ def audio_preset(
                 intensity=intensity,
             )
         )
+        warnings = _audio_preset_warnings(preset, duration)
+        if warnings:
+            result["warnings"] = warnings
+        return result
     except MCPVideoError as e:
         return _error_result(e)
     except Exception as e:

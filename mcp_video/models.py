@@ -61,6 +61,7 @@ class EditResult(BaseModel):
     progress: float | None = Field(default=None, description="Final progress percentage (0-100)")
     thumbnail_base64: str | None = Field(default=None, description="Base64-encoded JPEG thumbnail of the first frame")
     elapsed_ms: float | None = Field(default=None, description="Wall-clock processing time in milliseconds")
+    warnings: list[str] = Field(default_factory=list, description="Non-fatal guardrail warnings for agent workflows")
 
 
 class ErrorResult(BaseModel):
@@ -70,22 +71,34 @@ class ErrorResult(BaseModel):
     error: dict[str, Any]
 
 
-class StoryboardResult(BaseModel):
+class StoryboardResult(EditResult):
     """Result of storyboard generation."""
 
-    success: bool = True
+    output_path: str = Field(default="", description="Path to storyboard grid when available, otherwise first frame")
     frames: list[str] = Field(description="Paths to extracted frame images")
     grid: str | None = Field(default=None, description="Path to storyboard grid image")
     count: int
 
+    def model_post_init(self, __context: Any) -> None:
+        if not self.output_path:
+            object.__setattr__(self, "output_path", self.grid or (self.frames[0] if self.frames else ""))
+        if self.operation is None:
+            object.__setattr__(self, "operation", "storyboard")
 
-class SubtitleResult(BaseModel):
+
+class SubtitleResult(EditResult):
     """Result of subtitle generation."""
 
-    success: bool = True
+    output_path: str = Field(default="", description="Path to generated video when burned, otherwise generated SRT")
     srt_path: str | None = Field(default=None, description="Path to generated SRT file")
     video_path: str | None = Field(default=None, description="Path to burned-in video (if burn=True)")
     entry_count: int
+
+    def model_post_init(self, __context: Any) -> None:
+        if not self.output_path:
+            object.__setattr__(self, "output_path", self.video_path or self.srt_path or "")
+        if self.operation is None:
+            object.__setattr__(self, "operation", "generate_subtitles")
 
 
 class WaveformResult(BaseModel):
@@ -146,12 +159,18 @@ class MetadataResult(BaseModel):
     tags: dict[str, str] = Field(default_factory=dict, description="All metadata tags")
 
 
-class ThumbnailResult(BaseModel):
+class ThumbnailResult(EditResult):
     """Result of thumbnail extraction."""
 
-    success: bool = True
+    output_path: str = Field(default="", description="Alias of frame_path for agent chaining")
     frame_path: str
     timestamp: float
+
+    def model_post_init(self, __context: Any) -> None:
+        if not self.output_path:
+            object.__setattr__(self, "output_path", self.frame_path)
+        if self.operation is None:
+            object.__setattr__(self, "operation", "thumbnail")
 
 
 # --- Quality settings ---

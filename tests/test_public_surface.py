@@ -172,6 +172,7 @@ EXPECTED_SERVER_TOOLS = {
     "video_ai_color_grade",
     "video_audio_spatial",
     "video_quality_check",
+    "video_release_checkpoint",
     "video_design_quality_check",
     "video_fix_design_issues",
     "image_extract_colors",
@@ -197,13 +198,26 @@ def test_cli_help_lists_all_commands():
     assert len(EXPECTED_CLI_COMMANDS) == 86
 
 
+def test_agent_cookbook_dry_run():
+    result = subprocess.run(
+        [sys.executable, "examples/agent_cookbook.py", "--dry-run"],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+
+    assert result.returncode == 0
+    assert "Inspect create_from_images" in result.stdout
+    assert "video_release_checkpoint" in result.stdout
+
+
 def test_server_tool_registry_keeps_public_tool_names():
     from mcp_video.server import mcp
 
     tool_names = {tool.name for tool in asyncio.run(mcp.list_tools())}
 
     assert tool_names >= EXPECTED_SERVER_TOOLS
-    assert len(tool_names) == 81
+    assert len(tool_names) == 82
 
 
 def test_module_reexports():

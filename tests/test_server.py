@@ -59,7 +59,7 @@ from mcp_video.server import (
     video_analyze,
     video_ai_color_grade,
 )
-from mcp_video.errors import InputFileError
+from mcp_video.errors import InputFileError, MCPVideoError
 
 
 def requires_filter(name: str, feature: str):
@@ -733,6 +733,94 @@ class TestServerToolPathValidation:
         result = effect_glow("/nonexistent/video.mp4", "/tmp/out.mp4")
         assert result["success"] is False
         assert "error" in result
+
+
+class TestServerReleaseGuardrails:
+    def test_audio_preset_warns_for_long_procedural_music_bed(self, monkeypatch, tmp_path):
+        from mcp_video import server_tools_audio
+
+        output = tmp_path / "drone.wav"
+
+        def fake_preset(**kwargs):
+            output.write_bytes(b"wav")
+            return str(output)
+
+        monkeypatch.setattr("mcp_video.audio_engine.audio_preset", fake_preset)
+
+        result = server_tools_audio.audio_preset("drone-tech", str(output), duration=30)
+
+        assert result["success"] is True
+        assert result["output_path"] == str(output)
+        assert result["warnings"]
+        assert "not a polished music bed" in result["warnings"][0]
+
+    def test_add_audio_replacement_warning_surfaces_in_mcp_result(self, monkeypatch, tmp_path):
+        from mcp_video import server_tools_basic
+        from mcp_video.models import EditResult
+
+        video = tmp_path / "video.mp4"
+        audio = tmp_path / "audio.wav"
+        output = tmp_path / "out.mp4"
+        video.write_bytes(b"video")
+        audio.write_bytes(b"audio")
+
+        monkeypatch.setattr(server_tools_basic, "_validate_input_path", lambda path: path)
+        monkeypatch.setattr(
+            server_tools_basic,
+            "add_audio",
+            lambda *args, **kwargs: EditResult(
+                output_path=str(output),
+                operation="add_audio",
+                warnings=["This operation will replace existing audio; listen before publishing."],
+            ),
+        )
+
+        result = server_tools_basic.video_add_audio(str(video), str(audio), mix=False)
+
+        assert result["success"] is True
+        assert result["warnings"]
+        assert "replace existing audio" in result["warnings"][0]
+
+    def test_video_quality_check_fail_on_warning_returns_tool_failure(self, monkeypatch, tmp_path):
+        from mcp_video import server_tools_ai
+
+        video = tmp_path / "video.mp4"
+        video.write_bytes(b"placeholder")
+
+        monkeypatch.setattr(server_tools_ai, "_validate_input_path", lambda path: path)
+        monkeypatch.setattr(
+            "mcp_video.quality_guardrails.quality_check",
+            lambda _path, fail_on_warning=False: {
+                "video": _path,
+                "overall_score": 25.0,
+                "all_passed": False,
+                "checks": [],
+                "recommendations": ["Color cast detected"],
+            },
+        )
+
+        result = server_tools_ai.video_quality_check(str(video), fail_on_warning=True)
+
+        assert result["success"] is False
+        assert result["error"]["code"] == "quality_gate_failed"
+
+    def test_release_checkpoint_fails_before_preview_artifacts_on_bad_quality(self, monkeypatch, tmp_path):
+        from mcp_video import server_tools_ai
+
+        video = tmp_path / "video.mp4"
+        video.write_bytes(b"placeholder")
+        monkeypatch.setattr(server_tools_ai, "_validate_input_path", lambda path: path)
+        monkeypatch.setattr(
+            "mcp_video.quality_guardrails.assert_quality",
+            lambda *_args, **_kwargs: (_ for _ in ()).throw(
+                MCPVideoError("Quality gate failed: score 25.0 < 80.0", error_type="quality_error")
+            ),
+        )
+
+        result = server_tools_ai.video_release_checkpoint(str(video), output_dir=str(tmp_path / "review"))
+
+        assert result["success"] is False
+        assert "quality" in result["error"]["message"].lower()
 
 
 class TestServerAIEdgeCases:

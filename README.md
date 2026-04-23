@@ -14,7 +14,7 @@
 <p align="center">
   <a href="https://pypi.org/project/mcp-video/"><img src="https://img.shields.io/pypi/v/mcp-video.svg" alt="PyPI"></a>
   <a href="https://github.com/pastorsimon1798/mcp-video/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/pastorsimon1798/mcp-video/.github/workflows/ci.yml?branch=master&label=CI" alt="CI"></a>
-  <img src="https://img.shields.io/badge/tools-81%20MCP%20tools-orange.svg" alt="Tools">
+  <img src="https://img.shields.io/badge/tools-82%20MCP%20tools-orange.svg" alt="Tools">
   <img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="License">
   <img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python">
 </p>
@@ -127,6 +127,38 @@ video = editor.add_text(video.output_path, text="EPISODE 42", position="top-cent
 result = editor.resize(video.output_path, aspect_ratio="9:16")
 ```
 
+### Agent-safe Python workflow
+
+For autonomous agents, prefer inspection, pipeline chaining, and a release checkpoint:
+
+```python
+from mcp_video import Client
+
+client = Client()
+print(client.inspect("create_from_images"))  # Real params, aliases, return type
+
+result = client.pipeline(
+    [
+        {"op": "create_from_images", "images": frames, "fps": 30},
+        {"op": "effect_glow", "intensity": 0.2},  # safe capped default
+        {"op": "add_audio", "audio_path": "soundtrack.wav", "mix": True},
+        {"op": "export", "quality": "high"},
+    ],
+    output_path="final.mp4",
+)
+
+checkpoint = client.release_checkpoint(result.output_path)
+print(checkpoint["thumbnail"], checkpoint["storyboard"])
+```
+
+Agent contract:
+
+- Media-producing client calls return `EditResult` with `.output_path`.
+- Analysis/discovery calls return typed reports or dictionaries.
+- `Client.inspect(name)` exposes parameters, aliases, category, and return type.
+- Raw unexpected-keyword errors are converted into actionable `MCPVideoError` guidance.
+- Do not publish agent-generated video without `assert_quality()` or `release_checkpoint()` plus human visual/audio inspection.
+
 ### As a CLI Tool
 
 ```bash
@@ -140,7 +172,7 @@ mcp-video template tiktok video.mp4 --caption "Check this out!"
 
 ## MCP Tools
 
-81 unique MCP tools across 12 categories, plus a `search_tools` meta-tool for fast discovery. All return structured JSON. See the [full tool reference](docs/TOOLS.md) for complete details.
+82 unique MCP tools across 12 categories, plus a `search_tools` meta-tool for fast discovery. All return structured JSON. See the [full tool reference](docs/TOOLS.md) for complete details.
 
 | Category | Count | Highlights |
 |----------|-------|------------|
@@ -151,7 +183,7 @@ mcp-video template tiktok video.mp4 --caption "Check this out!"
 | **Visual Effects** | 5 | vignette, chromatic aberration, scanlines, noise, glow |
 | **Transitions** | 3 | glitch, pixelate, morph |
 | **Layout & Motion** | 6 | grid, pip, animated text, counters, progress bars, auto-chapters |
-| **Analysis** | 8 | scene detect, thumbnail, preview, storyboard, quality compare, metadata, waveform |
+| **Analysis** | 9 | scene detect, thumbnail, preview, storyboard, quality compare, metadata, waveform, release checkpoint |
 | **Image Analysis** | 3 | color extraction, palette generation, product analysis |
 | **Meta** | 1 | `search_tools` — keyword search across all tools |
 
@@ -293,7 +325,7 @@ See [`workflows/CONTEXT.md`](workflows/CONTEXT.md) for the routing table.
 mcp_video/
   client/                # Python Client API (mixins per domain)
   client/meta.py         # Client discovery mixin (search_tools)
-  server.py              # MCP server (81 tools + 4 resources + search_tools meta-tool)
+  server.py              # MCP server (82 tools + 4 resources + search_tools meta-tool)
   server_tools_*.py      # Tool registration by category
   engine.py              # Core FFmpeg engine
   engine_*.py            # Specialized engines (thumbnail, edit, probe, etc.)

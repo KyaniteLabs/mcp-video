@@ -488,11 +488,28 @@ class ClientMediaMixin:
 
     def create_from_images(
         self,
-        images: list[str],
+        images: list[str] | None = None,
         output: str | None = None,
         fps: float = 30.0,
+        *,
+        output_path: str | None = None,
+        **kwargs: Any,
     ) -> EditResult:
         """Create a video from a sequence of images."""
+        if "inputs" in kwargs:
+            raise MCPVideoError(
+                "Use 'images=' not 'inputs=' — see Client.create_from_images() signature.",
+                error_type="validation_error",
+                code="wrong_parameter_name",
+            )
+        if kwargs:
+            bad = next(iter(kwargs))
+            raise MCPVideoError(
+                f"create_from_images() got unexpected parameter '{bad}'. Use images= and output_path=.",
+                error_type="validation_error",
+                code="unexpected_parameter",
+            )
+        output = self._resolve_alias("output_path", output_path, "output", output)
         if not images:
             raise MCPVideoError("images cannot be empty", error_type="validation_error", code="empty_images")
         return _create_from_images(images, output_path=output, fps=fps)

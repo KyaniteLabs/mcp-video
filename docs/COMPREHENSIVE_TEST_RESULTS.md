@@ -1,5 +1,7 @@
 # Comprehensive Tool Execution Test Results
 
+> Historical snapshot: this report predates the `video_release_checkpoint` guardrail tool. Current public MCP tool count is 82.
+
 **Date:** 2026-04-22  
 **Tester:** Claude Code (systematic execution test)  
 **Method:** Real MP4 inputs, actual FFmpeg/Remotion subprocess calls, no mocks  

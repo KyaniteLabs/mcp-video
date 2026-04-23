@@ -10,6 +10,7 @@ from ..engine import (
     audio_waveform as _audio_waveform,
 )
 from ..models import (
+    EditResult,
     WaveformResult,
 )
 
@@ -33,7 +34,7 @@ class ClientAudioMixin:
         duration: float = 1.0,
         volume: float = 0.5,
         effects: dict | None = None,
-    ) -> str:
+    ) -> EditResult:
         """Generate audio procedurally using synthesis.
 
         Args:
@@ -49,23 +50,28 @@ class ClientAudioMixin:
         """
         from ..audio_engine import audio_synthesize
 
-        return audio_synthesize(
-            output=output,
-            waveform=waveform,
-            frequency=frequency,
-            duration=duration,
-            volume=volume,
-            effects=effects,
+        return self._to_edit_result(
+            audio_synthesize(
+                output=output,
+                waveform=waveform,
+                frequency=frequency,
+                duration=duration,
+                volume=volume,
+                effects=effects,
+            ),
+            operation="audio_synthesize",
         )
 
     def audio_preset(
         self,
         preset: str,
-        output: str,
+        output: str | None = None,
         pitch: Literal["low", "mid", "high"] = "mid",
         duration: float | None = None,
         intensity: float = 0.5,
-    ) -> str:
+        *,
+        output_path: str | None = None,
+    ) -> EditResult:
         """Generate preset sound design elements.
 
         Presets: ui-blip, ui-click, ui-tap, ui-whoosh-up, ui-whoosh-down,
@@ -79,19 +85,29 @@ class ClientAudioMixin:
         """
         from ..audio_engine import audio_preset
 
-        return audio_preset(
-            preset=preset,
-            output=output,
-            pitch=pitch,
-            duration=duration,
-            intensity=intensity,
+        output = self._resolve_alias("output_path", output_path, "output", output)
+        if output is None:
+            raise MCPVideoError(
+                "audio_preset() requires output_path= (or legacy output=) so agents can read result.output_path.",
+                error_type="validation_error",
+                code="missing_output_path",
+            )
+        return self._to_edit_result(
+            audio_preset(
+                preset=preset,
+                output=output,
+                pitch=pitch,
+                duration=duration,
+                intensity=intensity,
+            ),
+            operation="audio_preset",
         )
 
     def audio_sequence(
         self,
         sequence: list[dict],
         output: str,
-    ) -> str:
+    ) -> EditResult:
         """Compose multiple audio events into a timed sequence.
 
         Args:
@@ -105,14 +121,14 @@ class ClientAudioMixin:
             raise MCPVideoError("sequence cannot be empty", error_type="validation_error", code="empty_sequence")
         from ..audio_engine import audio_sequence
 
-        return audio_sequence(sequence=sequence, output=output)
+        return self._to_edit_result(audio_sequence(sequence=sequence, output=output), operation="audio_sequence")
 
     def audio_compose(
         self,
         tracks: list[dict],
         duration: float,
         output: str,
-    ) -> str:
+    ) -> EditResult:
         """Layer multiple audio tracks with mixing.
 
         Args:
@@ -135,14 +151,17 @@ class ClientAudioMixin:
             raise MCPVideoError("duration must be > 0", error_type="validation_error", code="invalid_parameter")
         from ..audio_engine import audio_compose
 
-        return audio_compose(tracks=tracks, duration=duration, output=output)
+        return self._to_edit_result(
+            audio_compose(tracks=tracks, duration=duration, output=output),
+            operation="audio_compose",
+        )
 
     def audio_effects(
         self,
         input_path: str,
         output: str,
         effects: list[dict],
-    ) -> str:
+    ) -> EditResult:
         """Apply audio effects chain.
 
         Args:
@@ -155,14 +174,17 @@ class ClientAudioMixin:
         """
         from ..audio_engine import audio_effects
 
-        return audio_effects(input_path=input_path, output=output, effects=effects)
+        return self._to_edit_result(
+            audio_effects(input_path=input_path, output=output, effects=effects),
+            operation="audio_effects",
+        )
 
     def add_generated_audio(
         self,
         video: str,
         audio_config: dict,
         output: str,
-    ) -> str:
+    ) -> EditResult:
         """Add generated audio to a video file.
 
         Args:
@@ -175,14 +197,17 @@ class ClientAudioMixin:
         """
         from ..audio_engine import add_generated_audio
 
-        return add_generated_audio(video=video, audio_config=audio_config, output=output)
+        return self._to_edit_result(
+            add_generated_audio(video=video, audio_config=audio_config, output=output),
+            operation="add_generated_audio",
+        )
 
     # ------------------------------------------------------------------
     # Visual Effects (P1 Features)
     # ------------------------------------------------------------------
 
-    def audio_spatial(self, video: str, output: str, positions: list[dict], method: str = "hrtf") -> str:
+    def audio_spatial(self, video: str, output: str, positions: list[dict], method: str = "hrtf") -> EditResult:
         """Apply 3D spatial audio positioning."""
         from ..ai_engine import audio_spatial
 
-        return audio_spatial(video, output, positions, method)
+        return self._to_edit_result(audio_spatial(video, output, positions, method), operation="audio_spatial")
