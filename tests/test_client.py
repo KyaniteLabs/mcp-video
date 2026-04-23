@@ -444,6 +444,10 @@ class TestClientAgentApiConsistency:
         assert result.output_path == "/tmp/drone.wav"
         assert result.operation == "audio_preset"
 
+    def test_audio_preset_requires_output_path(self, editor):
+        with pytest.raises(MCPVideoError, match="audio_preset\\(\\) requires output_path"):
+            editor.audio_preset("ui-blip")
+
     def test_scanlines_accepts_intensity_alias_with_warning(self, editor, monkeypatch):
         monkeypatch.setattr("mcp_video.effects_engine.effect_scanlines", lambda **kwargs: kwargs["output"])
 

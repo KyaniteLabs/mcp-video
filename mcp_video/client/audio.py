@@ -86,6 +86,12 @@ class ClientAudioMixin:
         from ..audio_engine import audio_preset
 
         output = self._resolve_alias("output_path", output_path, "output", output)
+        if output is None:
+            raise MCPVideoError(
+                "audio_preset() requires output_path= (or legacy output=) so agents can read result.output_path.",
+                error_type="validation_error",
+                code="missing_output_path",
+            )
         return self._to_edit_result(
             audio_preset(
                 preset=preset,

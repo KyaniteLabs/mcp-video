@@ -373,6 +373,30 @@ class TestQualityCheckAPI:
         with pytest.raises(Exception, match="Quality gate failed"):
             assert_quality(video_path, min_score=80)
 
+    def test_assert_quality_respects_custom_min_score_below_default(self, tmp_path, monkeypatch):
+        """Custom release thresholds below the default should not be overridden by all_passed."""
+        from mcp_video.quality_guardrails import assert_quality
+
+        video_path = str(tmp_path / "test.mp4")
+        create_test_video(video_path, "gray")
+
+        monkeypatch.setattr(
+            VisualQualityGuardrails,
+            "generate_report",
+            lambda self, video: {
+                "video": video,
+                "overall_score": 70.0,
+                "all_passed": False,
+                "checks": [],
+                "recommendations": ["Non-blocking for this custom threshold"],
+            },
+        )
+
+        report = assert_quality(video_path, min_score=60)
+
+        assert report["overall_score"] == 70.0
+        assert report["all_passed"] is True
+
     def test_client_assert_quality_method_raises_on_low_score(self, tmp_path, monkeypatch):
         from mcp_video import Client
 

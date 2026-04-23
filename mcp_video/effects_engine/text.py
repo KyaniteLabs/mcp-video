@@ -46,6 +46,15 @@ def _is_srt_index_line(line: str) -> bool:
     return line.strip().isdigit()
 
 
+def _is_webvtt_metadata_block(lines: list[str]) -> bool:
+    first = lines[0].strip() if lines else ""
+    if first == "WEBVTT":
+        return True
+    if first.startswith("NOTE"):
+        return True
+    return first in {"STYLE", "REGION"}
+
+
 def _wrap_subtitle_payload_for_safe_area(
     payload: str,
     max_chars_per_line: int = DEFAULT_SUBTITLE_MAX_CHARS_PER_LINE,
@@ -56,6 +65,9 @@ def _wrap_subtitle_payload_for_safe_area(
     wrapped_blocks: list[str] = []
     for block in blocks:
         lines = block.splitlines()
+        if _is_webvtt_metadata_block(lines):
+            wrapped_blocks.append(block)
+            continue
         header = [line for line in lines if _is_srt_index_line(line) or _is_subtitle_timing_line(line)]
         dialogue = [line for line in lines if line not in header and line.strip() and line.strip() != "WEBVTT"]
         if not dialogue:
