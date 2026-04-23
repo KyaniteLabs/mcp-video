@@ -6,9 +6,7 @@ from mcp_video import Client
 editor = Client()
 ```
 
-## Methods
-
-Agent-safe helpers:
+## Agent-safe helpers
 
 | Method | Returns | Description |
 |--------|---------|-------------|
@@ -19,6 +17,8 @@ Agent-safe helpers:
 
 Media-producing methods return an `EditResult`-compatible object with `.output_path`.
 Analysis methods return report models or dictionaries.
+
+## Methods
 
 | Method | Returns | Description |
 |--------|---------|-------------|

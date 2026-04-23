@@ -24,22 +24,12 @@ QUALITY_GATE_OPS = {"assert_quality", "release_checkpoint", "quality_check"}
 class ClientBase:
     """Base client with core lifecycle methods."""
 
-    def __getattribute__(self, name: str) -> Any:
-        attr = super().__getattribute__(name)
-        if name.startswith("_") or name not in CLIENT_METHOD_CONTRACTS or not callable(attr):
-            return attr
-
-        @wraps(attr)
-        def guarded_call(*args: Any, **kwargs: Any) -> Any:
-            try:
-                result = attr(*args, **self._normalize_kwargs_for_method(name, attr, kwargs))
-            except TypeError as exc:
-                self._raise_helpful_type_error(name, exc)  # never returns
-            if CLIENT_METHOD_CONTRACTS[name]["return_type"] == MEDIA_RETURN:
-                return self._to_edit_result(result, operation=name)
-            return result
-
-        return guarded_call
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        super().__init_subclass__(**kwargs)
+        for name in CLIENT_METHOD_CONTRACTS:
+            method = getattr(cls, name, None)
+            if callable(method) and not getattr(method, "_mcp_video_guarded", False):
+                setattr(cls, name, _guard_client_method(name, method))
 
     def _normalize_kwargs_for_method(self, method_name: str, method: Any, kwargs: dict[str, Any]) -> dict[str, Any]:
         """Map primary/legacy aliases to the concrete method signature."""
@@ -154,6 +144,18 @@ class ClientBase:
         if not steps:
             raise MCPVideoError("pipeline steps cannot be empty", error_type="validation_error", code="empty_pipeline")
         final_output = self._resolve_alias("output_path", output_path, "output", output)
+        result, warnings, saw_quality_gate = self._run_pipeline_steps(steps, final_output)
+        if not saw_quality_gate:
+            warnings.append(
+                "Pipeline did not include a release checkpoint; run assert_quality/release_checkpoint before publishing."
+            )
+        result.warnings = list(dict.fromkeys(warnings))
+        return result
+
+    def _run_pipeline_steps(
+        self, steps: list[dict[str, Any]], final_output: str | None
+    ) -> tuple[EditResult, list[str], bool]:
+        """Execute pipeline steps and collect guardrail state."""
         current: str | None = None
         result: EditResult | None = None
         warnings: list[str] = []
@@ -186,12 +188,7 @@ class ClientBase:
             raise MCPVideoError(
                 "pipeline produced no media output", error_type="validation_error", code="no_media_output"
             )
-        if not saw_quality_gate:
-            warnings.append(
-                "Pipeline did not include a release checkpoint; run assert_quality/release_checkpoint before publishing."
-            )
-        result.warnings = list(dict.fromkeys(warnings))
-        return result  # type: ignore[return-value]
+        return result, warnings, saw_quality_gate
 
     @staticmethod
     def _validate_choice(name: str, value: str, valid_values: set[str]) -> None:
@@ -201,3 +198,20 @@ class ClientBase:
                 error_type="validation_error",
                 code="invalid_parameter",
             )
+
+
+def _guard_client_method(method_name: str, method: Any) -> Any:
+    """Wrap public client methods once at class creation time."""
+
+    @wraps(method)
+    def guarded_call(self: ClientBase, *args: Any, **kwargs: Any) -> Any:
+        try:
+            result = method(self, *args, **self._normalize_kwargs_for_method(method_name, method, kwargs))
+        except TypeError as exc:
+            self._raise_helpful_type_error(method_name, exc)
+        if CLIENT_METHOD_CONTRACTS[method_name]["return_type"] == MEDIA_RETURN:
+            return self._to_edit_result(result, operation=method_name)
+        return result
+
+    guarded_call._mcp_video_guarded = True
+    return guarded_call

@@ -428,6 +428,10 @@ class TestClientAgentApiConsistency:
 
         assert result.output_path == "/tmp/out.mp4"
 
+    def test_public_methods_are_wrapped_without_getattribute_override(self, editor):
+        assert "__getattribute__" not in Client.__dict__
+        assert getattr(editor.effect_noise, "_mcp_video_guarded", False) is True
+
     def test_effect_methods_return_edit_result(self, editor, monkeypatch):
         monkeypatch.setattr("mcp_video.effects_engine.effect_glow", lambda **kwargs: kwargs["output"])
 
@@ -525,7 +529,7 @@ class TestClientAgentApiConsistency:
         monkeypatch.setattr(
             editor,
             "thumbnail",
-            lambda input_path, output_path=None, **kwargs: editor._to_edit_result(output_path or "/tmp/thumb.jpg", operation="thumbnail"),
+            lambda input_path, output=None, **kwargs: editor._to_edit_result(output or "/tmp/thumb.jpg", operation="thumbnail"),
         )
         monkeypatch.setattr(
             editor,
