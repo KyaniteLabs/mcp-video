@@ -53,6 +53,44 @@ def test_glow_falls_back_when_gblur_missing(tmp_path, monkeypatch):
     assert "boxblur=15:15" in calls[1][5]
 
 
+def test_glow_uses_non_additive_blend_by_default(tmp_path, monkeypatch):
+    from mcp_video import effects_engine
+
+    input_path = tmp_path / "input.mp4"
+    output_path = tmp_path / "output.mp4"
+    input_path.write_bytes(b"placeholder")
+    calls = []
+
+    def fake_run_ffmpeg(cmd):
+        calls.append(cmd.copy())
+        Path(cmd[-1]).write_bytes(b"output")
+
+    monkeypatch.setattr(effects_engine.core, "_run_ffmpeg", fake_run_ffmpeg)
+
+    result = effects_engine.effect_glow(str(input_path), str(output_path), intensity=0.5)
+
+    assert result == str(output_path)
+    assert len(calls) == 1
+    filter_graph = calls[0][5]
+    assert "all_mode='addition'" not in filter_graph
+    assert "all_mode='screen'" in filter_graph
+    assert "all_opacity=0.25" in filter_graph
+
+
+def test_subtitle_text_is_wrapped_for_safe_area():
+    from mcp_video.effects_engine.text import _wrap_subtitle_payload_for_safe_area
+
+    source = (
+        "1\n"
+        "00:00:00,000 --> 00:00:05,000\n"
+        "The same source becomes YouTube, Shorts, and square social cuts.\n"
+    )
+
+    wrapped = _wrap_subtitle_payload_for_safe_area(source, max_chars_per_line=24)
+
+    assert "The same source becomes\nYouTube, Shorts, and\nsquare social cuts." in wrapped
+
+
 def test_chromatic_aberration_reraises_unrelated_processing_error(tmp_path, monkeypatch):
     from mcp_video import effects_engine
 

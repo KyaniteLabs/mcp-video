@@ -7,12 +7,93 @@ from __future__ import annotations
 
 import logging
 import os
+import tempfile
+import textwrap
+from pathlib import Path
 from typing import Any
 
+from ..defaults import DEFAULT_SAFE_SUBTITLE_FONT_SIZE, DEFAULT_SUBTITLE_MAX_CHARS_PER_LINE, DEFAULT_SUBTITLE_MAX_LINES
 from ..errors import InputFileError
 from ..ffmpeg_helpers import _validate_input_path, _validate_output_path, _run_ffmpeg, _escape_ffmpeg_filter_value
 
 logger = logging.getLogger(__name__)
+
+
+def _wrap_subtitle_text_for_safe_area(
+    text: str,
+    max_chars_per_line: int = DEFAULT_SUBTITLE_MAX_CHARS_PER_LINE,
+    max_lines: int = DEFAULT_SUBTITLE_MAX_LINES,
+) -> str:
+    """Wrap subtitle dialogue into a bounded safe-area block."""
+    lines = textwrap.wrap(
+        " ".join(text.split()),
+        width=max_chars_per_line,
+        break_long_words=False,
+        break_on_hyphens=False,
+    )
+    if len(lines) > max_lines:
+        kept = lines[:max_lines]
+        kept[-1] = kept[-1].rstrip(" .,:;") + "…"
+        return "\n".join(kept)
+    return "\n".join(lines)
+
+
+def _is_subtitle_timing_line(line: str) -> bool:
+    return "-->" in line
+
+
+def _is_srt_index_line(line: str) -> bool:
+    return line.strip().isdigit()
+
+
+def _wrap_subtitle_payload_for_safe_area(
+    payload: str,
+    max_chars_per_line: int = DEFAULT_SUBTITLE_MAX_CHARS_PER_LINE,
+    max_lines: int = DEFAULT_SUBTITLE_MAX_LINES,
+) -> str:
+    """Wrap SRT/VTT dialogue lines while preserving timing/index lines."""
+    blocks = payload.strip().split("\n\n")
+    wrapped_blocks: list[str] = []
+    for block in blocks:
+        lines = block.splitlines()
+        header = [line for line in lines if _is_srt_index_line(line) or _is_subtitle_timing_line(line)]
+        dialogue = [line for line in lines if line not in header and line.strip() and line.strip() != "WEBVTT"]
+        if not dialogue:
+            wrapped_blocks.append(block)
+            continue
+        wrapped = _wrap_subtitle_text_for_safe_area(" ".join(dialogue), max_chars_per_line, max_lines)
+        wrapped_blocks.append("\n".join([*header, wrapped]))
+    return "\n\n".join(wrapped_blocks) + "\n"
+
+
+def _prepare_safe_subtitle_file(subtitles: str, max_chars_per_line: int) -> str:
+    """Return a wrapped temp subtitle file for SRT/VTT inputs."""
+    suffix = Path(subtitles).suffix.lower()
+    if suffix not in {".srt", ".vtt"}:
+        return subtitles
+    source = Path(subtitles).read_text(encoding="utf-8")
+    wrapped = _wrap_subtitle_payload_for_safe_area(source, max_chars_per_line=max_chars_per_line)
+    tmp = tempfile.NamedTemporaryFile("w", suffix=suffix, delete=False, encoding="utf-8")
+    with tmp:
+        tmp.write(wrapped)
+    return tmp.name
+
+
+def _subtitle_filter(prepared_subtitles: str, font: str, size: int, color: str, outline: int, outline_color: str) -> str:
+    """Build a safe subtitles filter string."""
+    safe_subtitles = _escape_ffmpeg_filter_value(prepared_subtitles)
+    safe_font = _escape_ffmpeg_filter_value(font)
+    safe_color = _escape_ffmpeg_filter_value(color)
+    safe_outline_color = _escape_ffmpeg_filter_value(outline_color)
+    return (
+        f"subtitles={safe_subtitles}:force_style='"
+        f"FontName={safe_font},"
+        f"FontSize={size},"
+        f"PrimaryColour={safe_color},"
+        f"OutlineColour={safe_outline_color},"
+        f"Outline={outline},"
+        f"BorderStyle=1'"
+    )
 
 
 def text_animated(
@@ -153,10 +234,14 @@ def text_subtitles(
 
     # Build subtitle filter options
     font = style.get("font", "Arial")
-    size = style.get("size", 32)
+    unsafe_layout = bool(style.get("allow_unsafe_layout", False))
+    size = int(style.get("size", DEFAULT_SAFE_SUBTITLE_FONT_SIZE))
+    if not unsafe_layout:
+        size = min(size, DEFAULT_SAFE_SUBTITLE_FONT_SIZE)
     color = style.get("color", "white")
     outline = style.get("outline", 2)
     outline_color = style.get("outline_color", "black")
+    max_chars_per_line = max(20, min(80, int(style.get("max_chars_per_line", DEFAULT_SUBTITLE_MAX_CHARS_PER_LINE))))
 
     # Convert hex colors to FFmpeg format
     if color.startswith("#"):
@@ -164,21 +249,8 @@ def text_subtitles(
     if outline_color.startswith("#"):
         outline_color = f"0x{outline_color[1:]}"
 
-    # Escape subtitle path for FFmpeg filter syntax
-    safe_subtitles = _escape_ffmpeg_filter_value(subtitles)
-    safe_font = _escape_ffmpeg_filter_value(font)
-    safe_color = _escape_ffmpeg_filter_value(color)
-    safe_outline_color = _escape_ffmpeg_filter_value(outline_color)
-
-    filter_complex = (
-        f"subtitles={safe_subtitles}:force_style='"
-        f"FontName={safe_font},"
-        f"FontSize={size},"
-        f"PrimaryColour={safe_color},"
-        f"OutlineColour={safe_outline_color},"
-        f"Outline={outline},"
-        f"BorderStyle=1'"
-    )
+    prepared_subtitles = _prepare_safe_subtitle_file(subtitles, max_chars_per_line)
+    filter_complex = _subtitle_filter(prepared_subtitles, font, size, color, outline, outline_color)
 
     cmd = [
         "ffmpeg",
@@ -198,7 +270,11 @@ def text_subtitles(
         output,
     ]
 
-    _run_ffmpeg(cmd)
+    try:
+        _run_ffmpeg(cmd)
+    finally:
+        if prepared_subtitles != subtitles:
+            Path(prepared_subtitles).unlink(missing_ok=True)
 
     return output
 

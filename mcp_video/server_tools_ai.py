@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import os
 from typing import Any
 
+from .defaults import DEFAULT_QUALITY_GATE_SCORE
 from .errors import MCPVideoError
 from .server_app import _error_result, _result, mcp
 from .ffmpeg_helpers import _validate_input_path
@@ -319,7 +321,75 @@ def video_quality_check(
         input_path = _validate_input_path(input_path)
         from .quality_guardrails import quality_check
 
-        return _result(quality_check(input_path, fail_on_warning))
+        report = quality_check(input_path, fail_on_warning)
+        if fail_on_warning and not report.get("all_passed", False):
+            return _error_result(
+                MCPVideoError(
+                    f"Quality gate failed: score {report.get('overall_score')} below release threshold",
+                    error_type="quality_error",
+                    code="quality_gate_failed",
+                    suggested_action={
+                        "auto_fix": False,
+                        "description": "Inspect storyboard/thumbnail, fix visual/audio issues, then rerun quality checks.",
+                    },
+                )
+            )
+        return _result(report)
+    except MCPVideoError as e:
+        return _error_result(e)
+    except Exception as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_release_checkpoint(
+    input_path: str,
+    output_dir: str | None = None,
+    min_score: float = DEFAULT_QUALITY_GATE_SCORE,
+    frame_count: int = 6,
+) -> dict[str, Any]:
+    """Create preview artifacts only after the video passes quality gates.
+
+    Use this before publishing or chaining more polish effects. It runs a hard
+    quality gate, then writes a thumbnail and storyboard for human inspection.
+    """
+    if min_score < 0 or min_score > 100:
+        return _error_result(
+            MCPVideoError(
+                f"min_score must be 0-100, got {min_score}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
+    if frame_count < 1:
+        return _error_result(
+            MCPVideoError(
+                f"frame_count must be at least 1, got {frame_count}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
+    try:
+        input_path = _validate_input_path(input_path)
+        from .quality_guardrails import assert_quality
+        from .engine_thumbnail import thumbnail
+        from .engine_storyboard import storyboard
+
+        report = assert_quality(input_path, min_score=min_score)
+        review_dir = output_dir or f"{os.path.splitext(input_path)[0]}_release_review"
+        os.makedirs(review_dir, exist_ok=True)
+        thumb = thumbnail(input_path, output_path=os.path.join(review_dir, "thumbnail.jpg"))
+        board = storyboard(input_path, output_dir=os.path.join(review_dir, "storyboard"), frame_count=frame_count)
+        return _result(
+            {
+                "video": input_path,
+                "quality": report,
+                "thumbnail": thumb.frame_path,
+                "storyboard": board.model_dump(),
+                "review_required": True,
+                "instructions": "Open the thumbnail/storyboard and inspect the final video before publishing.",
+            }
+        )
     except MCPVideoError as e:
         return _error_result(e)
     except Exception as e:

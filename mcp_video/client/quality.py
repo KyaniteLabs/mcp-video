@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from ..defaults import DEFAULT_QUALITY_GATE_SCORE
+
 
 class ClientQualityMixin:
     """Quality operations mixin."""
@@ -26,6 +28,12 @@ class ClientQualityMixin:
         from ..quality_guardrails import quality_check
 
         return quality_check(video, fail_on_warning)
+
+    def assert_quality(self, video: str, min_score: float = DEFAULT_QUALITY_GATE_SCORE) -> dict:
+        """Raise if a video fails release-quality guardrails."""
+        from ..quality_guardrails import assert_quality
+
+        return assert_quality(video, min_score=min_score)
 
     def design_quality_check(
         self,

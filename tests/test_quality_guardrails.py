@@ -343,6 +343,48 @@ class TestQualityCheckAPI:
         if report["overall_score"] < 80:
             assert report["all_passed"] is False
 
+    def test_assert_quality_raises_on_low_score(self, tmp_path, monkeypatch):
+        """Quality assertions should be usable as a hard workflow gate."""
+        from mcp_video.quality_guardrails import assert_quality
+
+        video_path = str(tmp_path / "test.mp4")
+        create_test_video(video_path, "gray")
+
+        def fake_report(_video):
+            return {
+                "video": _video,
+                "overall_score": 25.0,
+                "all_passed": False,
+                "checks": [],
+                "recommendations": ["Color cast detected"],
+            }
+
+        monkeypatch.setattr(VisualQualityGuardrails, "generate_report", lambda self, video: fake_report(video))
+
+        with pytest.raises(Exception, match="Quality gate failed"):
+            assert_quality(video_path, min_score=80)
+
+    def test_client_assert_quality_method_raises_on_low_score(self, tmp_path, monkeypatch):
+        from mcp_video import Client
+
+        video_path = str(tmp_path / "test.mp4")
+        create_test_video(video_path, "gray")
+
+        monkeypatch.setattr(
+            VisualQualityGuardrails,
+            "generate_report",
+            lambda self, video: {
+                "video": video,
+                "overall_score": 25.0,
+                "all_passed": False,
+                "checks": [],
+                "recommendations": ["Color cast detected"],
+            },
+        )
+
+        with pytest.raises(Exception, match="Quality gate failed"):
+            Client().assert_quality(video_path, min_score=80)
+
     def test_quality_check_with_black_video(self, tmp_path):
         """Test quality_check on black video."""
         video_path = str(tmp_path / "black.mp4")

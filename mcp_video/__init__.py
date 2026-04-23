@@ -41,7 +41,7 @@ from .transitions_engine import (
     transition_morph,
 )
 
-from .quality_guardrails import quality_check, VisualQualityGuardrails, QualityReport
+from .quality_guardrails import assert_quality, quality_check, VisualQualityGuardrails, QualityReport
 from .design_quality import (
     design_quality_check,
     fix_design_issues,
@@ -58,6 +58,7 @@ __all__ = [
     "QualityReport",
     "VisualQualityGuardrails",
     "add_generated_audio",
+    "assert_quality",
     "ai_color_grade",
     "ai_remove_silence",
     "ai_scene_detect",

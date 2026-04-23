@@ -1,10 +1,12 @@
 """Tests for the Python client — needs FFmpeg."""
 
 import os
+import inspect
 
 import pytest
 
 from mcp_video import Client
+from mcp_video.client.contracts import CLIENT_METHOD_CONTRACTS
 from mcp_video.engine import _check_filter_available
 from mcp_video.errors import MCPVideoError
 from mcp_video.models import EditResult, StoryboardResult, ThumbnailResult, VideoInfo
@@ -393,3 +395,87 @@ class TestClientTextAnimatedValidation:
     def test_text_animated_rejects_empty_text(self, editor):
         with pytest.raises(MCPVideoError, match=r"[Tt]ext"):
             editor.text_animated("/tmp/video.mp4", "", "/tmp/out.mp4")
+
+
+class TestClientAgentApiConsistency:
+    def test_every_public_client_method_has_contract(self, editor):
+        public_methods = {
+            name
+            for name, value in inspect.getmembers(editor, predicate=callable)
+            if not name.startswith("_")
+        }
+
+        assert public_methods == set(CLIENT_METHOD_CONTRACTS)
+
+    def test_media_contracts_advertise_edit_result(self):
+        for name, contract in CLIENT_METHOD_CONTRACTS.items():
+            if contract["category"] == "media":
+                assert contract["return_type"] == "EditResult", name
+
+    def test_unexpected_keyword_errors_are_agent_helpful(self, editor):
+        with pytest.raises(MCPVideoError, match="Valid parameters"):
+            editor.effect_noise(bogus=True)
+
+    def test_effect_methods_return_edit_result(self, editor, monkeypatch):
+        monkeypatch.setattr("mcp_video.effects_engine.effect_glow", lambda **kwargs: kwargs["output"])
+
+        result = editor.effect_glow(input_path="/tmp/in.mp4", output_path="/tmp/out.mp4")
+
+        assert result.output_path == "/tmp/out.mp4"
+        assert result.operation == "effect_glow"
+
+    def test_audio_preset_returns_edit_result(self, editor, monkeypatch):
+        monkeypatch.setattr("mcp_video.audio_engine.audio_preset", lambda **kwargs: kwargs["output"])
+
+        result = editor.audio_preset("drone-tech", output_path="/tmp/drone.wav")
+
+        assert result.output_path == "/tmp/drone.wav"
+        assert result.operation == "audio_preset"
+
+    def test_scanlines_accepts_intensity_alias_with_warning(self, editor, monkeypatch):
+        monkeypatch.setattr("mcp_video.effects_engine.effect_scanlines", lambda **kwargs: kwargs["output"])
+
+        with pytest.warns(DeprecationWarning, match="opacity"):
+            result = editor.effect_scanlines(input_path="/tmp/in.mp4", output_path="/tmp/out.mp4", intensity=0.2)
+
+        assert result.output_path == "/tmp/out.mp4"
+        assert result.operation == "effect_scanlines"
+
+    def test_create_from_images_rejects_inputs_alias_with_helpful_message(self, editor):
+        with pytest.raises(MCPVideoError, match="Use 'images=' not 'inputs='"):
+            editor.create_from_images(inputs=["frame1.png"], output_path="/tmp/out.mp4")
+
+    def test_inspect_returns_real_signature(self, editor):
+        info = editor.inspect("create_from_images")
+
+        assert info["name"] == "create_from_images"
+        assert "images" in info["parameters"]
+        assert info["return_type"] == "EditResult"
+
+    def test_pipeline_chains_edit_results(self, editor, monkeypatch):
+        calls = []
+
+        def fake_create_from_images(*, images, output_path=None, **kwargs):
+            calls.append(("create_from_images", images, output_path))
+            return editor._to_edit_result(output_path or "/tmp/scene.mp4", operation="create_from_images")
+
+        def fake_effect_glow(*, input_path, output_path=None, **kwargs):
+            calls.append(("effect_glow", input_path, output_path))
+            return editor._to_edit_result(output_path or "/tmp/glow.mp4", operation="effect_glow")
+
+        monkeypatch.setattr(editor, "create_from_images", fake_create_from_images)
+        monkeypatch.setattr(editor, "effect_glow", fake_effect_glow)
+
+        result = editor.pipeline(
+            [
+                {"op": "create_from_images", "images": ["a.png"], "output_path": "/tmp/scene.mp4"},
+                {"op": "effect_glow", "intensity": 0.2},
+            ],
+            output_path="/tmp/final.mp4",
+        )
+
+        assert result.output_path == "/tmp/final.mp4"
+        assert calls == [
+            ("create_from_images", ["a.png"], "/tmp/scene.mp4"),
+            ("effect_glow", "/tmp/scene.mp4", "/tmp/final.mp4"),
+        ]
