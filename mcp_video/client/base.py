@@ -17,6 +17,9 @@ from ..models import (
 )
 from .contracts import CLIENT_METHOD_CONTRACTS, MEDIA_RETURN
 
+DESTRUCTIVE_POLISH_OPS = {"effect_glow", "effect_noise", "effect_vignette", "effect_scanlines"}
+QUALITY_GATE_OPS = {"assert_quality", "release_checkpoint", "quality_check"}
+
 
 class ClientBase:
     """Base client with core lifecycle methods."""
@@ -29,7 +32,7 @@ class ClientBase:
         @wraps(attr)
         def guarded_call(*args: Any, **kwargs: Any) -> Any:
             try:
-                result = attr(*args, **kwargs)
+                result = attr(*args, **self._normalize_kwargs_for_method(name, attr, kwargs))
             except TypeError as exc:
                 self._raise_helpful_type_error(name, exc)  # never returns
             if CLIENT_METHOD_CONTRACTS[name]["return_type"] == MEDIA_RETURN:
@@ -37,6 +40,32 @@ class ClientBase:
             return result
 
         return guarded_call
+
+    def _normalize_kwargs_for_method(self, method_name: str, method: Any, kwargs: dict[str, Any]) -> dict[str, Any]:
+        """Map primary/legacy aliases to the concrete method signature."""
+        if not kwargs:
+            return kwargs
+        params = inspect.signature(method).parameters
+        normalized = dict(kwargs)
+        aliases = CLIENT_METHOD_CONTRACTS.get(method_name, {}).get("aliases", {})
+        for legacy, primary in aliases.items():
+            if primary in normalized and primary not in params and legacy in params:
+                if legacy in normalized:
+                    raise MCPVideoError(
+                        f"Use '{primary}=' or '{legacy}=', not both",
+                        error_type="validation_error",
+                        code="ambiguous_parameter",
+                    )
+                normalized[legacy] = normalized.pop(primary)
+            elif legacy in normalized and legacy not in params and primary in params:
+                if primary in normalized:
+                    raise MCPVideoError(
+                        f"Use '{primary}=' or '{legacy}=', not both",
+                        error_type="validation_error",
+                        code="ambiguous_parameter",
+                    )
+                normalized[primary] = normalized.pop(legacy)
+        return normalized
 
     def __enter__(self) -> Self:
         return self
@@ -125,17 +154,35 @@ class ClientBase:
         final_output = self._resolve_alias("output_path", output_path, "output", output)
         current: str | None = None
         result: EditResult | None = None
+        warnings: list[str] = []
+        previous_op: str | None = None
+        saw_quality_gate = False
         for index, step in enumerate(steps):
             op = step.get("op")
             if not op:
                 raise MCPVideoError("pipeline step missing 'op'", error_type="validation_error", code="missing_op")
             params = {k: v for k, v in step.items() if k != "op"}
+            if op in QUALITY_GATE_OPS:
+                saw_quality_gate = True
             if current and not any(k in params for k in ("input_path", "video", "background", "main")):
                 params["input_path"] = current
             if final_output and index == len(steps) - 1 and not any(k in params for k in ("output_path", "output")):
                 params["output_path"] = final_output
-            result = self._to_edit_result(getattr(self, op)(**params), operation=op)
+            raw_result = getattr(self, op)(**params)
+            if op in QUALITY_GATE_OPS:
+                previous_op = op
+                continue
+            if op in DESTRUCTIVE_POLISH_OPS and previous_op in DESTRUCTIVE_POLISH_OPS:
+                warnings.append("Stacked visual polish effects detected; inspect thumbnail/storyboard before publishing.")
+            result = self._to_edit_result(raw_result, operation=op)
+            warnings.extend(result.warnings)
             current = result.output_path
+            previous_op = op
+        if result is None:
+            raise MCPVideoError("pipeline produced no media output", error_type="validation_error", code="no_media_output")
+        if not saw_quality_gate:
+            warnings.append("Pipeline did not include a release checkpoint; run assert_quality/release_checkpoint before publishing.")
+        result.warnings = list(dict.fromkeys(warnings))
         return result  # type: ignore[return-value]
 
     @staticmethod

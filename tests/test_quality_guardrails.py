@@ -197,6 +197,15 @@ class TestVisualQualityGuardrails:
             if details.get("color_cast"):
                 assert "red" in details["color_cast"] or report.score < 70
 
+    def test_bad_color_cast_fixture_fails_quality_gate(self, tmp_path):
+        from mcp_video.quality_guardrails import assert_quality
+
+        video_path = str(tmp_path / "green.mp4")
+        create_test_video(video_path, "green")
+
+        with pytest.raises(Exception, match="Quality gate failed"):
+            assert_quality(video_path, min_score=95)
+
     def test_get_rgb_means_escapes_lavfi_path(self, guardrails):
         """RGB analysis should escape lavfi movie paths the same way as other ffprobe helpers."""
         special_path = "/tmp/with:comma,[brackets].mp4"

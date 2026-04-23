@@ -103,6 +103,7 @@ CLIENT_METHOD_CONTRACTS: dict[str, dict[str, Any]] = {
     # Quality/report methods
     "quality_check": {"category": "report", "return_type": "dict", "aliases": {"video": "input_path"}},
     "assert_quality": {"category": "report", "return_type": "dict", "aliases": {"video": "input_path"}},
+    "release_checkpoint": {"category": "report", "return_type": "dict", "aliases": {"video": "input_path"}},
     "design_quality_check": {"category": "report", "return_type": "DesignQualityReport", "aliases": {"video": "input_path"}},
     "fix_design_issues": {"category": "media", "return_type": MEDIA_RETURN, "aliases": {"video": "input_path", "output": "output_path"}},
 }

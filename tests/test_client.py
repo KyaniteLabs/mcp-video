@@ -416,6 +416,13 @@ class TestClientAgentApiConsistency:
         with pytest.raises(MCPVideoError, match="Valid parameters"):
             editor.effect_noise(bogus=True)
 
+    def test_primary_output_path_alias_maps_to_legacy_effect_signature(self, editor, monkeypatch):
+        monkeypatch.setattr("mcp_video.effects_engine.effect_noise", lambda **kwargs: kwargs["output"])
+
+        result = editor.effect_noise(input_path="/tmp/in.mp4", output_path="/tmp/out.mp4")
+
+        assert result.output_path == "/tmp/out.mp4"
+
     def test_effect_methods_return_edit_result(self, editor, monkeypatch):
         monkeypatch.setattr("mcp_video.effects_engine.effect_glow", lambda **kwargs: kwargs["output"])
 
@@ -479,3 +486,46 @@ class TestClientAgentApiConsistency:
             ("create_from_images", ["a.png"], "/tmp/scene.mp4"),
             ("effect_glow", "/tmp/scene.mp4", "/tmp/final.mp4"),
         ]
+
+    def test_pipeline_warns_on_stacked_polish_without_checkpoint(self, editor, monkeypatch):
+        monkeypatch.setattr(
+            editor,
+            "effect_noise",
+            lambda **kwargs: editor._to_edit_result(kwargs["output_path"], operation="effect_noise"),
+        )
+        monkeypatch.setattr(
+            editor,
+            "effect_glow",
+            lambda **kwargs: editor._to_edit_result(kwargs["output_path"], operation="effect_glow"),
+        )
+
+        result = editor.pipeline(
+            [
+                {"op": "effect_noise", "input_path": "/tmp/in.mp4", "output_path": "/tmp/noise.mp4"},
+                {"op": "effect_glow", "output_path": "/tmp/glow.mp4"},
+            ]
+        )
+
+        assert any("Stacked visual polish effects" in warning for warning in result.warnings)
+        assert any("release checkpoint" in warning for warning in result.warnings)
+
+    def test_release_checkpoint_runs_quality_then_preview_artifacts(self, editor, monkeypatch, tmp_path):
+        video = tmp_path / "video.mp4"
+        video.write_bytes(b"placeholder")
+        monkeypatch.setattr(editor, "assert_quality", lambda input_path, min_score=80.0: {"overall_score": 99.0})
+        monkeypatch.setattr(
+            editor,
+            "thumbnail",
+            lambda input_path, output_path=None, **kwargs: editor._to_edit_result(output_path or "/tmp/thumb.jpg", operation="thumbnail"),
+        )
+        monkeypatch.setattr(
+            editor,
+            "storyboard",
+            lambda input_path, output_path=None, **kwargs: editor._to_edit_result(output_path or "/tmp/storyboard.jpg", operation="storyboard"),
+        )
+
+        result = editor.release_checkpoint(str(video), output_dir=str(tmp_path / "review"))
+
+        assert result["quality"]["overall_score"] == 99.0
+        assert result["thumbnail"].endswith("thumbnail.jpg")
+        assert result["review_required"] is True

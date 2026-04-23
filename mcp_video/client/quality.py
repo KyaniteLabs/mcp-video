@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from typing import Any
 
 from ..defaults import DEFAULT_QUALITY_GATE_SCORE
@@ -34,6 +35,28 @@ class ClientQualityMixin:
         from ..quality_guardrails import assert_quality
 
         return assert_quality(video, min_score=min_score)
+
+    def release_checkpoint(
+        self,
+        input_path: str,
+        output_dir: str | None = None,
+        min_score: float = DEFAULT_QUALITY_GATE_SCORE,
+        frame_count: int = 6,
+    ) -> dict:
+        """Run a hard quality gate, then create human-review artifacts."""
+        quality = self.assert_quality(input_path, min_score=min_score)
+        review_dir = output_dir or f"{os.path.splitext(input_path)[0]}_release_review"
+        os.makedirs(review_dir, exist_ok=True)
+        thumb = self.thumbnail(input_path, output=os.path.join(review_dir, "thumbnail.jpg"))
+        board = self.storyboard(input_path, output_dir=os.path.join(review_dir, "storyboard"), frame_count=frame_count)
+        return {
+            "video": input_path,
+            "quality": quality,
+            "thumbnail": thumb.output_path,
+            "storyboard": board.model_dump() if hasattr(board, "model_dump") else board,
+            "review_required": True,
+            "instructions": "Open the thumbnail/storyboard and inspect the final video before publishing.",
+        }
 
     def design_quality_check(
         self,

@@ -61,6 +61,7 @@ class EditResult(BaseModel):
     progress: float | None = Field(default=None, description="Final progress percentage (0-100)")
     thumbnail_base64: str | None = Field(default=None, description="Base64-encoded JPEG thumbnail of the first frame")
     elapsed_ms: float | None = Field(default=None, description="Wall-clock processing time in milliseconds")
+    warnings: list[str] = Field(default_factory=list, description="Non-fatal guardrail warnings for agent workflows")
 
 
 class ErrorResult(BaseModel):
