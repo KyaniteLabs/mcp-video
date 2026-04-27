@@ -8,11 +8,11 @@
     "compositions": "remotion compositions --json"
   },
   "dependencies": {
-    "@remotion/cli": "4.0.448",
-    "@remotion/transitions": "^4.0.448",
+    "@remotion/cli": "4.0.452",
+    "@remotion/transitions": "^4.0.452",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
-    "remotion": "4.0.448"
+    "remotion": "4.0.452"
   },
   "devDependencies": {
     "@types/react": "^19.2.14",
