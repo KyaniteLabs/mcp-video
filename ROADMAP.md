@@ -4,6 +4,26 @@ v1.2.6 shipped. 90 MCP tools, 905 tests, Hyperframes integration, Remotion depre
 
 ---
 
+## 📋 Planned for v1.3.0
+
+### Revideo Integration — RESEARCHED, DEFERRED
+
+Revideo (MIT licensed, canvas-based) was evaluated as a Remotion replacement. However, Revideo lacks a standalone CLI for external project rendering — it requires running `npm run render` inside the project directory via a TypeScript `render.ts` script. This architecture does not map cleanly to the engine → server → client → CLI pattern used by Hyperframes and Remotion.
+
+**Decision:** Defer Revideo integration. Hyperframes (HTML-native, Apache 2.0) covers the code-to-video use case well. If demand emerges, reconsider.
+
+### Remotion Removal Timeline
+
+- **v1.2.x (current):** Remotion tools emit `DeprecationWarning`
+- **v1.3.0:** Remotion tools moved to optional extra `mcp-video[remotion]`; warnings upgraded to `FutureWarning`
+- **v2.0.0:** Remotion integration removed entirely (breaking change)
+
+### Documentation
+- [ ] Add usage examples to `docs/PYTHON_CLIENT.md` for AI, audio synthesis, and effects pipelines
+- [ ] Add `04-hyperframes-video` workflow template
+
+---
+
 ## ✅ Completed in v1.2.5 (2026-04-27)
 
 ### Hyperframes Integration
