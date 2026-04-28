@@ -7,7 +7,6 @@ from .media import ClientMediaMixin
 from .effects import ClientEffectsMixin
 from .audio import ClientAudioMixin
 from .ai import ClientAiMixin
-from .remotion import ClientRemotionMixin
 from .hyperframes import ClientHyperframesMixin
 from .image import ClientImageMixin
 from .quality import ClientQualityMixin
@@ -20,7 +19,6 @@ class Client(
     ClientEffectsMixin,
     ClientAudioMixin,
     ClientAiMixin,
-    ClientRemotionMixin,
     ClientHyperframesMixin,
     ClientImageMixin,
     ClientQualityMixin,

@@ -86,8 +86,6 @@ def add_parsers(subparsers: argparse._SubParsersAction) -> None:
     template_p.add_argument("--outro", help="Outro video file (for youtube)")
     template_p.add_argument("-o", "--output", help="Output file path")
 
-    # Remotion commands
-
     # Effect commands
 
     # Transition commands

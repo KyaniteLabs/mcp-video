@@ -8,7 +8,7 @@ mcp-video [command] [options]
 
 | Command | Description |
 |---------|-------------|
-| `doctor` | Check FFmpeg, Hyperframes, Remotion, image, and AI dependencies |
+| `doctor` | Check FFmpeg, Hyperframes, image, and AI dependencies |
 
 ## Core Editing
 
@@ -147,21 +147,6 @@ mcp-video [command] [options]
 | `hyperframes-add-block` | Install a block from the Hyperframes catalog |
 | `hyperframes-validate` | Validate a Hyperframes project structure |
 | `hyperframes-pipeline` | Render + post-process in one step |
-
-## Remotion Commands (Deprecated)
-
-> ⚠️ Remotion integration is deprecated and will be removed in a future version.
-
-| Command | Description |
-|---------|-------------|
-| `remotion-render` | Render a Remotion composition to video |
-| `remotion-compositions` | List compositions in a Remotion project |
-| `remotion-studio` | Launch Remotion Studio for live preview |
-| `remotion-still` | Render a single frame as an image |
-| `remotion-create` | Scaffold a new Remotion project |
-| `remotion-scaffold` | Generate a composition from a design spec |
-| `remotion-validate` | Validate a Remotion project structure |
-| `remotion-pipeline` | Render + post-process in one step |
 
 ## Global Options
 

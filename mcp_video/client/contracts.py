@@ -270,15 +270,6 @@ CLIENT_METHOD_CONTRACTS: dict[str, dict[str, Any]] = {
         "return_type": MEDIA_RETURN,
         "aliases": {"video": "input_path", "output": "output_path"},
     },
-    # Remotion
-    "remotion_render": {"category": "media", "return_type": MEDIA_RETURN, "aliases": {"output": "output_path"}},
-    "remotion_still": {"category": "media", "return_type": MEDIA_RETURN, "aliases": {"output": "output_path"}},
-    "remotion_to_mcpvideo": {"category": "media", "return_type": MEDIA_RETURN, "aliases": {"output": "output_path"}},
-    "remotion_compositions": {"category": "report", "return_type": "list", "aliases": {}},
-    "remotion_studio": {"category": "report", "return_type": "dict", "aliases": {}},
-    "remotion_create_project": {"category": "report", "return_type": "dict", "aliases": {"output_dir": "output_path"}},
-    "remotion_scaffold_template": {"category": "report", "return_type": "dict", "aliases": {}},
-    "remotion_validate": {"category": "report", "return_type": "dict", "aliases": {}},
     # Hyperframes
     "hyperframes_render": {"category": "media", "return_type": MEDIA_RETURN, "aliases": {"output": "output_path"}},
     "hyperframes_still": {"category": "media", "return_type": MEDIA_RETURN, "aliases": {"output": "output_path"}},

@@ -34,20 +34,6 @@ python -m pytest tests/test_real_all_features.py -v -m "not slow"
 | **Utility** | 7 | Convert format, preview, storyboard, thumbnail, batch process, timeline edit, generate subtitles |
 | **Total** | **70** | **100% passing** |
 
-## Remotion Tests
-
-Run Remotion-specific tests (requires Node.js 22+ and `npx remotion`):
-
-```bash
-python -m pytest tests/test_remotion_deprecation.py -v
-```
-
-Skip Remotion tests if Node.js is not available:
-
-```bash
-python -m pytest tests/ -v -m "not remotion"
-```
-
 ## Hyperframes Tests
 
 Run Hyperframes-specific tests (requires Node.js 22+ and `npx hyperframes`):

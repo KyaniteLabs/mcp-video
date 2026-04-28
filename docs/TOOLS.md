@@ -100,23 +100,6 @@ Create videos programmatically using [Hyperframes](https://hyperframes.io/) — 
 | `hyperframes_add_block` | Install a block from the Hyperframes catalog |
 | `hyperframes_to_mcpvideo` | Pipeline: render with Hyperframes, then post-process with mcp-video |
 
-## Remotion & Motion Graphics (8 tools) — Deprecated
-
-> ⚠️ **Remotion is deprecated** and will be removed in a future major version. All Remotion tools emit `DeprecationWarning`. Migrate to Hyperframes.
-
-Create videos programmatically using [Remotion](https://www.remotion.dev/) — a React framework for video. Scaffold projects, render compositions, then post-process with mcp-video.
-
-| Tool | Description |
-|------|-------------|
-| `remotion_create_project` | Scaffold a new Remotion project (blank or hello-world template) |
-| `remotion_scaffold_template` | Generate a composition from a design spec (colors, fonts, FPS, duration) |
-| `remotion_render` | Render a Remotion composition to video (MP4) |
-| `remotion_still` | Render a single frame as an image (PNG/JPEG/WebP) |
-| `remotion_compositions` | List all compositions in a project |
-| `remotion_studio` | Launch Remotion Studio for live preview |
-| `remotion_validate` | Check project structure and dependencies |
-| `remotion_to_mcpvideo` | Pipeline: render with Remotion, then post-process with mcp-video |
-
 ---
 
 ## Audio Synthesis (7 tools)

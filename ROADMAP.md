@@ -1,6 +1,6 @@
 # Improvement Roadmap
 
-v1.2.6 shipped. 90 MCP tools, 905 tests, Hyperframes integration, Remotion deprecated. Here's what's next.
+v1.3.0 shipped. 93 MCP tools, Hyperframes integration, 17 new features. Remotion completely removed in v2.0.0. Here's what's next.
 
 ---
 
@@ -14,9 +14,9 @@ Revideo (MIT licensed, canvas-based) was evaluated as a Remotion replacement. Ho
 
 ### Remotion Removal Timeline
 
-- **v1.2.x (current):** Remotion tools emit `DeprecationWarning`
-- **v1.3.0:** Remotion tools moved to optional extra `mcp-video[remotion]`; warnings upgraded to `FutureWarning`
-- **v2.0.0:** Remotion integration removed entirely (breaking change)
+- **v1.2.x:** Remotion tools emitted `DeprecationWarning`
+- **v1.3.0:** Remotion tools emitted `FutureWarning`
+- **v2.0.0 (current):** Remotion integration removed entirely (breaking change) — ✅ completed
 
 ### Documentation
 - [x] Add usage examples to `docs/PYTHON_CLIENT.md` for AI, audio synthesis, and effects pipelines
@@ -41,7 +41,7 @@ Revideo (MIT licensed, canvas-based) was evaluated as a Remotion replacement. Ho
 - [x] Documentation updated across README, TOOLS, CLI_REFERENCE, PYTHON_CLIENT, and CHANGELOG
 
 ### Test Suite
-- [x] Total: 905 tests (844 fast, 61 slow/hyperframes/remotion)
+- [x] Total: 905 tests (844 fast, 61 slow/hyperframes)
 
 ---
 
@@ -97,7 +97,7 @@ v1.2.0 shipped. 82 MCP tools, 832 tests, security hardened. Here's what's next.
 ### Tests
 - [x] 8 new adversarial test cases (injection prevention, null bytes, format validation)
 - [x] 12 new server validation tests (CRF, preset, format, transitions, AI, mograph)
-- [x] Total: 832 tests (707 fast, 116 slow/remotion)
+- [x] Total: 832 tests (707 fast, 116 slow/hyperframes)
 
 ---
 

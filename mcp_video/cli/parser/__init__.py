@@ -13,7 +13,6 @@ from . import image
 from . import layout
 from . import media
 from . import quality
-from . import remotion
 from . import hyperframes
 
 
@@ -53,7 +52,6 @@ def build_parser() -> argparse.ArgumentParser:
     advanced.add_parsers(subparsers)
     audio.add_parsers(subparsers)
     ai.add_parsers(subparsers)
-    remotion.add_parsers(subparsers)
     hyperframes.add_parsers(subparsers)
     layout.add_parsers(subparsers)
     image.add_parsers(subparsers)

@@ -34,7 +34,7 @@ def _validate_input_path(path: str) -> str:
 
 
 def _validate_project_path(path: str) -> str:
-    """Validate a Remotion project directory path."""
+    """Validate a project directory path."""
     if "\x00" in path:
         raise InputFileError(path, "Path contains null bytes")
     resolved = os.path.realpath(path)

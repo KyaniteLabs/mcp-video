@@ -37,7 +37,3 @@ class ClientImageMixin:
         from ..image_engine import analyze_product
 
         return analyze_product(image_path, use_ai=use_ai, n_colors=n_colors)
-
-    # ------------------------------------------------------------------
-    # Remotion Integration
-    # ------------------------------------------------------------------

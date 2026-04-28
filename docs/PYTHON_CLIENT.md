@@ -235,21 +235,6 @@ print(checkpoint["quality_score"])  # Must pass min_score
 
 ---
 
-## Remotion Methods (Deprecated)
-
-> ⚠️ All Remotion methods emit `DeprecationWarning`. Migrate to Hyperframes.
-
-| Method | Returns | Description |
-|--------|---------|-------------|
-| `remotion_render(project_path, composition_id, output?, codec?, crf?, width?, height?, fps?, concurrency?, frames?, props?, scale?)` | `RemotionRenderResult` | Render a Remotion composition |
-| `remotion_compositions(project_path)` | `CompositionsResult` | List compositions |
-| `remotion_studio(project_path, port?)` | `RemotionStudioResult` | Launch Remotion Studio |
-| `remotion_still(project_path, composition_id, output?, frame?, image_format?)` | `RemotionStillResult` | Render a single frame |
-| `remotion_create_project(name, output_dir?, template?)` | `RemotionProjectResult` | Scaffold a new project |
-| `remotion_scaffold_template(project_path, spec, slug)` | `RemotionScaffoldResult` | Generate composition from spec |
-| `remotion_validate(project_path, composition_id?)` | `RemotionValidationResult` | Validate project structure |
-| `remotion_to_mcpvideo(project_path, composition_id, post_process, output?)` | `RemotionPipelineResult` | Render + post-process pipeline |
-
 ---
 
 ## Return Models
@@ -292,11 +277,5 @@ HyperframesBlockResult(success=True, project_path, block_name)
 HyperframesValidationResult(success=True, valid, issues, warnings)
 HyperframesPipelineResult(success=True, output_path, hyperframes_output, post_process)
 
-RemotionRenderResult(success=True, output_path, composition_id, codec)
-RemotionStillResult(success=True, output_path, frame, image_format)
-RemotionStudioResult(success=True, url, port)
-RemotionProjectResult(success=True, project_path, template)
-RemotionScaffoldResult(success=True, project_path, slug)
-RemotionValidationResult(success=True, valid, issues)
-RemotionPipelineResult(success=True, output_path, remotion_output, post_process)
+
 ```

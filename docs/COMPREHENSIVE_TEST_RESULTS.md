@@ -4,7 +4,7 @@
 
 **Date:** 2026-04-22  
 **Tester:** Claude Code (systematic execution test)  
-**Method:** Real MP4 inputs, actual FFmpeg/Remotion subprocess calls, no mocks  
+**Method:** Real MP4 inputs, actual FFmpeg subprocess calls, no mocks  
 **Final Score: 81/81 tools tested and working**
 
 ---
@@ -32,29 +32,9 @@
 **Bug:** Called `guardrails.check()` (doesn't exist) and `guardrails.fix_all()` (doesn't exist). Constructor passed `strict=strict` but `__init__` takes no args.  
 **Fix:** Use `guardrails.analyze(video, auto_fix=...)` which is the actual method.
 
-### 3. All Remotion tools — directory validation bug
-**File:** `mcp_video/server_tools_remotion.py`  
-**Bug:** All 7 Remotion tools used `_validate_input_path()` which checks `os.path.isfile()`, but `project_path` is a directory.  
-**Fix:** Added `_validate_project_path()` helper to `ffmpeg_helpers.py` and updated all Remotion tools to use it.
-
-### 4. Remotion `tsconfig.json` / `HelloWorld.tsx` — invalid template braces
-**File:** `mcp_video/remotion_engine.py`  
-**Bug:** `_TS_CONFIG` and `_HELLO_WORLD_TSX` used `{{` / `}}` (Jinja2 syntax) but were written directly without template rendering, producing invalid JSON/TSX.  
-**Fix:** Replace `{{` → `{` and `}}` → `}` in both constants.
-
-### 5. Remotion `Root.tsx` — wrong Composition props
-**File:** `mcp_video/remotion_engine.py`  
-**Bug:** Used `compositionWidth`/`compositionHeight` but Remotion v4 API uses `width`/`height`.  
-**Fix:** Updated both `create_project` and `_ROOT_TSX` templates.
-
-### 6. Remotion `_ROOT_TSX` — wrong import syntax
-**File:** `mcp_video/remotion_engine.py`  
-**Bug:** Used named import `import { demoComposition } from "./compositions/demo"` but composition files export default.  
-**Fix:** Changed to default import `import demoComposition from "./compositions/demo"`.
-
-### 7. `remotion_to_mcpvideo` — relative path bug
-**File:** `mcp_video/remotion_engine.py`  
-**Bug:** `render_and_post` used relative `render_result.output_path` (e.g., `out/HelloWorld.mp4`) as input to video engine functions, which resolved from CWD instead of project dir.  
+### 3. `hyperframes_to_mcpvideo` — relative path bug
+**File:** `mcp_video/hyperframes_engine.py`  
+**Bug:** `render_and_post` used relative `render_result.output_path` (e.g., `out/demo.mp4`) as input to video engine functions, which resolved from CWD instead of project dir.  
 **Fix:** `os.path.join(project_path, render_result.output_path)`
 
 ---
@@ -163,15 +143,15 @@
 ### Meta (1)
 - `search_tools` ✅
 
-### Remotion (7)
-- `remotion_validate` ✅
-- `remotion_compositions` ✅
-- `remotion_create_project` ✅
-- `remotion_scaffold_template` ✅
-- `remotion_still` ✅
-- `remotion_studio` ✅
-- `remotion_render` ✅
-- `remotion_to_mcpvideo` ✅
+### Hyperframes (8)
+- `hyperframes_validate` ✅
+- `hyperframes_compositions` ✅
+- `hyperframes_init` ✅
+- `hyperframes_add_block` ✅
+- `hyperframes_still` ✅
+- `hyperframes_preview` ✅
+- `hyperframes_render` ✅
+- `hyperframes_to_mcpvideo` ✅
 
 ---
 

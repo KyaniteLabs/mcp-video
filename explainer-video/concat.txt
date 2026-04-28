@@ -1,2 +1,0 @@
-file 'out/McpVideoExplainer.mp4'
-file 'out/new-scenes-bright.mp4'

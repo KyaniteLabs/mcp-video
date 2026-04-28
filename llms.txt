@@ -1,6 +1,6 @@
 # mcp-video
 
-> Video editing and creation for AI agents. `mcp-video` is an open source MCP server, Python client, and CLI that exposes FFmpeg, Hyperframes, and Remotion workflows as structured tools.
+> Video editing and creation for AI agents. `mcp-video` is an open source MCP server, Python client, and CLI that exposes FFmpeg and Hyperframes workflows as structured tools.
 
 ## Use This Project When
 

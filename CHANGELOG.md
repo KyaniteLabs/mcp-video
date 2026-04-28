@@ -9,6 +9,20 @@ This project follows a simple release-note style:
 - `Fixed` for bug fixes.
 - `Security` for vulnerability fixes.
 
+## Unreleased
+
+### Removed
+
+- **Remotion integration completely removed.** All Remotion MCP tools, CLI commands, client methods, engine modules, and tests have been deleted. The project now uses Hyperframes (HTML-native, Apache 2.0) as its sole code-based video creation engine.
+  - Deleted: `mcp_video/remotion_engine.py`, `mcp_video/remotion_models.py`, `mcp_video/server_tools_remotion.py`, `mcp_video/client/remotion.py`, `mcp_video/cli/handlers_remotion.py`, `mcp_video/cli/parser/remotion.py`, `tests/test_remotion_engine.py`, `tests/test_remotion_deprecation.py`
+  - Removed `RemotionNotFoundError`, `RemotionProjectError`, `RemotionRenderError` from `errors.py`
+  - Removed `VALID_REMOTION_TEMPLATES` from `validation.py`
+  - Removed Remotion category from `doctor.py` checks
+  - Updated `test_public_surface.py`: 85 MCP tools (was 93), 86 CLI commands (was 94)
+  - Removed `remotion` optional dependency, pytest marker, and keyword from `pyproject.toml`
+  - Removed Remotion CI smoke test job
+  - Updated all documentation to remove Remotion references
+
 ## 1.3.0 - 2026-04-28
 
 ### Added

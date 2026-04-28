@@ -31,7 +31,7 @@ SCENES = [
     {"color": "#1a1a2e", "text": "Meet mcp-video", "duration": 5},
     {"color": "#16213e", "text": "Edit video with AI agents", "duration": 5},
     {"color": "#0f3460", "text": "81 MCP tools at your command", "duration": 5},
-    {"color": "#533483", "text": "Built on FFmpeg + Remotion", "duration": 5},
+    {"color": "#533483", "text": "Built on FFmpeg + Hyperframes", "duration": 5},
 ]
 
 FPS = 30
