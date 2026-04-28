@@ -27,6 +27,13 @@ def main() -> None:
     parser = build_parser()
     args = parser.parse_args()
 
+    if args.verbose:
+        logging.basicConfig(
+            level=logging.DEBUG,
+            format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+            datefmt="%H:%M:%S",
+        )
+
     # --version
     if args.version:
         from . import __version__

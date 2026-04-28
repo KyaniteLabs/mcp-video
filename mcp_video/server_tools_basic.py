@@ -36,6 +36,7 @@ def video_trim(
     duration: str | None = None,
     end: str | None = None,
     output_path: str | None = None,
+    accurate: bool = False,
 ) -> dict[str, Any]:
     """Trim a video clip by start time and duration.
 
@@ -45,10 +46,12 @@ def video_trim(
         duration: Duration to keep (e.g. '00:00:30' or '30'). Exclusive with end.
         end: End timestamp. Exclusive with duration.
         output_path: Where to save the trimmed video. Auto-generated if omitted.
+        accurate: Frame-accurate seeking (slower).  Default False uses fast
+            input seeking which may land on the nearest keyframe.
     """
     try:
         input_path = _validate_input_path(input_path)
-        return _result(trim(input_path, start=start, duration=duration, end=end, output_path=output_path))
+        return _result(trim(input_path, start=start, duration=duration, end=end, output_path=output_path, accurate=accurate))
     except MCPVideoError as e:
         return _error_result(e)
     except Exception as e:

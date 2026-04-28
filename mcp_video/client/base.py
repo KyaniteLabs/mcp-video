@@ -138,12 +138,31 @@ class ClientBase:
         }
 
     def pipeline(
-        self, steps: list[dict[str, Any]], output_path: str | None = None, output: str | None = None
+        self,
+        steps: list[dict[str, Any]],
+        output_path: str | None = None,
+        output: str | None = None,
+        cleanup: bool = False,
     ) -> EditResult:
-        """Run a simple chained media pipeline with EditResult normalization."""
+        """Run a simple chained media pipeline with EditResult normalization.
+
+        Args:
+            cleanup: Remove intermediate files after the pipeline completes.
+                Only the final output and the original input are kept.
+        """
+        import os
+
         self._validate_pipeline_steps(steps)
         final_output = self._resolve_alias("output_path", output_path, "output", output)
-        result, warnings, saw_quality_gate = self._run_pipeline_steps(steps, final_output)
+        result, warnings, saw_quality_gate, intermediates = self._run_pipeline_steps(steps, final_output)
+        if cleanup and intermediates:
+            for path in intermediates:
+                try:
+                    if os.path.exists(path):
+                        os.remove(path)
+                except OSError:
+                    pass
+            result.intermediates = intermediates
         return self._finalize_pipeline_result(result, warnings, saw_quality_gate)
 
     @staticmethod
@@ -162,11 +181,12 @@ class ClientBase:
 
     def _run_pipeline_steps(
         self, steps: list[dict[str, Any]], final_output: str | None
-    ) -> tuple[EditResult, list[str], bool]:
+    ) -> tuple[EditResult, list[str], bool, list[str]]:
         """Execute pipeline steps and collect guardrail state."""
         current: str | None = None
         result: EditResult | None = None
         warnings: list[str] = []
+        intermediates: list[str] = []
         previous_op: str | None = None
         saw_quality_gate = False
         for index, step in enumerate(steps):
@@ -175,6 +195,8 @@ class ClientBase:
                 saw_quality_gate = True
             step_result = self._execute_pipeline_media_step(op, params, previous_op, warnings)
             if step_result is not None:
+                if result is not None and result.output_path != final_output:
+                    intermediates.append(result.output_path)
                 result = step_result
                 current = result.output_path
             previous_op = op
@@ -182,7 +204,7 @@ class ClientBase:
             raise MCPVideoError(
                 "pipeline produced no media output", error_type="validation_error", code="no_media_output"
             )
-        return result, warnings, saw_quality_gate
+        return result, warnings, saw_quality_gate, intermediates
 
     def _prepare_pipeline_step(
         self, step: dict[str, Any], current: str | None, final_output: str | None, is_last: bool

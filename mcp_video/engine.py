@@ -17,6 +17,9 @@ from .engine_edit import trim as trim
 from .engine_export import export_video as export_video
 from .engine_extract_audio import extract_audio as extract_audio
 from .engine_frames import export_frames as export_frames
+from .engine_hls import hls_segment as hls_segment
+from .engine_advanced_mask import luma_key as luma_key
+from .engine_advanced_mask import shape_mask as shape_mask
 from .engine_filters import _build_pitch_shift_filter as _build_pitch_shift_filter
 from .engine_filters import _get_color_preset_filter as _get_color_preset_filter
 from .engine_filters import apply_filter as _apply_filter

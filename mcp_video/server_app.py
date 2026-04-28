@@ -19,6 +19,14 @@ mcp = FastMCP(
     ),
 )
 
+# Optional anonymous usage ping (disabled via MCP_VIDEO_ANALYTICS=0)
+try:
+    from .analytics import ping
+
+    ping(event="server_start")
+except Exception:
+    pass
+
 logger = logging.getLogger(__name__)
 
 

@@ -249,13 +249,17 @@ def video_export(
 @mcp.tool()
 def video_crop(
     input_path: str,
-    width: int,
-    height: int,
+    width: int | None = None,
+    height: int | None = None,
     x: int | None = None,
     y: int | None = None,
     output_path: str | None = None,
+    crop_percent: float | None = None,
 ) -> dict[str, Any]:
     """Crop a video to a rectangular region.
+
+    Provide either ``width`` + ``height`` or ``crop_percent`` (e.g. 50 for a
+    center 50% crop).  ``x`` and ``y`` default to center.
 
     Args:
         input_path: Absolute path to the input video.
@@ -264,10 +268,22 @@ def video_crop(
         x: X offset (defaults to center).
         y: Y offset (defaults to center).
         output_path: Where to save the output. Auto-generated if omitted.
+        crop_percent: Alternative to width/height — percentage of video
+            dimensions to keep, centered.  E.g. 50 = center 50%.
     """
     try:
         input_path = _validate_input_path(input_path)
-        return _result(crop(input_path, width=width, height=height, x=x, y=y, output_path=output_path))
+        return _result(
+            crop(
+                input_path,
+                width=width,
+                height=height,
+                x=x,
+                y=y,
+                output_path=output_path,
+                crop_percent=crop_percent,
+            )
+        )
     except MCPVideoError as e:
         return _error_result(e)
     except Exception as e:

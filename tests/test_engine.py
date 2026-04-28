@@ -151,10 +151,17 @@ class TestMerge:
             return types.SimpleNamespace(
                 duration=1.0,
                 resolution="320x240",
+                display_resolution="320x240",
                 width=320,
                 height=240,
+                display_width=320,
+                display_height=240,
                 codec="h264",
                 size_mb=1.0,
+                rotation=0,
+                audio_codec="aac",
+                audio_sample_rate=48000,
+                fps=30.0,
             )
 
         def fake_run_ffmpeg(args):

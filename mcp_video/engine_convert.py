@@ -31,7 +31,11 @@ def convert(
     two_pass: bool = False,
     target_bitrate: int | None = None,
 ) -> EditResult:
-    """Convert video to a different format."""
+    """Convert a video to a different format (e.g. mp4 → webm, mp4 → gif).
+
+    Use this when you need to change the container or codec.  For final
+    delivery with quality tuning, prefer :func:`export_video`.
+    """
     input_path = _validate_input_path(input_path)
 
     if two_pass and format not in ("mp4", "mov"):
@@ -48,7 +52,8 @@ def convert(
         )
 
     preset = QUALITY_PRESETS[quality]
-    ext = f".{format}" if not format.startswith(".") else format
+    ext_map = {"hevc": ".mp4", "av1": ".webm", "prores": ".mov"}
+    ext = ext_map.get(format, f".{format}") if not format.startswith(".") else format
     output = output_path or _auto_output(input_path, format, ext=ext)
     _validate_output_path(output)
     input_info = probe(input_path)
@@ -64,6 +69,12 @@ def convert(
             _convert_mov(input_path, output, preset, input_info.duration, on_progress)
         elif format == "gif":
             _convert_gif(input_path, output, quality, input_info.duration, on_progress)
+        elif format == "hevc":
+            _convert_hevc(input_path, output, preset, input_info.duration, on_progress)
+        elif format == "av1":
+            _convert_av1(input_path, output, preset, input_info.duration, on_progress)
+        elif format == "prores":
+            _convert_prores(input_path, output, preset, input_info.duration, on_progress)
         else:
             raise MCPVideoError(f"Unsupported format: {format}", code="unsupported_format")
 
@@ -192,11 +203,15 @@ def _convert_gif(
     input_path: str, output: str, quality: QualityLevel, duration: float, on_progress: Callable[[float], None] | None
 ) -> None:
     gif_scale = {"low": 320, "medium": 480, "high": 640, "ultra": 800}
+    gif_fps = {"low": 10, "medium": 12, "high": 15, "ultra": 20}
     width = gif_scale.get(quality, 480)
+    fps = gif_fps.get(quality, 15)
     tmpdir = tempfile.mkdtemp(prefix="mcp_video_gif_")
     try:
         palette = os.path.join(tmpdir, "palette.png")
-        _run_ffmpeg(["-i", input_path, "-vf", f"fps=15,scale={width}:-1:flags=lanczos,palettegen", "-y", palette])
+        _run_ffmpeg(
+            ["-i", input_path, "-vf", f"fps={fps},scale={width}:-1:flags=lanczos,palettegen=max_colors=128", "-y", palette]
+        )
         _run_ffmpeg_with_progress(
             [
                 "-i",
@@ -204,7 +219,7 @@ def _convert_gif(
                 "-i",
                 palette,
                 "-lavfi",
-                f"fps=15,scale={width}:-1:flags=lanczos [x]; [x][1:v] paletteuse",
+                f"fps={fps},scale={width}:-1:flags=lanczos [x]; [x][1:v] paletteuse=dither=bayer",
                 "-y",
                 output,
             ],
@@ -213,6 +228,76 @@ def _convert_gif(
         )
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+def _convert_hevc(
+    input_path: str, output: str, preset: dict, duration: float, on_progress: Callable[[float], None] | None
+) -> None:
+    _run_ffmpeg_with_progress(
+        [
+            "-i",
+            input_path,
+            "-c:v",
+            "libx265",
+            "-crf",
+            str(preset["crf"]),
+            "-preset",
+            preset["preset"],
+            "-c:a",
+            "aac",
+            "-b:a",
+            DEFAULT_AUDIO_BITRATE,
+            "-tag:v",
+            "hvc1",
+            "-movflags",
+            "+faststart",
+            output,
+        ],
+        estimated_duration=duration,
+        on_progress=on_progress,
+    )
+
+
+def _convert_av1(
+    input_path: str, output: str, preset: dict, duration: float, on_progress: Callable[[float], None] | None
+) -> None:
+    _run_ffmpeg_with_progress(
+        [
+            "-i",
+            input_path,
+            "-c:v",
+            "libsvtav1",
+            "-crf",
+            str(preset["crf"]),
+            "-preset",
+            preset["preset"],
+            "-c:a",
+            "libopus",
+            output,
+        ],
+        estimated_duration=duration,
+        on_progress=on_progress,
+    )
+
+
+def _convert_prores(
+    input_path: str, output: str, preset: dict, duration: float, on_progress: Callable[[float], None] | None
+) -> None:
+    _run_ffmpeg_with_progress(
+        [
+            "-i",
+            input_path,
+            "-c:v",
+            "prores_ks",
+            "-profile:v",
+            "2",
+            "-c:a",
+            "pcm_s16le",
+            output,
+        ],
+        estimated_duration=duration,
+        on_progress=on_progress,
+    )
 
 
 def _convert_result(output: str, format: ExportFormat, elapsed_ms: float | None = None) -> EditResult:

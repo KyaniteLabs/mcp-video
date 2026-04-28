@@ -15,10 +15,13 @@ from .engine import (
     detect_scenes,
     export_frames,
     generate_subtitles,
+    hls_segment,
+    luma_key,
     normalize_audio,
     overlay_video,
     read_metadata,
     reverse,
+    shape_mask,
     split_screen,
     stabilize,
     write_metadata,
@@ -72,6 +75,87 @@ def video_filter(
                 output_path=output_path,
                 crf=crf,
                 preset=preset,
+            )
+        )
+    except MCPVideoError as e:
+        return _error_result(e)
+    except Exception as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_luma_key(
+    input_path: str,
+    threshold: float = 0.5,
+    output_path: str | None = None,
+) -> dict[str, Any]:
+    """Mask out dark regions based on luminance (brightness).
+
+    Args:
+        input_path: Absolute path to the input video.
+        threshold: Luminance threshold (0.0-1.0). Pixels darker than this
+            become transparent.
+        output_path: Where to save the output. Auto-generated if omitted.
+    """
+    try:
+        input_path = _validate_input_path(input_path)
+        return _result(luma_key(input_path, threshold=threshold, output_path=output_path))
+    except MCPVideoError as e:
+        return _error_result(e)
+    except Exception as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_shape_mask(
+    input_path: str,
+    shape: str = "circle",
+    output_path: str | None = None,
+    feather: int = 0,
+) -> dict[str, Any]:
+    """Apply a geometric shape mask to a video.
+
+    Args:
+        input_path: Absolute path to the input video.
+        shape: Shape to use — "circle", "rounded_rect", or "oval".
+        output_path: Where to save the output. Auto-generated if omitted.
+        feather: Feather radius in pixels (0 = sharp edges).
+    """
+    try:
+        input_path = _validate_input_path(input_path)
+        return _result(shape_mask(input_path, shape=shape, output_path=output_path, feather=feather))
+    except MCPVideoError as e:
+        return _error_result(e)
+    except Exception as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_hls_segment(
+    input_path: str,
+    output_dir: str | None = None,
+    segment_duration: int = 4,
+    playlist_name: str = "playlist.m3u8",
+    qualities: list[str] | None = None,
+) -> dict[str, Any]:
+    """Segment a video into HLS (HTTP Live Streaming) format.
+
+    Args:
+        input_path: Absolute path to the input video.
+        output_dir: Directory to save segments. Auto-generated if omitted.
+        segment_duration: Target segment duration in seconds (default 4).
+        playlist_name: Name of the master playlist file.
+        qualities: List of quality levels (e.g. ["low", "medium", "high"]).
+    """
+    try:
+        input_path = _validate_input_path(input_path)
+        return _result(
+            hls_segment(
+                input_path,
+                output_dir=output_dir,
+                segment_duration=segment_duration,
+                playlist_name=playlist_name,
+                qualities=qualities,
             )
         )
     except MCPVideoError as e:

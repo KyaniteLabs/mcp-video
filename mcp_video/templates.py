@@ -190,6 +190,54 @@ def instagram_post_template(
     return timeline
 
 
+def preview_template(
+    template_name: str,
+    video_path: str,
+    **kwargs: Any,
+) -> dict[str, Any]:
+    """Return a preview of what a template would produce without rendering.
+
+    Returns:
+        Dict with ``operations``, ``estimated_duration``, ``resolution``,
+        ``format``, and ``quality`` for agent review before committing.
+    """
+    tmpl = TEMPLATES.get(template_name)
+    if tmpl is None:
+        raise ValueError(f"Unknown template: {template_name}. Available: {list(TEMPLATES.keys())}")
+    timeline = tmpl(video_path, **kwargs)
+    tracks = timeline.get("tracks", [])
+    export = timeline.get("export", {})
+
+    operations: list[str] = []
+    video_clips: list[dict] = []
+    for track in tracks:
+        ttype = track.get("type")
+        if ttype == "video":
+            video_clips = track.get("clips", [])
+            operations.append(f"resize_to_{timeline['width']}x{timeline['height']}")
+        elif ttype == "text":
+            operations.append(f"add_text ({len(track.get('elements', []))} overlay(s))")
+        elif ttype == "audio":
+            operations.append(f"mix_audio ({len(track.get('clips', []))} track(s))")
+
+    total_duration = 0.0
+    for clip in video_clips:
+        dur = clip.get("duration") or clip.get("trim_end")
+        if dur is None:
+            dur = 10.0  # fallback
+        total_duration += float(dur)
+
+    return {
+        "template": template_name,
+        "operations": operations,
+        "estimated_duration": round(total_duration, 1),
+        "resolution": f"{timeline['width']}x{timeline['height']}",
+        "format": export.get("format", "mp4"),
+        "quality": export.get("quality", "high"),
+        "timeline": timeline,
+    }
+
+
 # Template registry
 TEMPLATES: dict[str, Any] = {
     "tiktok": tiktok_template,

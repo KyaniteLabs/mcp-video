@@ -17,7 +17,12 @@ def export_video(
     two_pass: bool = False,
     target_bitrate: int | None = None,
 ) -> EditResult:
-    """Export a video with specified quality and format settings."""
+    """Export a video for final delivery with quality tuning.
+
+    This is a convenience wrapper around :func:`convert` that defaults to
+    high-quality mp4.  Use it when you want to re-encode for publishing
+    rather than change the format.
+    """
     input_path = _validate_input_path(input_path)
     from .engine_convert import convert
 
