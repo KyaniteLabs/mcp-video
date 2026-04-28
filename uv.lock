@@ -1524,7 +1524,7 @@ requires-dist = [
     { name = "webcolors", marker = "extra == 'image'", specifier = ">=1.13" },
     { name = "webcolors", marker = "extra == 'image-ai'", specifier = ">=1.13" },
 ]
-provides-extras = ["client", "image", "image-ai", "remotion", "transcribe", "ai-scene", "stems", "upscale", "ai", "all-ai", "dev"]
+provides-extras = ["client", "image", "image-ai", "transcribe", "ai-scene", "stems", "upscale", "ai", "all-ai", "dev"]
 
 [[package]]
 name = "mdurl"
