@@ -9,6 +9,12 @@ This project follows a simple release-note style:
 - `Fixed` for bug fixes.
 - `Security` for vulnerability fixes.
 
+## 1.2.6 - 2026-04-27
+
+### Changed
+
+- Bumped version to 1.2.6 (1.2.5 tag already existed).
+
 ## 1.2.5 - 2026-04-27
 
 ### Added

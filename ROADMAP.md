@@ -1,6 +1,6 @@
 # Improvement Roadmap
 
-v1.2.5 shipped. 90 MCP tools, 905 tests, Hyperframes integration, Remotion deprecated. Here's what's next.
+v1.2.6 shipped. 90 MCP tools, 905 tests, Hyperframes integration, Remotion deprecated. Here's what's next.
 
 ---
 
