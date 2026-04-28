@@ -415,7 +415,7 @@ def search_tools(query: str) -> dict[str, Any]:
     """Search registered MCP tools by keyword.
 
     Use this when you need to find the right tool for a task without reading
-    all 80 tool descriptions. Returns matching tools with their names,
+    all 85 tool descriptions. Returns matching tools with their names,
     descriptions, and required parameters.
 
     Args:

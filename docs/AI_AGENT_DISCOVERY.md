@@ -22,7 +22,7 @@ This document is the short, explicit discovery map for agents, answer engines, a
 - `README.md` - install, quick start, tools, CLI, Python client, workflows.
 - `CLAUDE.md` - Layer 0 identity: what this project is, where to find staged pipelines.
 - `llms.txt` - compact machine-readable project map.
-- `mcp_video/server.py` - MCP tool registration layer (90 tools + search_tools meta-tool).
+- `mcp_video/server.py` - MCP tool registration layer (85 tools + search_tools meta-tool).
 - `mcp_video/engine.py` - core FFmpeg operations.
 - `mcp_video/client/` - Python client mixins. Use `Client.inspect()`, `Client.pipeline()`, and `Client.release_checkpoint()` for guarded agent workflows.
 - `mcp_video/client/meta.py` - Client-side tool discovery (`search_tools`).
