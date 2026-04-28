@@ -79,6 +79,20 @@ def hls_segment(
                 ]
             )
 
+        # Write a master playlist that references all variants
+        master_lines = ["#EXTM3U"]
+        for quality in qualities:
+            q_dir = os.path.join(output_dir, quality)
+            variant_playlist = os.path.join(q_dir, "playlist.m3u8")
+            if os.path.isfile(variant_playlist):
+                # Infer bandwidth roughly from height
+                height_map = {"low": 480, "medium": 720, "high": 1080, "ultra": 1080}
+                bw = height_map.get(quality, 1080) * 3000  # rough kbps
+                master_lines.append(f"#EXT-X-STREAM-INF:BANDWIDTH={bw}")
+                master_lines.append(os.path.join(quality, "playlist.m3u8"))
+        with open(playlist_path, "w") as f:
+            f.write("\n".join(master_lines) + "\n")
+
     return EditResult(
         output_path=playlist_path,
         duration=info.duration,

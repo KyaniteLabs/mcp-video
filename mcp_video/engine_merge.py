@@ -89,7 +89,9 @@ def merge(
                         f"scale={target_w}:{target_h}:force_original_aspect_ratio=decrease",
                         f"pad={target_w}:{target_h}:(ow-iw)/2:(oh-ih)/2",
                     ]
-                    if info.rotation in (90, 270):
+                    if info.rotation == 90:
+                        vf_parts.insert(0, "transpose=2")
+                    elif info.rotation == 270:
                         vf_parts.insert(0, "transpose=1")
                     _run_ffmpeg(
                         [
