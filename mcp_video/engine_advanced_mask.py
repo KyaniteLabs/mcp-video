@@ -101,6 +101,7 @@ def shape_mask(
             )
     finally:
         import shutil
+
         shutil.rmtree(tmpdir, ignore_errors=True)
 
     result_info = probe(output)
@@ -115,9 +116,7 @@ def shape_mask(
     )
 
 
-def _generate_shape_mask(
-    width: int, height: int, shape: str, output_path: str, feather: int
-) -> None:
+def _generate_shape_mask(width: int, height: int, shape: str, output_path: str, feather: int) -> None:
     """Generate a grayscale mask image for the given shape."""
     img = Image.new("L", (width, height), 0)
     draw = ImageDraw.Draw(img)

@@ -449,7 +449,11 @@ class TestStudio:
         mock_proc.poll.return_value = 1
         mock_proc.stderr.read.return_value = "some error"
 
-        with _mock_deps_ok(), patch("mcp_video.remotion_engine.subprocess.Popen", return_value=mock_proc), pytest.raises(RemotionProjectError):
+        with (
+            _mock_deps_ok(),
+            patch("mcp_video.remotion_engine.subprocess.Popen", return_value=mock_proc),
+            pytest.raises(RemotionProjectError),
+        ):
             studio(project, port=3000)
 
 
@@ -538,7 +542,6 @@ class TestStill:
 
 class TestCreateProject:
     """Tests for create_project()."""
-
 
     def test_rejects_invalid_project_name_at_engine_boundary(self, tmp_path):
         with (

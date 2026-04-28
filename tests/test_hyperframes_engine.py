@@ -409,7 +409,10 @@ class TestPreview:
         mock_proc = MagicMock()
         mock_proc.poll.return_value = None
 
-        with _mock_deps_ok(), patch("mcp_video.hyperframes_engine.subprocess.Popen", return_value=mock_proc) as mock_popen:
+        with (
+            _mock_deps_ok(),
+            patch("mcp_video.hyperframes_engine.subprocess.Popen", return_value=mock_proc) as mock_popen,
+        ):
             preview(project, port=3001)
 
             call_args = mock_popen.call_args
@@ -538,7 +541,10 @@ class TestCreateProject:
 
     def test_returns_project_result(self, tmp_path):
         """create_project() should return a HyperframesProjectResult."""
-        with _mock_deps_ok(), patch("mcp_video.hyperframes_engine.subprocess.run", return_value=_make_completed_process()):
+        with (
+            _mock_deps_ok(),
+            patch("mcp_video.hyperframes_engine.subprocess.run", return_value=_make_completed_process()),
+        ):
             result = create_project("proj", output_dir=str(tmp_path), template="blank")
             assert result.template == "blank"
             assert "proj" in result.project_path
@@ -581,7 +587,13 @@ class TestValidate:
         """validate() should return valid=True for a well-formed project."""
         (tmp_path / "index.html").write_text("<!DOCTYPE html><html></html>")
 
-        with _mock_deps_ok(), patch("mcp_video.hyperframes_engine._run_hyperframes", return_value=_make_completed_process(stdout='{"errors": [], "warnings": []}')):
+        with (
+            _mock_deps_ok(),
+            patch(
+                "mcp_video.hyperframes_engine._run_hyperframes",
+                return_value=_make_completed_process(stdout='{"errors": [], "warnings": []}'),
+            ),
+        ):
             result = validate(str(tmp_path))
 
         assert result.valid is True
@@ -592,9 +604,12 @@ class TestValidate:
         (tmp_path / "index.html").write_text("<!DOCTYPE html><html></html>")
         lint_json = '{"errors": ["missing data-composition-id"], "warnings": ["missing meta viewport"]}'
 
-        with _mock_deps_ok(), patch(
-            "mcp_video.hyperframes_engine._run_hyperframes",
-            return_value=_make_completed_process(returncode=1, stdout=lint_json),
+        with (
+            _mock_deps_ok(),
+            patch(
+                "mcp_video.hyperframes_engine._run_hyperframes",
+                return_value=_make_completed_process(returncode=1, stdout=lint_json),
+            ),
         ):
             result = validate(str(tmp_path))
 

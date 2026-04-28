@@ -51,7 +51,9 @@ def video_trim(
     """
     try:
         input_path = _validate_input_path(input_path)
-        return _result(trim(input_path, start=start, duration=duration, end=end, output_path=output_path, accurate=accurate))
+        return _result(
+            trim(input_path, start=start, duration=duration, end=end, output_path=output_path, accurate=accurate)
+        )
     except MCPVideoError as e:
         return _error_result(e)
     except Exception as e:

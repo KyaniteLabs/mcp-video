@@ -210,7 +210,14 @@ def _convert_gif(
     try:
         palette = os.path.join(tmpdir, "palette.png")
         _run_ffmpeg(
-            ["-i", input_path, "-vf", f"fps={fps},scale={width}:-1:flags=lanczos,palettegen=max_colors=128", "-y", palette]
+            [
+                "-i",
+                input_path,
+                "-vf",
+                f"fps={fps},scale={width}:-1:flags=lanczos,palettegen=max_colors=128",
+                "-y",
+                palette,
+            ]
         )
         _run_ffmpeg_with_progress(
             [

@@ -72,12 +72,7 @@ def merge(
     fps_set = {round(i.fps, 2) for i in infos}
     audio_rates = {i.audio_sample_rate for i in infos if i.audio_sample_rate}
 
-    needs_normalize = (
-        len(resolutions) > 1
-        or len(codecs) > 1
-        or len(fps_set) > 1
-        or len(audio_rates) > 1
-    )
+    needs_normalize = len(resolutions) > 1 or len(codecs) > 1 or len(fps_set) > 1 or len(audio_rates) > 1
     target_w = max(i.display_width for i in infos)
     target_h = max(i.display_height for i in infos)
 
