@@ -9,6 +9,7 @@ ICM-style staged pipelines for common video productions.
 | `01-social-media-clip` | Turn landscape video into TikTok / Short / Reel | 5 |
 | `02-podcast-clip` | Extract highlight with chapters and captions | 6 |
 | `03-explainer-video` | Build branded explainer from scratch | 7 |
+| `04-hyperframes-video` | Create video with Hyperframes, then post-process | 5 |
 
 ## How to use
 

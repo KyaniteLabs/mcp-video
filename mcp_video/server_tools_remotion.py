@@ -13,11 +13,7 @@ from .validation import VALID_CODECS, VALID_REMOTION_TEMPLATES
 from .ffmpeg_helpers import _validate_project_path
 
 
-_REMOTION_DEPRECATION_MSG = (
-    "Remotion integration is deprecated and will be removed in a future version. "
-    "Please migrate to Hyperframes (HTML-native, fully open source under Apache 2.0) "
-    "or Revideo (Canvas-based, MIT licensed)."
-)
+_REMOTION_DEPRECATION_MSG = "Remotion is deprecated. Migrate to Hyperframes or Revideo."
 
 
 def _warn_remotion_deprecated() -> None:

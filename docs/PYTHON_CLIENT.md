@@ -20,6 +20,87 @@ Analysis methods return report models or dictionaries.
 
 ---
 
+## Usage Examples
+
+### Pipeline chaining
+
+```python
+from mcp_video import Client
+
+client = Client()
+
+# Chain operations — each step receives the previous output_path
+result = client.pipeline(
+    [
+        {"op": "trim", "start": "00:00:10", "duration": "00:00:30"},
+        {"op": "resize", "aspect_ratio": "9:16"},
+        {"op": "add_text", "text": "Subscribe!", "position": "bottom-center", "size": 48},
+        {"op": "normalize_audio", "target_lufs": -14},
+        {"op": "export", "quality": "high"},
+    ],
+    output_path="final.mp4",
+)
+print(result.output_path)
+```
+
+### AI analysis + extract highlights
+
+```python
+info = client.analyze_video("interview.mp4")
+scenes = info["scenes"]  # Auto-detected scene changes
+
+# Extract a thumbnail from each scene
+for i, (start, end) in enumerate(scenes[:5]):
+    client.thumbnail("interview.mp4", timestamp=start, output=f"scene_{i}.jpg")
+```
+
+### Generate audio and composite
+
+```python
+# Create a tech drone + success chimes
+drone = client.audio_preset("drone-tech", "drone.wav", duration=20, intensity=0.3)
+chime = client.audio_preset("chime-success", "chime.wav", intensity=0.6)
+
+soundtrack = client.audio_compose(
+    tracks=[
+        {"file": drone, "volume": 0.3, "start": 0},
+        {"file": chime, "volume": 0.8, "start": 5},
+        {"file": chime, "volume": 0.8, "start": 15},
+    ],
+    duration=20,
+    output="soundtrack.wav",
+)
+```
+
+### Effects chain
+
+```python
+client.effect_vignette("raw.mp4", "vignette.mp4", intensity=0.4)
+client.effect_glow("vignette.mp4", "glow.mp4", intensity=0.3)
+client.transition_glitch("scene1.mp4", "scene2.mp4", "glitch.mp4", duration=0.5)
+```
+
+### Hyperframes workflow
+
+```python
+# Scaffold, render, post-process
+project = client.hyperframes_init("my-video", template="warm-grain")
+client.hyperframes_validate(project.project_path)
+render = client.hyperframes_render(project.project_path, output="base.mp4")
+client.add_text(render.output_path, text="EPISODE 1", position="top-center", output="final.mp4")
+```
+
+### Quality gate before publishing
+
+```python
+checkpoint = client.release_checkpoint("final.mp4", min_score=0.8)
+print(checkpoint["thumbnail"])      # Review thumbnail
+print(checkpoint["storyboard"])     # Review key frames
+print(checkpoint["quality_score"])  # Must pass min_score
+```
+
+---
+
 ## Core Editing Methods
 
 | Method | Returns | Description |

@@ -7,6 +7,7 @@
 | Turn a long video into a TikTok / Short / Reel | `01-social-media-clip` | 5 | 2-5 min |
 | Extract a podcast highlight with chapters and captions | `02-podcast-clip` | 6 | 5-10 min |
 | Build a branded explainer video from scratch | `03-explainer-video` | 7 | 30-60 min |
+| Create a video with Hyperframes, then post-process | `04-hyperframes-video` | 5 | 10-20 min |
 
 ## How to run a workflow
 
