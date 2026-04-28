@@ -47,7 +47,6 @@ This repository previously contained local/demo artifacts and extracted/referenc
 
 Before a public release or commercial deployment:
 
-1. Confirm whether your usage includes optional **Remotion** features.
 2. Confirm whether you are **bundling** FFmpeg or only invoking a system install.
 3. Review the licenses of all optional AI/media dependencies you intend to ship.
 4. Keep release artifacts limited to the intended package surface.

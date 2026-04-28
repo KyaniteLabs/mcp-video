@@ -91,51 +91,13 @@ Full Hyperframes integration with 8 MCP tools, Python client methods, and CLI co
 
 ---
 
-## 4. Remotion Integration — DEPRECATED
+## 4. Remotion Integration — REMOVED
 
-### Status: Deprecated in v1.2.5. Will be removed in a future major version.
+### Status: Completely removed in v2.0.0 (PR #163).
 
-Remotion's custom freemium license (company-size gate, no derivative resale) creates liability for wrappers like mcp-video. All Remotion tools now emit `DeprecationWarning`. Migrate to Hyperframes (Apache 2.0) or Revideo (MIT).
+Remotion's custom freemium license (company-size gate, no derivative resale) created liability for wrappers like mcp-video. All Remotion MCP tools, CLI commands, client methods, engine modules, and tests have been deleted. Hyperframes (HTML-native, Apache 2.0) is now the sole code-based video creation engine.
 
-### Previous Status: Third-party template available as reference. Complementary to mcp-video.
-
-### Available Reference Material
-
-A third-party `script-to-animation` template exists at `~/Desktop/Interpreted-Context-Methdology/workspaces/script-to-animation`. It was downloaded (not built by us) and has never been configured or used.
-
-**What it contains:**
-- 60+ markdown files defining a 3-stage pipeline: Script → Spec → Build (Remotion components)
-- A Remotion best-practices skill (35 rule files covering animations, sequencing, transitions, timing, etc.)
-- A design aesthetics skill
-- All `{{PLACEHOLDER}}` values are unfilled — brand, voice, audience, colors, fonts
-- Targets TikTok/Reels (9:16), YouTube (16:9), YouTube Shorts (9:16)
-
-### Complementary Relationship
-
-**script-to-animation** and **mcp-video** are complementary, not competing:
-
-| | script-to-animation | mcp-video |
-|---|---|---|
-| **Purpose** | Generate original video from scratch | Manipulate existing video |
-| **Engine** | React/Remotion (programmatic animation) | FFmpeg (editing, overlays, export) |
-| **Ecosystem** | Node.js/TypeScript | Python |
-| **Best for** | Motion graphics, kinetic typography, data-driven templates | Post-processing, overlays, platform export |
-
-**Pipeline:** `script-to-animation (generate) → mcp-video (polish/export)`
-
-### Recommended Approach
-
-1. **Reuse the Remotion skill** — the 35 rule files are high-quality reference material for animations, sequencing, transitions, and timing
-2. **Adapt the build conventions** — project structure (composition → beats → constants → assets) is well-designed
-3. **Skip the brand questionnaire** — configure for Cerafica or a specific use case when ready
-4. **No custom MCP server needed** — Remotion renders via CLI, output feeds directly into mcp-video
-
-### When to Build
-- If you need complex motion graphics (animated transitions, kinetic typography)
-- If you need to generate 100+ data-driven video variants from templates
-- If clients request After Effects-style animations programmatically
-
-### Effort: 5-10 days (Remotion project setup + template design + mcp-video pipeline integration)
+**Migration path:** Use `hyperframes_init`, `hyperframes_render`, `hyperframes_preview`, and `hyperframes_to_mcpvideo` instead of the removed Remotion equivalents.
 
 ---
 
@@ -145,4 +107,4 @@ A third-party `script-to-animation` template exists at `~/Desktop/Interpreted-Co
 |-------------|----------|--------|--------|---------|-----|
 | Blender MCP | LOW | 1-2 days | Defer | No | Medium |
 | Image Analysis | MEDIUM | 2-3 days | **Completed (v0.7.0)** | Yes | Medium |
-| Remotion | MEDIUM | 5-10 days | Deprecated (v1.2.5) | Yes | Medium (later) |
+| Remotion | MEDIUM | 5-10 days | **Removed (v2.0.0)** | N/A | N/A |
