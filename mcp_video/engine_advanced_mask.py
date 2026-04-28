@@ -5,7 +5,6 @@ from __future__ import annotations
 import os
 import tempfile
 
-from PIL import Image, ImageDraw, ImageFilter
 
 from .engine_probe import probe
 from .engine_runtime_utils import _auto_output, _movflags_args, _quality_args, _run_ffmpeg, _timed_operation
@@ -118,6 +117,8 @@ def shape_mask(
 
 def _generate_shape_mask(width: int, height: int, shape: str, output_path: str, feather: int) -> None:
     """Generate a grayscale mask image for the given shape."""
+    from PIL import Image, ImageDraw, ImageFilter
+
     img = Image.new("L", (width, height), 0)
     draw = ImageDraw.Draw(img)
 
