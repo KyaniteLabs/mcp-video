@@ -405,9 +405,7 @@ class TestClientTextAnimatedValidation:
 class TestClientAgentApiConsistency:
     def test_every_public_client_method_has_contract(self, editor):
         public_methods = {
-            name
-            for name, value in inspect.getmembers(editor, predicate=callable)
-            if not name.startswith("_")
+            name for name, value in inspect.getmembers(editor, predicate=callable) if not name.startswith("_")
         }
 
         assert public_methods == set(CLIENT_METHOD_CONTRACTS)
@@ -529,12 +527,16 @@ class TestClientAgentApiConsistency:
         monkeypatch.setattr(
             editor,
             "thumbnail",
-            lambda input_path, output=None, **kwargs: editor._to_edit_result(output or "/tmp/thumb.jpg", operation="thumbnail"),
+            lambda input_path, output=None, **kwargs: editor._to_edit_result(
+                output or "/tmp/thumb.jpg", operation="thumbnail"
+            ),
         )
         monkeypatch.setattr(
             editor,
             "storyboard",
-            lambda input_path, output_path=None, **kwargs: editor._to_edit_result(output_path or "/tmp/storyboard.jpg", operation="storyboard"),
+            lambda input_path, output_path=None, **kwargs: editor._to_edit_result(
+                output_path or "/tmp/storyboard.jpg", operation="storyboard"
+            ),
         )
 
         result = editor.release_checkpoint(str(video), output_dir=str(tmp_path / "review"))

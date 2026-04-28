@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from .limits import *  # noqa: F403 — re-export all limit constants
 
-VALID_FORMATS = {"mp4", "webm", "gif", "mov"}
+VALID_FORMATS = {"mp4", "webm", "gif", "mov", "hevc", "av1", "prores"}
 VALID_AUDIO_FORMATS = {"mp3", "aac", "wav", "ogg", "flac"}
 VALID_PRESETS = {"ultrafast", "fast", "medium", "slow", "veryslow"}
 VALID_CODECS = {"h264", "h265", "vp8", "vp9", "prores", "gif"}

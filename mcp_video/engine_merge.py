@@ -65,14 +65,16 @@ def merge(
 
     clips = [_validate_input_path(c) for c in clips]
 
-    # Check if all clips have same resolution — if not, normalize
+    # Check if all clips have same properties — if not, normalize
     infos = [probe(c) for c in clips]
-    resolutions = {i.resolution for i in infos}
+    resolutions = {i.display_resolution for i in infos}
     codecs = {i.codec for i in infos}
+    fps_set = {round(i.fps, 2) for i in infos}
+    audio_rates = {i.audio_sample_rate for i in infos if i.audio_sample_rate}
 
-    needs_normalize = len(resolutions) > 1 or len(codecs) > 1
-    target_w = max(i.width for i in infos)
-    target_h = max(i.height for i in infos)
+    needs_normalize = len(resolutions) > 1 or len(codecs) > 1 or len(fps_set) > 1 or len(audio_rates) > 1
+    target_w = max(i.display_width for i in infos)
+    target_h = max(i.display_height for i in infos)
 
     working_clips: list[str] = []
 
@@ -82,12 +84,21 @@ def merge(
             if needs_normalize:
                 for i, clip in enumerate(clips):
                     norm_path = os.path.join(tmpdir, f"clip_{i:04d}.mp4")
+                    info = infos[i]
+                    vf_parts = [
+                        f"scale={target_w}:{target_h}:force_original_aspect_ratio=decrease",
+                        f"pad={target_w}:{target_h}:(ow-iw)/2:(oh-ih)/2",
+                    ]
+                    if info.rotation == 90:
+                        vf_parts.insert(0, "transpose=2")
+                    elif info.rotation == 270:
+                        vf_parts.insert(0, "transpose=1")
                     _run_ffmpeg(
                         [
                             "-i",
                             clip,
                             "-vf",
-                            f"scale={target_w}:{target_h}:force_original_aspect_ratio=decrease,pad={target_w}:{target_h}:(ow-iw)/2:(oh-ih)/2",
+                            ",".join(vf_parts),
                             "-c:v",
                             "libx264",
                             "-preset",

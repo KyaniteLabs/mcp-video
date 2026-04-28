@@ -20,6 +20,8 @@ from ..engine import (
     extract_audio as _extract_audio,
     fade as _fade,
     generate_subtitles as _generate_subtitles,
+    hls_segment as _hls_segment,
+    luma_key as _luma_key,
     merge as _merge,
     normalize_audio as _normalize_audio,
     overlay_video as _overlay_video,
@@ -27,6 +29,7 @@ from ..engine import (
     read_metadata as _read_metadata,
     resize as _resize,
     rotate as _rotate,
+    shape_mask as _shape_mask,
     split_screen as _split_screen,
     stabilize as _stabilize,
     storyboard as _storyboard,
@@ -60,9 +63,13 @@ class ClientMediaMixin:
         duration: str | float | None = None,
         end: str | float | None = None,
         output: str | None = None,
+        accurate: bool = False,
     ) -> EditResult:
-        """Trim a clip by start time and duration."""
-        return _trim(input, start=start, duration=duration, end=end, output_path=output)
+        """Trim a clip by start time and duration.
+
+        Set ``accurate=True`` for frame-accurate output seeking (slower).
+        """
+        return _trim(input, start=start, duration=duration, end=end, output_path=output, accurate=accurate)
 
     def merge(
         self,
@@ -164,7 +171,7 @@ class ClientMediaMixin:
             output_path=output,
         )
 
-    _VALID_FORMATS: ClassVar[set[str]] = {"mp4", "webm", "gif", "mov"}
+    _VALID_FORMATS: ClassVar[set[str]] = {"mp4", "webm", "gif", "mov", "hevc", "av1", "prores"}
     _VALID_QUALITIES: ClassVar[set[str]] = {"low", "medium", "high", "ultra"}
 
     def convert(
@@ -180,7 +187,7 @@ class ClientMediaMixin:
 
         Args:
             video: Input video path
-            format: Output format (mp4, webm, gif, mov). CLI: -f/--format
+            format: Output format (mp4, webm, gif, mov, hevc, av1, prores). CLI: -f/--format
             quality: Quality preset (low, medium, high, ultra). CLI: -q/--quality
             output: Output file path
             two_pass: Enable two-pass encoding
@@ -277,14 +284,27 @@ class ClientMediaMixin:
     def crop(
         self,
         video: str,
-        width: int,
-        height: int,
+        width: int | None = None,
+        height: int | None = None,
         x: int | None = None,
         y: int | None = None,
         output: str | None = None,
+        crop_percent: float | None = None,
     ) -> EditResult:
-        """Crop a video to a rectangular region."""
-        return _crop(video, width=width, height=height, x=x, y=y, output_path=output)
+        """Crop a video to a rectangular region.
+
+        Provide either ``width`` + ``height`` or ``crop_percent`` (e.g. 50
+        for a center 50% crop).  ``x`` and ``y`` default to center.
+        """
+        return _crop(
+            video,
+            width=width,
+            height=height,
+            x=x,
+            y=y,
+            output_path=output,
+            crop_percent=crop_percent,
+        )
 
     def rotate(
         self,
@@ -578,6 +598,42 @@ class ClientMediaMixin:
     ) -> EditResult:
         """Apply an image mask to a video with edge feathering."""
         return _apply_mask(video, mask_path=mask, feather=feather, output_path=output)
+
+    def luma_key(
+        self,
+        video: str,
+        threshold: float = 0.5,
+        output: str | None = None,
+    ) -> EditResult:
+        """Mask out dark regions based on luminance (brightness)."""
+        return _luma_key(video, threshold=threshold, output_path=output)
+
+    def shape_mask(
+        self,
+        video: str,
+        shape: str = "circle",
+        output: str | None = None,
+        feather: int = 0,
+    ) -> EditResult:
+        """Apply a geometric shape mask (circle, rounded_rect, oval)."""
+        return _shape_mask(video, shape=shape, output_path=output, feather=feather)
+
+    def hls_segment(
+        self,
+        video: str,
+        output_dir: str | None = None,
+        segment_duration: int = 4,
+        playlist_name: str = "playlist.m3u8",
+        qualities: list[str] | None = None,
+    ) -> EditResult:
+        """Segment a video into HLS (HTTP Live Streaming) format."""
+        return _hls_segment(
+            video,
+            output_dir=output_dir,
+            segment_duration=segment_duration,
+            playlist_name=playlist_name,
+            qualities=qualities,
+        )
 
     def batch(
         self,

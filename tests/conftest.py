@@ -337,18 +337,16 @@ def sample_hyperframes_project(tmp_path):
 
     # index.html — Hyperframes entry point
     (project_dir / "index.html").write_text(
-        '<!DOCTYPE html>\n'
-        '<html>\n'
-        '  <head><title>Test</title></head>\n'
-        '  <body>\n'
+        "<!DOCTYPE html>\n"
+        "<html>\n"
+        "  <head><title>Test</title></head>\n"
+        "  <body>\n"
         '    <div data-composition-id="test-comp"></div>\n'
-        '  </body>\n'
-        '</html>\n'
+        "  </body>\n"
+        "</html>\n"
     )
 
     # package.json (optional but useful for validation)
-    (project_dir / "package.json").write_text(
-        '{"name": "test-hyperframes-project", "version": "1.0.0"}'
-    )
+    (project_dir / "package.json").write_text('{"name": "test-hyperframes-project", "version": "1.0.0"}')
 
     return str(project_dir)

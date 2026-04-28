@@ -39,6 +39,12 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Show version and exit",
     )
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Enable verbose logging to stderr",
+    )
     subparsers = parser.add_subparsers(dest="command", help="CLI commands")
 
     core.add_parsers(subparsers)

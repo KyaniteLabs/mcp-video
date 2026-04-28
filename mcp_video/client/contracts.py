@@ -153,6 +153,21 @@ CLIENT_METHOD_CONTRACTS: dict[str, dict[str, Any]] = {
         "return_type": MEDIA_RETURN,
         "aliases": {"video": "input_path", "mask": "mask_path", "output": "output_path"},
     },
+    "luma_key": {
+        "category": "media",
+        "return_type": MEDIA_RETURN,
+        "aliases": {"video": "input_path", "output": "output_path"},
+    },
+    "shape_mask": {
+        "category": "media",
+        "return_type": MEDIA_RETURN,
+        "aliases": {"video": "input_path", "output": "output_path"},
+    },
+    "hls_segment": {
+        "category": "media",
+        "return_type": MEDIA_RETURN,
+        "aliases": {"video": "input_path"},
+    },
     # Media reports
     "detect_scenes": {"category": "report", "return_type": "SceneDetectionResult", "aliases": {"video": "input_path"}},
     "export_frames": {"category": "report", "return_type": "ImageSequenceResult", "aliases": {"video": "input_path"}},

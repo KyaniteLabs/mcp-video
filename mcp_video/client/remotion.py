@@ -10,7 +10,7 @@ _REMOTION_DEPRECATION_MSG = "Remotion is deprecated. Migrate to Hyperframes or R
 
 
 def _warn_remotion_deprecated() -> None:
-    warnings.warn(_REMOTION_DEPRECATION_MSG, DeprecationWarning, stacklevel=3)
+    warnings.warn(_REMOTION_DEPRECATION_MSG, FutureWarning, stacklevel=3)
 
 
 class ClientRemotionMixin:

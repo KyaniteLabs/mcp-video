@@ -9,6 +9,33 @@ from pydantic import BaseModel, Field
 from .defaults import DEFAULT_CRF
 
 
+# --- Helpers ---
+
+
+def _render_ascii_waveform(peaks: list[dict], width: int = 60, height: int = 10) -> str:
+    """Render an ASCII waveform from peak data.
+
+    Returns a multi-line string where each line is a time slice and the
+    bar height represents the audio level at that point.
+    """
+    if not peaks:
+        return ""
+    levels = [p["level"] for p in peaks]
+    min_l = min(levels)
+    max_l = max(levels)
+    if max_l == min_l:
+        max_l = min_l + 1
+    chars = " ▁▂▃▄▅▆▇█"
+    step = (max_l - min_l) / (len(chars) - 1)
+    idxs = [min(len(chars) - 1, max(0, int((lvl - min_l) / step))) for lvl in levels]
+    lines: list[str] = []
+    for h in range(height, 0, -1):
+        threshold = (h - 1) / height * (len(chars) - 1)
+        line = "".join(chars[min(len(chars) - 1, max(0, i - int(threshold)))] for i in idxs)
+        lines.append(line)
+    return "\n".join(lines)
+
+
 # --- Video metadata ---
 
 
@@ -26,17 +53,32 @@ class VideoInfo(BaseModel):
     bitrate: int | None = None
     size_bytes: int | None = None
     format: str | None = None
+    rotation: int = 0
 
     @property
     def resolution(self) -> str:
         return f"{self.width}x{self.height}"
 
     @property
+    def display_width(self) -> int:
+        """Width accounting for rotation (e.g. 90° rotates dimensions)."""
+        return self.height if self.rotation in (90, 270) else self.width
+
+    @property
+    def display_height(self) -> int:
+        """Height accounting for rotation (e.g. 90° rotates dimensions)."""
+        return self.width if self.rotation in (90, 270) else self.height
+
+    @property
+    def display_resolution(self) -> str:
+        return f"{self.display_width}x{self.display_height}"
+
+    @property
     def aspect_ratio(self) -> str:
         from math import gcd
 
-        g = gcd(self.width, self.height)
-        return f"{self.width // g}:{self.height // g}"
+        g = gcd(self.display_width, self.display_height)
+        return f"{self.display_width // g}:{self.display_height // g}"
 
     @property
     def size_mb(self) -> float | None:
@@ -62,6 +104,7 @@ class EditResult(BaseModel):
     thumbnail_base64: str | None = Field(default=None, description="Base64-encoded JPEG thumbnail of the first frame")
     elapsed_ms: float | None = Field(default=None, description="Wall-clock processing time in milliseconds")
     warnings: list[str] = Field(default_factory=list, description="Non-fatal guardrail warnings for agent workflows")
+    intermediates: list[str] = Field(default_factory=list, description="Intermediate files that were cleaned up")
 
 
 class ErrorResult(BaseModel):
@@ -119,6 +162,11 @@ class WaveformResult(BaseModel):
     synthetic: bool = Field(
         default=False, description="True if data was synthetically generated due to analysis failure"
     )
+    text: str = Field(default="", description="ASCII waveform representation for agents")
+
+    def model_post_init(self, __context: Any) -> None:
+        if not self.text and self.peaks:
+            object.__setattr__(self, "text", _render_ascii_waveform(self.peaks))
 
 
 class SceneDetectionResult(BaseModel):
@@ -253,7 +301,7 @@ SplitLayout = Literal["side-by-side", "top-bottom"]
 
 # --- Format types ---
 
-ExportFormat = Literal["mp4", "webm", "gif", "mov"]
+ExportFormat = Literal["mp4", "webm", "gif", "mov", "hevc", "av1", "prores"]
 
 # --- Timeline DSL models ---
 

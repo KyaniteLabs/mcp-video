@@ -465,8 +465,6 @@ def test_ai_scene_detect_missing_file_does_not_create_parent_dir(tmp_path, monke
     assert not missing_video.parent.exists()
 
 
-
-
 def test_ai_scene_detect_ai_mode_rejects_invalid_threshold(sample_video, monkeypatch):
     """AI mode should validate threshold before doing expensive frame extraction."""
     from mcp_video.ai_engine import ai_scene_detect
@@ -513,8 +511,6 @@ def test_ai_scene_detect_caps_ai_frame_extraction_rate(tmp_path, monkeypatch):
     vf_arg = seen_cmds[0][seen_cmds[0].index("-vf") + 1]
     expected_interval = 1200 / MAX_AI_SCENE_FRAMES
     assert vf_arg.startswith(f"fps=1/{expected_interval}")
-
-
 
 
 def test_require_audio_stream_propagates_probe_errors(monkeypatch):
@@ -625,7 +621,6 @@ class TestColorGrade:
                 assert os.path.exists(result), f"Output not created for style: {style}"
                 assert os.path.getsize(result) > 0, f"Output is empty for style: {style}"
 
-
     def test_reference_color_analysis_failure_falls_back_to_neutral(self, monkeypatch):
         """Reference matching should remain best-effort when FFmpeg analysis fails."""
         import subprocess
@@ -645,7 +640,6 @@ class TestColorGrade:
             "green": 1.0,
             "blue": 1.0,
         }
-
 
     @requires_ffmpeg
     def test_color_grade_with_reference(self):
@@ -1145,8 +1139,6 @@ def test_ai_stem_separation_missing_demucs_dependency(monkeypatch, sample_video,
     assert exc_info.value.code == "missing_demucs"
 
 
-
-
 def test_ai_stem_separation_demucs_timeout(monkeypatch, sample_video, tmp_path):
     from mcp_video.ai_engine import ai_stem_separation
     from mcp_video.errors import ProcessingError
@@ -1443,8 +1435,6 @@ def test_resolve_video_source_local_passthrough():
     assert url is None
 
 
-
-
 def test_is_safe_url_restores_socket_default_timeout(monkeypatch):
     """SSRF DNS lookup timeout must not clobber an embedding app's global socket default."""
     import socket
@@ -1463,8 +1453,6 @@ def test_is_safe_url_restores_socket_default_timeout(monkeypatch):
         assert socket.getdefaulttimeout() == 3.5
     finally:
         socket.setdefaulttimeout(previous_timeout)
-
-
 
 
 def test_direct_download_rechecks_connected_peer_ip(monkeypatch, tmp_path):
@@ -1531,7 +1519,9 @@ def test_ai_transcribe_rejects_overlong_media_before_extraction(monkeypatch, sam
             raise AssertionError("Whisper model should not load for overlong media")
 
     monkeypatch.setitem(sys.modules, "whisper", FakeWhisper)
-    monkeypatch.setattr("mcp_video.ai_engine.transcribe._get_video_duration", lambda _path: MAX_AI_TRANSCRIBE_DURATION + 1)
+    monkeypatch.setattr(
+        "mcp_video.ai_engine.transcribe._get_video_duration", lambda _path: MAX_AI_TRANSCRIBE_DURATION + 1
+    )
 
     with pytest.raises(MCPVideoError, match="duration"):
         ai_transcribe(sample_video)
@@ -1569,12 +1559,13 @@ def test_ai_upscale_rejects_excessive_frame_count(monkeypatch, sample_video, tmp
     from mcp_video.limits import MAX_AI_UPSCALE_FRAMES
 
     monkeypatch.setattr("mcp_video.ai_engine.upscale._estimate_frame_count", lambda _path: MAX_AI_UPSCALE_FRAMES + 1)
-    monkeypatch.setattr("mcp_video.ai_engine.upscale._ai_upscale_opencv", lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("upscale should not run")))
+    monkeypatch.setattr(
+        "mcp_video.ai_engine.upscale._ai_upscale_opencv",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("upscale should not run")),
+    )
 
     with pytest.raises(MCPVideoError, match="frame"):
         ai_upscale(sample_video, str(tmp_path / "out.mp4"), scale=2)
-
-
 
 
 def test_ai_upscale_rejects_unknown_fps_for_resource_guard(monkeypatch, sample_video, tmp_path):

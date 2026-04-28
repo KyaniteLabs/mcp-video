@@ -33,8 +33,14 @@ def trim(
     duration: str | float | None = None,
     end: str | float | None = None,
     output_path: str | None = None,
+    accurate: bool = False,
 ) -> EditResult:
-    """Trim a video by start time and duration or end time."""
+    """Trim a video by start time and duration or end time.
+
+    Args:
+        accurate: When True, place ``-ss`` after ``-i`` for frame-accurate
+            seeking (slower).  Default False uses input seeking (fast).
+    """
     input_path = _validate_input_path(input_path)
     output = output_path or _auto_output(input_path, "trimmed")
     _validate_output_path(output)
@@ -94,9 +100,13 @@ def trim(
             )
 
     args = []
-    if start:
+    if not accurate and start:
+        # Input seeking — fast but may land on nearest keyframe
         args.extend(["-ss", str(start)])
     args.extend(["-i", input_path])
+    if accurate and start:
+        # Output seeking — frame accurate but slower
+        args.extend(["-ss", str(start)])
     if duration:
         args.extend(["-t", str(duration)])
     elif end:

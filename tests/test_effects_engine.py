@@ -80,11 +80,7 @@ def test_glow_uses_non_additive_blend_by_default(tmp_path, monkeypatch):
 def test_subtitle_text_is_wrapped_for_safe_area():
     from mcp_video.effects_engine.text import _wrap_subtitle_payload_for_safe_area
 
-    source = (
-        "1\n"
-        "00:00:00,000 --> 00:00:05,000\n"
-        "The same source becomes YouTube, Shorts, and square social cuts.\n"
-    )
+    source = "1\n00:00:00,000 --> 00:00:05,000\nThe same source becomes YouTube, Shorts, and square social cuts.\n"
 
     wrapped = _wrap_subtitle_payload_for_safe_area(source, max_chars_per_line=28)
 

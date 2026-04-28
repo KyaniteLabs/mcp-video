@@ -713,7 +713,6 @@ class TestGenerateSubtitles:
         assert result.video_path is not None
         assert os.path.isfile(result.video_path)
 
-
     def test_subtitle_text_allows_arrow_marker_content(self, sample_video, tmp_path):
         from mcp_video.engine import generate_subtitles
 
@@ -737,7 +736,6 @@ class TestGenerateSubtitles:
 
         assert result.srt_path == os.path.join(output_dir, "subtitles.srt")
         assert os.path.isfile(result.srt_path)
-
 
     def test_empty_entries_raises(self, sample_video):
         from mcp_video.engine import generate_subtitles

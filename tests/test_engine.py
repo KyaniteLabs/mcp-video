@@ -36,8 +36,6 @@ def requires_filter(name: str, feature: str):
     )
 
 
-
-
 def test_probe_duration_falls_back_to_stream_before_limit():
     from mcp_video.engine_probe import _build_video_info
     from mcp_video.limits import MAX_VIDEO_DURATION
@@ -130,7 +128,6 @@ class TestMerge:
         # Probed output should be a valid video in the requested container
         assert info.duration > 0
 
-
     def test_merge_persists_validated_multi_clip_paths(self, monkeypatch, tmp_path):
         import types
 
@@ -151,10 +148,17 @@ class TestMerge:
             return types.SimpleNamespace(
                 duration=1.0,
                 resolution="320x240",
+                display_resolution="320x240",
                 width=320,
                 height=240,
+                display_width=320,
+                display_height=240,
                 codec="h264",
                 size_mb=1.0,
+                rotation=0,
+                audio_codec="aac",
+                audio_sample_rate=48000,
+                fps=30.0,
             )
 
         def fake_run_ffmpeg(args):
@@ -174,7 +178,6 @@ class TestMerge:
 
         assert result.output_path == output
         assert seen_probe_paths[:2] == [resolved_a, resolved_b]
-
 
     def test_merge_no_clips_raises(self):
         with pytest.raises(InputFileError):
@@ -363,7 +366,6 @@ class TestProgressCallbacks:
         assert len(progress_values) > 0
         assert 100.0 in progress_values
 
-
     def test_run_ffmpeg_with_progress_propagates_callback_failure(self, sample_video, tmp_path):
         """Exceptions from progress callbacks must not disappear in stderr reader threads."""
         from mcp_video.engine import _run_ffmpeg_with_progress
@@ -384,7 +386,6 @@ class TestProgressCallbacks:
 
         with pytest.raises(RuntimeError, match="progress failed"):
             _run_ffmpeg_with_progress(args, estimated_duration=1.0, on_progress=fail_on_progress)
-
 
     def test_convert_returns_progress_field(self, sample_video):
         """Verify that convert returns EditResult with progress=100.0."""
@@ -481,7 +482,6 @@ class TestGifQualityScaling:
 
 
 class TestBatchOutputDirValidation:
-
     def test_batch_output_dir_file_path_returns_structured_failures(self, sample_video, tmp_path):
         from mcp_video.engine import video_batch
 
@@ -499,9 +499,10 @@ class TestBatchOutputDirValidation:
         assert result["failed"] == 1
         assert result["results"][0]["success"] is False
 
-
     def test_batch_rejects_invalid_output_dir(self, sample_video):
         from mcp_video.engine import video_batch
 
         with pytest.raises(MCPVideoError, match="Output path contains null bytes"):
-            video_batch([sample_video], operation="trim", params={"start": "0", "duration": "1"}, output_dir="bad\x00dir")
+            video_batch(
+                [sample_video], operation="trim", params={"start": "0", "duration": "1"}, output_dir="bad\x00dir"
+            )

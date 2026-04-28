@@ -846,7 +846,6 @@ class TestServerAIEdgeCases:
         assert result["success"] is True
 
 
-
 class TestSearchTools:
     def test_search_by_name(self):
         result = search_tools("trim")

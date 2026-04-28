@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import os
 
 from .errors import InputFileError, MCPVideoError
@@ -72,6 +73,15 @@ def _build_video_info(path: str, data: dict) -> VideoInfo:
     audio_codec = audio_s.get("codec_name") if audio_s else None
     audio_sr = int(audio_s.get("sample_rate", 0)) if audio_s else None
 
+    # Rotation from side_data_list
+    rotation = 0
+    for side in vs.get("side_data_list", []):
+        rot = side.get("rotation")
+        if rot is not None:
+            with contextlib.suppress(ValueError, TypeError):
+                rotation = int(rot)
+            break
+
     # Bitrate / size
     fmt = data.get("format", {})
     try:
@@ -93,6 +103,7 @@ def _build_video_info(path: str, data: dict) -> VideoInfo:
         bitrate=bitrate,
         size_bytes=size_bytes,
         format=fmt_name,
+        rotation=rotation,
     )
 
 

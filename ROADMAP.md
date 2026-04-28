@@ -19,8 +19,8 @@ Revideo (MIT licensed, canvas-based) was evaluated as a Remotion replacement. Ho
 - **v2.0.0:** Remotion integration removed entirely (breaking change)
 
 ### Documentation
-- [ ] Add usage examples to `docs/PYTHON_CLIENT.md` for AI, audio synthesis, and effects pipelines
-- [ ] Add `04-hyperframes-video` workflow template
+- [x] Add usage examples to `docs/PYTHON_CLIENT.md` for AI, audio synthesis, and effects pipelines
+- [x] Add `04-hyperframes-video` workflow template
 
 ---
 
