@@ -25,8 +25,10 @@ This document is the short, explicit discovery map for agents, answer engines, a
 - `llms.txt` - compact machine-readable project map.
 - `mcp_video/server.py` - MCP tool registration layer (90 tools + search_tools meta-tool).
 - `mcp_video/engine.py` - core FFmpeg operations.
-- `mcp_video/client.py` - Python client. Use `Client.inspect()`, `Client.pipeline()`, and `Client.release_checkpoint()` for guarded agent workflows.
+- `mcp_video/client/` - Python client mixins. Use `Client.inspect()`, `Client.pipeline()`, and `Client.release_checkpoint()` for guarded agent workflows.
 - `mcp_video/client/meta.py` - Client-side tool discovery (`search_tools`).
+- `mcp_video/client/hyperframes.py` - Hyperframes client mixin.
+- `mcp_video/client/remotion.py` - Remotion client mixin (deprecated).
 - `mcp_video/__main__.py` - CLI.
 - `workflows/CONTEXT.md` - Layer 1 routing: which ICM workflow to use.
 - `workflows/01-social-media-clip/CONTEXT.md` - Stage contract for social clip production.

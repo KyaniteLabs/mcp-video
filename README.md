@@ -172,19 +172,19 @@ mcp-video template tiktok video.mp4 --caption "Check this out!"
 
 ## MCP Tools
 
-82 unique MCP tools across 12 categories, plus a `search_tools` meta-tool for fast discovery. All return structured JSON. See the [full tool reference](docs/TOOLS.md) for complete details.
+90 unique MCP tools across 12 categories, plus a `search_tools` meta-tool for fast discovery. All return structured JSON. See the [full tool reference](docs/TOOLS.md) for complete details.
 
 | Category | Count | Highlights |
 |----------|-------|------------|
-| **Core Video** | 26 | trim, merge, text, audio, resize, convert, filters, stabilize, chroma key, subtitles, watermark, batch |
-| **AI-Powered** | 10 | transcribe (Whisper), scene detect, stem separation (Demucs), upscale, color grade |
+| **Core Video** | 29 | trim, merge, text, audio, resize, convert, filters, stabilize, chroma key, subtitles, watermark, batch, export, normalize audio |
+| **AI-Powered** | 11 | transcribe (Whisper), scene detect, stem separation (Demucs), upscale, color grade |
 | **Hyperframes** | 8 | init, render, still, preview, compositions, validate, add block, pipeline |
 | **Remotion** | 8 | create project, scaffold, render, studio preview, pipeline *(deprecated)* |
 | **Audio Synthesis** | 7 | generate waveforms, presets, sequences, effects, spatial audio — pure NumPy |
-| **Visual Effects** | 5 | vignette, chromatic aberration, scanlines, noise, glow |
+| **Visual Effects** | 6 | vignette, chromatic aberration, scanlines, noise, glow, mask |
 | **Transitions** | 3 | glitch, pixelate, morph |
 | **Layout & Motion** | 6 | grid, pip, animated text, counters, progress bars, auto-chapters |
-| **Analysis** | 9 | scene detect, thumbnail, preview, storyboard, quality compare, metadata, waveform, release checkpoint |
+| **Analysis** | 8 | scene detect, thumbnail, preview, storyboard, quality compare, metadata, waveform, release checkpoint |
 | **Image Analysis** | 3 | color extraction, palette generation, product analysis |
 | **Meta** | 1 | `search_tools` — keyword search across all tools |
 

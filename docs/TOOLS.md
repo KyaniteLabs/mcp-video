@@ -8,7 +8,7 @@
 
 | Tool | Description |
 |------|-------------|
-| `search_tools` | Search all registered MCP tools by keyword. Returns matching tool names, descriptions, and required parameters. Use this when you need to find the right tool without loading all 82 descriptions into context. |
+| `search_tools` | Search all registered MCP tools by keyword. Returns matching tool names, descriptions, and required parameters. Use this when you need to find the right tool without loading all 90 descriptions into context. |
 
 **Python Client:**
 ```python
@@ -20,7 +20,7 @@ results = editor.search_tools("subtitle")
 
 ---
 
-## Core Editing (26 tools)
+## Core Editing (29 tools)
 
 | Tool | Description |
 |------|-------------|
@@ -50,6 +50,9 @@ results = editor.search_tools("subtitle")
 | `video_create_from_images` | Create video from image sequence |
 | `video_export_frames` | Export video as individual image frames |
 | `video_extract_audio` | Extract audio as mp3, wav, aac, ogg, or flac |
+| `video_export` | Render with quality and format settings |
+| `video_normalize_audio` | Normalize audio loudness to a target LUFS level |
+| `video_batch` | Apply the same operation to multiple video files |
 
 ---
 
@@ -131,7 +134,7 @@ Generate audio from code — no external audio files needed. Pure NumPy, no extr
 
 ---
 
-## Visual Effects (5 tools)
+## Visual Effects (6 tools)
 
 | Tool | Description |
 |------|-------------|
@@ -140,6 +143,7 @@ Generate audio from code — no external audio files needed. Pure NumPy, no extr
 | `effect_scanlines` | Retro CRT scanline effect with flicker |
 | `effect_noise` | Film grain and digital noise |
 | `effect_glow` | Bloom/glow for highlights |
+| `video_apply_mask` | Apply image mask with edge feathering |
 
 ---
 

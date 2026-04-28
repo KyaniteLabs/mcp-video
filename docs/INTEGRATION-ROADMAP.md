@@ -145,4 +145,4 @@ A third-party `script-to-animation` template exists at `~/Desktop/Interpreted-Co
 |-------------|----------|--------|--------|---------|-----|
 | Blender MCP | LOW | 1-2 days | Defer | No | Medium |
 | Image Analysis | MEDIUM | 2-3 days | **Completed (v0.7.0)** | Yes | Medium |
-| Remotion | MEDIUM | 5-10 days | Reference material available | Yes | Medium (later) |
+| Remotion | MEDIUM | 5-10 days | Deprecated (v1.2.5) | Yes | Medium (later) |
