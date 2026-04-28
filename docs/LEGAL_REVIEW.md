@@ -21,21 +21,6 @@ The `mcp-video` Python package is released under **Apache 2.0**. See [LICENSE](L
 Reference:
 - https://ffmpeg.org/legal.html
 
-### Remotion
-
-The optional Remotion-based video-generation workflow does **not** use the same license as the Apache-licensed Python package.
-
-The locally installed Remotion packages in this repo include a license stating that:
-- individuals, nonprofits, evaluations, and very small for-profit organizations may qualify for the free license
-- larger for-profit organizations may require a **company license**
-
-References:
-- `explainer-video/node_modules/remotion/LICENSE.md`
-- `explainer-video/node_modules/@remotion/transitions/LICENSE.md`
-- https://www.remotion.dev/
-
-If you use the Remotion functionality in a commercial setting, review those terms before shipping.
-
 ## Optional AI/media dependencies
 
 Optional dependencies may bring their own licenses and model/runtime constraints. In particular:

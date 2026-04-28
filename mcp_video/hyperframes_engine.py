@@ -1,7 +1,6 @@
 """Hyperframes engine — subprocess wrappers calling npx hyperframes CLI.
 
-No pip packages needed — Hyperframes is external (Node.js). Follows the exact
-pattern used by remotion_engine.py.
+No pip packages needed — Hyperframes is external (Node.js).
 
 All file paths should be absolute. Output files are generated automatically
 if no output_path is provided.

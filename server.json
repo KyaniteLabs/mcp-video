@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.pastorsimon1798/mcp-video",
   "title": "mcp-video",
-  "description": "Video editing MCP server for AI agents using FFmpeg, Hyperframes, and Remotion structured tools.",
+  "description": "Video editing MCP server for AI agents using FFmpeg and Hyperframes structured tools.",
   "version": "1.2.6",
   "repository": {
     "url": "https://github.com/pastorsimon1798/mcp-video",

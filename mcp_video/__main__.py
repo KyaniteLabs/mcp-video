@@ -14,7 +14,6 @@ from .cli.handlers_core import handle_initial_command
 from .cli.handlers_effects import handle_effect_command
 from .cli.handlers_image import handle_image_commands
 from .cli.handlers_media import handle_media_commands
-from .cli.handlers_remotion import handle_remotion_commands
 from .cli.handlers_hyperframes import handle_hyperframes_commands
 from .cli.handlers_transitions import handle_transition_command
 from .cli.parser import build_parser
@@ -65,7 +64,6 @@ def main() -> None:
             or handle_transition_command(args, use_json=use_json)
             or handle_composition_command(args, use_json=use_json)
             or handle_media_commands(args, use_json=use_json)
-            or handle_remotion_commands(args, use_json=use_json)
             or handle_hyperframes_commands(args, use_json=use_json)
             or handle_ai_commands(args, use_json=use_json)
             or handle_audio_commands(args, use_json=use_json)

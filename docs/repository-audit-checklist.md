@@ -64,7 +64,7 @@ This validates:
 - `mcp-video doctor --json`
 - a minimal FFmpeg trim path
 - image extra import and tiny image color extraction
-- Node/npm/npx availability reporting for Remotion
+- Node/npm/npx availability reporting for Hyperframes
 - AI module import and optional dependency reporting without installing heavyweight AI stacks
 
 ## 4) Documentation quality (weekly)

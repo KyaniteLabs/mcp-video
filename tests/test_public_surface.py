@@ -49,14 +49,6 @@ EXPECTED_CLI_COMMANDS = {
     "generate-subtitles",
     "templates",
     "template",
-    "remotion-render",
-    "remotion-compositions",
-    "remotion-studio",
-    "remotion-still",
-    "remotion-create",
-    "remotion-scaffold",
-    "remotion-validate",
-    "remotion-pipeline",
     "hyperframes-render",
     "hyperframes-compositions",
     "hyperframes-preview",
@@ -141,14 +133,6 @@ EXPECTED_SERVER_TOOLS = {
     "video_stabilize",
     "video_apply_mask",
     "video_audio_waveform",
-    "remotion_render",
-    "remotion_compositions",
-    "remotion_studio",
-    "remotion_still",
-    "remotion_create_project",
-    "remotion_scaffold_template",
-    "remotion_validate",
-    "remotion_to_mcpvideo",
     "hyperframes_render",
     "hyperframes_compositions",
     "hyperframes_preview",
@@ -211,7 +195,7 @@ def test_cli_help_lists_all_commands():
     help_commands = set(command_list.split(","))
 
     assert help_commands == EXPECTED_CLI_COMMANDS
-    assert len(EXPECTED_CLI_COMMANDS) == 94
+    assert len(EXPECTED_CLI_COMMANDS) == 86
 
 
 def test_agent_cookbook_dry_run():
@@ -233,7 +217,7 @@ def test_server_tool_registry_keeps_public_tool_names():
     tool_names = {tool.name for tool in asyncio.run(mcp.list_tools())}
 
     assert tool_names >= EXPECTED_SERVER_TOOLS
-    assert len(tool_names) == 93
+    assert len(tool_names) == 85
 
 
 def test_module_reexports():
@@ -250,7 +234,7 @@ def test_module_reexports():
         "video_audio_resource",
         "video_trim",
         "video_analyze",
-        "remotion_render",
+        "hyperframes_render",
         "image_analyze_product",
     ]:
         assert hasattr(server, name), f"server missing {name}"

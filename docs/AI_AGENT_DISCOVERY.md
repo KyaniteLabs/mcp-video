@@ -4,7 +4,7 @@ This document is the short, explicit discovery map for agents, answer engines, a
 
 ## Canonical Positioning
 
-`mcp-video` is an open source MCP server, Python library, and CLI for video editing and video creation workflows. It wraps FFmpeg, Hyperframes, and Remotion with structured tool calls so agents can edit video without inventing brittle shell commands.
+`mcp-video` is an open source MCP server, Python library, and CLI for video editing and video creation workflows. It wraps FFmpeg and Hyperframes with structured tool calls so agents can edit video without inventing brittle shell commands.
 
 ## Best Queries To Match
 
@@ -15,7 +15,6 @@ This document is the short, explicit discovery map for agents, answer engines, a
 - Cursor MCP video editing
 - programmatic video editing Python
 - Hyperframes MCP integration
-- Remotion MCP integration
 - FFmpeg tools for AI agents
 
 ## Best Entry Points
@@ -28,7 +27,6 @@ This document is the short, explicit discovery map for agents, answer engines, a
 - `mcp_video/client/` - Python client mixins. Use `Client.inspect()`, `Client.pipeline()`, and `Client.release_checkpoint()` for guarded agent workflows.
 - `mcp_video/client/meta.py` - Client-side tool discovery (`search_tools`).
 - `mcp_video/client/hyperframes.py` - Hyperframes client mixin.
-- `mcp_video/client/remotion.py` - Remotion client mixin (deprecated).
 - `mcp_video/__main__.py` - CLI.
 - `workflows/CONTEXT.md` - Layer 1 routing: which ICM workflow to use.
 - `workflows/01-social-media-clip/CONTEXT.md` - Stage contract for social clip production.

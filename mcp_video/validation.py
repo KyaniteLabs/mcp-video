@@ -29,7 +29,6 @@ VALID_AUDIO_EFFECT_TYPES = {"lowpass", "highpass", "reverb", "normalize", "fade"
 VALID_SPATIAL_METHODS = {"hrtf", "panning"}
 VALID_MOGRAPH_STYLES = {"bar", "circle", "dots"}
 VALID_LAYOUTS = {"side-by-side", "top-bottom"}
-VALID_REMOTION_TEMPLATES = {"blank", "hello-world"}
 VALID_HYPERFRAMES_TEMPLATES = {"blank", "warm-grain", "swiss-grid"}
 VALID_HYPERFRAMES_QUALITIES = {"draft", "standard", "high"}
 VALID_HYPERFRAMES_FORMATS = {"mp4", "webm", "mov"}

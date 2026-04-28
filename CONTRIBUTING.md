@@ -37,8 +37,8 @@ mcp_video/
 ├── effects_engine.py      # Visual effects + motion graphics (FFmpeg filters)
 ├── transitions_engine.py  # Clip transitions (glitch, pixelate, morph)
 ├── ai_engine.py           # AI features (Whisper, Demucs, Real-ESRGAN, spatial audio)
-├── remotion_engine.py     # Remotion CLI wrapper (render, studio, scaffold, validate)
-├── remotion_models.py     # Remotion data models
+├── hyperframes_engine.py  # Hyperframes CLI wrapper (render, preview, validate, init)
+├── hyperframes_models.py  # Hyperframes data models
 ├── image_engine.py        # Image color analysis (K-means, palette generation)
 ├── image_models.py        # Image data models
 ├── quality_guardrails.py  # Automated quality checks (brightness, contrast, audio)
@@ -62,7 +62,7 @@ tests/
 ├── test_image_engine.py         # Color extraction, palettes
 ├── test_adversarial_audit.py    # Security audit (injection, validation, bounds)
 ├── test_red_team.py             # Red team tests
-├── test_remotion_engine.py      # Remotion CLI wrapper (mocked)
+├── test_hyperframes_engine.py   # Hyperframes CLI wrapper (mocked)
 ├── test_real_media.py           # Real-media integration tests (marked @slow)
 ├── test_real_all_features.py    # Real-media all-features sweep (marked @slow)
 └── test_real_exhaustive.py      # Exhaustive real-media tests (marked @slow)
