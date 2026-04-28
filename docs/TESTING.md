@@ -184,4 +184,4 @@ Every MCP tool has a corresponding test:
 - Real FFmpeg operations validated
 - Error handling verified
 - Edge cases covered (silent videos, different codecs, etc.)
-- Deprecation warnings verified for all Remotion tools and client methods
+- Remotion integration completely removed (PR #163)

@@ -1,6 +1,6 @@
 # Improvement Roadmap
 
-v1.3.0 shipped. 93 MCP tools, Hyperframes integration, 17 new features. Remotion completely removed in v2.0.0. Here's what's next.
+v1.3.0 shipped. 85 MCP tools, Hyperframes integration, 17 new features. Remotion completely removed post-v1.3.0. Here's what's next.
 
 ---
 
@@ -16,7 +16,7 @@ Revideo (MIT licensed, canvas-based) was evaluated as a Remotion replacement. Ho
 
 - **v1.2.x:** Remotion tools emitted `DeprecationWarning`
 - **v1.3.0:** Remotion tools emitted `FutureWarning`
-- **v2.0.0 (current):** Remotion integration removed entirely (breaking change) — ✅ completed
+- **post-v1.3.0:** Remotion integration removed entirely (breaking change) — ✅ completed
 
 ### Documentation
 - [x] Add usage examples to `docs/PYTHON_CLIENT.md` for AI, audio synthesis, and effects pipelines
@@ -57,7 +57,7 @@ v1.2.0 shipped. 82 MCP tools, 832 tests, security hardened. Here's what's next.
 - [x] FFmpeg filter injection prevention — all numeric params sanitized before interpolation via `_sanitize_ffmpeg_number`
 - [x] Color validation hardened — whitelist CSS named colors + hex + `0xRRGGBB` format, reject FFmpeg special chars
 - [x] Null byte rejection on all input paths across all engines
-- [x] Server-side parameter validation on all 82 tools (crf, preset, format, transitions, audio, AI, Remotion)
+- [x] Server-side parameter validation on all 85 tools (crf, preset, format, transitions, audio, AI)
 - [x] `except Exception` fallback on all ~55 tool functions — no raw exceptions leak to MCP framework
 - [x] Timeout (600s) on all 22 subprocess.run calls in ai_engine.py
 - [x] Subprocess.TimeoutExpired handling in ai_engine.py

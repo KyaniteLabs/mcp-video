@@ -14,7 +14,7 @@
 <p align="center">
   <a href="https://pypi.org/project/mcp-video/"><img src="https://img.shields.io/pypi/v/mcp-video.svg" alt="PyPI"></a>
   <a href="https://github.com/pastorsimon1798/mcp-video/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/pastorsimon1798/mcp-video/.github/workflows/ci.yml?branch=master&label=CI" alt="CI"></a>
-  <img src="https://img.shields.io/badge/tools-90%20MCP%20tools-orange.svg" alt="Tools">
+  <img src="https://img.shields.io/badge/tools-85%20MCP%20tools-orange.svg" alt="Tools">
   <img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="License">
   <img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python">
 </p>
@@ -172,7 +172,7 @@ mcp-video template tiktok video.mp4 --caption "Check this out!"
 
 ## MCP Tools
 
-90 unique MCP tools across 12 categories, plus a `search_tools` meta-tool for fast discovery. All return structured JSON. See the [full tool reference](docs/TOOLS.md) for complete details.
+85 unique MCP tools across 10 categories, plus a `search_tools` meta-tool for fast discovery. All return structured JSON. See the [full tool reference](docs/TOOLS.md) for complete details.
 
 | Category | Count | Highlights |
 |----------|-------|------------|
@@ -339,7 +339,7 @@ See [`workflows/CONTEXT.md`](workflows/CONTEXT.md) for the routing table.
 mcp_video/
   client/                # Python Client API (mixins per domain)
   client/meta.py         # Client discovery mixin (search_tools)
-  server.py              # MCP server (90 tools + 4 resources + search_tools meta-tool)
+  server.py              # MCP server (85 tools + 4 resources + search_tools meta-tool)
   server_tools_*.py      # Tool registration by category
   engine.py              # Core FFmpeg engine
   engine_*.py            # Specialized engines (thumbnail, edit, probe, etc.)
