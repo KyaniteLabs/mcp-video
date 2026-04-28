@@ -23,7 +23,7 @@ def get_signal_stats(video_path):
         '-f', 'null', '-'
     ]
     result = subprocess.run(cmd, capture_output=True, text=True)
-    
+
     stats = {}
     for line in result.stderr.split('\n'):
         if 'lavfi.signalstats.' in line and '=' in line:
@@ -31,7 +31,7 @@ def get_signal_stats(video_path):
                 key = line.split('lavfi.signalstats.')[1].split('=')[0]
                 val = line.split('=')[-1].strip()
                 stats[key] = float(val) if val.replace('.', '').replace('-', '').isdigit() else val
-            except:
+            except Exception:
                 pass
     return stats
 
@@ -43,7 +43,7 @@ def get_audio_stats(video_path):
         '-f', 'null', '-'
     ]
     result = subprocess.run(cmd, capture_output=True, text=True)
-    
+
     stats = {}
     for line in result.stderr.split('\n'):
         if 'mean_volume:' in line:
@@ -75,13 +75,13 @@ def audit_technical_score(stats, audio_stats):
     yavg = stats.get('YAVG', 128)
     ystd = stats.get('YSTD', 50)
     mean_vol = audio_stats.get('mean_volume', -70)
-    
+
     brightness_score = calculate_brightness_score(yavg)
     contrast_score = calculate_contrast_score(ystd)
     audio_score = calculate_audio_score(mean_vol)
-    
+
     overall = (brightness_score + contrast_score + audio_score) / 3
-    
+
     return {
         'overall': overall,
         'brightness': {
@@ -129,7 +129,7 @@ def audit_motion_score(fps):
     """Audit motion score."""
     fps_score = min(100, (fps / 30) * 100)
     smoothness = 1.0 if fps >= 30 else 0.85 if fps >= 24 else 0.6
-    
+
     return {
         'overall': (fps_score + smoothness * 100) / 2,
         'fps': {
@@ -148,7 +148,7 @@ def audit_design_score():
     """Audit design score calculation."""
     return {
         'method': 'Penalty-based from issue count',
-        'formula': '100 - (errors × 20) - (warnings × 10) - (infos × 2)',
+        'formula': '100 - (errors x 20) - (warnings x 10) - (infos x 2)',
         'current_issues': {
             'errors': 0,
             'warnings': 1,  # Dark video
@@ -167,7 +167,7 @@ def print_audit(video_path):
     print("COMPREHENSIVE SCORE AUDIT")
     print("=" * 80)
     print(f"\nVideo: {video_path}")
-    
+
     # Get metadata
     probe = run_ffprobe(video_path)
     if probe.get('streams'):
@@ -175,20 +175,20 @@ def print_audit(video_path):
         print(f"Resolution: {stream.get('width')}x{stream.get('height')}")
         print(f"Duration: {float(stream.get('duration', 0)):.1f}s")
         print(f"Bitrate: {int(stream.get('bit_rate', 0))//1000} kbps")
-    
+
     # Get signal stats
     stats = get_signal_stats(video_path)
     audio_stats = get_audio_stats(video_path)
-    
+
     fps = 30  # Known
-    
+
     print("\n" + "=" * 80)
     print("1. TECHNICAL SCORE (38.6/100)")
     print("=" * 80)
-    
+
     tech = audit_technical_score(stats, audio_stats)
     print(f"\n  Overall: {tech['overall']:.1f}/100")
-    print(f"\n  Components:")
+    print("\n  Components:")
     for component, data in tech.items():
         if component == 'overall':
             continue
@@ -197,32 +197,32 @@ def print_audit(video_path):
         print(f"      Value: {data['value']:.1f} (target: {data['target']})")
         print(f"      Status: {data['status']}")
         print(f"      Weight: {data['weight']*100:.0f}%")
-    
+
     print("\n  ANALYSIS:")
     print(f"    • Brightness is very low ({tech['brightness']['value']:.1f}) because of")
-    print(f"      the intentional Midnight Violet (#5B2E91) dark background.")
-    print(f"    • This is NOT a quality issue - it's brand design.")
+    print("      the intentional Midnight Violet (#5B2E91) dark background.")
+    print("    • This is NOT a quality issue - it's brand design.")
     print(f"    • Audio is silent ({tech['audio']['value']:.1f} dB) - needs audio track.")
-    
+
     print("\n  IMPROVEMENT OPTIONS:")
     print("    1. Adjust algorithm weights (don't penalize dark themes)")
     print("    2. Add audio normalization to improve audio score")
     print("    3. Accept current score (design intent)")
-    
+
     print("\n" + "=" * 80)
     print("2. HIERARCHY SCORE (70.0/100)")
     print("=" * 80)
-    
+
     hier = audit_hierarchy_score()
     print(f"\n  Current Score: {hier['score']:.1f}/100")
     print(f"\n  Method: {hier['method']}")
-    print(f"\n  LIMITATIONS:")
+    print("\n  LIMITATIONS:")
     for lim in hier['limitations']:
         print(f"    • {lim}")
-    print(f"\n  IMPROVEMENTS NEEDED:")
+    print("\n  IMPROVEMENTS NEEDED:")
     for imp in hier['improvements']:
         print(f"    • {imp}")
-    
+
     print("\n  IN YOUR VIDEO:")
     print("    Check actual text size ratios in your scenes:")
     print("    - S11: AI Features - 7 feature cards with different text sizes")
@@ -230,11 +230,11 @@ def print_audit(video_path):
     print("    - S13: Audio - waveform visualizations")
     print("    - S14: VFX - particle effects text")
     print("    - S15: Quality - score bars with labels")
-    
+
     print("\n" + "=" * 80)
     print("3. MOTION SCORE (100.0/100)")
     print("=" * 80)
-    
+
     motion = audit_motion_score(fps)
     print(f"\n  Overall: {motion['overall']:.1f}/100")
     print(f"\n  FPS Component: {motion['fps']['score']:.1f}/100")
@@ -242,56 +242,56 @@ def print_audit(video_path):
     print(f"    Status: {motion['fps']['status']}")
     print(f"\n  Smoothness: {motion['smoothness']['score']:.1f}/100")
     print(f"    Method: {motion['smoothness']['method']}")
-    print(f"\n  STATUS: PERFECT - No improvements needed")
-    
+    print("\n  STATUS: PERFECT - No improvements needed")
+
     print("\n" + "=" * 80)
     print("4. DESIGN SCORE (86.0/100)")
     print("=" * 80)
-    
+
     design = audit_design_score()
     print(f"\n  Method: {design['method']}")
     print(f"  Formula: {design['formula']}")
-    print(f"\n  Current Issues:")
+    print("\n  Current Issues:")
     for issue_type, count in design['current_issues'].items():
         print(f"    • {issue_type.capitalize()}: {count}")
-    print(f"\n  Calculation: 100 - (0×20) - (1×10) - (2×2) = 86")
-    
-    print(f"\n  LIMITATIONS:")
+    print("\n  Calculation: 100 - (0x20) - (1x10) - (2x2) = 86")
+
+    print("\n  LIMITATIONS:")
     for lim in design['limitations']:
         print(f"    • {lim}")
-    
+
     print("\n" + "=" * 80)
     print("5. OVERALL SCORE (73.6/100)")
     print("=" * 80)
-    print(f"\n  Formula: (Technical + Design + Hierarchy + Motion) / 4")
-    print(f"  Calculation: (38.6 + 86.0 + 70.0 + 100.0) / 4 = 73.6")
-    
+    print("\n  Formula: (Technical + Design + Hierarchy + Motion) / 4")
+    print("  Calculation: (38.6 + 86.0 + 70.0 + 100.0) / 4 = 73.6")
+
     print("\n  BREAKDOWN:")
-    print(f"    Technical:  38.6 × 25% =  9.7 points")
-    print(f"    Design:     86.0 × 25% = 21.5 points")
-    print(f"    Hierarchy:  70.0 × 25% = 17.5 points")
-    print(f"    Motion:    100.0 × 25% = 25.0 points")
-    print(f"                              --------")
-    print(f"    TOTAL:                     73.6/100")
-    
+    print("    Technical:  38.6 x 25% =  9.7 points")
+    print("    Design:     86.0 x 25% = 21.5 points")
+    print("    Hierarchy:  70.0 x 25% = 17.5 points")
+    print("    Motion:    100.0 x 25% = 25.0 points")
+    print("                              --------")
+    print("    TOTAL:                     73.6/100")
+
     print("\n" + "=" * 80)
     print("RECOMMENDATIONS TO REACH 100/100")
     print("=" * 80)
-    
+
     print("\n  QUICK WINS (Low effort, high impact):")
     print("    1. Fix audio (-91 dB → -16 LUFS): +25 technical points")
     print("    2. Adjust dark theme penalty: +40 technical points")
     print("    3. Reduce info messages: +4 design points")
-    
+
     print("\n  MEDIUM EFFORT:")
     print("    4. Implement real hierarchy detection (OCR)")
     print("    5. Add more Electric Lime accents for contrast")
-    
+
     print("\n  CURRENT REALISTIC SCORE:")
     print("    If dark theme accepted + audio fixed:")
     print("    Technical: 75, Design: 90, Hierarchy: 80, Motion: 100")
     print("    = 86.25/100 (vs current 73.6)")
-    
+
     print("\n" + "=" * 80)
 
 if __name__ == '__main__':
