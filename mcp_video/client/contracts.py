@@ -264,6 +264,15 @@ CLIENT_METHOD_CONTRACTS: dict[str, dict[str, Any]] = {
     "remotion_create_project": {"category": "report", "return_type": "dict", "aliases": {"output_dir": "output_path"}},
     "remotion_scaffold_template": {"category": "report", "return_type": "dict", "aliases": {}},
     "remotion_validate": {"category": "report", "return_type": "dict", "aliases": {}},
+    # Hyperframes
+    "hyperframes_render": {"category": "media", "return_type": MEDIA_RETURN, "aliases": {"output": "output_path"}},
+    "hyperframes_still": {"category": "media", "return_type": MEDIA_RETURN, "aliases": {"output": "output_path"}},
+    "hyperframes_to_mcpvideo": {"category": "media", "return_type": MEDIA_RETURN, "aliases": {"output": "output_path"}},
+    "hyperframes_compositions": {"category": "report", "return_type": "list", "aliases": {}},
+    "hyperframes_preview": {"category": "report", "return_type": "dict", "aliases": {}},
+    "hyperframes_init": {"category": "report", "return_type": "dict", "aliases": {"output_dir": "output_path"}},
+    "hyperframes_add_block": {"category": "report", "return_type": "dict", "aliases": {}},
+    "hyperframes_validate": {"category": "report", "return_type": "dict", "aliases": {}},
     # Image/report methods
     "extract_colors": {"category": "report", "return_type": "dict", "aliases": {}},
     "generate_palette": {"category": "report", "return_type": "dict", "aliases": {}},

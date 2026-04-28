@@ -1,5 +1,30 @@
 # Improvement Roadmap
 
+v1.2.5 shipped. 90 MCP tools, 905 tests, Hyperframes integration, Remotion deprecated. Here's what's next.
+
+---
+
+## ✅ Completed in v1.2.5 (2026-04-27)
+
+### Hyperframes Integration
+- [x] 8 new MCP tools: `hyperframes_init`, `hyperframes_render`, `hyperframes_still`, `hyperframes_compositions`, `hyperframes_preview`, `hyperframes_validate`, `hyperframes_add_block`, `hyperframes_to_mcpvideo`
+- [x] Python client mixin (`ClientHyperframesMixin`) with 8 methods
+- [x] CLI commands: `hyperframes-render`, `hyperframes-init`, `hyperframes-preview`, `hyperframes-validate`, `hyperframes-add-block`, `hyperframes-pipeline`, `hyperframes-compositions`, `hyperframes-still`
+- [x] Engine: `hyperframes_engine.py` with subprocess wrappers for `npx hyperframes` CLI
+- [x] Models: `hyperframes_models.py` with Pydantic result types
+- [x] 54 unit + integration tests in `tests/test_hyperframes_engine.py`
+- [x] `sample_hyperframes_project` pytest fixture
+
+### Remotion Deprecation
+- [x] All Remotion MCP tools emit `DeprecationWarning`
+- [x] All Remotion client mixin methods emit `DeprecationWarning`
+- [x] Documentation updated across README, TOOLS, CLI_REFERENCE, PYTHON_CLIENT, and CHANGELOG
+
+### Test Suite
+- [x] Total: 905 tests (844 fast, 61 slow/hyperframes/remotion)
+
+---
+
 v1.2.0 shipped. 82 MCP tools, 832 tests, security hardened. Here's what's next.
 
 ---

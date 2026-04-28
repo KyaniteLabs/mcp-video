@@ -2,7 +2,19 @@
 
 from __future__ import annotations
 
+import warnings
+
 from ..errors import MCPVideoError
+
+_REMOTION_DEPRECATION_MSG = (
+    "Remotion integration is deprecated and will be removed in a future version. "
+    "Please migrate to Hyperframes (HTML-native, fully open source under Apache 2.0) "
+    "or Revideo (Canvas-based, MIT licensed)."
+)
+
+
+def _warn_remotion_deprecated() -> None:
+    warnings.warn(_REMOTION_DEPRECATION_MSG, DeprecationWarning, stacklevel=3)
 
 
 class ClientRemotionMixin:
@@ -24,6 +36,7 @@ class ClientRemotionMixin:
         scale: float | None = None,
     ) -> dict:
         """Render a Remotion composition to video."""
+        _warn_remotion_deprecated()
         from ..remotion_engine import render
 
         return render(
@@ -43,12 +56,14 @@ class ClientRemotionMixin:
 
     def remotion_compositions(self, project_path: str) -> list[dict]:
         """List compositions in a Remotion project."""
+        _warn_remotion_deprecated()
         from ..remotion_engine import compositions
 
         return compositions(project_path)
 
     def remotion_studio(self, project_path: str, port: int = 3000) -> dict:
         """Launch Remotion Studio for live preview."""
+        _warn_remotion_deprecated()
         from ..remotion_engine import studio
 
         return studio(project_path, port=port)
@@ -62,6 +77,7 @@ class ClientRemotionMixin:
         image_format: str = "png",
     ) -> dict:
         """Render a single frame as image."""
+        _warn_remotion_deprecated()
         from ..remotion_engine import still
 
         return still(project_path, composition_id, output_path=output, frame=frame, image_format=image_format)
@@ -82,6 +98,7 @@ class ClientRemotionMixin:
         Returns:
             dict with key "project_path" (str): absolute path to the new project
         """
+        _warn_remotion_deprecated()
         if not name:
             raise MCPVideoError("name cannot be empty", error_type="validation_error", code="empty_name")
         from ..remotion_engine import create_project
@@ -95,6 +112,7 @@ class ClientRemotionMixin:
         slug: str,
     ) -> None:
         """Generate composition from spec."""
+        _warn_remotion_deprecated()
         from ..remotion_engine import scaffold_template
 
         return scaffold_template(project_path, spec, slug)
@@ -110,6 +128,7 @@ class ClientRemotionMixin:
         Returns:
             RemotionValidationResult with pass/fail status and issues list
         """
+        _warn_remotion_deprecated()
         from ..remotion_engine import validate
 
         return validate(project_path, composition_id=composition_id)
@@ -134,6 +153,7 @@ class ClientRemotionMixin:
         Returns:
             RemotionPipelineResult with output path and applied operations
         """
+        _warn_remotion_deprecated()
         from ..remotion_engine import render_and_post
 
         return render_and_post(project_path, composition_id, post_process, output_path=output)

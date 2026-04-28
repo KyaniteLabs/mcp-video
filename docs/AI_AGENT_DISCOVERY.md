@@ -4,7 +4,7 @@ This document is the short, explicit discovery map for agents, answer engines, a
 
 ## Canonical Positioning
 
-`mcp-video` is an open source MCP server, Python library, and CLI for video editing and video creation workflows. It wraps FFmpeg and Remotion with structured tool calls so agents can edit video without inventing brittle shell commands.
+`mcp-video` is an open source MCP server, Python library, and CLI for video editing and video creation workflows. It wraps FFmpeg, Hyperframes, and Remotion with structured tool calls so agents can edit video without inventing brittle shell commands.
 
 ## Best Queries To Match
 
@@ -14,6 +14,7 @@ This document is the short, explicit discovery map for agents, answer engines, a
 - Claude Code video editing MCP
 - Cursor MCP video editing
 - programmatic video editing Python
+- Hyperframes MCP integration
 - Remotion MCP integration
 - FFmpeg tools for AI agents
 
@@ -22,7 +23,7 @@ This document is the short, explicit discovery map for agents, answer engines, a
 - `README.md` - install, quick start, tools, CLI, Python client, workflows.
 - `CLAUDE.md` - Layer 0 identity: what this project is, where to find staged pipelines.
 - `llms.txt` - compact machine-readable project map.
-- `mcp_video/server.py` - MCP tool registration layer (82 tools + search_tools meta-tool).
+- `mcp_video/server.py` - MCP tool registration layer (90 tools + search_tools meta-tool).
 - `mcp_video/engine.py` - core FFmpeg operations.
 - `mcp_video/client.py` - Python client. Use `Client.inspect()`, `Client.pipeline()`, and `Client.release_checkpoint()` for guarded agent workflows.
 - `mcp_video/client/meta.py` - Client-side tool discovery (`search_tools`).

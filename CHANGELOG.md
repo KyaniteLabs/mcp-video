@@ -9,6 +9,32 @@ This project follows a simple release-note style:
 - `Fixed` for bug fixes.
 - `Security` for vulnerability fixes.
 
+## 1.2.5 - 2026-04-27
+
+### Added
+
+- **Hyperframes integration** — 8 new MCP tools, Python client methods, and CLI commands for HTML-native video creation:
+  - `hyperframes_init` — scaffold new projects (blank, warm-grain, swiss-grid templates)
+  - `hyperframes_render` — render compositions to MP4/WebM/MOV
+  - `hyperframes_still` — render single frames via snapshot
+  - `hyperframes_compositions` — list compositions in a project
+  - `hyperframes_preview` — launch live preview studio
+  - `hyperframes_validate` — validate project structure and run lint
+  - `hyperframes_add_block` — install blocks from the Hyperframes catalog
+  - `hyperframes_to_mcpvideo` — render then post-process with mcp-video in one step
+- Full test suite for Hyperframes engine: 54 unit + integration tests in `tests/test_hyperframes_engine.py`.
+- `sample_hyperframes_project` pytest fixture.
+
+### Changed
+
+- **Remotion is deprecated.** All Remotion MCP tools, client methods, and CLI commands now emit `DeprecationWarning`. Remotion will be removed in a future major version. Migrate to Hyperframes (Apache 2.0) or Revideo (MIT).
+- Public tool count updated from 82 to 90 unique MCP tools.
+- `mcp_video/client/remotion.py` — all methods now warn on usage.
+
+### Fixed
+
+- `hyperframes_engine.validate()` no longer raises `HyperframesProjectError` when no HTML entry point is found; it correctly reports the issue in the validation result.
+
 ## 1.2.4 - 2026-04-22
 
 ### Added

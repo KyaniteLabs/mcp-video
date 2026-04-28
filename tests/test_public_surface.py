@@ -57,6 +57,14 @@ EXPECTED_CLI_COMMANDS = {
     "remotion-scaffold",
     "remotion-validate",
     "remotion-pipeline",
+    "hyperframes-render",
+    "hyperframes-compositions",
+    "hyperframes-preview",
+    "hyperframes-still",
+    "hyperframes-init",
+    "hyperframes-add-block",
+    "hyperframes-validate",
+    "hyperframes-pipeline",
     "effect-vignette",
     "effect-glow",
     "effect-noise",
@@ -141,6 +149,14 @@ EXPECTED_SERVER_TOOLS = {
     "remotion_scaffold_template",
     "remotion_validate",
     "remotion_to_mcpvideo",
+    "hyperframes_render",
+    "hyperframes_compositions",
+    "hyperframes_preview",
+    "hyperframes_still",
+    "hyperframes_init",
+    "hyperframes_add_block",
+    "hyperframes_validate",
+    "hyperframes_to_mcpvideo",
     "audio_synthesize",
     "audio_preset",
     "audio_sequence",
@@ -195,7 +211,7 @@ def test_cli_help_lists_all_commands():
     help_commands = set(command_list.split(","))
 
     assert help_commands == EXPECTED_CLI_COMMANDS
-    assert len(EXPECTED_CLI_COMMANDS) == 86
+    assert len(EXPECTED_CLI_COMMANDS) == 94
 
 
 def test_agent_cookbook_dry_run():
@@ -217,7 +233,7 @@ def test_server_tool_registry_keeps_public_tool_names():
     tool_names = {tool.name for tool in asyncio.run(mcp.list_tools())}
 
     assert tool_names >= EXPECTED_SERVER_TOOLS
-    assert len(tool_names) == 82
+    assert len(tool_names) == 90
 
 
 def test_module_reexports():

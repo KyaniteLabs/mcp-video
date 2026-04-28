@@ -320,3 +320,35 @@ def sample_remotion_project(tmp_path):
     )
 
     return str(project_dir)
+
+
+@pytest.fixture
+def sample_hyperframes_project(tmp_path):
+    """Create a minimal Hyperframes project directory with required files.
+
+    This creates a temp directory containing:
+      - index.html (entry point with data-composition-id)
+      - package.json (optional, for validation)
+
+    Returns the project directory as a string.
+    """
+    project_dir = tmp_path / "hyperframes-project"
+    project_dir.mkdir()
+
+    # index.html — Hyperframes entry point
+    (project_dir / "index.html").write_text(
+        '<!DOCTYPE html>\n'
+        '<html>\n'
+        '  <head><title>Test</title></head>\n'
+        '  <body>\n'
+        '    <div data-composition-id="test-comp"></div>\n'
+        '  </body>\n'
+        '</html>\n'
+    )
+
+    # package.json (optional but useful for validation)
+    (project_dir / "package.json").write_text(
+        '{"name": "test-hyperframes-project", "version": "1.0.0"}'
+    )
+
+    return str(project_dir)

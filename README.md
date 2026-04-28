@@ -8,13 +8,13 @@
 
 <p align="center">
   <strong>Video editing and creation for AI agents.</strong><br>
-  Edit existing video with FFmpeg. Create new video from code with Remotion.
+  Edit existing video with FFmpeg. Create new video from code with Hyperframes or Remotion.
 </p>
 
 <p align="center">
   <a href="https://pypi.org/project/mcp-video/"><img src="https://img.shields.io/pypi/v/mcp-video.svg" alt="PyPI"></a>
   <a href="https://github.com/pastorsimon1798/mcp-video/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/pastorsimon1798/mcp-video/.github/workflows/ci.yml?branch=master&label=CI" alt="CI"></a>
-  <img src="https://img.shields.io/badge/tools-82%20MCP%20tools-orange.svg" alt="Tools">
+  <img src="https://img.shields.io/badge/tools-90%20MCP%20tools-orange.svg" alt="Tools">
   <img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="License">
   <img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python">
 </p>
@@ -37,7 +37,7 @@ An open-source video editing server built on the [Model Context Protocol (MCP)](
 
 **Two modes:**
 1. **Edit existing video** with FFmpeg — trim, merge, overlay text, add audio, apply filters, stabilize, detect scenes, transcribe, and more.
-2. **Create new video from code** with [Remotion](https://www.remotion.dev/) — scaffold React-based video compositions, preview live, render to MP4, then post-process.
+2. **Create new video from code** with [Hyperframes](https://hyperframes.io/) (HTML-native, Apache 2.0) or [Remotion](https://www.remotion.dev/) (React/TypeScript) — scaffold compositions, preview live, render to MP4, then post-process.
 
 **Three interfaces:**
 
@@ -51,7 +51,7 @@ An open-source video editing server built on the [Model Context Protocol (MCP)](
 
 ## Installation
 
-**Prerequisites:** [FFmpeg](https://ffmpeg.org) must be installed. For Remotion features, you also need [Node.js](https://nodejs.org/) 18+.
+**Prerequisites:** [FFmpeg](https://ffmpeg.org) must be installed. For Hyperframes or Remotion features, you also need [Node.js](https://nodejs.org/) 22+.
 
 ```bash
 # macOS
@@ -178,7 +178,8 @@ mcp-video template tiktok video.mp4 --caption "Check this out!"
 |----------|-------|------------|
 | **Core Video** | 26 | trim, merge, text, audio, resize, convert, filters, stabilize, chroma key, subtitles, watermark, batch |
 | **AI-Powered** | 10 | transcribe (Whisper), scene detect, stem separation (Demucs), upscale, color grade |
-| **Remotion** | 8 | create project, scaffold, render, studio preview, pipeline |
+| **Hyperframes** | 8 | init, render, still, preview, compositions, validate, add block, pipeline |
+| **Remotion** | 8 | create project, scaffold, render, studio preview, pipeline *(deprecated)* |
 | **Audio Synthesis** | 7 | generate waveforms, presets, sequences, effects, spatial audio — pure NumPy |
 | **Visual Effects** | 5 | vignette, chromatic aberration, scanlines, noise, glow |
 | **Transitions** | 3 | glitch, pixelate, morph |
@@ -196,7 +197,23 @@ results = editor.search_tools("subtitle")  # Find subtitle-related tools
 
 ---
 
-## Remotion Integration
+## Hyperframes Integration
+
+Create videos programmatically with [Hyperframes](https://hyperframes.io/) — an HTML-native framework for video (Apache 2.0).
+
+```
+1. Create project     -> hyperframes_init
+2. Add blocks         -> hyperframes_add_block
+3. Preview live       -> hyperframes_preview
+4. Render             -> hyperframes_render
+5. Post-process       -> hyperframes_to_mcpvideo
+```
+
+See [Hyperframes docs](docs/TOOLS.md#hyperframes--html-native-video-8-tools) and the [Python client reference](docs/PYTHON_CLIENT.md).
+
+## Remotion Integration (Deprecated)
+
+> ⚠️ **Remotion is deprecated** and will be removed in a future major version. All Remotion tools now emit `DeprecationWarning`. Please migrate to Hyperframes (Apache 2.0) or Revideo (MIT).
 
 Create videos programmatically with [Remotion](https://www.remotion.dev/) — a React framework for video.
 
@@ -325,7 +342,7 @@ See [`workflows/CONTEXT.md`](workflows/CONTEXT.md) for the routing table.
 mcp_video/
   client/                # Python Client API (mixins per domain)
   client/meta.py         # Client discovery mixin (search_tools)
-  server.py              # MCP server (82 tools + 4 resources + search_tools meta-tool)
+  server.py              # MCP server (90 tools + 4 resources + search_tools meta-tool)
   server_tools_*.py      # Tool registration by category
   engine.py              # Core FFmpeg engine
   engine_*.py            # Specialized engines (thumbnail, edit, probe, etc.)
@@ -336,7 +353,8 @@ mcp_video/
   effects_engine.py      # Visual effects + motion graphics
   transitions_engine.py  # Clip transitions
   ai_engine.py           # AI features (Whisper, Demucs, Real-ESRGAN)
-  remotion_engine.py     # Remotion CLI wrapper
+  hyperframes_engine.py  # Hyperframes CLI wrapper
+  remotion_engine.py     # Remotion CLI wrapper (deprecated)
   image_engine.py        # Image color analysis
   quality_guardrails.py  # Automated quality checks
 workflows/               # ICM staged pipelines
@@ -392,7 +410,7 @@ Tests are excluded from the PyPI package. To run locally:
 
 ```bash
 pip install -e ".[dev]"
-pytest tests/ -v -m "not slow and not remotion"
+pytest tests/ -v -m "not slow and not remotion and not hyperframes"
 ```
 
 See [docs/TESTING.md](docs/TESTING.md) for full test categories and CI details.
@@ -401,6 +419,6 @@ See [docs/TESTING.md](docs/TESTING.md) for full test categories and CI details.
 
 Apache 2.0 — see [LICENSE](LICENSE).
 
-Built on [FFmpeg](https://ffmpeg.org/), [Remotion](https://www.remotion.dev/), and the [Model Context Protocol](https://modelcontextprotocol.io/).
+Built on [FFmpeg](https://ffmpeg.org/), [Hyperframes](https://hyperframes.io/), [Remotion](https://www.remotion.dev/), and the [Model Context Protocol](https://modelcontextprotocol.io/).
 
 See [docs/LEGAL_REVIEW.md](docs/LEGAL_REVIEW.md) for dependency licensing notes.

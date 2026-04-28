@@ -34,6 +34,21 @@ python -m pytest tests/test_real_all_features.py -v -m "not slow"
 | **Utility** | 7 | Convert format, preview, storyboard, thumbnail, batch process, timeline edit, generate subtitles |
 | **Total** | **70** | **100% passing** |
 
+## Hyperframes Tests
+
+Run Hyperframes-specific tests (requires Node.js 22+ and `npx hyperframes`):
+
+```bash
+python -m pytest tests/test_hyperframes_engine.py -v
+python -m pytest tests/test_hyperframes_engine.py -v -m hyperframes
+```
+
+Run without Hyperframes integration tests:
+
+```bash
+python -m pytest tests/ -v -m "not hyperframes"
+```
+
 ## AI Features Tested
 
 ### 1. AI Scene Detection (`test_40_ai_scene_detect`)
