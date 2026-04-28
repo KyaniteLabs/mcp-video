@@ -4,12 +4,24 @@ from __future__ import annotations
 
 from typing import Any
 import re
+import warnings
 
 from .errors import MCPVideoError
 from .limits import MAX_CONCURRENCY, MAX_CRF, MAX_PORT, MAX_RESOLUTION, MIN_CRF, MIN_PORT
 from .server_app import _error_result, _result, mcp
 from .validation import VALID_CODECS, VALID_REMOTION_TEMPLATES
 from .ffmpeg_helpers import _validate_project_path
+
+
+_REMOTION_DEPRECATION_MSG = (
+    "Remotion integration is deprecated and will be removed in a future version. "
+    "Please migrate to Hyperframes (HTML-native, fully open source under Apache 2.0) "
+    "or Revideo (Canvas-based, MIT licensed)."
+)
+
+
+def _warn_remotion_deprecated() -> None:
+    warnings.warn(_REMOTION_DEPRECATION_MSG, DeprecationWarning, stacklevel=3)
 
 
 @mcp.tool()
@@ -43,6 +55,7 @@ def remotion_render(
         props: Input props as JSON dict.
         scale: Render scale factor.
     """
+    _warn_remotion_deprecated()
     if codec not in VALID_CODECS:
         return _error_result(
             MCPVideoError(
@@ -124,6 +137,7 @@ def remotion_compositions(
     Args:
         project_path: Absolute path to the Remotion project directory.
     """
+    _warn_remotion_deprecated()
     try:
         project_path = _validate_project_path(project_path)
         from .remotion_engine import compositions
@@ -146,6 +160,7 @@ def remotion_studio(
         project_path: Absolute path to the Remotion project directory.
         port: Port for the studio server (default 3000).
     """
+    _warn_remotion_deprecated()
     if port < MIN_PORT or port > MAX_PORT:
         return _error_result(
             MCPVideoError(
@@ -182,6 +197,7 @@ def remotion_still(
         frame: Frame number to render (default 0).
         image_format: Image format (png, jpeg, webp). Default png.
     """
+    _warn_remotion_deprecated()
     try:
         project_path = _validate_project_path(project_path)
         from .remotion_engine import still
@@ -208,6 +224,7 @@ def remotion_create_project(
         output_dir: Directory to create the project in. Defaults to current directory.
         template: Project template (blank, hello-world). Default blank.
     """
+    _warn_remotion_deprecated()
     if not re.match(r"^[a-zA-Z0-9_-]+$", name):
         return _error_result(
             MCPVideoError(
@@ -245,6 +262,7 @@ def remotion_scaffold_template(
         spec: Composition spec as JSON dict with keys like primary_color, heading_font, target_fps, target_duration, etc.
         slug: Slug for the composition (used for filenames and component naming).
     """
+    _warn_remotion_deprecated()
     if not re.match(r"^[a-zA-Z0-9_-]+$", slug):
         return _error_result(
             MCPVideoError(
@@ -273,6 +291,7 @@ def remotion_validate(
         project_path: Absolute path to the Remotion project directory.
         composition_id: Optional specific composition ID to validate.
     """
+    _warn_remotion_deprecated()
     try:
         project_path = _validate_project_path(project_path)
         from .remotion_engine import validate
@@ -300,6 +319,7 @@ def remotion_to_mcpvideo(
             Example: [{"op": "resize", "params": {"aspect_ratio": "9:16"}}]
         output_path: Where to save the final output. Auto-generated if omitted.
     """
+    _warn_remotion_deprecated()
     if not isinstance(post_process, list) or len(post_process) < 1:
         return _error_result(
             MCPVideoError(

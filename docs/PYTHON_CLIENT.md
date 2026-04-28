@@ -65,6 +65,34 @@ Analysis methods return report models or dictionaries.
 | `generate_palette(image_path, harmony?, n_colors?)` | `PaletteResult` | Generate color harmony palette |
 | `analyze_product(image_path, use_ai?, n_colors?)` | `ProductAnalysisResult` | Extract colors + optional AI description |
 
+## Hyperframes Methods
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `hyperframes_render(project_path, output?, fps?, width?, height?, quality?, format?, workers?, crf?)` | `HyperframesRenderResult` | Render a Hyperframes composition to video |
+| `hyperframes_compositions(project_path)` | `CompositionsResult` | List compositions in a project |
+| `hyperframes_preview(project_path, port?)` | `HyperframesPreviewResult` | Launch live preview studio |
+| `hyperframes_still(project_path, output?, frame?)` | `HyperframesStillResult` | Render a single frame |
+| `hyperframes_init(name, output_dir?, template?)` | `HyperframesProjectResult` | Scaffold a new project |
+| `hyperframes_add_block(project_path, block_name)` | `HyperframesBlockResult` | Install a block from the catalog |
+| `hyperframes_validate(project_path)` | `HyperframesValidationResult` | Validate project for rendering readiness |
+| `hyperframes_to_mcpvideo(project_path, post_process, output?)` | `HyperframesPipelineResult` | Render then post-process with mcp-video |
+
+## Remotion Methods (Deprecated)
+
+> ⚠️ All Remotion methods emit `DeprecationWarning`. Migrate to Hyperframes.
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `remotion_render(project_path, composition_id, output?, codec?, crf?, width?, height?, fps?, concurrency?, frames?, props?, scale?)` | `RemotionRenderResult` | Render a Remotion composition |
+| `remotion_compositions(project_path)` | `CompositionsResult` | List compositions |
+| `remotion_studio(project_path, port?)` | `RemotionStudioResult` | Launch Remotion Studio |
+| `remotion_still(project_path, composition_id, output?, frame?, image_format?)` | `RemotionStillResult` | Render a single frame |
+| `remotion_create_project(name, output_dir?, template?)` | `RemotionProjectResult` | Scaffold a new project |
+| `remotion_scaffold_template(project_path, spec, slug)` | `RemotionScaffoldResult` | Generate composition from spec |
+| `remotion_validate(project_path, composition_id?)` | `RemotionValidationResult` | Validate project structure |
+| `remotion_to_mcpvideo(project_path, composition_id, post_process, output?)` | `RemotionPipelineResult` | Render + post-process pipeline |
+
 ## Return Models
 
 ```python

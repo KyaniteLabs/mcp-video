@@ -141,6 +141,54 @@ class RemotionRenderError(MCPVideoError):
         self.full_stderr = stderr
 
 
+class HyperframesNotFoundError(MCPVideoError):
+    """Hyperframes CLI or Node.js not found on PATH."""
+
+    def __init__(self, detail: str = "") -> None:
+        msg = "Hyperframes requires Node.js 22+ and npx. Install Node.js from https://nodejs.org"
+        if detail:
+            msg += f" — {detail}"
+        super().__init__(
+            msg,
+            error_type="dependency_error",
+            code="hyperframes_not_found",
+            suggested_action={
+                "auto_fix": False,
+                "description": "Install Node.js (v22+) and ensure npx is on PATH, then run: npx hyperframes --version",
+            },
+        )
+
+
+class HyperframesProjectError(MCPVideoError):
+    """Invalid Hyperframes project structure."""
+
+    def __init__(self, path: str, reason: str = "Invalid project") -> None:
+        super().__init__(
+            f"Hyperframes project error: {path} — {reason}",
+            error_type="project_error",
+            code="invalid_hyperframes_project",
+            suggested_action={
+                "auto_fix": False,
+                "description": "Ensure the project has an index.html with a data-composition-id root element.",
+            },
+        )
+
+
+class HyperframesRenderError(MCPVideoError):
+    """Hyperframes render failure."""
+
+    def __init__(self, command: str, returncode: int, stderr: str) -> None:
+        stderr_short = stderr[-500:] if len(stderr) > 500 else stderr
+        super().__init__(
+            f"Hyperframes render failed (exit code {returncode}): {stderr_short}",
+            error_type="render_error",
+            code=f"hyperframes_exit_{returncode}",
+        )
+        self.command = command
+        self.returncode = returncode
+        self.full_stderr = stderr
+
+
 # Actionable error keywords that can appear before standard stream markers
 _ACTIONABLE_PATTERNS = (
     "permission denied",

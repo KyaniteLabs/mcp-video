@@ -1,6 +1,6 @@
 # MCP Tools Reference
 
-82 unique MCP tools across 12 categories, plus a `search_tools` meta-tool. All return structured JSON with `success`, `output_path`, and operation metadata. On failure, they return `{"success": false, "error": {...}}` with auto-fix suggestions.
+90 unique MCP tools across 12 categories, plus a `search_tools` meta-tool. All return structured JSON with `success`, `output_path`, and operation metadata. On failure, they return `{"success": false, "error": {...}}` with auto-fix suggestions.
 
 ---
 
@@ -81,7 +81,24 @@ pip install "mcp-video[ai]"          # all AI extras, kept for compatibility
 
 ---
 
-## Remotion & Motion Graphics (8 tools)
+## Hyperframes — HTML-Native Video (8 tools)
+
+Create videos programmatically using [Hyperframes](https://hyperframes.io/) — an HTML-native framework for video (Apache 2.0). Scaffold projects, add blocks, render compositions, then post-process with mcp-video.
+
+| Tool | Description |
+|------|-------------|
+| `hyperframes_init` | Scaffold a new Hyperframes project (blank, warm-grain, swiss-grid templates) |
+| `hyperframes_render` | Render a Hyperframes composition to video (MP4/WebM/MOV) |
+| `hyperframes_still` | Render a single frame as an image via snapshot |
+| `hyperframes_compositions` | List all compositions in a project |
+| `hyperframes_preview` | Launch Hyperframes preview studio |
+| `hyperframes_validate` | Check project structure and run lint |
+| `hyperframes_add_block` | Install a block from the Hyperframes catalog |
+| `hyperframes_to_mcpvideo` | Pipeline: render with Hyperframes, then post-process with mcp-video |
+
+## Remotion & Motion Graphics (8 tools) — Deprecated
+
+> ⚠️ **Remotion is deprecated** and will be removed in a future major version. All Remotion tools emit `DeprecationWarning`. Migrate to Hyperframes.
 
 Create videos programmatically using [Remotion](https://www.remotion.dev/) — a React framework for video. Scaffold projects, render compositions, then post-process with mcp-video.
 

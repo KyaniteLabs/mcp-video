@@ -70,6 +70,16 @@ from .server_tools_remotion import (
     remotion_to_mcpvideo as remotion_to_mcpvideo,
     remotion_validate as remotion_validate,
 )
+from .server_tools_hyperframes import (
+    hyperframes_add_block as hyperframes_add_block,
+    hyperframes_compositions as hyperframes_compositions,
+    hyperframes_init as hyperframes_init,
+    hyperframes_preview as hyperframes_preview,
+    hyperframes_render as hyperframes_render,
+    hyperframes_still as hyperframes_still,
+    hyperframes_to_mcpvideo as hyperframes_to_mcpvideo,
+    hyperframes_validate as hyperframes_validate,
+)
 from .server_tools_audio import (
     audio_compose as audio_compose,
     audio_effects as audio_effects,

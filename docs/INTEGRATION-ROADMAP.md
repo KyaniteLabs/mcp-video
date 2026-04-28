@@ -71,9 +71,33 @@ mcp-video (video_export_frames)
 
 ---
 
-## 3. Remotion Integration — MEDIUM PRIORITY — APPROVED
+## 3. Hyperframes Integration — COMPLETED
 
-### Status: Third-party template available as reference. Complementary to mcp-video.
+### Status: Shipped in v1.2.5
+
+Full Hyperframes integration with 8 MCP tools, Python client methods, and CLI commands.
+
+**Tools shipped:**
+1. `hyperframes_init` — scaffold new projects
+2. `hyperframes_render` — render compositions to video
+3. `hyperframes_still` — render single frames
+4. `hyperframes_compositions` — list compositions
+5. `hyperframes_preview` — launch preview studio
+6. `hyperframes_validate` — validate project structure
+7. `hyperframes_add_block` — install blocks from catalog
+8. `hyperframes_to_mcpvideo` — render + post-process pipeline
+
+**Architecture:** HTML-native video creation via `npx hyperframes` CLI. No pip dependencies — requires Node.js 22+ and npx.
+
+---
+
+## 4. Remotion Integration — DEPRECATED
+
+### Status: Deprecated in v1.2.5. Will be removed in a future major version.
+
+Remotion's custom freemium license (company-size gate, no derivative resale) creates liability for wrappers like mcp-video. All Remotion tools now emit `DeprecationWarning`. Migrate to Hyperframes (Apache 2.0) or Revideo (MIT).
+
+### Previous Status: Third-party template available as reference. Complementary to mcp-video.
 
 ### Available Reference Material
 

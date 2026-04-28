@@ -38,21 +38,35 @@ COMMAND_CHECKS = (
         "category": "remotion",
         "required": False,
         "command": ["node", "--version"],
-        "install_hint": "Install Node.js 18+ for Remotion features.",
+        "install_hint": "Install Node.js 18+ for Remotion features (22+ recommended for Hyperframes).",
     },
     {
         "name": "npm",
         "category": "remotion",
         "required": False,
         "command": ["npm", "--version"],
-        "install_hint": "Install npm for Remotion project setup.",
+        "install_hint": "Install npm for Remotion/Hyperframes project setup.",
     },
     {
         "name": "npx",
         "category": "remotion",
         "required": False,
         "command": ["npx", "--version"],
-        "install_hint": "Install npx/npm for Remotion CLI execution.",
+        "install_hint": "Install npx/npm for Remotion and Hyperframes CLI execution.",
+    },
+    {
+        "name": "node",
+        "category": "hyperframes",
+        "required": False,
+        "command": ["node", "--version"],
+        "install_hint": "Install Node.js 22+ for Hyperframes features.",
+    },
+    {
+        "name": "npx",
+        "category": "hyperframes",
+        "required": False,
+        "command": ["npx", "--version"],
+        "install_hint": "Install npx/npm for Hyperframes CLI execution.",
     },
 )
 

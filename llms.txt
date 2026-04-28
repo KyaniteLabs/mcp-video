@@ -1,6 +1,6 @@
 # mcp-video
 
-> Video editing and creation for AI agents. `mcp-video` is an open source MCP server, Python client, and CLI that exposes FFmpeg and Remotion workflows as structured tools.
+> Video editing and creation for AI agents. `mcp-video` is an open source MCP server, Python client, and CLI that exposes FFmpeg, Hyperframes, and Remotion workflows as structured tools.
 
 ## Use This Project When
 
@@ -38,7 +38,7 @@ claude mcp add mcp-video -- uvx mcp-video
 - `README.md` - user documentation, install guide, tool list, CLI and Python examples.
 - `CLAUDE.md` - Layer 0 identity file for agent context routing.
 - `docs/AI_AGENT_DISCOVERY.md` - agent and answer-engine discovery map.
-- `mcp_video/server.py` - MCP tool registration layer (82 tools + search_tools meta-tool).
+- `mcp_video/server.py` - MCP tool registration layer (90 tools + search_tools meta-tool).
 - `mcp_video/engine.py` - core FFmpeg editing operations.
 - `mcp_video/client.py` - Python client API.
 - `mcp_video/client/meta.py` - Client-side tool discovery (`search_tools`).
@@ -58,7 +58,7 @@ claude mcp add mcp-video -- uvx mcp-video
 - Keep subprocess timeouts.
 - Preserve public MCP tool signatures.
 - Do not commit generated media, local caches, virtualenvs, rendered output, or workspace state.
-- Use `search_tools("keyword")` to discover tools instead of loading all 82 descriptions into context.
+- Use `search_tools("keyword")` to discover tools instead of loading all 90 descriptions into context.
 - Use `Client.inspect("method")` before uncertain Python calls; it returns real parameters, aliases, category, and return type.
 - Treat media-producing Python client methods as returning `EditResult` with `.output_path`.
 - Use `Client.pipeline([...], output_path="final.mp4")` for chained media workflows instead of manual return-type guessing.

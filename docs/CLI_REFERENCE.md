@@ -8,7 +8,7 @@ mcp-video [command] [options]
 
 | Command | Description |
 |---------|-------------|
-| `doctor` | Check FFmpeg, Remotion, image, and AI dependencies |
+| `doctor` | Check FFmpeg, Hyperframes, Remotion, image, and AI dependencies |
 
 ## Core Editing
 
@@ -135,7 +135,22 @@ mcp-video [command] [options]
 | `image-generate-palette` | Generate color harmony palette |
 | `image-analyze-product` | Analyze product image (colors + AI description) |
 
-## Remotion Commands
+## Hyperframes Commands
+
+| Command | Description |
+|---------|-------------|
+| `hyperframes-render` | Render a Hyperframes composition to video |
+| `hyperframes-compositions` | List compositions in a Hyperframes project |
+| `hyperframes-preview` | Launch Hyperframes preview studio |
+| `hyperframes-still` | Render a single frame as an image |
+| `hyperframes-init` | Scaffold a new Hyperframes project |
+| `hyperframes-add-block` | Install a block from the Hyperframes catalog |
+| `hyperframes-validate` | Validate a Hyperframes project structure |
+| `hyperframes-pipeline` | Render + post-process in one step |
+
+## Remotion Commands (Deprecated)
+
+> ⚠️ Remotion integration is deprecated and will be removed in a future version.
 
 | Command | Description |
 |---------|-------------|
