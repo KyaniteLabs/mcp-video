@@ -9,6 +9,34 @@ This project follows a simple release-note style:
 - `Fixed` for bug fixes.
 - `Security` for vulnerability fixes.
 
+## 1.3.0 - 2026-04-28
+
+### Added
+
+- **Crop by percentage** — `crop()` now accepts `crop_percent` (e.g. `crop_percent=50` for a center 50% crop). Alternative to explicit `width` + `height`.
+- **Orientation-aware metadata** — `VideoInfo` now exposes `rotation`, `display_width`, `display_height`, and `display_resolution`. ffprobe `side_data_list` is parsed for rotation metadata.
+- **Audio waveform text representation** — `WaveformResult.text` returns an ASCII art waveform for agent-friendly display.
+- **Frame-accurate seeking** — `trim()` gains `accurate=True` for output-seeking (slower, frame-perfect) vs the default fast input-seeking.
+- **Pipeline output cleanup** — `Client.pipeline()` gains `cleanup=True` to auto-remove intermediate files after chaining.
+- **Structured logging** — New `--verbose` / `-v` CLI flag enables DEBUG logging to stderr.
+- **Template preview** — `preview_template()` returns operations list + estimated output before rendering a timeline template.
+- **Custom font upload** — `font_manager.py` downloads and caches Google Fonts by name for use in text overlays.
+- **Usage analytics** — `analytics.py` sends an optional anonymous ping on server startup. Disable with `MCP_VIDEO_ANALYTICS=0`.
+- **HLS/DASH streaming** — `hls_segment()` segments video into HTTP Live Streaming format with multi-quality variants.
+- **Advanced codecs** — `convert()` now supports `hevc` (H.265), `av1`, and `prores` output formats.
+- **Advanced masking** — New `luma_key()` (brightness-based masking) and `shape_mask()` (circle, rounded_rect, oval) tools.
+- **Smarter GIF output** — Quality-based fps scaling (10/12/15/20), Bayer dithering, and 128-color palette generation.
+
+### Changed
+
+- **Merge auto-normalize** now handles fps mismatches, audio sample rate mismatches, and rotation-aware display dimensions during normalization.
+- **Remotion deprecation upgraded** from `DeprecationWarning` to `FutureWarning` for v1.3.0 timeline.
+- Public tool count updated from 90 to **93** unique MCP tools.
+
+### Fixed
+
+- `convert()` vs `export_video()` docstrings clarified to distinguish format changes from quality-tuned delivery.
+
 ## 1.2.6 - 2026-04-27
 
 ### Changed
