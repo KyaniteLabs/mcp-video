@@ -1,6 +1,6 @@
 # MCP Tools Reference
 
-90 unique MCP tools across 12 categories, plus a `search_tools` meta-tool. All return structured JSON with `success`, `output_path`, and operation metadata. On failure, they return `{"success": false, "error": {...}}` with auto-fix suggestions.
+93 unique MCP tools across 12 categories, plus a `search_tools` meta-tool. All return structured JSON with `success`, `output_path`, and operation metadata. On failure, they return `{"success": false, "error": {...}}` with auto-fix suggestions.
 
 ---
 
@@ -20,7 +20,7 @@ results = editor.search_tools("subtitle")
 
 ---
 
-## Core Editing (29 tools)
+## Core Editing (30 tools)
 
 | Tool | Description |
 |------|-------------|
@@ -53,6 +53,7 @@ results = editor.search_tools("subtitle")
 | `video_export` | Render with quality and format settings |
 | `video_normalize_audio` | Normalize audio loudness to a target LUFS level |
 | `video_batch` | Apply the same operation to multiple video files |
+| `video_hls_segment` | Segment video into HLS format with multi-quality variants |
 
 ---
 
@@ -134,7 +135,7 @@ Generate audio from code — no external audio files needed. Pure NumPy, no extr
 
 ---
 
-## Visual Effects (6 tools)
+## Visual Effects (8 tools)
 
 | Tool | Description |
 |------|-------------|
@@ -144,6 +145,8 @@ Generate audio from code — no external audio files needed. Pure NumPy, no extr
 | `effect_noise` | Film grain and digital noise |
 | `effect_glow` | Bloom/glow for highlights |
 | `video_apply_mask` | Apply image mask with edge feathering |
+| `video_luma_key` | Mask out dark regions based on luminance (brightness) |
+| `video_shape_mask` | Apply geometric shape mask: circle, rounded_rect, oval |
 
 ---
 
