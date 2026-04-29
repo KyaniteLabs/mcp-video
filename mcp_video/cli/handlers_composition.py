@@ -35,6 +35,7 @@ def handle_composition_command(args: Any, *, use_json: bool) -> bool:
             position=args.position,
             start=args.start,
             duration=args.duration,
+            typewriter_speed=getattr(args, "typewriter_speed", 0.08),
         )
         _print_output(f"Animated text ({args.animation})", result, use_json=use_json)
         return True

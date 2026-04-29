@@ -1,6 +1,6 @@
 # Improvement Roadmap
 
-v1.3.0 shipped. 85 MCP tools, Hyperframes integration, 17 new features. Remotion completely removed post-v1.3.0. Here's what's next.
+v1.3.0 shipped. 87 MCP tools, Hyperframes integration, 17 new features. Remotion completely removed post-v1.3.0. Here's what's next.
 
 ---
 
@@ -57,7 +57,7 @@ v1.2.0 shipped. 82 MCP tools, 832 tests, security hardened. Here's what's next.
 - [x] FFmpeg filter injection prevention — all numeric params sanitized before interpolation via `_sanitize_ffmpeg_number`
 - [x] Color validation hardened — whitelist CSS named colors + hex + `0xRRGGBB` format, reject FFmpeg special chars
 - [x] Null byte rejection on all input paths across all engines
-- [x] Server-side parameter validation on all 85 tools (crf, preset, format, transitions, audio, AI)
+- [x] Server-side parameter validation on all 87 tools (crf, preset, format, transitions, audio, AI)
 - [x] `except Exception` fallback on all ~55 tool functions — no raw exceptions leak to MCP framework
 - [x] Timeout (600s) on all 22 subprocess.run calls in ai_engine.py
 - [x] Subprocess.TimeoutExpired handling in ai_engine.py
@@ -172,7 +172,7 @@ v1.2.0 shipped. 82 MCP tools, 832 tests, security hardened. Here's what's next.
 ## High Impact (Directly improves every user session)
 
 - [x] **Progress callbacks** — Long operations (merge, convert, export) give no feedback. A progress percentage in the MCP response would let agents tell users "50% done..." instead of silence. FFmpeg outputs progress to stderr — parse it.
-- [ ] **Output file cleanup** — Every operation creates a new file. Multi-step workflows leave 3-4 intermediate files. Add a `cleanup` parameter or a `video_cleanup` tool that removes intermediates, keeping only the final output.
+- [x] **Output file cleanup** — `video_cleanup` MCP tool removes intermediate files, with a `keep` list to preserve finals.
 - [ ] **Smarter GIF output** — 3-second GIF at "low" quality = 28MB. The two-pass palette approach is good but `scale=480:-1` is too large for "low". Scale by quality preset: low=320, medium=480, high=640.
 - [x] **Visual verification** — After an operation, return a thumbnail of the first frame of the output. *(Shipped in v1.0.0)*
 
@@ -186,11 +186,11 @@ v1.2.0 shipped. 82 MCP tools, 832 tests, security hardened. Here's what's next.
 - [x] **Smarter GIF output** — Quality-based scaling (low=320, medium=480, high=640, ultra=800) instead of fixed 480px. *(Shipped in v0.4.0)*
 - [x] **Rich CLI output** — Human-friendly terminal UI with tables, spinners, styled error panels. `--format json` for scripts. `--version` flag. Video templates (TikTok, YouTube Shorts, Instagram Reel, YouTube, Instagram Post). *(Shipped in v0.4.0)*
 
-- [ ] **Crop by percentage** — Currently requires pixel math (`width=1920, height=1080`). Add `crop_percent: 50` so "center 50%" just works. The engine calculates pixels internally.
-- [ ] **Orientation-aware metadata** — `video_info` reports raw stream dimensions (3840x2160) for a portrait phone video that displays as 2160x3840. Read the rotation/side_data metadata from ffprobe and report display orientation.
-- [ ] **Merge auto-concat** — When merging clips with different resolutions/codecs, auto-normalize instead of failing. The error message suggests this but doesn't do it.
-- [ ] **convert vs export clarity** — Both do similar things. Either merge them or make the distinction obvious in the tool descriptions. Right now users (and agents) have to guess which to use.
-- [ ] **Template preview** — Before running a template, return what it *would* do (operations list, estimated output size, duration). Lets agents confirm before committing to a 30-second render.
+- [x] **Crop by percentage** — `video_crop` supports `crop_percent` (e.g. 50 for center 50%).
+- [x] **Orientation-aware metadata** — `video_info` returns `rotation`, `display_width`, `display_height`, `display_resolution`, and `aspect_ratio`.
+- [x] **Merge auto-concat** — `video_merge` auto-normalizes resolution, codec, fps, and audio sample rate mismatches.
+- [x] **convert vs export clarity** — Docstrings updated: `video_convert` for format/codec changes, `video_export` for final delivery re-encoding.
+- [x] **Template preview** — `video_template_preview` returns operations list, estimated duration, resolution, and size without rendering.
 - [x] **Batch operations** — Accept multiple inputs for a single operation. "Trim these 5 videos to 10 seconds each" in one call instead of 5. *(Shipped in v0.3.0 as `video_batch`)*
 
 ## Low Impact (Nice to have)

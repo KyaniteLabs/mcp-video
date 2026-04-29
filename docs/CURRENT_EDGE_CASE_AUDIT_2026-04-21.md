@@ -28,7 +28,7 @@ The remaining risks are now concentrated in a smaller set of areas:
 | ID | Status | Finding | Evidence | Recommended fix |
 |---|---|---|---|---|
 | C-P0-1 | Closed in follow-up branch | `engine_batch.video_batch()` previously created caller-provided `output_dir` without `_validate_output_path()` or canonical policy check. | Follow-up remediation validates `output_dir` before `os.makedirs()` and adds a null-byte regression test. | Keep regression coverage around batch output directories. |
-| C-P0-2 | Closed in follow-up branch | Remotion project scaffolding previously wrote project files under caller-provided `output_dir` + `name` without output-path validation. | Follow-up remediation validates `output_dir`, validates final `project_dir`, rejects unsafe project names, and adds engine-boundary tests. | Keep Remotion name/output validation in engine and server layers. |
+| C-P0-2 | Removed | Remotion project scaffolding previously wrote project files under caller-provided `output_dir` + `name` without output-path validation. | Remotion integration completely removed in PR #163. `remotion_engine.py` and all related server/client/tests deleted. | N/A |
 | C-P0-3 | Closed in follow-up branch | Direct URL download previously checked DNS before `urlopen()` but did not verify the connected peer address. | Follow-up remediation re-checks the peer IP from the opened response before reading bytes and rejects private/reserved peers. | Keep peer-IP regression coverage; future hardening can move to IP-pinned connects if needed. |
 
 ### P1 / next reliability sprint
@@ -49,9 +49,9 @@ The remaining risks are now concentrated in a smaller set of areas:
 |---|---|---|---|---|
 | C-P2-1 | Partial | Direct `subprocess.run()` handling remains duplicated in multiple modules. Most have timeouts now, but behavior/error shaping remains inconsistent. | Examples include `mcp_video/engine_audio_waveform.py:45`, `mcp_video/engine_compare_quality.py:80`, `mcp_video/engine_detect_scenes.py:48`, `mcp_video/engine_stabilize.py:92`, plus AI and design-quality modules. | Gradually route FFmpeg/ffprobe subprocesses through canonical helpers or focused wrappers; keep tests around error typing. |
 | C-P2-2 | Partial | Temporary files with `delete=False` now mostly clean up, but this pattern remains and should stay under regression coverage. | Current cleanup evidence: `mcp_video/ai_engine/transcribe.py:117-119`, `mcp_video/ai_engine/stem.py:130-132`, `mcp_video/engine_runtime_utils.py:444-477`, `mcp_video/audio_engine/__init__.py:78-122`, `mcp_video/audio_engine/sequencing.py:100-115`. | Add regression tests or convert safe cases to `TemporaryDirectory`/managed temp paths. |
-| C-P2-3 | Open | `remotion_engine.py` still uses `subprocess.Popen()` directly. This is outside FFmpeg, but still needs timeout/lifecycle review. | `mcp_video/remotion_engine.py:290` starts a process with `subprocess.Popen()`. | Ensure callers can stop it, document long-running behavior, and add lifecycle tests. |
-| C-P2-4 | Open | Client mixin return types remain inconsistent: media methods return structured results, while many audio/effects/remotion methods return raw `str` or `dict`. | `mcp_video/client/audio.py:90-134`, `mcp_video/client/effects.py:154-170`, `mcp_video/client/remotion.py:11-139`. | Decide public contract, then standardize or document the exception explicitly. |
-| C-P2-5 | Open | Optional dependency errors may still be inconsistent across lazy import surfaces. | Server/client tool layers perform many lazy imports; direct evidence requires a dependency-by-dependency test sweep. | Add tests for missing optional dependencies (`whisper`, `demucs`, `realesrgan`, `remotion`) and assert `dependency_error` where expected. |
+| C-P2-3 | Removed | `remotion_engine.py` previously used `subprocess.Popen()` directly without timeout/lifecycle review. | Remotion integration completely removed in PR #163. `remotion_engine.py` deleted. | N/A |
+| C-P2-4 | Partial | Client mixin return types remain inconsistent: media methods return structured results, while audio/effects methods return raw `str` or `dict`. | `mcp_video/client/audio.py:90-134`, `mcp_video/client/effects.py:154-170`. Remotion client mixin deleted in PR #163. | Decide public contract, then standardize or document the exception explicitly. |
+| C-P2-5 | Open | Optional dependency errors may still be inconsistent across lazy import surfaces. | Server/client tool layers perform many lazy imports; direct evidence requires a dependency-by-dependency test sweep. | Add tests for missing optional dependencies (`whisper`, `demucs`, `realesrgan`) and assert `dependency_error` where expected. |
 
 ---
 
@@ -84,7 +84,7 @@ Legend:
 | 16 | Silence detection accepts invalid params | Partial | Numeric sanitization exists (`mcp_video/ai_engine/silence.py:35-36`, `mcp_video/ai_engine/silence.py:101`), but semantic bounds should be tested explicitly. |
 | 17 | ai_color_grade missing reference/FFmpeg errors | Closed | Reference path is validated (`mcp_video/ai_engine/color.py:65-69`) and reference analysis catches `ProcessingError` for neutral fallback (`mcp_video/ai_engine/color.py:203-205`). |
 | 18 | Inconsistent client mixin return types | Open | See C-P2-4. |
-| 19 | Missing client-side bounds/enum validation | Partial | Some media/remotion validations were added; remaining client gaps are C-P1-1 through C-P1-3. |
+| 19 | Missing client-side bounds/enum validation | Partial | Some media validations were added; remaining client gaps are C-P1-1 through C-P1-3. |
 | 20 | Empty list/string client edge cases | Mostly closed | `merge([])`, `audio_sequence([])`, `add_text("")`, `text_animated("")`, and invalid `audio_compose()` inputs are covered after follow-up remediation. |
 | 21 | Demucs runs without timeout | Closed in follow-up branch | See C-P1-4. |
 | 22 | Whisper model/RAM guard | Partial | Model and duration guards are closed; RAM-specific guard remains. See C-P1-5. |
@@ -96,7 +96,7 @@ Legend:
 | 28 | Concat demuxer path escaping | Partial | Merge path uses escaping; AI spatial/silence concat behavior needs targeted tests. |
 | 29 | Unvalidated batch `output_dir` | Closed in follow-up branch | See C-P0-1. |
 | 30 | Lazy imports return generic optional-dep errors | Open | See C-P2-5. |
-| 31 | Missing remotion return type annotations | Mostly closed | `remotion_render()` and `remotion_to_mcpvideo()` now annotate `-> dict`; exact result type remains broad (`mcp_video/client/remotion.py:11-25`, `mcp_video/client/remotion.py:117-139`). |
+| 31 | Missing remotion return type annotations | Removed | Remotion client mixin deleted in PR #163. |
 | 32 | Lazy imports in client effects/audio | Open | Still present in `mcp_video/client/audio.py` and `mcp_video/client/effects.py`; classify as low-risk style debt. |
 | 33 | `design_quality_check` vague return type | Open | Not re-audited in depth; should be checked with client quality contract cleanup. |
 | 34 | Trailing comment in quality.py | Unknown | Not rechecked in this pass. |
@@ -104,7 +104,7 @@ Legend:
 | 36 | SRT text format safety | Partial | Newlines are normalized and `-->` is allowed as valid caption text; additional control-character policy may be optional. |
 | 37 | `_sanitize_params` over-sanitizes future string params | Open | Current `engine_filters.py` still sanitizes every key except `preset`; future string params would fail. |
 | 38 | Duplicated subprocess handling | Open | See C-P2-1. |
-| 39 | Subprocess.Popen policy violation | Partial | `engine_runtime_utils.py` uses `Popen` with `wait(timeout=...)`; `remotion_engine.py` still uses `Popen`. See C-P2-3. |
+| 39 | Subprocess.Popen policy violation | Partial | `engine_runtime_utils.py` uses `Popen` with `wait(timeout=...)`; `remotion_engine.py` previously used `Popen` but was removed in PR #163. See C-P2-3. |
 | 40 | AI scene temp bloat | Closed in follow-up branch | See C-P1-6. |
 | 41 | AI upscale disk-space guard | Open | Needs targeted check for temp-frame path. |
 | 42 | Spatial no-audio check | Closed in follow-up branch | See C-P1-7. |

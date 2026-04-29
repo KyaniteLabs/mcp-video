@@ -31,6 +31,9 @@ def add_parsers(subparsers: argparse._SubParsersAction) -> None:
     )
     tanim_p.add_argument("--start", type=float, default=0, help="Start time in seconds (default: 0)")
     tanim_p.add_argument("--duration", type=float, default=3.0, help="Display duration in seconds (default: 3.0)")
+    tanim_p.add_argument(
+        "--typewriter-speed", type=float, default=0.08, help="Seconds per character for typewriter (default: 0.08)"
+    )
 
     # video-mograph-count
     mcount_p = subparsers.add_parser("video-mograph-count", help="Generate animated number counter video")

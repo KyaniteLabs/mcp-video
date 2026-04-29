@@ -205,6 +205,7 @@ class ClientEffectsMixin:
         position: str = "center",
         start: float = 0,
         duration: float = 3.0,
+        typewriter_speed: float = 0.08,
     ) -> EditResult:
         """Add animated text to video."""
         if not text or not text.strip():
@@ -212,7 +213,9 @@ class ClientEffectsMixin:
         from ..effects_engine import text_animated
 
         return self._to_edit_result(
-            text_animated(video, text, output, animation, font, size, color, position, start, duration),
+            text_animated(
+                video, text, output, animation, font, size, color, position, start, duration, typewriter_speed
+            ),
             operation="text_animated",
         )
 

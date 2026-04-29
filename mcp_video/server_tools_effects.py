@@ -381,6 +381,7 @@ def video_text_animated(
     position: str = "center",
     start: float = 0,
     duration: float = 3.0,
+    typewriter_speed: float = 0.08,
 ) -> dict[str, Any]:
     """Add animated text to video.
 
@@ -424,7 +425,9 @@ def video_text_animated(
         from .effects_engine import text_animated as _text
 
         output = output_path or _auto_output(input_path, "animated")
-        return _result(_text(input_path, text, output, animation, font, size, color, position, start, duration))
+        return _result(
+            _text(input_path, text, output, animation, font, size, color, position, start, duration, typewriter_speed)
+        )
     except MCPVideoError as e:
         return _error_result(e)
     except Exception as e:

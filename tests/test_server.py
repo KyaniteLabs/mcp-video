@@ -52,6 +52,7 @@ from mcp_video.server import (
     video_split_screen,
     video_stabilize,
     video_storyboard,
+    video_template_preview,
     video_thumbnail,
     video_trim,
     video_watermark,
@@ -293,6 +294,55 @@ class TestErrorHandling:
         result = _result("/tmp/audio.mp3")
         assert result["success"] is True
         assert result["output_path"] == "/tmp/audio.mp3"
+
+
+class TestVideoTemplatePreviewTool:
+    def test_unknown_template(self):
+        result = video_template_preview(template="unknown")
+        assert result["success"] is False
+        assert "error" in result
+        assert "Unknown template" in result["error"]["message"]
+
+    def test_tiktok_preview_without_input(self):
+        result = video_template_preview(template="tiktok", caption="Hello")
+        assert result["success"] is True
+        assert result["template"] == "tiktok"
+        assert result["estimated_resolution"] == "1080x1920"
+        ops = result["operations"]
+        assert any(op["op"] == "resize" for op in ops)
+        text_ops = [op for op in ops if op["op"] == "add_text"]
+        assert len(text_ops) == 1
+        assert text_ops[0]["text"] == "Hello"
+        assert "estimated_size_mb" in result
+
+    def test_youtube_preview_with_outro(self):
+        result = video_template_preview(
+            template="youtube",
+            title="Test Title",
+            outro_path="/tmp/outro.mp4",
+        )
+        assert result["success"] is True
+        assert result["template"] == "youtube"
+        assert result["estimated_resolution"] == "1920x1080"
+        concat_ops = [op for op in result["operations"] if op["op"] == "concat"]
+        assert len(concat_ops) == 1
+        assert concat_ops[0]["clip_count"] == 2
+
+    def test_duration_override(self):
+        result = video_template_preview(template="tiktok", duration=30.0)
+        assert result["success"] is True
+        assert result["estimated_duration"] == 30.0
+        assert result["estimated_size_mb"] > 0
+
+    def test_all_templates_previewable(self):
+        templates = ["tiktok", "youtube-shorts", "instagram-reel", "youtube", "instagram-post"]
+        for name in templates:
+            result = video_template_preview(template=name)
+            assert result["success"] is True, f"{name} preview failed"
+            assert "operations" in result
+            assert "estimated_duration" in result
+            assert "estimated_resolution" in result
+            assert "estimated_size_mb" in result
 
 
 class TestTemplatesResource:
