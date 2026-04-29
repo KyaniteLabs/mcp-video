@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import os
 from typing import Any
 
@@ -20,8 +21,9 @@ from .engine import (
 )
 from .errors import MCPVideoError
 from .server_app import _error_result, _result, mcp
+from .templates import TEMPLATES, preview_template
 from .validation import VALID_AUDIO_FORMATS, VALID_FORMATS, VALID_PRESETS
-from .ffmpeg_helpers import _validate_input_path
+from .ffmpeg_helpers import _get_video_duration, _validate_input_path
 
 
 @mcp.tool()
@@ -214,7 +216,11 @@ def video_export(
     quality: str = "high",
     format: str = "mp4",
 ) -> dict[str, Any]:
-    """Render and export a video with quality and format settings.
+    """Export a video for final delivery with quality tuning.
+
+    Use ``video_export`` when you want to re-encode a video for publishing
+    with a quality preset (e.g. high-quality mp4 for YouTube).  For
+    format/converter changes (mp4 → webm, gif), prefer :func:`video_convert`.
 
     Args:
         input_path: Absolute path to the input video.
@@ -443,6 +449,75 @@ def video_edit(
         )
     try:
         return _result(edit_timeline(parsed_timeline, output_path=output_path))
+    except MCPVideoError as e:
+        return _error_result(e)
+    except Exception as e:
+        return _error_result(e)
+
+
+@mcp.tool()
+def video_template_preview(
+    template: str,
+    input_path: str | None = None,
+    duration: float | None = None,
+    caption: str | None = None,
+    title: str | None = None,
+    music_path: str | None = None,
+    outro_path: str | None = None,
+) -> dict[str, Any]:
+    """Preview what a video template would do before rendering.
+
+    Analyzes the template and returns a list of operations, estimated output
+    duration, resolution, and file size — without actually processing any video.
+
+    Args:
+        template: Template name (tiktok, youtube-shorts, instagram-reel, youtube, instagram-post).
+        input_path: Absolute path to the input video (optional; used for duration probing).
+        duration: Override the estimated duration in seconds.
+        caption: Caption text for TikTok / Instagram Reel / Instagram Post templates.
+        title: Title text for YouTube Shorts / YouTube video templates.
+        music_path: Absolute path to background music file.
+        outro_path: Absolute path to outro video file (YouTube template only).
+    """
+    template = template.lower().strip()
+    if template not in TEMPLATES:
+        return _error_result(
+            MCPVideoError(
+                f"Unknown template: '{template}'. Available: {sorted(TEMPLATES.keys())}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        )
+
+    kwargs: dict[str, Any] = {}
+    if caption is not None:
+        kwargs["caption"] = caption
+    if title is not None:
+        kwargs["title"] = title
+    if music_path is not None:
+        kwargs["music_path"] = music_path
+    if outro_path is not None:
+        kwargs["outro_path"] = outro_path
+
+    probed_duration: float | None = None
+    if input_path is not None:
+        try:
+            input_path = _validate_input_path(input_path)
+        except MCPVideoError as e:
+            return _error_result(e)
+        with contextlib.suppress(Exception):
+            probed_duration = _get_video_duration(input_path)
+
+    effective_duration = duration if duration is not None else probed_duration
+
+    try:
+        result = preview_template(
+            template_name=template,
+            video_path=input_path or "",
+            duration=effective_duration,
+            **kwargs,
+        )
+        return result
     except MCPVideoError as e:
         return _error_result(e)
     except Exception as e:

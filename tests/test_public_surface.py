@@ -123,7 +123,9 @@ EXPECTED_SERVER_TOOLS = {
     "video_overlay",
     "video_split_screen",
     "video_batch",
+    "video_cleanup",
     "video_detect_scenes",
+    "video_template_preview",
     "video_create_from_images",
     "video_export_frames",
     "video_generate_subtitles",
@@ -217,7 +219,7 @@ def test_server_tool_registry_keeps_public_tool_names():
     tool_names = {tool.name for tool in asyncio.run(mcp.list_tools())}
 
     assert tool_names >= EXPECTED_SERVER_TOOLS
-    assert len(tool_names) == 85
+    assert len(tool_names) == 87
 
 
 def test_module_reexports():

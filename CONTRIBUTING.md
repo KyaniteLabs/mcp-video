@@ -26,7 +26,7 @@ mcp_video/
 ├── __init__.py            # Exports Client + public API
 ├── __main__.py            # CLI entry point (argparse + Rich)
 ├── client.py              # Python Client API (wraps all engines)
-├── server.py              # MCP server (85 tools + 4 resources)
+├── server.py              # MCP server (87 tools + 4 resources)
 ├── engine.py              # Core FFmpeg engine (40 video operations)
 ├── models.py              # Pydantic models (VideoInfo, EditResult, Timeline DSL)
 ├── errors.py              # Error hierarchy + FFmpeg stderr parser

@@ -33,6 +33,7 @@ from .server_tools_media import (
     video_rotate as video_rotate,
     video_storyboard as video_storyboard,
     video_subtitles as video_subtitles,
+    video_template_preview as video_template_preview,
     video_thumbnail as video_thumbnail,
     video_watermark as video_watermark,
 )
@@ -41,6 +42,7 @@ from .server_tools_advanced import (
     video_audio_waveform as video_audio_waveform,
     video_batch as video_batch,
     video_chroma_key as video_chroma_key,
+    video_cleanup as video_cleanup,
     video_compare_quality as video_compare_quality,
     video_create_from_images as video_create_from_images,
     video_detect_scenes as video_detect_scenes,

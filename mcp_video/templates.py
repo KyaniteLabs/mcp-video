@@ -190,50 +190,114 @@ def instagram_post_template(
     return timeline
 
 
+def _estimate_size_mb(
+    width: int,
+    height: int,
+    duration: float,
+    quality: str,
+    fps: float = 30.0,
+) -> float:
+    """Heuristic size estimate based on resolution, duration, and quality preset."""
+    # Base bitrate estimates in Mbps for 1080p@30fps
+    quality_bitrate = {
+        "low": 2.5,
+        "medium": 5.0,
+        "high": 8.0,
+        "ultra": 15.0,
+    }
+    bitrate = quality_bitrate.get(quality, 8.0)
+    # Scale by pixel count relative to 1080p
+    pixel_ratio = (width * height) / (1920 * 1080)
+    bitrate *= pixel_ratio
+    # Slight fps scaling
+    bitrate *= min(fps, 60) / 30.0
+    size_mb = (bitrate * duration) / 8.0
+    return round(size_mb, 2)
+
+
 def preview_template(
     template_name: str,
     video_path: str,
+    duration: float | None = None,
     **kwargs: Any,
 ) -> dict[str, Any]:
     """Return a preview of what a template would produce without rendering.
 
     Returns:
         Dict with ``operations``, ``estimated_duration``, ``resolution``,
-        ``format``, and ``quality`` for agent review before committing.
+        ``format``, ``quality``, and ``estimated_size_mb`` for agent review
+        before committing.
     """
+    from .errors import MCPVideoError
+
     tmpl = TEMPLATES.get(template_name)
     if tmpl is None:
-        raise ValueError(f"Unknown template: {template_name}. Available: {list(TEMPLATES.keys())}")
+        raise MCPVideoError(
+            f"Unknown template: {template_name}. Available: {list(TEMPLATES.keys())}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
     timeline = tmpl(video_path, **kwargs)
     tracks = timeline.get("tracks", [])
     export = timeline.get("export", {})
 
-    operations: list[str] = []
+    operations: list[dict[str, Any]] = []
     video_clips: list[dict] = []
     for track in tracks:
         ttype = track.get("type")
         if ttype == "video":
             video_clips = track.get("clips", [])
-            operations.append(f"resize_to_{timeline['width']}x{timeline['height']}")
+            operations.append({"op": "resize", "width": timeline["width"], "height": timeline["height"]})
+            # Add concatenation if multiple clips
+            if len(video_clips) > 1:
+                operations.append({"op": "concat", "clip_count": len(video_clips)})
         elif ttype == "text":
-            operations.append(f"add_text ({len(track.get('elements', []))} overlay(s))")
+            for elem in track.get("elements", []):
+                operations.append(
+                    {
+                        "op": "add_text",
+                        "text": elem.get("text", ""),
+                        "position": elem.get("position", "center"),
+                        "duration": elem.get("duration"),
+                        "style": elem.get("style", {}),
+                    }
+                )
         elif ttype == "audio":
-            operations.append(f"mix_audio ({len(track.get('clips', []))} track(s))")
+            for clip in track.get("clips", []):
+                operations.append(
+                    {
+                        "op": "mix_audio",
+                        "source": clip.get("source", ""),
+                        "volume": clip.get("volume", 1.0),
+                        "fade_in": clip.get("fade_in", 0.0),
+                        "fade_out": clip.get("fade_out", 0.0),
+                    }
+                )
 
     total_duration = 0.0
     for clip in video_clips:
         dur = clip.get("duration") or clip.get("trim_end")
         if dur is None:
-            dur = 10.0  # fallback
+            dur = duration if duration is not None else 10.0
         total_duration += float(dur)
 
+    quality = export.get("quality", "high")
+    size_mb = _estimate_size_mb(
+        timeline["width"],
+        timeline["height"],
+        total_duration,
+        quality,
+    )
+
     return {
+        "success": True,
         "template": template_name,
         "operations": operations,
         "estimated_duration": round(total_duration, 1),
-        "resolution": f"{timeline['width']}x{timeline['height']}",
+        "estimated_resolution": f"{timeline['width']}x{timeline['height']}",
+        "estimated_size_mb": size_mb,
         "format": export.get("format", "mp4"),
-        "quality": export.get("quality", "high"),
+        "quality": quality,
         "timeline": timeline,
     }
 

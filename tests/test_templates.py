@@ -1,9 +1,12 @@
 """Tests for editing templates — no FFmpeg needed (validate JSON output)."""
 
+import pytest
+
 from mcp_video.templates import (
     TEMPLATES,
     instagram_post_template,
     instagram_reel_template,
+    preview_template,
     tiktok_template,
     youtube_video_template,
     youtube_shorts_template,
@@ -149,3 +152,51 @@ class TestTemplatesRegistry:
             assert "tracks" in tl, f"{name} template missing tracks"
             assert "width" in tl, f"{name} template missing width"
             assert "height" in tl, f"{name} template missing height"
+
+
+class TestPreviewTemplate:
+    def test_tiktok_preview(self):
+        result = preview_template("tiktok", "/tmp/video.mp4", caption="Hello")
+        assert result["success"] is True
+        assert result["template"] == "tiktok"
+        assert result["estimated_resolution"] == "1080x1920"
+        assert result["format"] == "mp4"
+        assert result["quality"] == "high"
+        ops = result["operations"]
+        assert any(op["op"] == "resize" and op["width"] == 1080 for op in ops)
+        text_ops = [op for op in ops if op["op"] == "add_text"]
+        assert len(text_ops) == 1
+        assert text_ops[0]["text"] == "Hello"
+        assert result["estimated_size_mb"] > 0
+
+    def test_youtube_preview_with_outro(self):
+        result = preview_template("youtube", "/tmp/video.mp4", title="Test", outro_path="/tmp/outro.mp4")
+        assert result["success"] is True
+        assert result["template"] == "youtube"
+        assert result["estimated_resolution"] == "1920x1080"
+        concat_ops = [op for op in result["operations"] if op["op"] == "concat"]
+        assert len(concat_ops) == 1
+        assert concat_ops[0]["clip_count"] == 2
+        text_ops = [op for op in result["operations"] if op["op"] == "add_text"]
+        assert text_ops[0]["duration"] == 3
+
+    def test_preview_with_duration_override(self):
+        result = preview_template("tiktok", "/tmp/video.mp4", duration=25.0)
+        assert result["estimated_duration"] == 25.0
+        assert result["estimated_size_mb"] > 0
+
+    def test_unknown_template_raises(self):
+        from mcp_video.errors import MCPVideoError
+
+        with pytest.raises(MCPVideoError) as exc_info:
+            preview_template("unknown", "/tmp/video.mp4")
+        assert "Unknown template" in str(exc_info.value)
+
+    def test_all_templates_previewable(self):
+        for name in TEMPLATES:
+            result = preview_template(name, "/tmp/video.mp4")
+            assert result["success"] is True
+            assert "operations" in result
+            assert "estimated_duration" in result
+            assert "estimated_resolution" in result
+            assert "estimated_size_mb" in result

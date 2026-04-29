@@ -14,7 +14,14 @@ from typing import Any
 
 from ..defaults import DEFAULT_SAFE_SUBTITLE_FONT_SIZE, DEFAULT_SUBTITLE_MAX_CHARS_PER_LINE, DEFAULT_SUBTITLE_MAX_LINES
 from ..errors import InputFileError
-from ..ffmpeg_helpers import _validate_input_path, _validate_output_path, _run_ffmpeg, _escape_ffmpeg_filter_value
+from ..engine_runtime_utils import _sanitize_ffmpeg_number
+from ..ffmpeg_helpers import (
+    _validate_input_path,
+    _validate_output_path,
+    _run_ffmpeg,
+    _escape_ffmpeg_filter_value,
+    _run_ffprobe_json,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -109,6 +116,168 @@ def _subtitle_filter(
     )
 
 
+def _get_video_dimensions(video_path: str) -> tuple[int, int]:
+    """Return (width, height) for the first video stream."""
+    try:
+        info = _run_ffprobe_json(video_path)
+        for stream in info.get("streams", []):
+            if stream.get("codec_type") == "video":
+                return int(stream["width"]), int(stream["height"])
+    except Exception as e:
+        logger.warning("Could not get video dimensions, using fallback: %s", e)
+    return 1920, 1080
+
+
+def _load_pil_font(font_name: str, size: int):
+    """Try to locate a TrueType font file for PIL."""
+    import glob
+    import platform
+
+    cleaned = font_name.replace(" ", "").replace("-", "").lower()
+    paths: list[str] = []
+    system = platform.system()
+    if system == "Darwin":
+        paths = [
+            "/System/Library/Fonts/**/*.ttf",
+            "/System/Library/Fonts/**/*.ttc",
+            "/Library/Fonts/**/*.ttf",
+            "/Library/Fonts/**/*.ttc",
+            os.path.expanduser("~/Library/Fonts/**/*.ttf"),
+            os.path.expanduser("~/Library/Fonts/**/*.ttc"),
+        ]
+    elif system == "Linux":
+        paths = [
+            "/usr/share/fonts/**/*.ttf",
+            "/usr/local/share/fonts/**/*.ttf",
+            os.path.expanduser("~/.fonts/**/*.ttf"),
+        ]
+    elif system == "Windows":
+        paths = ["C:/Windows/Fonts/*.ttf", "C:/Windows/Fonts/*.ttc"]
+
+    for pattern in paths:
+        for path in glob.glob(pattern, recursive=True):
+            base = os.path.splitext(os.path.basename(path))[0].replace(" ", "").replace("-", "").lower()
+            if cleaned in base or base in cleaned:
+                try:
+                    from PIL import ImageFont
+
+                    return ImageFont.truetype(path, size)
+                except OSError:
+                    continue
+    try:
+        from PIL import ImageFont
+
+        return ImageFont.truetype(font_name, size)
+    except OSError:
+        try:
+            from PIL import ImageFont
+
+            return ImageFont.truetype(f"{font_name}.ttf", size)
+        except OSError:
+            return None
+
+
+def _measure_text(text: str, font_name: str, size: int) -> tuple[int, int]:
+    """Measure text width/height in pixels. Falls back to heuristic."""
+    try:
+        font_obj = _load_pil_font(font_name, size)
+        if font_obj is not None:
+            bbox = font_obj.getbbox(text)
+            if bbox:
+                return bbox[2] - bbox[0], bbox[3] - bbox[1]
+    except Exception as e:
+        logger.warning("PIL text measurement failed, using fallback: %s", e)
+    lines = text.split("\n")
+    max_chars = max((len(line) for line in lines), default=0)
+    width = int(max_chars * size * 0.55)
+    height = int(len(lines) * size * 1.2)
+    return width, height
+
+
+def _text_position_xy(position: str, video_w: int, video_h: int, text_w: int, text_h: int) -> tuple[int, int]:
+    """Compute top-left (x, y) for text given position keyword."""
+    pos_map = {
+        "center": ((video_w - text_w) // 2, (video_h - text_h) // 2),
+        "top": ((video_w - text_w) // 2, 20),
+        "bottom": ((video_w - text_w) // 2, video_h - text_h - 20),
+        "top-left": (20, 20),
+        "top-right": (video_w - text_w - 20, 20),
+        "bottom-left": (20, video_h - text_h - 20),
+        "bottom-right": (video_w - text_w - 20, video_h - text_h - 20),
+    }
+    return pos_map.get(position, pos_map["center"])
+
+
+def _escape_sendcmd_value(value: str) -> str:
+    """Escape a value for use inside single quotes in a sendcmd file."""
+    # Re-use the same escaping rules as FFmpeg filter values since
+    # sendcmd forwards the text directly into drawtext reinit.
+    return _escape_ffmpeg_filter_value(value)
+
+
+def _build_typewriter_filter(
+    text: str,
+    font: str,
+    size: int,
+    color: str,
+    position: str,
+    start: float,
+    duration: float,
+    typewriter_speed: float,
+    video_path: str,
+) -> tuple[str, str]:
+    """Build a filter chain and sendcmd file for character-by-character reveal.
+
+    Returns:
+        (filter_complex, cmd_file_path)
+    """
+    video_w, video_h = _get_video_dimensions(video_path)
+    text_w, text_h = _measure_text(text, font, size)
+    text_x, text_y = _text_position_xy(position, video_w, video_h, text_w, text_h)
+
+    char_count = len(text)
+    if char_count == 0:
+        return "", ""
+
+    safe_start = _sanitize_ffmpeg_number(start, "start")
+    safe_duration = _sanitize_ffmpeg_number(duration, "duration")
+    safe_speed = _sanitize_ffmpeg_number(typewriter_speed, "typewriter_speed")
+    char_duration = max(0.01, safe_speed)
+    end_time = safe_start + safe_duration
+
+    safe_font = _escape_ffmpeg_filter_value(font) if font is not None else font
+    safe_color = _escape_ffmpeg_filter_value(color) if color is not None else color
+    safe_size = int(_sanitize_ffmpeg_number(size, "size"))
+    safe_text_x = int(_sanitize_ffmpeg_number(text_x, "text_x"))
+    safe_text_y = int(_sanitize_ffmpeg_number(text_y, "text_y"))
+
+    # Build sendcmd commands: start empty, then reveal one more char at each step
+    cmd_lines = [f"{safe_start:.4f} drawtext@1 reinit text='{_escape_sendcmd_value('')}'"]
+    for i in range(1, char_count + 1):
+        t_cmd = safe_start + i * char_duration
+        partial = text[:i]
+        safe_partial = _escape_sendcmd_value(partial)
+        cmd_lines.append(f"{t_cmd:.4f} drawtext@1 reinit text='{safe_partial}'")
+
+    cmd_content = ";\n".join(cmd_lines) + ";"
+
+    cmd_fd, cmd_path = tempfile.mkstemp(suffix=".txt", prefix="mcp_video_typewriter_")
+    try:
+        with os.fdopen(cmd_fd, "w", encoding="utf-8") as f:
+            f.write(cmd_content)
+    except Exception:
+        os.close(cmd_fd)
+        raise
+
+    safe_cmd_path = _escape_ffmpeg_filter_value(cmd_path)
+    filter_complex = (
+        f"sendcmd=f={safe_cmd_path},"
+        f"drawtext@1=text='':font={safe_font}:fontsize={safe_size}:fontcolor={safe_color}:"
+        f"x={safe_text_x}:y={safe_text_y}:enable='between(t\\,{safe_start}\\,{end_time})'"
+    )
+    return filter_complex, cmd_path
+
+
 def text_animated(
     video: str,
     text: str,
@@ -120,6 +289,7 @@ def text_animated(
     position: str = "center",
     start: float = 0,
     duration: float = 3.0,
+    typewriter_speed: float = 0.08,
 ) -> str:
     """Add animated text to video.
 
@@ -134,67 +304,62 @@ def text_animated(
         position: Text position
         start: Start time in seconds
         duration: Display duration
+        typewriter_speed: Seconds per character for typewriter animation
 
     Returns:
         Path to output video
     """
-    # Map positions
-    pos_map = {
-        "center": "(w-text_w)/2:(h-text_h)/2",
-        "top": "(w-text_w)/2:20",
-        "bottom": "(w-text_w)/2:h-text_h-20",
-        "top-left": "20:20",
-        "top-right": "w-text_w-20:20",
-        "bottom-left": "20:h-text_h-20",
-        "bottom-right": "w-text_w-20:h-text_h-20",
-    }
-    pos = pos_map.get(position, pos_map["center"])
+    video = _validate_input_path(video)
+    _validate_output_path(output)
 
-    # Build animation expression
-    fade_start = start
-    fade_end = start + 0.5
-    fade_out_start = start + duration - 0.5
-    fade_out_end = start + duration
-
-    if animation == "fade":
-        # Fade in/out opacity
-        alpha_expr = (
-            f"if(lt(t,{fade_start}),0,"
-            f"if(lt(t,{fade_end}),(t-{fade_start})/0.5,"
-            f"if(lt(t,{fade_out_start}),1,"
-            f"if(lt(t,{fade_out_end}),({fade_out_end}-t)/0.5,0))))"
-        )
-    elif animation == "slide-up":
-        # Slide up from bottom
-        y_offset = f"+50*(1-min(1,(t-{start})/0.3))"
-        pos = pos.replace("(h-text_h)/2", f"(h-text_h)/2{y_offset}")
-        alpha_expr = "1"
-    elif animation == "typewriter":
-        # True per-character reveal requires multiple drawtext filters with
-        # staggered enable times (one per character) — too expensive for
-        # arbitrary-length text. Using rapid linear fade-in as approximation:
-        # text appears quickly (like a typewriter keystroke burst) then
-        # stays visible. Distinct from "fade" which has slow in + slow out.
-        # TODO: Implement proper typewriter via overlay clipping mask.
-        reveal_duration = min(1.5, duration * 0.5)
-        alpha_expr = f"if(lt(t,{start}),0,if(lt(t,{start}+{reveal_duration}),(t-{start})/{reveal_duration},1))"
-    elif animation == "glitch":
-        # Random glitch opacity
-        alpha_expr = "if(random(0)*lt(mod(t,0.2),0.1),0.8,1)"
-    else:
-        alpha_expr = "1"
-
-    # Escape text for FFmpeg — handle all filter-special characters
     safe_text = _escape_ffmpeg_filter_value(text)
     safe_font = _escape_ffmpeg_filter_value(font) if font is not None else font
     safe_color = _escape_ffmpeg_filter_value(color) if color is not None else color
 
-    filter_complex = (
-        f"drawtext=text='{safe_text}':font={safe_font}:fontsize={size}:fontcolor={safe_color}:"
-        f"x={pos.split(':')[0]}:y={pos.split(':')[1]}:"
-        f"enable='between(t\\,{start}\\,{start + duration})':"
-        f"alpha='{alpha_expr}'"
-    )
+    cmd_path = ""
+    if animation == "typewriter":
+        filter_complex, cmd_path = _build_typewriter_filter(
+            text, font, size, color, position, start, duration, typewriter_speed, video
+        )
+    else:
+        pos_map = {
+            "center": "(w-text_w)/2:(h-text_h)/2",
+            "top": "(w-text_w)/2:20",
+            "bottom": "(w-text_w)/2:h-text_h-20",
+            "top-left": "20:20",
+            "top-right": "w-text_w-20:20",
+            "bottom-left": "20:h-text_h-20",
+            "bottom-right": "w-text_w-20:h-text_h-20",
+        }
+        pos = pos_map.get(position, pos_map["center"])
+
+        fade_start = start
+        fade_end = start + 0.5
+        fade_out_start = start + duration - 0.5
+        fade_out_end = start + duration
+
+        if animation == "fade":
+            alpha_expr = (
+                f"if(lt(t,{fade_start}),0,"
+                f"if(lt(t,{fade_end}),(t-{fade_start})/0.5,"
+                f"if(lt(t,{fade_out_start}),1,"
+                f"if(lt(t,{fade_out_end}),({fade_out_end}-t)/0.5,0))))"
+            )
+        elif animation == "slide-up":
+            y_offset = f"+50*(1-min(1,(t-{start})/0.3))"
+            pos = pos.replace("(h-text_h)/2", f"(h-text_h)/2{y_offset}")
+            alpha_expr = "1"
+        elif animation == "glitch":
+            alpha_expr = "if(random(0)*lt(mod(t,0.2),0.1),0.8,1)"
+        else:
+            alpha_expr = "1"
+
+        filter_complex = (
+            f"drawtext=text='{safe_text}':font={safe_font}:fontsize={size}:fontcolor={safe_color}:"
+            f"x={pos.split(':')[0]}:y={pos.split(':')[1]}:"
+            f"enable='between(t\\,{start}\\,{start + duration})':"
+            f"alpha='{alpha_expr}'"
+        )
 
     cmd = [
         "ffmpeg",
@@ -214,7 +379,11 @@ def text_animated(
         output,
     ]
 
-    _run_ffmpeg(cmd)
+    try:
+        _run_ffmpeg(cmd)
+    finally:
+        if cmd_path:
+            Path(cmd_path).unlink(missing_ok=True)
 
     return output
 

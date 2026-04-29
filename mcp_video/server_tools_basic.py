@@ -22,7 +22,12 @@ def video_info(input_path: str) -> dict[str, Any]:
     try:
         input_path = _validate_input_path(input_path)
         info = probe(input_path)
-        return {"success": True, "info": info.model_dump()}
+        data = info.model_dump()
+        data["display_width"] = info.display_width
+        data["display_height"] = info.display_height
+        data["display_resolution"] = info.display_resolution
+        data["aspect_ratio"] = info.aspect_ratio
+        return {"success": True, "info": data}
     except MCPVideoError as e:
         return _error_result(e)
     except Exception as e:
@@ -348,7 +353,11 @@ def video_convert(
     quality: str = "high",
     output_path: str | None = None,
 ) -> dict[str, Any]:
-    """Convert a video to a different format.
+    """Convert a video to a different format or codec.
+
+    Use ``video_convert`` when you need to change the container or codec
+    (e.g. mp4 → webm, or re-encode with a different CRF). For simple final
+    delivery with quality tuning, prefer :func:`video_export`.
 
     Args:
         input_path: Absolute path to the input video.
@@ -415,7 +424,7 @@ def search_tools(query: str) -> dict[str, Any]:
     """Search registered MCP tools by keyword.
 
     Use this when you need to find the right tool for a task without reading
-    all 85 tool descriptions. Returns matching tools with their names,
+    all 87 tool descriptions. Returns matching tools with their names,
     descriptions, and required parameters.
 
     Args:

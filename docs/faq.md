@@ -2,7 +2,7 @@
 
 ## What is mcp-video?
 
-mcp-video is an open-source MCP server, Python library, and CLI that wraps FFmpeg and Hyperframes to give AI agents 85 video editing tools. It runs locally, requires no cloud services, and is free under the Apache-2.0 license.
+mcp-video is an open-source MCP server, Python library, and CLI that wraps FFmpeg and Hyperframes to give AI agents 87 video editing tools. It runs locally, requires no cloud services, and is free under the Apache-2.0 license.
 
 ## What is MCP?
 

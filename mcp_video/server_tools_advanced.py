@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from typing import Any
 
 from .engine import (
@@ -732,3 +733,44 @@ def video_batch(
         return _error_result(e)
     except Exception as e:
         return _error_result(e)
+
+
+@mcp.tool()
+def video_cleanup(
+    files: list[str],
+    keep: list[str] | None = None,
+) -> dict[str, Any]:
+    """Delete intermediate video files after a workflow.
+
+    Useful for multi-step pipelines that leave temporary outputs.
+    Files in ``keep`` are preserved even if listed in ``files``.
+
+    Args:
+        files: List of absolute paths to delete.
+        keep: List of absolute paths to preserve (optional).
+    """
+    keep_set = set(keep or [])
+    results: list[dict[str, Any]] = []
+    removed = 0
+    failed = 0
+    for path in files:
+        if path in keep_set:
+            results.append({"path": path, "status": "kept"})
+            continue
+        try:
+            p = _validate_input_path(path)
+            os.remove(p)
+            results.append({"path": p, "status": "removed"})
+            removed += 1
+        except MCPVideoError as e:
+            results.append({"path": path, "status": "failed", "error": str(e)})
+            failed += 1
+        except OSError as e:
+            results.append({"path": path, "status": "failed", "error": str(e)})
+            failed += 1
+    return {
+        "success": True,
+        "removed": removed,
+        "failed": failed,
+        "results": results,
+    }
