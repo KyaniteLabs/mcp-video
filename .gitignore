@@ -50,3 +50,7 @@ MCP-VIDEO-FEEDBACK.md
 RELEASE_NOTES_v*.md
 CLAUDE.md
 glama-score*.png
+
+# Coverage data
+.coverage
+

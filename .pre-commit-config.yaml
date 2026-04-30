@@ -1,0 +1,16 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.11
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  - repo: local
+    hooks:
+      - id: repo-readiness-audit
+        name: Repository readiness audit
+        entry: python3 scripts/repo-readiness-audit.py
+        language: system
+        pass_filenames: false
+        always_run: true
