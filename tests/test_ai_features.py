@@ -1218,6 +1218,156 @@ def test_ai_upscale_missing_file():
         print(f"✓ Correctly raised InputFileError: {exc_info.value}")
 
 
+class TestUpscaleHelpers:
+    """Unit tests for extracted ai_upscale helpers."""
+
+    def test_extract_frames_runs_ffmpeg_and_returns_sorted_paths(self, monkeypatch, tmp_path):
+        from mcp_video.ai_engine.upscale import _extract_frames
+
+        calls = []
+
+        def fake_run_ffmpeg(cmd, timeout=None):
+            calls.append(cmd)
+            # Create fake frames
+            (tmp_path / "frame_0001.png").write_text("frame1")
+            (tmp_path / "frame_0002.png").write_text("frame2")
+            return type("Result", (), {"returncode": 0, "stderr": ""})()
+
+        monkeypatch.setattr("mcp_video.ai_engine.upscale._run_ffmpeg", fake_run_ffmpeg)
+        frames = _extract_frames("/fake/video.mp4", tmp_path)
+
+        assert len(calls) == 1
+        assert "ffmpeg" in calls[0]
+        assert len(frames) == 2
+        assert str(frames[0]).endswith("frame_0001.png")
+
+    def test_extract_frames_raises_when_no_frames(self, monkeypatch, tmp_path):
+        from mcp_video.ai_engine.upscale import _extract_frames
+        from mcp_video.errors import ProcessingError
+
+        def fake_run_ffmpeg(cmd, timeout=None):
+            return type("Result", (), {"returncode": 0, "stderr": ""})()
+
+        monkeypatch.setattr("mcp_video.ai_engine.upscale._run_ffmpeg", fake_run_ffmpeg)
+        with pytest.raises(ProcessingError, match="No frames extracted"):
+            _extract_frames("/fake/video.mp4", tmp_path)
+
+    def test_reconstruct_video_without_audio(self, monkeypatch, tmp_path):
+        from mcp_video.ai_engine.upscale import _reconstruct_video
+
+        calls = []
+
+        def fake_run_ffmpeg(cmd, timeout=None):
+            calls.append(cmd)
+            return type("Result", (), {"returncode": 0, "stderr": ""})()
+
+        monkeypatch.setattr("mcp_video.ai_engine.upscale._run_ffmpeg", fake_run_ffmpeg)
+        frame_pattern = tmp_path / "frame_%04d.png"
+        output = tmp_path / "out.mp4"
+        _reconstruct_video(frame_pattern, output, 30.0)
+
+        assert len(calls) == 1
+        cmd = calls[0]
+        assert "-framerate" in cmd
+        assert "30.0" in cmd
+        assert "-c:v" in cmd
+        assert "libx264" in cmd
+        assert str(output) in cmd
+        assert "-i" not in cmd[cmd.index(str(output)) + 1 :]
+
+    def test_reconstruct_video_with_audio(self, monkeypatch, tmp_path):
+        from mcp_video.ai_engine.upscale import _reconstruct_video
+
+        calls = []
+
+        def fake_run_ffmpeg(cmd, timeout=None):
+            calls.append(cmd)
+            return type("Result", (), {"returncode": 0, "stderr": ""})()
+
+        monkeypatch.setattr("mcp_video.ai_engine.upscale._run_ffmpeg", fake_run_ffmpeg)
+        frame_pattern = tmp_path / "frame_%04d.png"
+        output = tmp_path / "out.mp4"
+        _reconstruct_video(frame_pattern, output, 24.0, audio_source="/fake/audio.aac")
+
+        cmd = calls[0]
+        assert "/fake/audio.aac" in cmd
+        assert "-c:a" in cmd
+        assert "copy" in cmd
+        assert "-shortest" in cmd
+
+    def test_extract_audio_success(self, monkeypatch, tmp_path):
+        from mcp_video.ai_engine.upscale import _extract_audio
+
+        calls = []
+
+        def fake_run_ffmpeg(cmd, timeout=None):
+            calls.append(cmd)
+            return type("Result", (), {"returncode": 0, "stderr": ""})()
+
+        monkeypatch.setattr("mcp_video.ai_engine.upscale._run_ffmpeg", fake_run_ffmpeg)
+        audio_path = tmp_path / "audio.aac"
+        result = _extract_audio("/fake/video.mp4", audio_path)
+
+        assert result is True
+        assert "-vn" in calls[0]
+        assert "-c:a" in calls[0]
+        assert "copy" in calls[0]
+
+    def test_extract_audio_failure_returns_false(self, monkeypatch, tmp_path):
+        from mcp_video.ai_engine.upscale import _extract_audio
+        from mcp_video.errors import ProcessingError
+
+        def fake_run_ffmpeg(cmd, timeout=None):
+            raise ProcessingError("ffmpeg", 1, "audio extract failed")
+
+        monkeypatch.setattr("mcp_video.ai_engine.upscale._run_ffmpeg", fake_run_ffmpeg)
+        audio_path = tmp_path / "audio.aac"
+        result = _extract_audio("/fake/video.mp4", audio_path)
+
+        assert result is False
+
+    def test_download_fsrcnn_model_uses_cache(self, monkeypatch, tmp_path):
+        from mcp_video.ai_engine.upscale import _download_fsrcnn_model
+
+        monkeypatch.setattr(
+            "mcp_video.ai_engine.upscale.Path.home", lambda: tmp_path
+        )
+        cache_dir = tmp_path / ".cache" / "mcp-video" / "models"
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        model_path = cache_dir / "FSRCNN_x2.pb"
+        model_path.write_bytes(b"fake_model")
+
+        # Patch hash verification to accept fake model
+        monkeypatch.setattr(
+            "mcp_video.ai_engine.upscale._verify_model_hash", lambda p, h: None
+        )
+
+        result = _download_fsrcnn_model(2)
+        assert result == model_path
+
+    def test_init_opencv_sr_missing_module(self, monkeypatch):
+        from mcp_video.ai_engine.upscale import _init_opencv_sr
+        from mcp_video.errors import MCPVideoError
+
+        class FakeCv2:
+            pass
+
+        monkeypatch.setitem(__import__("sys").modules, "cv2", FakeCv2())
+        with pytest.raises(MCPVideoError, match="dnn_superres"):
+            _init_opencv_sr(2, "/fake/model.pb")
+
+    def test_init_opencv_sr_success(self, monkeypatch):
+        from mcp_video.ai_engine.upscale import _init_opencv_sr
+
+        sr_mock = type("SR", (), {"readModel": lambda self, p: None, "setModel": lambda self, m, s: None})()
+        fake_dnn = type("DnnSuperRes", (), {"DnnSuperResImpl_create": lambda *a, **k: sr_mock})()
+        fake_cv2 = type("Cv2", (), {"dnn_superres": fake_dnn})()
+        monkeypatch.setitem(__import__("sys").modules, "cv2", fake_cv2)
+
+        result = _init_opencv_sr(2, "/fake/model.pb")
+        assert result is sr_mock
+
+
 # ---------------------------------------------------------------------------
 # analyze_video Tests
 # ---------------------------------------------------------------------------
