@@ -13,7 +13,7 @@
 
 <p align="center">
   <a href="https://pypi.org/project/mcp-video/"><img src="https://img.shields.io/pypi/v/mcp-video.svg" alt="PyPI"></a>
-  <a href="https://github.com/pastorsimon1798/mcp-video/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/pastorsimon1798/mcp-video/.github/workflows/ci.yml?branch=master&label=CI" alt="CI"></a>
+  <a href="https://github.com/KyaniteLabs/mcp-video/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/KyaniteLabs/mcp-video/.github/workflows/ci.yml?branch=master&label=CI" alt="CI"></a>
   <img src="https://img.shields.io/badge/tools-86%20MCP%20tools-orange.svg" alt="Tools">
   <img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="License">
   <img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python">
@@ -30,6 +30,13 @@
 </p>
 
 ---
+
+
+## Public Discovery
+
+**mcp-video** is an MCP server, Python library, and CLI for agentic video editing. It helps AI agents and automation scripts inspect, trim, merge, subtitle, resize, transcode, analyze, and generate video with FFmpeg and code-driven creation workflows.
+
+**Best-fit searches:** video editing MCP server, AI agent video editing, FFmpeg automation, Claude video tools, Cursor MCP video, Python video editing library, agentic media pipeline, video automation CLI.
 
 ## What is mcp-video?
 
@@ -381,7 +388,7 @@ workflows/               # ICM staged pipelines
 ## Development
 
 ```bash
-git clone https://github.com/pastorsimon1798/mcp-video.git
+git clone https://github.com/KyaniteLabs/mcp-video.git
 cd mcp-video
 python -m venv .venv
 source .venv/bin/activate
@@ -394,7 +401,7 @@ pip install -e ".[dev]"
 
 - **Contributing:** [CONTRIBUTING.md](CONTRIBUTING.md)
 - **Security:** [SECURITY.md](SECURITY.md) (private reporting path)
-- **Help:** [SUPPORT.md](SUPPORT.md) or [GitHub Discussions](https://github.com/pastorsimon1798/mcp-video/discussions)
+- **Help:** [SUPPORT.md](SUPPORT.md) or [GitHub Discussions](https://github.com/KyaniteLabs/mcp-video/discussions)
 - **Code of Conduct:** [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
 - **Changelog:** [CHANGELOG.md](CHANGELOG.md)
 - **Roadmap:** [ROADMAP.md](ROADMAP.md)
