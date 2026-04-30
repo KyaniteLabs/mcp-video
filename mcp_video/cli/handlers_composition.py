@@ -4,109 +4,126 @@ from __future__ import annotations
 
 from typing import Any
 
-from rich.panel import Panel
-
-from .common import _parse_json_arg, _with_spinner, output_json
-from .formatting import console
-
-
-def _print_output(label: str, result: str, *, use_json: bool) -> None:
-    if use_json:
-        output_json({"success": True, "output_path": result})
-    else:
-        console.print(Panel(f"[bold green]{label}:[/bold green] {result}", border_style="green", title="Done"))
+from .common import _parse_json_arg, _with_spinner
+from .formatting import _format_path_panel
+from .runner import CommandRunner, _out
 
 
 def handle_composition_command(args: Any, *, use_json: bool) -> bool:
     """Handle motion graphics and layout commands extracted from main."""
-    if args.command == "video-text-animated":
+    runner = CommandRunner(args, use_json)
+
+    def _text_animated(a, j):
         from ..effects_engine import text_animated
 
-        result = _with_spinner(
+        r = _with_spinner(
             "Adding animated text...",
             text_animated,
-            args.input,
-            args.text,
-            args.output,
-            animation=args.animation,
-            font=args.font,
-            size=args.size,
-            color=args.color,
-            position=args.position,
-            start=args.start,
-            duration=args.duration,
-            typewriter_speed=getattr(args, "typewriter_speed", 0.08),
+            a.input,
+            a.text,
+            a.output,
+            animation=a.animation,
+            font=a.font,
+            size=a.size,
+            color=a.color,
+            position=a.position,
+            start=a.start,
+            duration=a.duration,
+            typewriter_speed=getattr(a, "typewriter_speed", 0.08),
         )
-        _print_output(f"Animated text ({args.animation})", result, use_json=use_json)
-        return True
+        _out(
+            r,
+            j,
+            lambda res: _format_path_panel(f"Animated text ({a.animation})", res),
+            json_transform=lambda r: {"success": True, "output_path": r},
+        )
 
-    if args.command == "video-mograph-count":
+    runner.register("video-text-animated", _text_animated)
+
+    def _mograph_count(a, j):
         from ..effects_engine import mograph_count
 
-        style = _parse_json_arg(args.style, "style", json_mode=use_json) if args.style else None
-        result = _with_spinner(
-            "Generating counter...",
-            mograph_count,
-            args.start,
-            args.end,
-            args.duration,
-            args.output,
-            style=style,
-            fps=args.fps,
+        style = _parse_json_arg(a.style, "style", json_mode=j) if a.style else None
+        r = _with_spinner(
+            "Generating counter...", mograph_count, a.start, a.end, a.duration, a.output, style=style, fps=a.fps
         )
-        _print_output(f"Counter ({args.start}-{args.end})", result, use_json=use_json)
-        return True
+        _out(
+            r,
+            j,
+            lambda res: _format_path_panel(f"Counter ({a.start}-{a.end})", res),
+            json_transform=lambda r: {"success": True, "output_path": r},
+        )
 
-    if args.command == "video-mograph-progress":
+    runner.register("video-mograph-count", _mograph_count)
+
+    def _mograph_progress(a, j):
         from ..effects_engine import mograph_progress
 
-        result = _with_spinner(
+        r = _with_spinner(
             "Generating progress animation...",
             mograph_progress,
-            args.duration,
-            args.output,
-            style=args.style,
-            color=args.color,
-            track_color=args.track_color,
-            fps=args.fps,
+            a.duration,
+            a.output,
+            style=a.style,
+            color=a.color,
+            track_color=a.track_color,
+            fps=a.fps,
         )
-        _print_output(f"Progress bar ({args.style})", result, use_json=use_json)
-        return True
+        _out(
+            r,
+            j,
+            lambda res: _format_path_panel(f"Progress bar ({a.style})", res),
+            json_transform=lambda r: {"success": True, "output_path": r},
+        )
 
-    if args.command == "video-layout-grid":
+    runner.register("video-mograph-progress", _mograph_progress)
+
+    def _layout_grid(a, j):
         from ..effects_engine import layout_grid
 
-        result = _with_spinner(
+        r = _with_spinner(
             "Creating grid layout...",
             layout_grid,
-            args.inputs,
-            args.layout,
-            args.output,
-            gap=args.gap,
-            padding=args.padding,
-            background=args.background,
+            a.inputs,
+            a.layout,
+            a.output,
+            gap=a.gap,
+            padding=a.padding,
+            background=a.background,
         )
-        _print_output(f"Grid layout ({args.layout})", result, use_json=use_json)
-        return True
+        _out(
+            r,
+            j,
+            lambda res: _format_path_panel(f"Grid layout ({a.layout})", res),
+            json_transform=lambda r: {"success": True, "output_path": r},
+        )
 
-    if args.command == "video-layout-pip":
+    runner.register("video-layout-grid", _layout_grid)
+
+    def _layout_pip(a, j):
         from ..effects_engine import layout_pip
 
-        result = _with_spinner(
+        r = _with_spinner(
             "Creating PIP layout...",
             layout_pip,
-            args.main,
-            args.pip,
-            args.output,
-            position=args.position,
-            size=args.size,
-            margin=args.margin,
-            border=args.border,
-            border_color=args.border_color,
-            border_width=args.border_width,
-            rounded_corners=args.rounded_corners,
+            a.main,
+            a.pip,
+            a.output,
+            position=a.position,
+            size=a.size,
+            margin=a.margin,
+            border=a.border,
+            border_color=a.border_color,
+            border_width=a.border_width,
+            rounded_corners=a.rounded_corners,
         )
-        _print_output(f"PIP ({args.position})", result, use_json=use_json)
-        return True
+        _out(
+            r,
+            j,
+            lambda res: _format_path_panel(f"PIP ({a.position})", res),
+            json_transform=lambda r: {"success": True, "output_path": r},
+        )
 
-    return False
+    runner.register("video-layout-pip", _layout_pip)
+
+    return runner.dispatch()

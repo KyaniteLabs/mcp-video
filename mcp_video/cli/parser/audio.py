@@ -41,7 +41,12 @@ def add_parsers(subparsers: argparse._SubParsersAction) -> None:
     apreset_p = subparsers.add_parser("audio-preset", help="Generate preset sound design elements")
     apreset_p.add_argument(
         "preset",
-        help="Preset name: ui-blip, ui-click, ui-tap, ui-whoosh-up, ui-whoosh-down, drone-low, drone-mid, drone-tech, drone-ominous, chime-success, chime-error, chime-notification, typing, scan, processing, data-flow, upload, download",
+        help=(
+            "Preset name: ui-blip, ui-click, ui-tap, ui-whoosh-up, ui-whoosh-down, "
+            "drone-low, drone-mid, drone-tech, drone-ominous, chime-success, "
+            "chime-error, chime-notification, typing, scan, processing, "
+            "data-flow, upload, download"
+        ),
     )
     apreset_p.add_argument("-o", "--output", required=True, help="Output WAV file path")
     apreset_p.add_argument(

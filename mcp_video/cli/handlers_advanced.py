@@ -4,141 +4,84 @@ from __future__ import annotations
 
 from typing import Any
 
-from rich.panel import Panel
-from rich.table import Table
-
-from .common import _with_spinner, output_json
-from .formatting import _format_thumbnail_text, console
+from .common import _with_spinner
+from .formatting import (
+    _format_auto_chapters,
+    _format_design_quality,
+    _format_fix_design_issues,
+    _format_quality_check,
+    _format_thumbnail_text,
+    _format_video_info_detailed,
+)
+from .runner import CommandRunner, _out, engine_cmd
 
 
 def handle_advanced_commands(args: Any, *, use_json: bool) -> bool:
     """Handle quality, info, and advanced analysis commands extracted from the main dispatcher."""
-    if args.command == "video-auto-chapters":
+    runner = CommandRunner(args, use_json)
+
+    def _auto_chapters(a, j):
         from ..effects_engine import auto_chapters
 
-        result = _with_spinner("Detecting chapters...", auto_chapters, args.input, threshold=args.threshold)
-        if use_json:
-            output_json(
-                {
-                    "chapters": [
-                        {
-                            "timestamp": (c[0] if isinstance(c, (list, tuple)) else c.get("timestamp", "")),
-                            "description": (c[1] if isinstance(c, (list, tuple)) else c.get("description", "")),
-                        }
-                        for c in result
-                    ]
-                }
-            )
-        else:
-            table = Table(title="Auto Chapters")
-            table.add_column("#", style="bold", justify="right")
-            table.add_column("Timestamp", style="cyan")
-            table.add_column("Description")
-            for i, chapter in enumerate(result, 1):
-                if isinstance(chapter, (list, tuple)):
-                    ts, desc = chapter
-                else:
-                    ts = chapter.get("timestamp", "")
-                    desc = chapter.get("description", "")
-                table.add_row(str(i), f"{ts:.2f}s", desc)
-            console.print(table)
-            console.print(f"[bold]{len(result)} chapters detected[/bold]")
-        return True
+        r = _with_spinner("Detecting chapters...", auto_chapters, a.input, threshold=a.threshold)
 
-    if args.command == "video-extract-frame":
-        from ..engine import thumbnail
+        def _chapter_dict(c):
+            if isinstance(c, (list, tuple)):
+                return {"timestamp": c[0], "description": c[1]}
+            return {"timestamp": c.get("timestamp", ""), "description": c.get("description", "")}
 
-        result = _with_spinner(
-            "Extracting frame...", thumbnail, args.input, timestamp=args.timestamp, output_path=args.output
-        )
-        if use_json:
-            output_json(result)
-        else:
-            _format_thumbnail_text(result)
-        return True
+        _out(r, j, _format_auto_chapters, json_transform=lambda r: {"chapters": [_chapter_dict(c) for c in r]})
 
-    if args.command == "video-info-detailed":
+    runner.register("video-auto-chapters", _auto_chapters)
+
+    runner.register(
+        "video-extract-frame",
+        engine_cmd(
+            "mcp_video.engine:thumbnail",
+            "Extracting frame...",
+            "input",
+            formatter=_format_thumbnail_text,
+            timestamp="timestamp",
+            output_path="output",
+        ),
+    )
+
+    def _info_detailed(a, j):
         from ..effects_engine import video_info_detailed
 
-        result = _with_spinner("Getting detailed info...", video_info_detailed, args.input)
-        if use_json:
-            output_json(result)
-        else:
-            table = Table(title="Detailed Video Info")
-            table.add_column("Property", style="bold cyan", no_wrap=True)
-            table.add_column("Value")
-            table.add_row("Duration", f"{result.get('duration', 0):.2f}s")
-            table.add_row("FPS", str(result.get("fps", "N/A")))
-            table.add_row("Resolution", f"{result.get('resolution', 'N/A')}")
-            table.add_row("Bitrate", f"{(result.get('bitrate') or 0) // 1000} kbps")
-            table.add_row("Has Audio", str(result.get("has_audio", False)))
-            table.add_row("Scene Changes", str(len(result.get("scene_changes", []))))
-            for i, ts in enumerate(result.get("scene_changes", []), 1):
-                table.add_row(f"  Scene {i}", f"{ts:.2f}s")
-            console.print(table)
-        return True
+        r = _with_spinner("Getting detailed info...", video_info_detailed, a.input)
+        _out(r, j, _format_video_info_detailed)
 
-    if args.command == "video-quality-check":
+    runner.register("video-info-detailed", _info_detailed)
+
+    def _quality_check(a, j):
         from ..quality_guardrails import quality_check
 
-        result = _with_spinner(
-            "Running quality check...", quality_check, args.input, fail_on_warning=args.fail_on_warning
-        )
-        if use_json:
-            output_json(result)
-        else:
-            data = result if isinstance(result, dict) else {}
-            table = Table(title="Quality Check")
-            table.add_column("Check", style="bold cyan")
-            table.add_column("Status")
-            table.add_column("Value")
-            checks = data.get("checks", {})
-            if isinstance(checks, dict):
-                for check, info in checks.items():
-                    status = "[green]PASS[/green]" if info.get("passed") else "[red]FAIL[/red]"
-                    table.add_row(check, status, str(info.get("value", "")))
-            overall = "[green]PASS[/green]" if data.get("passed") else "[red]FAIL[/red]"
-            console.print(table)
-            console.print(f"[bold]Overall: {overall}[/bold]")
-        return True
+        r = _with_spinner("Running quality check...", quality_check, a.input, fail_on_warning=a.fail_on_warning)
+        _out(r, j, _format_quality_check)
 
-    if args.command == "video-design-quality-check":
+    runner.register("video-quality-check", _quality_check)
+
+    def _design_quality(a, j):
         from ..design_quality import design_quality_check
 
-        result = _with_spinner(
+        r = _with_spinner(
             "Running design quality check...",
             design_quality_check,
-            args.input,
-            auto_fix=args.auto_fix,
-            strict=args.strict,
+            a.input,
+            auto_fix=a.auto_fix,
+            strict=a.strict,
         )
-        if use_json:
-            output_json(result.model_dump() if hasattr(result, "model_dump") else result)
-        else:
-            data = result.model_dump() if hasattr(result, "model_dump") else result
-            score = data.get("overall_score", "N/A")
-            issues = data.get("issues", [])
-            warnings = data.get("warnings", [])
-            lines = [f"[bold green]Score:[/bold green] {score}"]
-            if issues:
-                lines.append(f"[red]Issues ({len(issues)}):[/red]")
-                for issue in issues[:5]:
-                    lines.append(f"  - {issue}")
-            if warnings:
-                lines.append(f"[yellow]Warnings ({len(warnings)}):[/yellow]")
-                for w in warnings[:5]:
-                    lines.append(f"  - {w}")
-            console.print(Panel("\n".join(lines), border_style="green", title="Design Quality"))
-        return True
+        _out(r, j, _format_design_quality, json_transform=lambda r: r.model_dump() if hasattr(r, "model_dump") else r)
 
-    if args.command == "video-fix-design-issues":
+    runner.register("video-design-quality-check", _design_quality)
+
+    def _fix_design(a, j):
         from ..design_quality import fix_design_issues
 
-        result = _with_spinner("Fixing design issues...", fix_design_issues, args.input, args.output)
-        if use_json:
-            output_json({"success": True, "output_path": result})
-        else:
-            console.print(Panel(f"[bold green]Design fixed:[/bold green] {result}", border_style="green", title="Done"))
-        return True
+        r = _with_spinner("Fixing design issues...", fix_design_issues, a.input, a.output)
+        _out(r, j, _format_fix_design_issues, json_transform=lambda r: {"success": True, "output_path": r})
 
-    return False
+    runner.register("video-fix-design-issues", _fix_design)
+
+    return runner.dispatch()

@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-import json
+import json as _json
 from typing import Any
 
-from .common import _with_spinner, output_json
+from .common import _parse_json_arg, _with_spinner
 from .formatting import (
     _format_doctor_text,
     _format_edit_text,
@@ -14,333 +14,269 @@ from .formatting import (
     _format_storyboard_text,
     _format_thumbnail_text,
 )
+from .runner import CommandRunner, _out, engine_cmd, plain_cmd
 
 
 def handle_initial_command(args: Any, *, use_json: bool) -> bool:
-    """Handle initial low-risk commands extracted from ``__main__``.
+    from ..doctor import run_diagnostics
+    from ..engine import add_text, probe, subtitles
+    from ..engine import edit_timeline as _edit_timeline
+    from ..models import Timeline
 
-    Returns True when a command was handled and no further dispatch is needed.
-    """
-    if args.command == "doctor":
-        from ..doctor import run_diagnostics
-
-        report = run_diagnostics()
-        if use_json or args.json:
-            output_json(report)
-        else:
-            _format_doctor_text(report)
-        return True
-
-    if args.command == "info":
-        from ..engine import probe
-
-        info = probe(args.input)
-        if use_json:
-            info_dict = info.model_dump() if hasattr(info, "model_dump") else info
-            output_json({"success": True, "data": info_dict})
-        else:
-            _format_info_text(info)
-        return True
-
-    if args.command == "extract-frame":
-        from ..engine import thumbnail
-
-        result = _with_spinner(
-            "Extracting frame...", thumbnail, args.input, timestamp=args.timestamp, output_path=args.output
-        )
-        if use_json:
-            result_dict = result.model_dump() if hasattr(result, "model_dump") else result
-            output_json({"success": True, **result_dict})
-        else:
-            _format_thumbnail_text(result)
-        return True
-
-    if args.command == "trim":
-        from ..engine import trim
-
-        result = _with_spinner(
+    runner = CommandRunner(args, use_json)
+    runner.register("doctor", lambda a, j: _out(run_diagnostics(), j or a.json, _format_doctor_text))
+    runner.register(
+        "info",
+        lambda a, j: _out(
+            probe(a.input),
+            j,
+            _format_info_text,
+            json_transform=lambda r: {"success": True, "data": r.model_dump() if hasattr(r, "model_dump") else r},
+        ),
+    )
+    runner.register(
+        "extract-frame",
+        engine_cmd(
+            "mcp_video.engine:thumbnail",
+            "Extracting frame...",
+            "input",
+            formatter=_format_thumbnail_text,
+            timestamp="timestamp",
+            output_path="output",
+            json_transform=lambda r: {"success": True, **(r.model_dump() if hasattr(r, "model_dump") else r)},
+        ),
+    )
+    runner.register(
+        "trim",
+        engine_cmd(
+            "mcp_video.engine:trim",
             "Trimming...",
-            trim,
-            args.input,
-            start=args.start,
-            duration=args.duration,
-            end=args.end,
-            output_path=args.output,
-        )
-        if use_json:
-            output_json(result)
-        else:
-            _format_edit_text(result)
-        return True
-
-    if args.command == "merge":
-        from ..engine import merge
-
-        result = _with_spinner(
+            "input",
+            formatter=_format_edit_text,
+            start="start",
+            duration="duration",
+            end="end",
+            output_path="output",
+        ),
+    )
+    runner.register(
+        "merge",
+        engine_cmd(
+            "mcp_video.engine:merge",
             "Merging...",
-            merge,
-            args.inputs,
-            output_path=args.output,
-            transition=args.transition,
-            transitions=args.transitions,
-            transition_duration=args.transition_duration,
+            "inputs",
+            formatter=_format_edit_text,
+            output_path="output",
+            transition="transition",
+            transitions="transitions",
+            transition_duration="transition_duration",
+        ),
+    )
+
+    def _add_text(a, j):
+        _out(
+            _with_spinner(
+                "Adding text...",
+                add_text,
+                a.input,
+                text=a.text,
+                position=a.position,
+                font=a.font,
+                size=a.size,
+                color=a.color,
+                shadow=not a.no_shadow,
+                start_time=a.start_time,
+                duration=a.duration,
+                output_path=a.output,
+            ),
+            j,
+            _format_edit_text,
         )
-        if use_json:
-            output_json(result)
-        else:
-            _format_edit_text(result)
-        return True
 
-    if args.command == "add-text":
-        from ..engine import add_text
-
-        result = _with_spinner(
-            "Adding text...",
-            add_text,
-            args.input,
-            text=args.text,
-            position=args.position,
-            font=args.font,
-            size=args.size,
-            color=args.color,
-            shadow=not args.no_shadow,
-            start_time=args.start_time,
-            duration=args.duration,
-            output_path=args.output,
-        )
-        if use_json:
-            output_json(result)
-        else:
-            _format_edit_text(result)
-        return True
-
-    if args.command == "add-audio":
-        from ..engine import add_audio
-
-        result = _with_spinner(
+    runner.register("add-text", _add_text)
+    runner.register(
+        "add-audio",
+        engine_cmd(
+            "mcp_video.engine:add_audio",
             "Adding audio...",
-            add_audio,
-            args.video,
-            args.audio,
-            volume=args.volume,
-            fade_in=args.fade_in,
-            fade_out=args.fade_out,
-            mix=args.mix,
-            start_time=args.start_time,
-            output_path=args.output,
-        )
-        if use_json:
-            output_json(result)
-        else:
-            _format_edit_text(result)
-        return True
-
-    if args.command == "resize":
-        from ..engine import resize
-
-        result = _with_spinner(
+            "video",
+            "audio",
+            formatter=_format_edit_text,
+            volume="volume",
+            fade_in="fade_in",
+            fade_out="fade_out",
+            mix="mix",
+            start_time="start_time",
+            output_path="output",
+        ),
+    )
+    runner.register(
+        "resize",
+        engine_cmd(
+            "mcp_video.engine:resize",
             "Resizing...",
-            resize,
-            args.input,
-            width=args.width,
-            height=args.height,
-            aspect_ratio=args.aspect_ratio,
-            quality=args.quality,
-            output_path=args.output,
-        )
-        if use_json:
-            output_json(result)
-        else:
-            _format_edit_text(result)
-        return True
+            "input",
+            formatter=_format_edit_text,
+            width="width",
+            height="height",
+            aspect_ratio="aspect_ratio",
+            quality="quality",
+            output_path="output",
+        ),
+    )
+    runner.register(
+        "speed",
+        engine_cmd(
+            "mcp_video.engine:speed",
+            "Changing speed...",
+            "input",
+            formatter=_format_edit_text,
+            factor="factor",
+            output_path="output",
+        ),
+    )
+    runner.register(
+        "convert",
+        engine_cmd(
+            "mcp_video.engine:convert",
+            "Converting...",
+            "input",
+            formatter=_format_edit_text,
+            format="fmt",
+            quality="quality",
+            output_path="output",
+        ),
+    )
+    runner.register(
+        "thumbnail",
+        plain_cmd(
+            "mcp_video.engine:thumbnail",
+            "input",
+            formatter=_format_edit_text,
+            timestamp="timestamp",
+            output_path="output",
+        ),
+    )
+    runner.register(
+        "preview",
+        engine_cmd(
+            "mcp_video.engine:preview",
+            "Generating preview...",
+            "input",
+            formatter=_format_edit_text,
+            output_path="output",
+            scale_factor="scale",
+        ),
+    )
+    runner.register(
+        "storyboard",
+        engine_cmd(
+            "mcp_video.engine:storyboard",
+            "Extracting storyboard...",
+            "input",
+            formatter=_format_storyboard_text,
+            output_dir="output_dir",
+            frame_count="frames",
+        ),
+    )
 
-    if args.command == "speed":
-        from ..engine import speed
+    def _subs(a, j):
+        kwargs = {"subtitle_path": a.subtitle, "output_path": a.output}
+        if a.style is not None:
+            kwargs["style"] = a.style
+        _out(_with_spinner("Burning subtitles...", subtitles, a.input, **kwargs), j, _format_edit_text)
 
-        result = _with_spinner("Changing speed...", speed, args.input, factor=args.factor, output_path=args.output)
-        if use_json:
-            output_json(result)
-        else:
-            _format_edit_text(result)
-        return True
-
-    if args.command == "convert":
-        from ..engine import convert
-
-        result = _with_spinner(
-            "Converting...", convert, args.input, format=args.fmt, quality=args.quality, output_path=args.output
-        )
-        if use_json:
-            output_json(result)
-        else:
-            _format_edit_text(result)
-        return True
-
-    if args.command == "thumbnail":
-        from ..engine import thumbnail
-
-        result = thumbnail(args.input, timestamp=args.timestamp, output_path=args.output)
-        if use_json:
-            output_json(result)
-        else:
-            _format_edit_text(result)
-        return True
-
-    if args.command == "preview":
-        from ..engine import preview
-
-        result = _with_spinner(
-            "Generating preview...", preview, args.input, output_path=args.output, scale_factor=args.scale
-        )
-        if use_json:
-            output_json(result)
-        else:
-            _format_edit_text(result)
-        return True
-
-    if args.command == "storyboard":
-        from ..engine import storyboard
-
-        result = _with_spinner(
-            "Extracting storyboard...", storyboard, args.input, output_dir=args.output_dir, frame_count=args.frames
-        )
-        if use_json:
-            output_json(result)
-        else:
-            _format_storyboard_text(result)
-        return True
-
-    if args.command == "subtitles":
-        from ..engine import subtitles
-
-        sub_kwargs = {"subtitle_path": args.subtitle, "output_path": args.output}
-        if args.style is not None:
-            sub_kwargs["style"] = args.style
-        result = _with_spinner("Burning subtitles...", subtitles, args.input, **sub_kwargs)
-        if use_json:
-            output_json(result)
-        else:
-            _format_edit_text(result)
-        return True
-
-    if args.command == "watermark":
-        from ..engine import watermark
-
-        result = _with_spinner(
+    runner.register("subtitles", _subs)
+    runner.register(
+        "watermark",
+        engine_cmd(
+            "mcp_video.engine:watermark",
             "Adding watermark...",
-            watermark,
-            args.input,
-            image_path=args.image,
-            position=args.position,
-            opacity=args.opacity,
-            margin=args.margin,
-            output_path=args.output,
-            crf=args.crf,
-            preset=args.preset,
-        )
-        if use_json:
-            output_json(result)
-        else:
-            _format_edit_text(result)
-        return True
-
-    if args.command == "crop":
-        from ..engine import crop
-
-        result = _with_spinner(
+            "input",
+            formatter=_format_edit_text,
+            image_path="image",
+            position="position",
+            opacity="opacity",
+            margin="margin",
+            output_path="output",
+            crf="crf",
+            preset="preset",
+        ),
+    )
+    runner.register(
+        "crop",
+        engine_cmd(
+            "mcp_video.engine:crop",
             "Cropping...",
-            crop,
-            args.input,
-            width=args.width,
-            height=args.height,
-            x=args.x,
-            y=args.y,
-            output_path=args.output,
-        )
-        if use_json:
-            output_json(result)
-        else:
-            _format_edit_text(result)
-        return True
-
-    if args.command == "rotate":
-        from ..engine import rotate
-
-        result = _with_spinner(
+            "input",
+            formatter=_format_edit_text,
+            width="width",
+            height="height",
+            x="x",
+            y="y",
+            output_path="output",
+        ),
+    )
+    runner.register(
+        "rotate",
+        engine_cmd(
+            "mcp_video.engine:rotate",
             "Rotating...",
-            rotate,
-            args.input,
-            angle=args.angle,
-            flip_horizontal=args.flip_h,
-            flip_vertical=args.flip_v,
-            output_path=args.output,
-        )
-        if use_json:
-            output_json(result)
-        else:
-            _format_edit_text(result)
-        return True
-
-    if args.command == "fade":
-        from ..engine import fade
-
-        result = _with_spinner(
+            "input",
+            formatter=_format_edit_text,
+            angle="angle",
+            flip_horizontal="flip_h",
+            flip_vertical="flip_v",
+            output_path="output",
+        ),
+    )
+    runner.register(
+        "fade",
+        engine_cmd(
+            "mcp_video.engine:fade",
             "Applying fade...",
-            fade,
-            args.input,
-            fade_in=args.fade_in,
-            fade_out=args.fade_out,
-            output_path=args.output,
-            crf=args.crf,
-            preset=args.preset,
-        )
-        if use_json:
-            output_json(result)
-        else:
-            _format_edit_text(result)
-        return True
+            "input",
+            formatter=_format_edit_text,
+            fade_in="fade_in",
+            fade_out="fade_out",
+            output_path="output",
+            crf="crf",
+            preset="preset",
+        ),
+    )
+    runner.register(
+        "export",
+        engine_cmd(
+            "mcp_video.engine:export_video",
+            "Exporting...",
+            "input",
+            formatter=_format_edit_text,
+            quality="quality",
+            format="fmt",
+            output_path="output",
+        ),
+    )
+    runner.register(
+        "extract-audio",
+        engine_cmd(
+            "mcp_video.engine:extract_audio",
+            "Extracting audio...",
+            "input",
+            formatter=_format_extract_audio_text,
+            output_path="output",
+            format="audio_format",
+            json_transform=lambda r: {"success": True, "output_path": r},
+        ),
+    )
 
-    if args.command == "export":
-        from ..engine import export_video
-
-        result = _with_spinner(
-            "Exporting...", export_video, args.input, quality=args.quality, format=args.fmt, output_path=args.output
-        )
-        if use_json:
-            output_json(result)
-        else:
-            _format_edit_text(result)
-        return True
-
-    if args.command == "extract-audio":
-        from ..engine import extract_audio
-
-        result = _with_spinner(
-            "Extracting audio...", extract_audio, args.input, output_path=args.output, format=args.audio_format
-        )
-        if use_json:
-            output_json({"success": True, "output_path": result})
-        else:
-            _format_extract_audio_text(result)
-        return True
-
-    if args.command == "edit":
-        from ..engine import edit_timeline
-        from ..models import Timeline
-        from .common import _parse_json_arg
-
-        timeline_arg = args.timeline.strip()
+    def _edit(a, j):
+        timeline_arg = a.timeline.strip()
         if timeline_arg.startswith(("{", "[")):
-            tl = Timeline.model_validate(_parse_json_arg(timeline_arg, "timeline", json_mode=use_json))
+            tl = Timeline.model_validate(_parse_json_arg(timeline_arg, "timeline", json_mode=j))
         else:
             with open(timeline_arg) as f:
-                tl = Timeline.model_validate(json.load(f))
+                tl = Timeline.model_validate(_json.load(f))
+        _out(_with_spinner("Editing timeline...", _edit_timeline, tl, output_path=a.output), j, _format_edit_text)
 
-        result = _with_spinner("Editing timeline...", edit_timeline, tl, output_path=args.output)
-        if use_json:
-            output_json(result)
-        else:
-            _format_edit_text(result)
-        return True
-
-    return False
+    runner.register("edit", _edit)
+    return runner.dispatch()

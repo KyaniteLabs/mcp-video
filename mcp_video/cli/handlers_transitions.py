@@ -4,64 +4,76 @@ from __future__ import annotations
 
 from typing import Any
 
-from rich.panel import Panel
-
-from .common import _with_spinner, output_json
-from .formatting import console
-
-
-def _print_transition_result(label: str, result: str, *, use_json: bool) -> None:
-    if use_json:
-        output_json({"success": True, "output_path": result})
-    else:
-        console.print(Panel(f"[bold green]{label}:[/bold green] {result}", border_style="green", title="Done"))
+from .common import _with_spinner
+from .formatting import _format_path_panel
+from .runner import CommandRunner, _out
 
 
 def handle_transition_command(args: Any, *, use_json: bool) -> bool:
     """Handle transition commands extracted from the main dispatcher."""
-    if args.command == "transition-glitch":
+    runner = CommandRunner(args, use_json)
+
+    def _glitch(a, j):
         from ..transitions_engine import transition_glitch
 
-        result = _with_spinner(
+        r = _with_spinner(
             "Applying glitch transition...",
             transition_glitch,
-            args.clip1,
-            args.clip2,
-            args.output,
-            duration=args.duration,
-            intensity=args.intensity,
+            a.clip1,
+            a.clip2,
+            a.output,
+            duration=a.duration,
+            intensity=a.intensity,
         )
-        _print_transition_result("Glitch transition", result, use_json=use_json)
-        return True
+        _out(
+            r,
+            j,
+            lambda res: _format_path_panel("Glitch transition", res),
+            json_transform=lambda r: {"success": True, "output_path": r},
+        )
 
-    if args.command == "transition-morph":
+    runner.register("transition-glitch", _glitch)
+
+    def _morph(a, j):
         from ..transitions_engine import transition_morph
 
-        result = _with_spinner(
+        r = _with_spinner(
             "Applying morph transition...",
             transition_morph,
-            args.clip1,
-            args.clip2,
-            args.output,
-            duration=args.duration,
-            mesh_size=args.mesh_size,
+            a.clip1,
+            a.clip2,
+            a.output,
+            duration=a.duration,
+            mesh_size=a.mesh_size,
         )
-        _print_transition_result("Morph transition", result, use_json=use_json)
-        return True
+        _out(
+            r,
+            j,
+            lambda res: _format_path_panel("Morph transition", res),
+            json_transform=lambda r: {"success": True, "output_path": r},
+        )
 
-    if args.command == "transition-pixelate":
+    runner.register("transition-morph", _morph)
+
+    def _pixelate(a, j):
         from ..transitions_engine import transition_pixelate
 
-        result = _with_spinner(
+        r = _with_spinner(
             "Applying pixelate transition...",
             transition_pixelate,
-            args.clip1,
-            args.clip2,
-            args.output,
-            duration=args.duration,
-            pixel_size=args.pixel_size,
+            a.clip1,
+            a.clip2,
+            a.output,
+            duration=a.duration,
+            pixel_size=a.pixel_size,
         )
-        _print_transition_result("Pixelate transition", result, use_json=use_json)
-        return True
+        _out(
+            r,
+            j,
+            lambda res: _format_path_panel("Pixelate transition", res),
+            json_transform=lambda r: {"success": True, "output_path": r},
+        )
 
-    return False
+    runner.register("transition-pixelate", _pixelate)
+
+    return runner.dispatch()

@@ -4,130 +4,129 @@ from __future__ import annotations
 
 from typing import Any
 
-from rich.panel import Panel
-
-from .common import _parse_json_arg, _with_spinner, output_json
-from .formatting import console
+from .common import _parse_json_arg, _with_spinner
+from .formatting import _format_path_panel
+from .runner import CommandRunner, _out
 
 
 def handle_audio_commands(args: Any, *, use_json: bool) -> bool:
     """Handle audio synthesis and spatial commands extracted from the main dispatcher."""
-    if args.command == "audio-synthesize":
+    runner = CommandRunner(args, use_json)
+
+    def _synthesize(a, j):
         from ..audio_engine import audio_synthesize
 
-        effects = _parse_json_arg(args.effects, "effects", json_mode=use_json) if args.effects else None
-        result = _with_spinner(
+        effects = _parse_json_arg(a.effects, "effects", json_mode=j) if a.effects else None
+        r = _with_spinner(
             "Synthesizing audio...",
             audio_synthesize,
-            args.output,
-            waveform=args.waveform,
-            frequency=args.frequency,
-            duration=args.duration,
-            volume=args.volume,
+            a.output,
+            waveform=a.waveform,
+            frequency=a.frequency,
+            duration=a.duration,
+            volume=a.volume,
             effects=effects,
         )
-        if use_json:
-            output_json({"success": True, "output_path": result})
-        else:
-            console.print(
-                Panel(f"[bold green]Audio synthesized:[/bold green] {result}", border_style="green", title="Done")
-            )
-        return True
+        _out(
+            r,
+            j,
+            lambda res: _format_path_panel("Audio synthesized", res),
+            json_transform=lambda r: {"success": True, "output_path": r},
+        )
 
-    if args.command == "audio-compose":
+    runner.register("audio-synthesize", _synthesize)
+
+    def _compose(a, j):
         from ..audio_engine import audio_compose
 
-        tracks = _parse_json_arg(args.tracks, "tracks", json_mode=use_json)
-        result = _with_spinner("Composing audio...", audio_compose, tracks, args.duration, args.output)
-        if use_json:
-            output_json({"success": True, "output_path": result})
-        else:
-            console.print(
-                Panel(f"[bold green]Audio composed:[/bold green] {result}", border_style="green", title="Done")
-            )
-        return True
+        tracks = _parse_json_arg(a.tracks, "tracks", json_mode=j)
+        r = _with_spinner("Composing audio...", audio_compose, tracks, a.duration, a.output)
+        _out(
+            r,
+            j,
+            lambda res: _format_path_panel("Audio composed", res),
+            json_transform=lambda r: {"success": True, "output_path": r},
+        )
 
-    if args.command == "audio-preset":
+    runner.register("audio-compose", _compose)
+
+    def _preset(a, j):
         from ..audio_engine import audio_preset
 
-        result = _with_spinner(
-            f"Generating preset '{args.preset}'...",
+        r = _with_spinner(
+            f"Generating preset '{a.preset}'...",
             audio_preset,
-            args.preset,
-            args.output,
-            pitch=args.pitch,
-            duration=args.duration,
-            intensity=args.intensity,
+            a.preset,
+            a.output,
+            pitch=a.pitch,
+            duration=a.duration,
+            intensity=a.intensity,
         )
-        if use_json:
-            output_json({"success": True, "output_path": result})
-        else:
-            console.print(
-                Panel(f"[bold green]Preset '{args.preset}':[/bold green] {result}", border_style="green", title="Done")
-            )
-        return True
+        _out(
+            r,
+            j,
+            lambda res: _format_path_panel(f"Preset '{a.preset}'", res),
+            json_transform=lambda r: {"success": True, "output_path": r},
+        )
 
-    if args.command == "audio-sequence":
+    runner.register("audio-preset", _preset)
+
+    def _sequence(a, j):
         from ..audio_engine import audio_sequence
 
-        sequence = _parse_json_arg(args.sequence, "sequence", json_mode=use_json)
-        result = _with_spinner("Composing audio sequence...", audio_sequence, sequence, args.output)
-        if use_json:
-            output_json({"success": True, "output_path": result})
-        else:
-            console.print(
-                Panel(f"[bold green]Audio sequence:[/bold green] {result}", border_style="green", title="Done")
-            )
-        return True
+        sequence = _parse_json_arg(a.sequence, "sequence", json_mode=j)
+        r = _with_spinner("Composing audio sequence...", audio_sequence, sequence, a.output)
+        _out(
+            r,
+            j,
+            lambda res: _format_path_panel("Audio sequence", res),
+            json_transform=lambda r: {"success": True, "output_path": r},
+        )
 
-    if args.command == "audio-effects":
+    runner.register("audio-sequence", _sequence)
+
+    def _effects(a, j):
         from ..audio_engine import audio_effects
 
-        effects = _parse_json_arg(args.effects, "effects", json_mode=use_json)
-        result = _with_spinner("Applying audio effects...", audio_effects, args.input, args.output, effects)
-        if use_json:
-            output_json({"success": True, "output_path": result})
-        else:
-            console.print(
-                Panel(f"[bold green]Audio effects applied:[/bold green] {result}", border_style="green", title="Done")
-            )
-        return True
+        effects = _parse_json_arg(a.effects, "effects", json_mode=j)
+        r = _with_spinner("Applying audio effects...", audio_effects, a.input, a.output, effects)
+        _out(
+            r,
+            j,
+            lambda res: _format_path_panel("Audio effects applied", res),
+            json_transform=lambda r: {"success": True, "output_path": r},
+        )
 
-    if args.command == "video-add-generated-audio":
+    runner.register("audio-effects", _effects)
+
+    def _add_generated(a, j):
         from ..audio_engine import add_generated_audio
 
-        audio_config = _parse_json_arg(args.audio_config, "audio-config", json_mode=use_json)
-        result = _with_spinner("Adding generated audio...", add_generated_audio, args.input, audio_config, args.output)
-        if use_json:
-            output_json({"success": True, "output_path": result})
-        else:
-            console.print(
-                Panel(f"[bold green]Generated audio added:[/bold green] {result}", border_style="green", title="Done")
-            )
-        return True
+        audio_config = _parse_json_arg(a.audio_config, "audio-config", json_mode=j)
+        r = _with_spinner("Adding generated audio...", add_generated_audio, a.input, audio_config, a.output)
+        _out(
+            r,
+            j,
+            lambda res: _format_path_panel("Generated audio added", res),
+            json_transform=lambda r: {"success": True, "output_path": r},
+        )
 
-    if args.command == "video-audio-spatial":
+    runner.register("video-add-generated-audio", _add_generated)
+
+    def _spatial(a, j):
         from ..ai_engine import audio_spatial
 
-        positions = _parse_json_arg(args.positions, "positions", json_mode=use_json)
-        result = _with_spinner(
-            "Applying spatial audio...",
-            audio_spatial,
-            args.input,
-            args.output,
-            positions=positions,
-            method=args.method,
+        positions = _parse_json_arg(a.positions, "positions", json_mode=j)
+        r = _with_spinner(
+            "Applying spatial audio...", audio_spatial, a.input, a.output, positions=positions, method=a.method
         )
-        if use_json:
-            output_json({"success": True, "output_path": result})
-        else:
-            console.print(
-                Panel(
-                    f"[bold green]Spatial audio ({args.method}):[/bold green] {result}",
-                    border_style="green",
-                    title="Done",
-                )
-            )
-        return True
+        _out(
+            r,
+            j,
+            lambda res: _format_path_panel(f"Spatial audio ({a.method})", res),
+            json_transform=lambda r: {"success": True, "output_path": r},
+        )
 
-    return False
+    runner.register("video-audio-spatial", _spatial)
+
+    return runner.dispatch()

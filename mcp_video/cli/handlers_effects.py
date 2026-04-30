@@ -4,98 +4,110 @@ from __future__ import annotations
 
 from typing import Any
 
-from rich.panel import Panel
-
-from .common import _auto_output, _with_spinner, output_json
-from .formatting import console
-
-
-def _print_effect_result(label: str, result: str, *, use_json: bool) -> None:
-    if use_json:
-        output_json({"success": True, "output_path": result})
-    else:
-        console.print(Panel(f"[bold green]{label} applied:[/bold green] {result}", border_style="green", title="Done"))
+from .common import _auto_output, _with_spinner
+from .formatting import _format_path_panel
+from .runner import CommandRunner, _out
 
 
 def handle_effect_command(args: Any, *, use_json: bool) -> bool:
     """Handle visual effect commands extracted from the main dispatcher."""
-    if args.command == "effect-vignette":
+    runner = CommandRunner(args, use_json)
+
+    def _vignette(a, j):
         from ..effects_engine import effect_vignette
 
-        out = args.output or _auto_output(args.input, "vignette")
-        result = _with_spinner(
+        out = a.output or _auto_output(a.input, "vignette")
+        r = _with_spinner(
             "Applying vignette...",
             effect_vignette,
-            args.input,
+            a.input,
             out,
-            intensity=args.intensity,
-            radius=args.radius,
-            smoothness=args.smoothness,
+            intensity=a.intensity,
+            radius=a.radius,
+            smoothness=a.smoothness,
         )
-        _print_effect_result("Vignette", result, use_json=use_json)
-        return True
+        _out(
+            r,
+            j,
+            lambda res: _format_path_panel("Vignette applied", res),
+            json_transform=lambda r: {"success": True, "output_path": r},
+        )
 
-    if args.command == "effect-glow":
+    runner.register("effect-vignette", _vignette)
+
+    def _glow(a, j):
         from ..effects_engine import effect_glow
 
-        out = args.output or _auto_output(args.input, "glow")
-        result = _with_spinner(
-            "Applying glow...",
-            effect_glow,
-            args.input,
-            out,
-            intensity=args.intensity,
-            radius=args.radius,
-            threshold=args.threshold,
+        out = a.output or _auto_output(a.input, "glow")
+        r = _with_spinner(
+            "Applying glow...", effect_glow, a.input, out, intensity=a.intensity, radius=a.radius, threshold=a.threshold
         )
-        _print_effect_result("Glow", result, use_json=use_json)
-        return True
+        _out(
+            r,
+            j,
+            lambda res: _format_path_panel("Glow applied", res),
+            json_transform=lambda r: {"success": True, "output_path": r},
+        )
 
-    if args.command == "effect-noise":
+    runner.register("effect-glow", _glow)
+
+    def _noise(a, j):
         from ..effects_engine import effect_noise
 
-        out = args.output or _auto_output(args.input, "noise")
-        result = _with_spinner(
-            "Applying noise...",
-            effect_noise,
-            args.input,
-            out,
-            intensity=args.intensity,
-            mode=args.mode,
-            animated=not args.static,
+        out = a.output or _auto_output(a.input, "noise")
+        r = _with_spinner(
+            "Applying noise...", effect_noise, a.input, out, intensity=a.intensity, mode=a.mode, animated=not a.static
         )
-        _print_effect_result("Noise", result, use_json=use_json)
-        return True
+        _out(
+            r,
+            j,
+            lambda res: _format_path_panel("Noise applied", res),
+            json_transform=lambda r: {"success": True, "output_path": r},
+        )
 
-    if args.command == "effect-scanlines":
+    runner.register("effect-noise", _noise)
+
+    def _scanlines(a, j):
         from ..effects_engine import effect_scanlines
 
-        out = args.output or _auto_output(args.input, "scanlines")
-        result = _with_spinner(
+        out = a.output or _auto_output(a.input, "scanlines")
+        r = _with_spinner(
             "Applying scanlines...",
             effect_scanlines,
-            args.input,
+            a.input,
             out,
-            line_height=args.line_height,
-            opacity=args.opacity,
-            flicker=args.flicker,
+            line_height=a.line_height,
+            opacity=a.opacity,
+            flicker=a.flicker,
         )
-        _print_effect_result("Scanlines", result, use_json=use_json)
-        return True
+        _out(
+            r,
+            j,
+            lambda res: _format_path_panel("Scanlines applied", res),
+            json_transform=lambda r: {"success": True, "output_path": r},
+        )
 
-    if args.command == "effect-chromatic-aberration":
+    runner.register("effect-scanlines", _scanlines)
+
+    def _chromatic(a, j):
         from ..effects_engine import effect_chromatic_aberration
 
-        out = args.output or _auto_output(args.input, "chromatic")
-        result = _with_spinner(
+        out = a.output or _auto_output(a.input, "chromatic")
+        r = _with_spinner(
             "Applying chromatic aberration...",
             effect_chromatic_aberration,
-            args.input,
+            a.input,
             out,
-            intensity=args.intensity,
-            angle=args.angle,
+            intensity=a.intensity,
+            angle=a.angle,
         )
-        _print_effect_result("Chromatic aberration", result, use_json=use_json)
-        return True
+        _out(
+            r,
+            j,
+            lambda res: _format_path_panel("Chromatic aberration applied", res),
+            json_transform=lambda r: {"success": True, "output_path": r},
+        )
 
-    return False
+    runner.register("effect-chromatic-aberration", _chromatic)
+
+    return runner.dispatch()
