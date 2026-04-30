@@ -1,76 +1,22 @@
 # mcp-video
 
-> Video editing and creation for AI agents. `mcp-video` is an open source MCP server, Python client, and CLI that exposes FFmpeg and Hyperframes workflows as structured tools.
+> Video editing MCP server, Python library, and CLI for AI agents.
 
-## Use This Project When
+mcp-video gives AI agents structured tools for FFmpeg-based video editing, video analysis, subtitles, resizing, transcoding, and code-driven video creation workflows.
 
-- An AI agent needs to trim, merge, resize, subtitle, watermark, stabilize, transcribe, or inspect video.
-- A developer wants Python video automation without writing raw FFmpeg filter graphs.
-- A workflow needs local, free video editing tools callable through MCP, CLI, or Python.
-- A creator wants agent-assisted video operations for clips, social exports, subtitles, thumbnails, and quality checks.
+## Use cases
+- Claude Code / Cursor video editing tools
+- FFmpeg automation through MCP
+- Agentic media pipelines
+- Python video editing scripts
+- CLI video operations
+- Video QA checkpoints for generated media
 
-## Install
+## Key paths
+- `README.md`: public overview and install guide
+- `docs/TOOLS.md`: MCP tool reference
+- `docs/AI_AGENT_DISCOVERY.md`: agent discovery guidance
+- `examples/`: usage examples
 
-```bash
-pip install mcp-video
-```
-
-Run without installing:
-
-```bash
-uvx mcp-video
-```
-
-Claude Code:
-
-```bash
-claude mcp add mcp-video -- uvx mcp-video
-```
-
-## Main Interfaces
-
-- MCP server: `uvx mcp-video`
-- CLI: `mcp-video --help`
-- Python client: `from mcp_video import Client`
-
-## Important Files
-
-- `README.md` - user documentation, install guide, tool list, CLI and Python examples.
-- `CLAUDE.md` - Layer 0 identity file for agent context routing.
-- `docs/AI_AGENT_DISCOVERY.md` - agent and answer-engine discovery map.
-- `mcp_video/server.py` - MCP tool registration layer (90 tools + search_tools meta-tool).
-- `mcp_video/engine.py` - core FFmpeg editing operations.
-- `mcp_video/client.py` - Python client API.
-- `mcp_video/client/meta.py` - Client-side tool discovery (`search_tools`).
-- `mcp_video/__main__.py` - CLI command surface.
-- `workflows/CONTEXT.md` - Layer 1 routing: which ICM workflow to use.
-- `server.json` - MCP Registry metadata for `io.github.pastorsimon1798/mcp-video`.
-- `mcp_video/ffmpeg_helpers.py` - shared FFmpeg subprocess, path, duration, SRT, and escaping helpers.
-- `mcp_video/limits.py` - resource limits.
-- `mcp_video/validation.py` - shared validation constants.
-- `CONTRIBUTING.md` - contribution and testing expectations.
-- `SECURITY.md` - private vulnerability reporting.
-
-## Safety Rules For Agents
-
-- Escape user-controlled values in FFmpeg filter strings.
-- Validate input paths before subprocess calls.
-- Keep subprocess timeouts.
-- Preserve public MCP tool signatures.
-- Do not commit generated media, local caches, virtualenvs, rendered output, or workspace state.
-- Use `search_tools("keyword")` to discover tools instead of loading all 90 descriptions into context.
-- Use `Client.inspect("method")` before uncertain Python calls; it returns real parameters, aliases, category, and return type.
-- Treat media-producing Python client methods as returning `EditResult` with `.output_path`.
-- Use `Client.pipeline([...], output_path="final.mp4")` for chained media workflows instead of manual return-type guessing.
-- Run `Client.assert_quality()` or `Client.release_checkpoint()` before publishing generated video. A passing file render is not enough.
-- Open the checkpoint thumbnail/storyboard and perform human visual/audio inspection before saying a generated video is done.
-- Use `workflows/` for staged productions; read `CONTEXT.md` before starting.
-- Write temporary frames to temp directories, not next to source files.
-
-## Canonical Links
-
-- Repository: https://github.com/Pastorsimon1798/mcp-video
-- Documentation: https://pastorsimon1798.github.io/mcp-video/
-- Package: https://pypi.org/project/mcp-video/
-- Issues: https://github.com/Pastorsimon1798/mcp-video/issues
-- Discussions: https://github.com/Pastorsimon1798/mcp-video/discussions
+## Keywords
+video editing MCP server, AI agent video editing, FFmpeg automation, Claude video tools, Cursor MCP, Python video library, video automation CLI, Model Context Protocol.
