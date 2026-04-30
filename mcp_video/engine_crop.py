@@ -74,7 +74,11 @@ def crop(
     suffix = f"crop_{width}x{height}"
     output = output_path or _auto_output(input_path, suffix)
     _validate_output_path(output)
-    crop_filter = f"crop={_escape_ffmpeg_filter_value(str(width))}:{_escape_ffmpeg_filter_value(str(height))}:{_escape_ffmpeg_filter_value(str(x))}:{_escape_ffmpeg_filter_value(str(y))}"
+    safe_w = _escape_ffmpeg_filter_value(str(width))
+    safe_h = _escape_ffmpeg_filter_value(str(height))
+    safe_x = _escape_ffmpeg_filter_value(str(x))
+    safe_y = _escape_ffmpeg_filter_value(str(y))
+    crop_filter = f"crop={safe_w}:{safe_h}:{safe_x}:{safe_y}"
 
     with _timed_operation() as timing:
         _run_ffmpeg(

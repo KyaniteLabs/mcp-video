@@ -56,7 +56,11 @@ def _validate_image(path: str) -> None:
     ext = os.path.splitext(path)[1].lower()
     if ext not in SUPPORTED_EXTENSIONS and ext not in VIDEO_EXTENSIONS:
         raise MCPVideoError(
-            f"Unsupported format: {ext}. Supported images: {', '.join(sorted(SUPPORTED_EXTENSIONS))}. Supported videos: {', '.join(sorted(VIDEO_EXTENSIONS))}",
+            (
+                f"Unsupported format: {ext}. "
+                f"Supported images: {', '.join(sorted(SUPPORTED_EXTENSIONS))}. "
+                f"Supported videos: {', '.join(sorted(VIDEO_EXTENSIONS))}"
+            ),
             error_type="validation_error",
             code="unsupported_format",
         )

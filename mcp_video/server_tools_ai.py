@@ -330,7 +330,10 @@ def video_quality_check(
                     code="quality_gate_failed",
                     suggested_action={
                         "auto_fix": False,
-                        "description": "Inspect storyboard/thumbnail, fix visual/audio issues, then rerun quality checks.",
+                        "description": (
+                            "Inspect storyboard/thumbnail, fix visual/audio issues, "
+                            "then rerun quality checks."
+                        ),
                     },
                 )
             )

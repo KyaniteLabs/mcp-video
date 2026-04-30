@@ -128,23 +128,43 @@ def _filter_map(params: dict[str, Any], width: int, height: int) -> dict[FilterT
         "color_preset": ("eq", _get_color_preset_filter(params.get("preset", "warm")), False),
         "denoise": (
             "hqdn3d",
-            f"hqdn3d={_param(params, 'luma_spatial', 4)}:{_param(params, 'chroma_spatial', 3)}:{_param(params, 'luma_tmp', 6)}:{_param(params, 'chroma_tmp', 4.5)}",
+            (
+                f"hqdn3d={_param(params, 'luma_spatial', 4)}:"
+                f"{_param(params, 'chroma_spatial', 3)}:"
+                f"{_param(params, 'luma_tmp', 6)}:"
+                f"{_param(params, 'chroma_tmp', 4.5)}"
+            ),
             False,
         ),
         "deinterlace": ("yadif", "yadif=0:-1:0", False),
         "ken_burns": (
             "zoompan",
-            f"zoompan=z='min(zoom+{_param(params, 'zoom_speed', 0.0015)},1.5)':d={_param(params, 'duration', 150)}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s={_safe_filter_int(width, 'width')}x{_safe_filter_int(height, 'height')}",
+            (
+                f"zoompan=z='min(zoom+{_param(params, 'zoom_speed', 0.0015)},1.5)':"
+                f"d={_param(params, 'duration', 150)}:"
+                f"x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':"
+                f"s={_safe_filter_int(width, 'width')}x{_safe_filter_int(height, 'height')}"
+            ),
             False,
         ),
         "reverb": (
             "aecho",
-            f"aecho={_param(params, 'in_gain', 0.8)}:{_param(params, 'out_gain', 0.9)}:{_param(params, 'delays', 60)}:{_param(params, 'decay', 0.2)}",
+            (
+                f"aecho={_param(params, 'in_gain', 0.8)}:"
+                f"{_param(params, 'out_gain', 0.9)}:"
+                f"{_param(params, 'delays', 60)}:"
+                f"{_param(params, 'decay', 0.2)}"
+            ),
             True,
         ),
         "compressor": (
             "acompressor",
-            f"acompressor=threshold={_param(params, 'threshold_db', -20)}dB:ratio={_param(params, 'ratio', 4)}:attack={_param(params, 'attack', 5)}:release={_param(params, 'release', 50)}",
+            (
+                f"acompressor=threshold={_param(params, 'threshold_db', -20)}dB:"
+                f"ratio={_param(params, 'ratio', 4)}:"
+                f"attack={_param(params, 'attack', 5)}:"
+                f"release={_param(params, 'release', 50)}"
+            ),
             True,
         ),
         "pitch_shift": ("asetrate", _build_pitch_shift_filter(params.get("semitones", 0)), True),

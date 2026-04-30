@@ -157,7 +157,8 @@ def video_watermark(
     Args:
         input_path: Absolute path to the input video.
         image_path: Absolute path to the watermark image (PNG with transparency recommended).
-        position: Position on screen. Named (top-left, etc.), pixel {"x": 100, "y": 50}, or percentage {"x_pct": 0.5, "y_pct": 0.5}.
+        position: Position on screen. Named (top-left, etc.), pixel"
+                  " {\"x\": 100, \"y\": 50}, or percentage {\"x_pct\": 0.5, \"y_pct\": 0.5}.
         opacity: Watermark opacity (0.0 to 1.0).
         margin: Margin from edge in pixels.
         output_path: Where to save the output. Auto-generated if omitted.
@@ -406,7 +407,8 @@ def video_edit(
     Args:
         timeline: JSON object with keys: width, height, tracks (video/audio/text/image), export.
             Can also be a JSON string or a path to a .json file.
-            Image overlays in tracks: {"type": "image", "images": [{"source": "logo.png", "position": "top-right", "width": 200, "opacity": 0.8}]}
+            Image overlays in tracks: {"type": "image", "images": [{"source":
+            "logo.png", "position": "top-right", "width": 200, "opacity": 0.8}]}
         output_path: Where to save the final video. Auto-generated if omitted.
     """
     parsed_timeline = timeline
@@ -434,7 +436,10 @@ def video_edit(
             else:
                 return _error_result(
                     MCPVideoError(
-                        f"timeline must be a dict, valid JSON string, or path to a .json file. Got: {timeline_str[:100]}",
+                        (
+                            "timeline must be a dict, valid JSON string, or path "
+                            f"to a .json file. Got: {timeline_str[:100]}"
+                        ),
                         error_type="validation_error",
                         code="invalid_parameter",
                     )

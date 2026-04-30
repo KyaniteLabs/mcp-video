@@ -113,7 +113,10 @@ def video_merge(
         if invalid:
             return _error_result(
                 MCPVideoError(
-                    f"Invalid transition(s): {', '.join(invalid)}. Must be one of: {', '.join(sorted(VALID_XFADE_TRANSITIONS))}",
+                    (
+                        f"Invalid transition(s): {', '.join(invalid)}. "
+                        f"Must be one of: {', '.join(sorted(VALID_XFADE_TRANSITIONS))}"
+                    ),
                     error_type="validation_error",
                     code="invalid_parameter",
                 )
@@ -156,7 +159,8 @@ def video_add_text(
     Args:
         input_path: Absolute path to the input video.
         text: Text to overlay.
-        position: Position on screen. Named (top-left, top-center, etc.), pixel {"x": 100, "y": 50}, or percentage {"x_pct": 0.5, "y_pct": 0.5}.
+        position: Position on screen. Named (top-left, top-center, etc.), pixel"
+                  " {\"x\": 100, \"y\": 50}, or percentage {\"x_pct\": 0.5, \"y_pct\": 0.5}.
         font: Path to font file. Uses system default if omitted.
         size: Font size in pixels.
         color: Text color (CSS color name or hex).

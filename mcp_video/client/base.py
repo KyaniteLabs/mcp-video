@@ -174,7 +174,8 @@ class ClientBase:
     def _finalize_pipeline_result(result: EditResult, warnings: list[str], saw_quality_gate: bool) -> EditResult:
         if not saw_quality_gate:
             warnings.append(
-                "Pipeline did not include a release checkpoint; run assert_quality/release_checkpoint before publishing."
+                "Pipeline did not include a release checkpoint; run "
+                "assert_quality/release_checkpoint before publishing."
             )
         result.warnings = list(dict.fromkeys(warnings))
         return result

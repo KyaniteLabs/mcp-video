@@ -227,7 +227,9 @@ def effect_noise(
     if mode == "color":
         # Color noise
         noise_expr = f"lum(X,Y)+{intensity * 50}*({seed_expr}*2-1)"
-        filters = f"geq=lum='{noise_expr}':cb='cb(X,Y)+{intensity * 30}*({seed_expr}*2-1)':cr='cr(X,Y)+{intensity * 30}*({seed_expr}*2-1)'"
+        cb_expr = f"cb(X,Y)+{intensity * 30}*({seed_expr}*2-1)"
+        cr_expr = f"cr(X,Y)+{intensity * 30}*({seed_expr}*2-1)"
+        filters = f"geq=lum='{noise_expr}':cb='{cb_expr}':cr='{cr_expr}'"
     else:
         # Luminance noise only
         noise_expr = f"lum(X,Y)*(1+{intensity}*({seed_expr}*2-1))"

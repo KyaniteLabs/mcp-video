@@ -237,7 +237,10 @@ def audio_sequence(
         if evt_type not in VALID_AUDIO_SEQUENCE_TYPES:
             return _error_result(
                 MCPVideoError(
-                    f"Invalid sequence[{i}].type: must be one of {sorted(VALID_AUDIO_SEQUENCE_TYPES)}, got '{evt_type}'",
+                    (
+                        f"Invalid sequence[{i}].type: must be one of "
+                        f"{sorted(VALID_AUDIO_SEQUENCE_TYPES)}, got '{evt_type}'"
+                    ),
                     error_type="validation_error",
                     code="invalid_parameter",
                 )

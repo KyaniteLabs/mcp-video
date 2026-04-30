@@ -139,8 +139,9 @@ def transition_pixelate(
     safe_offset = _escape_ffmpeg_filter_value(str(offset))
     safe_pixel_size = _escape_ffmpeg_filter_value(str(pixel_size))
     safe_mid = _escape_ffmpeg_filter_value(str(mid))
-    scale_w_expr = f"trunc(iw/max(1,min({safe_pixel_size},1+({safe_pixel_size}-1)*((1+cos((t-{safe_mid})*PI/{safe_duration}))/2)))/2)*2"
-    scale_h_expr = f"trunc(ih/max(1,min({safe_pixel_size},1+({safe_pixel_size}-1)*((1+cos((t-{safe_mid})*PI/{safe_duration}))/2)))/2)*2"
+    cos_expr = f"((1+cos((t-{safe_mid})*PI/{safe_duration}))/2)"
+    scale_w_expr = f"trunc(iw/max(1,min({safe_pixel_size},1+({safe_pixel_size}-1)*{cos_expr}))/2)*2"
+    scale_h_expr = f"trunc(ih/max(1,min({safe_pixel_size},1+({safe_pixel_size}-1)*{cos_expr}))/2)*2"
 
     filter_complex = (
         f"[0:v][1:v]xfade=transition=fade:duration={safe_duration}:offset={safe_offset}[faded];"

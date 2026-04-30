@@ -580,7 +580,10 @@ class VisualQualityGuardrails:
 
         if cast:
             cast_str = "/".join(cast)
-            message = f"Color cast detected: {cast_str} (max deviation: {max_deviation:.1f}%). Consider white balance correction."
+            message = (
+                f"Color cast detected: {cast_str} (max deviation: {max_deviation:.1f}%). "
+                "Consider white balance correction."
+            )
         else:
             message = f"Color balance is good (max deviation: {max_deviation:.1f}%)"
 

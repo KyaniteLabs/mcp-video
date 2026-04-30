@@ -57,7 +57,11 @@ def mograph_count(
 
             safe_font = _escape_ffmpeg_filter_value(font)
             safe_color = _escape_ffmpeg_filter_value(color)
-            text_filter = f"drawtext=text='{current_value}':font={safe_font}:fontsize={size}:fontcolor={safe_color}:x=(w-text_w)/2:y=(h-text_h)/2"
+            text_filter = (
+                f"drawtext=text='{current_value}':font={safe_font}:"
+                f"fontsize={size}:fontcolor={safe_color}:"
+                f"x=(w-text_w)/2:y=(h-text_h)/2"
+            )
 
             if glow:
                 text_filter += f":box=1:boxcolor={safe_color}@0.3:boxborderw=10"

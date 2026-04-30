@@ -52,7 +52,10 @@ def video_filter(
 
     Args:
         input_path: Absolute path to the input video.
-        filter_type: Filter type (blur, sharpen, brightness, contrast, saturation, grayscale, sepia, invert, vignette, color_preset, denoise, deinterlace, ken_burns, reverb, compressor, pitch_shift, noise_reduction).
+        filter_type: Filter type (blur, sharpen, brightness, contrast, saturation,"
+                     " grayscale, sepia, invert, vignette, color_preset, denoise,"
+                     " deinterlace, ken_burns, reverb, compressor, pitch_shift,"
+                     " noise_reduction).
         params: Optional filter parameters (e.g. radius for blur, preset for color_preset).
         output_path: Where to save the output. Auto-generated if omitted.
         crf: Override CRF value (0-51, lower = better quality). Default 23.
@@ -282,7 +285,8 @@ def video_overlay(
     Args:
         background_path: Absolute path to the background video.
         overlay_path: Absolute path to the overlay video.
-        position: Position on screen. Named (top-left, etc.), pixel {"x": 100, "y": 50}, or percentage {"x_pct": 0.5, "y_pct": 0.5}.
+        position: Position on screen. Named (top-left, etc.), pixel"
+                  " {\"x\": 100, \"y\": 50}, or percentage {\"x_pct\": 0.5, \"y_pct\": 0.5}.
         width: Width to scale the overlay to (pixels).
         height: Height to scale the overlay to (pixels).
         opacity: Overlay opacity (0.0 to 1.0).
@@ -695,7 +699,8 @@ def video_batch(
 
     Args:
         inputs: List of absolute paths to input video files.
-        operation: Operation (trim, resize, convert, filter, blur, color_grade, watermark, speed, fade, normalize_audio).
+        operation: Operation (trim, resize, convert, filter, blur, color_grade,"
+                  " watermark, speed, fade, normalize_audio).
         params: Parameters for the operation.
         output_dir: Directory for output files. Auto-generated if omitted.
     """

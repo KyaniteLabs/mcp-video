@@ -187,7 +187,9 @@ def layout_pip(
     if border:
         # Add border using pad
         safe_border_color = _escape_ffmpeg_filter_value(border_color)
-        pip_filters += f",pad={pip_w + border_width * 2}:{pip_h + border_width * 2}:{border_width}:{border_width}:color={safe_border_color}"
+        pad_w = pip_w + border_width * 2
+        pad_h = pip_h + border_width * 2
+        pip_filters += f",pad={pad_w}:{pad_h}:{border_width}:{border_width}:color={safe_border_color}"
 
     if rounded_corners:
         # Use format and drawbox for rounded corners simulation
