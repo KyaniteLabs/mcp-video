@@ -1309,6 +1309,75 @@ def test_analyze_video_errors_are_non_fatal():
     assert "mock quality failure" in quality_errors[0]["error"]
 
 
+def test_validate_analysis_output_paths_blocks_system_prefixes():
+    """_validate_analysis_output_paths rejects writes to system directories."""
+    from mcp_video.ai_engine import _validate_analysis_output_paths
+    from mcp_video.errors import MCPVideoError
+
+    with pytest.raises(MCPVideoError, match="escapes safe directory") as exc_info:
+        _validate_analysis_output_paths(output_srt="/etc/passwd.srt", output_txt=None, output_md=None, output_json=None)
+    assert exc_info.value.code == "unsafe_path"
+
+    with pytest.raises(MCPVideoError, match="escapes safe directory"):
+        _validate_analysis_output_paths(output_srt=None, output_txt="/usr/local/out.txt", output_md=None, output_json=None)
+
+    with pytest.raises(MCPVideoError, match="escapes safe directory"):
+        _validate_analysis_output_paths(output_srt=None, output_txt=None, output_md="/root/file.md", output_json=None)
+
+    with pytest.raises(MCPVideoError, match="escapes safe directory"):
+        _validate_analysis_output_paths(output_srt=None, output_txt=None, output_md=None, output_json="/var/log/out.json")
+
+
+def test_validate_analysis_output_paths_allows_safe_paths():
+    """_validate_analysis_output_paths allows normal user / tmp paths."""
+    from mcp_video.ai_engine import _validate_analysis_output_paths
+
+    _validate_analysis_output_paths(
+        output_srt="/tmp/transcript.srt",
+        output_txt="/home/user/out.txt",
+        output_md="relative/path.md",
+        output_json=None,
+    )
+
+
+def test_run_analysis_returns_result_on_success():
+    """_run_analysis returns the callable result when no exception is raised."""
+    from mcp_video.ai_engine import _run_analysis
+
+    errors: list[dict[str, str]] = []
+    result = _run_analysis("test", lambda: 42, errors)
+    assert result == 42
+    assert errors == []
+
+
+def test_run_analysis_appends_error_on_failure():
+    """_run_analysis logs warning, appends error, and returns fallback on exception."""
+    from mcp_video.ai_engine import _run_analysis
+
+    errors: list[dict[str, str]] = []
+    fallback = {"default": True}
+
+    def boom():
+        raise RuntimeError("mock failure")
+
+    result = _run_analysis("test", boom, errors, fallback=fallback)
+    assert result == fallback
+    assert len(errors) == 1
+    assert errors[0]["section"] == "test"
+    assert "mock failure" in errors[0]["error"]
+
+
+def test_run_analysis_returns_none_fallback_when_unset():
+    """_run_analysis returns None when no fallback is provided and the callable fails."""
+    from mcp_video.ai_engine import _run_analysis
+
+    errors: list[dict[str, str]] = []
+    result = _run_analysis("test", lambda: (_ for _ in ()).throw(ValueError("nope")), errors)
+    assert result is None
+    assert len(errors) == 1
+    assert "nope" in errors[0]["error"]
+
+
 def test_format_txt_basic():
     """_format_txt joins segment texts as plain lines."""
     from mcp_video.ai_engine import _format_txt

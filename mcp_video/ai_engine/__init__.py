@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import json
+import logging
 import shutil
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from ..errors import InputFileError, MCPVideoError
 from ..ffmpeg_helpers import _validate_output_path
+
+logger = logging.getLogger(__name__)
 
 # Public API re-exports
 from .color import ai_color_grade as ai_color_grade
@@ -37,6 +40,149 @@ from .transcribe import (
     _format_srt as _format_srt,
     _format_txt as _format_txt,
 )
+
+_BLOCKED_SYSTEM_PREFIXES = tuple(
+    str(Path(prefix).resolve())
+    for prefix in (
+        "/etc/",
+        "/usr/",
+        "/bin/",
+        "/sbin/",
+        "/var/",
+        "/root/",
+        "/boot/",
+        "/dev/",
+        "/proc/",
+        "/sys/",
+    )
+)
+
+
+def _validate_analysis_output_paths(
+    output_srt: str | None,
+    output_txt: str | None,
+    output_md: str | None,
+    output_json: str | None,
+) -> None:
+    import tempfile
+
+    temp_prefix = str(Path(tempfile.gettempdir()).resolve())
+    for label, path in [
+        ("output_srt", output_srt),
+        ("output_txt", output_txt),
+        ("output_md", output_md),
+        ("output_json", output_json),
+    ]:
+        if path is not None:
+            p = Path(path).resolve()
+            if str(p).startswith(temp_prefix):
+                continue
+            if any(str(p).startswith(prefix) for prefix in _BLOCKED_SYSTEM_PREFIXES):
+                raise MCPVideoError(
+                    f"{label} path escapes safe directory: {path}",
+                    error_type="validation_error",
+                    code="unsafe_path",
+                )
+
+
+def _run_analysis(
+    name: str,
+    fn: Callable[..., Any],
+    errors: list[dict[str, str]],
+    *args: Any,
+    fallback: Any | None = None,
+    **kwargs: Any,
+) -> Any | None:
+    try:
+        return fn(*args, **kwargs)
+    except Exception as exc:
+        logger.warning("Analysis section %s failed: %s", name, exc)
+        errors.append({"section": name, "error": str(exc)})
+        return fallback
+
+
+def _probe_media(video_path: Path, _engine: Any) -> dict[str, Any]:
+    info = _engine.probe(str(video_path))
+    return {
+        "duration": info.duration,
+        "width": info.width,
+        "height": info.height,
+        "fps": info.fps,
+        "codec": info.codec,
+        "audio_codec": info.audio_codec,
+        "audio_sample_rate": info.audio_sample_rate,
+        "bitrate": info.bitrate,
+        "size_bytes": info.size_bytes,
+        "format": info.format,
+    }
+
+
+def _waveform_to_dict(waveform: Any) -> dict[str, Any]:
+    return {
+        "duration": waveform.duration,
+        "peaks": waveform.peaks,
+        "mean_level": waveform.mean_level,
+        "max_level": waveform.max_level,
+        "min_level": waveform.min_level,
+        "silence_regions": waveform.silence_regions,
+    }
+
+
+def _placeholder_colors() -> list[Any]:
+    raise NotImplementedError("Color extraction not yet implemented")
+
+
+def _build_transcript_result(
+    video_path: Path,
+    *,
+    output_srt: str | None,
+    output_txt: str | None,
+    output_md: str | None,
+    output_json: str | None,
+    whisper_model: str,
+    language: str | None,
+) -> dict[str, Any]:
+    raw = ai_transcribe(
+        str(video_path),
+        output_srt=output_srt,
+        model=whisper_model,
+        language=language,
+    )
+    segments = raw.get("segments", [])
+    txt_path: str | None = None
+    md_path: str | None = None
+    json_path: str | None = None
+
+    if output_txt:
+        _validate_output_path(output_txt)
+        Path(output_txt).write_text(_format_txt(segments), encoding="utf-8")
+        txt_path = output_txt
+    if output_md:
+        _validate_output_path(output_md)
+        Path(output_md).write_text(_format_md(segments), encoding="utf-8")
+        md_path = output_md
+    if output_json:
+        _validate_output_path(output_json)
+        json_data = _format_json_transcript(
+            raw.get("transcript", ""),
+            segments,
+            raw.get("language", "unknown"),
+        )
+        Path(output_json).write_text(
+            json.dumps(json_data, indent=2, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        json_path = output_json
+
+    return {
+        "text": raw.get("transcript", ""),
+        "language": raw.get("language", "unknown"),
+        "segments": segments,
+        "srt_path": output_srt,
+        "txt_path": txt_path,
+        "md_path": md_path,
+        "json_path": json_path,
+    }
 
 
 def analyze_video(
@@ -90,7 +236,6 @@ def analyze_video(
     if "\x00" in video:
         raise InputFileError(video, "Invalid path: contains null bytes")
 
-    # Validate scene_threshold
     if not (0.0 <= scene_threshold <= 1.0):
         raise MCPVideoError(
             f"scene_threshold must be between 0.0 and 1.0, got {scene_threshold}",
@@ -98,34 +243,8 @@ def analyze_video(
             code="invalid_parameter",
         )
 
-    # Validate output paths — ensure they don't escape safe directories
-    for label, path in [
-        ("output_srt", output_srt),
-        ("output_txt", output_txt),
-        ("output_md", output_md),
-        ("output_json", output_json),
-    ]:
-        if path is not None:
-            p = Path(path).resolve()
-            # Block writes to system directories
-            blocked_prefixes = (
-                "/etc/",
-                "/usr/",
-                "/bin/",
-                "/sbin/",
-                "/var/",
-                "/root/",
-                "/boot/",
-                "/dev/",
-                "/proc/",
-                "/sys/",
-            )
-            if any(str(p).startswith(prefix) for prefix in blocked_prefixes):
-                raise MCPVideoError(
-                    f"{label} path escapes safe directory: {path}", error_type="validation_error", code="unsafe_path"
-                )
+    _validate_analysis_output_paths(output_srt, output_txt, output_md, output_json)
 
-    # ── Resolve URL → local file ─────────────────────────────────────────────
     _tmp_dir: str | None = None
     try:
         local_video, _tmp_dir, source_url = _resolve_video_source(video)
@@ -134,134 +253,85 @@ def analyze_video(
         if not video_path.exists():
             raise InputFileError(str(video_path))
 
-        # Lazy imports — keep optional-dependency pattern consistent with the rest
         from .. import engine as _engine
         from .. import effects_engine as _effects
         from .. import quality_guardrails as _quality
 
         errors: list[dict[str, str]] = []
 
-        # ── 1. Metadata (always runs) ────────────────────────────────────────
-        try:
-            info = _engine.probe(str(video_path))
-            metadata: dict[str, Any] = {
-                "path": str(video_path.resolve()),
-                "duration": info.duration,
-                "width": info.width,
-                "height": info.height,
-                "fps": info.fps,
-                "codec": info.codec,
-                "audio_codec": info.audio_codec,
-                "audio_sample_rate": info.audio_sample_rate,
-                "bitrate": info.bitrate,
-                "size_bytes": info.size_bytes,
-                "format": info.format,
-            }
-        except Exception as exc:
-            metadata = {"path": str(video_path.resolve())}
-            errors.append({"section": "metadata", "error": str(exc)})
+        metadata = _run_analysis(
+            "metadata",
+            lambda vp: {"path": str(vp.resolve()), **_probe_media(vp, _engine)},
+            errors,
+            video_path,
+            fallback={"path": str(video_path.resolve())},
+        )
 
-        # ── 2. Transcript ────────────────────────────────────────────────────
-        transcript_result: dict[str, Any] | None = None
-        if include_transcript:
-            try:
-                raw = ai_transcribe(
-                    str(video_path),
-                    output_srt=output_srt,
-                    model=whisper_model,
-                    language=language,
-                )
-                segments = raw.get("segments", [])
-                txt_path: str | None = None
-                md_path: str | None = None
-                json_path: str | None = None
+        transcript_result = (
+            _run_analysis(
+                "transcript",
+                _build_transcript_result,
+                errors,
+                video_path,
+                output_srt=output_srt,
+                output_txt=output_txt,
+                output_md=output_md,
+                output_json=output_json,
+                whisper_model=whisper_model,
+                language=language,
+            )
+            if include_transcript
+            else None
+        )
 
-                if output_txt:
-                    _validate_output_path(output_txt)
-                    Path(output_txt).write_text(_format_txt(segments), encoding="utf-8")
-                    txt_path = output_txt
-                if output_md:
-                    _validate_output_path(output_md)
-                    Path(output_md).write_text(_format_md(segments), encoding="utf-8")
-                    md_path = output_md
-                if output_json:
-                    _validate_output_path(output_json)
-                    json_data = _format_json_transcript(
-                        raw.get("transcript", ""),
-                        segments,
-                        raw.get("language", "unknown"),
-                    )
-                    Path(output_json).write_text(
-                        json.dumps(json_data, indent=2, ensure_ascii=False),
-                        encoding="utf-8",
-                    )
-                    json_path = output_json
+        scenes_result = (
+            _run_analysis(
+                "scenes",
+                lambda vp: _engine.detect_scenes(str(vp), threshold=scene_threshold).scenes,
+                errors,
+                video_path,
+            )
+            if include_scenes
+            else None
+        )
 
-                transcript_result = {
-                    "text": raw.get("transcript", ""),
-                    "language": raw.get("language", "unknown"),
-                    "segments": segments,
-                    "srt_path": output_srt,
-                    "txt_path": txt_path,
-                    "md_path": md_path,
-                    "json_path": json_path,
-                }
-            except RuntimeError as exc:
-                # Whisper not installed — record gracefully
-                errors.append({"section": "transcript", "error": str(exc)})
-            except Exception as exc:
-                errors.append({"section": "transcript", "error": str(exc)})
+        audio_result = (
+            _run_analysis(
+                "audio",
+                lambda vp: _waveform_to_dict(_engine.audio_waveform(str(vp))),
+                errors,
+                video_path,
+            )
+            if include_audio
+            else None
+        )
 
-        # ── 3. Scenes ────────────────────────────────────────────────────────
-        scenes_result: list[dict] | None = None
-        if include_scenes:
-            try:
-                scene_det = _engine.detect_scenes(str(video_path), threshold=scene_threshold)
-                scenes_result = scene_det.scenes
-            except Exception as exc:
-                errors.append({"section": "scenes", "error": str(exc)})
+        chapters_result = (
+            _run_analysis(
+                "chapters",
+                lambda vp: [
+                    {"timestamp": ts, "title": title}
+                    for ts, title in _effects.auto_chapters(str(vp), threshold=scene_threshold)
+                ],
+                errors,
+                video_path,
+            )
+            if include_chapters
+            else None
+        )
 
-        # ── 4. Audio waveform ────────────────────────────────────────────────
-        audio_result: dict[str, Any] | None = None
-        if include_audio:
-            try:
-                waveform = _engine.audio_waveform(str(video_path))
-                audio_result = {
-                    "duration": waveform.duration,
-                    "peaks": waveform.peaks,
-                    "mean_level": waveform.mean_level,
-                    "max_level": waveform.max_level,
-                    "min_level": waveform.min_level,
-                    "silence_regions": waveform.silence_regions,
-                }
-            except Exception as exc:
-                errors.append({"section": "audio", "error": str(exc)})
+        colors_result = _run_analysis("colors", _placeholder_colors, errors) if include_colors else None
 
-        # ── 5. Chapters ──────────────────────────────────────────────────────
-        chapters_result: list[dict] | None = None
-        if include_chapters:
-            try:
-                raw_chapters = _effects.auto_chapters(str(video_path), threshold=scene_threshold)
-                chapters_result = [{"timestamp": ts, "title": title} for ts, title in raw_chapters]
-            except Exception as exc:
-                errors.append({"section": "chapters", "error": str(exc)})
-
-        # ── 6. Colors / extended info ────────────────────────────────────────
-        # NOTE: Dominant color extraction is not yet implemented in effects_engine.
-        # video_info_detailed() returns an empty list for dominant_colors.
-        # Leaving this section as a placeholder — remove include_colors flag
-        # and this block when colors are actually implemented.
-        colors_result: list[Any] | None = None
-        if include_colors:
-            errors.append({"section": "colors", "error": "Color extraction not yet implemented"})
-
-        # ── 7. Quality ───────────────────────────────────────────────────────
-        quality_result: dict[str, Any] | None = None
-        if include_quality:
-            try:
-                quality_result = _quality.quality_check(str(video_path))
-            except Exception as exc:
-                errors.append({"section": "quality", "error": str(exc)})
+        quality_result = (
+            _run_analysis(
+                "quality",
+                lambda vp: _quality.quality_check(str(vp)),
+                errors,
+                video_path,
+            )
+            if include_quality
+            else None
+        )
 
         return {
             "success": True,
@@ -278,6 +348,5 @@ def analyze_video(
         }
 
     finally:
-        # Clean up downloaded temp directory (if input was a URL)
         if _tmp_dir is not None:
             shutil.rmtree(_tmp_dir, ignore_errors=True)
