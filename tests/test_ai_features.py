@@ -1319,13 +1319,17 @@ def test_validate_analysis_output_paths_blocks_system_prefixes():
     assert exc_info.value.code == "unsafe_path"
 
     with pytest.raises(MCPVideoError, match="escapes safe directory"):
-        _validate_analysis_output_paths(output_srt=None, output_txt="/usr/local/out.txt", output_md=None, output_json=None)
+        _validate_analysis_output_paths(
+            output_srt=None, output_txt="/usr/local/out.txt", output_md=None, output_json=None
+        )
 
     with pytest.raises(MCPVideoError, match="escapes safe directory"):
         _validate_analysis_output_paths(output_srt=None, output_txt=None, output_md="/root/file.md", output_json=None)
 
     with pytest.raises(MCPVideoError, match="escapes safe directory"):
-        _validate_analysis_output_paths(output_srt=None, output_txt=None, output_md=None, output_json="/var/log/out.json")
+        _validate_analysis_output_paths(
+            output_srt=None, output_txt=None, output_md=None, output_json="/var/log/out.json"
+        )
 
 
 def test_validate_analysis_output_paths_allows_safe_paths():

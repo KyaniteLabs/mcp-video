@@ -506,3 +506,196 @@ class TestBatchOutputDirValidation:
             video_batch(
                 [sample_video], operation="trim", params={"start": "0", "duration": "1"}, output_dir="bad\x00dir"
             )
+
+
+# ---------------------------------------------------------------------------
+# Tests for extracted helpers (deepening candidates 2 & 3)
+# ---------------------------------------------------------------------------
+
+
+class TestBuildAudioFilters:
+    def test_no_filters(self):
+        from mcp_video.engine_audio_ops import _build_audio_filters
+
+        assert _build_audio_filters(1.0, 0.0, 0.0, 10.0) == []
+
+    def test_volume_only(self):
+        from mcp_video.engine_audio_ops import _build_audio_filters
+
+        filters = _build_audio_filters(0.5, 0.0, 0.0, 10.0)
+        assert len(filters) == 1
+        assert "volume=0.5" in filters[0]
+
+    def test_fade_in_only(self):
+        from mcp_video.engine_audio_ops import _build_audio_filters
+
+        filters = _build_audio_filters(1.0, 2.0, 0.0, 10.0)
+        assert len(filters) == 1
+        assert "afade=t=in:st=0:d=2.0" in filters[0]
+
+    def test_fade_out_only(self):
+        from mcp_video.engine_audio_ops import _build_audio_filters
+
+        filters = _build_audio_filters(1.0, 0.0, 3.0, 10.0)
+        assert len(filters) == 1
+        assert "afade=t=out:st=7.0:d=3.0" in filters[0]
+
+    def test_fade_out_clamped_to_zero(self):
+        from mcp_video.engine_audio_ops import _build_audio_filters
+
+        filters = _build_audio_filters(1.0, 0.0, 5.0, 3.0)
+        assert len(filters) == 1
+        assert "afade=t=out:st=0.0:d=5.0" in filters[0]
+
+    def test_all_filters(self):
+        from mcp_video.engine_audio_ops import _build_audio_filters
+
+        filters = _build_audio_filters(0.8, 1.0, 2.0, 10.0)
+        assert len(filters) == 3
+        assert any("volume" in f for f in filters)
+        assert any("afade=t=in" in f for f in filters)
+        assert any("afade=t=out" in f for f in filters)
+
+
+class TestBuildAddAudioArgs:
+    def test_replace_without_filters_or_start(self):
+        from mcp_video.engine_audio_ops import _build_add_audio_args
+
+        args = _build_add_audio_args(
+            "vid.mp4", "aud.wav", [], False, None, True, "out.mp4"
+        )
+        assert "-i" in args
+        assert "-map" in args
+        assert "-shortest" in args
+        assert "-af" not in args
+
+    def test_replace_with_start_time(self):
+        from mcp_video.engine_audio_ops import _build_add_audio_args
+
+        args = _build_add_audio_args(
+            "vid.mp4", "aud.wav", [], False, 1.5, True, "out.mp4"
+        )
+        assert "-filter_complex" in args
+        fc_idx = args.index("-filter_complex")
+        assert "adelay=1500|1500" in args[fc_idx + 1]
+
+    def test_replace_with_filters(self):
+        from mcp_video.engine_audio_ops import _build_add_audio_args
+
+        args = _build_add_audio_args(
+            "vid.mp4", "aud.wav", ["volume=0.5"], False, None, True, "out.mp4"
+        )
+        idx = args.index("-af")
+        assert args[idx + 1] == "volume=0.5"
+
+    def test_mix_with_source_audio(self):
+        from mcp_video.engine_audio_ops import _build_add_audio_args
+
+        args = _build_add_audio_args(
+            "vid.mp4", "aud.wav", ["volume=0.5"], True, None, True, "out.mp4"
+        )
+        assert "-filter_complex" in args
+        fc_idx = args.index("-filter_complex")
+        fc = args[fc_idx + 1]
+        assert "amix=inputs=2" in fc
+        assert "[aout]" in fc
+        assert "-map" in args
+
+    def test_mix_without_source_audio_uses_replace_branch(self):
+        from mcp_video.engine_audio_ops import _build_add_audio_args
+
+        args = _build_add_audio_args(
+            "vid.mp4", "aud.wav", [], True, None, False, "out.mp4"
+        )
+        # When mix=True but no source audio, _build_add_audio_args takes the replace branch
+        assert "-filter_complex" not in args
+        assert "-map" in args
+        assert "-shortest" in args
+
+
+class TestNormalizeClips:
+    def test_normalize_calls_ffmpeg_with_correct_filter(self, monkeypatch, tmp_path):
+        from mcp_video.engine_merge import _normalize_clips
+
+        calls = []
+
+        def fake_run_ffmpeg(cmd):
+            calls.append(cmd)
+
+        monkeypatch.setattr("mcp_video.engine_merge._run_ffmpeg", fake_run_ffmpeg)
+
+        # Create a fake info object with required attributes
+        class FakeInfo:
+            rotation = 0
+
+        infos = [FakeInfo()]
+        clips = [str(tmp_path / "clip.mp4")]
+        result = _normalize_clips(clips, infos, 640, 480, str(tmp_path))
+
+        assert len(calls) == 1
+        cmd = calls[0]
+        vf_idx = cmd.index("-vf")
+        vf = cmd[vf_idx + 1]
+        assert "scale=640:480" in vf
+        assert "pad=640:480" in vf
+        assert len(result) == 1
+
+    def test_normalize_applies_transpose_for_rotation(self, monkeypatch, tmp_path):
+        from mcp_video.engine_merge import _normalize_clips
+
+        calls = []
+
+        def fake_run_ffmpeg(cmd):
+            calls.append(cmd)
+
+        monkeypatch.setattr("mcp_video.engine_merge._run_ffmpeg", fake_run_ffmpeg)
+
+        class FakeInfo90:
+            rotation = 90
+
+        class FakeInfo270:
+            rotation = 270
+
+        infos = [FakeInfo90(), FakeInfo270()]
+        clips = [str(tmp_path / "a.mp4"), str(tmp_path / "b.mp4")]
+        _normalize_clips(clips, infos, 640, 480, str(tmp_path))
+
+        assert len(calls) == 2
+        assert "transpose=2" in calls[0][calls[0].index("-vf") + 1]
+        assert "transpose=1" in calls[1][calls[1].index("-vf") + 1]
+
+
+class TestMergeSingleClip:
+    def test_copy_same_extension(self, sample_video, tmp_path, monkeypatch):
+        from mcp_video.engine_merge import _merge_single_clip
+
+        copy_calls = []
+        monkeypatch.setattr("mcp_video.engine_merge.shutil.copy2", lambda s, d: copy_calls.append((s, d)))
+        monkeypatch.setattr("mcp_video.engine_merge._run_ffmpeg", lambda cmd: None)
+        # Patch probe so it doesn't need the output file to exist
+        class FakeInfo:
+            duration = 1.0
+            resolution = "640x480"
+            size_mb = 0.1
+        monkeypatch.setattr("mcp_video.engine_merge.probe", lambda p: FakeInfo())
+
+        result = _merge_single_clip(sample_video, str(tmp_path / "out.mp4"))
+        assert len(copy_calls) == 1
+        assert result.operation == "merge"
+
+    def test_remux_different_extension(self, sample_video, tmp_path, monkeypatch):
+        from mcp_video.engine_merge import _merge_single_clip
+
+        ffmpeg_calls = []
+        monkeypatch.setattr("mcp_video.engine_merge.shutil.copy2", lambda s, d: None)
+        monkeypatch.setattr("mcp_video.engine_merge._run_ffmpeg", lambda cmd: ffmpeg_calls.append(cmd))
+        class FakeInfo:
+            duration = 1.0
+            resolution = "640x480"
+            size_mb = 0.1
+        monkeypatch.setattr("mcp_video.engine_merge.probe", lambda p: FakeInfo())
+
+        _merge_single_clip(sample_video, str(tmp_path / "out.mkv"))
+        assert len(ffmpeg_calls) == 1
+        assert "-c" in ffmpeg_calls[0]
+        assert "copy" in ffmpeg_calls[0]

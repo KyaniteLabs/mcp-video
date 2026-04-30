@@ -21,6 +21,82 @@ from .ffmpeg_helpers import _escape_ffmpeg_filter_value, _validate_input_path, _
 from .models import EditResult
 
 
+def _normalize_clips(
+    clips: list[str],
+    infos: list,
+    target_w: int,
+    target_h: int,
+    tmpdir: str,
+) -> list[str]:
+    """Normalize clips to common resolution, codec, fps, and audio rate.
+
+    Returns list of normalized clip paths inside *tmpdir*.
+    """
+    working: list[str] = []
+    for i, clip in enumerate(clips):
+        norm_path = os.path.join(tmpdir, f"clip_{i:04d}.mp4")
+        info = infos[i]
+        vf_parts = [
+            f"scale={target_w}:{target_h}:force_original_aspect_ratio=decrease",
+            f"pad={target_w}:{target_h}:(ow-iw)/2:(oh-ih)/2",
+        ]
+        if info.rotation == 90:
+            vf_parts.insert(0, "transpose=2")
+        elif info.rotation == 270:
+            vf_parts.insert(0, "transpose=1")
+        _run_ffmpeg(
+            [
+                "-i", clip,
+                "-vf", ",".join(vf_parts),
+                "-c:v", "libx264",
+                "-preset", DEFAULT_PRESET,
+                "-crf", str(DEFAULT_CRF),
+                "-c:a", "aac",
+                "-b:a", DEFAULT_AUDIO_BITRATE,
+                "-r", str(DEFAULT_FPS),
+                "-ar", str(DEFAULT_SAMPLE_RATE),
+                "-ac", str(DEFAULT_AUDIO_CHANNELS),
+                norm_path,
+            ]
+        )
+        working.append(norm_path)
+    return working
+
+
+def _merge_single_clip(clip: str, output_path: str | None) -> EditResult:
+    """Fast path for single-clip merge: copy or remux to output."""
+    output = output_path or _auto_output(clip, "merged")
+    _validate_output_path(output)
+    input_ext = os.path.splitext(clip)[1].lower()
+    output_ext = os.path.splitext(output)[1].lower()
+    if output_path is not None and input_ext != output_ext:
+        _run_ffmpeg(["-i", clip, "-c", "copy", *_movflags_args(output), output])
+    else:
+        shutil.copy2(clip, output)
+    info = probe(output)
+    return EditResult(
+        output_path=output,
+        duration=info.duration,
+        resolution=info.resolution,
+        size_mb=info.size_mb,
+        format="mp4",
+        operation="merge",
+        elapsed_ms=0.0,
+    )
+
+
+def _concat_clips(clips: list[str], output: str, tmpdir: str) -> None:
+    """Concatenate clips using FFmpeg concat demuxer."""
+    concat_file = os.path.join(tmpdir, "concat.txt")
+    with open(concat_file, "w") as f:
+        for clip in clips:
+            abs_path = os.path.abspath(clip).replace("\\", "\\\\").replace("'", "'\\''")
+            f.write(f"file '{abs_path}'\n")
+    _run_ffmpeg(
+        ["-f", "concat", "-safe", "0", "-i", concat_file, "-c", "copy", *_movflags_args(output), output]
+    )
+
+
 def merge(
     clips: list[str],
     output_path: str | None = None,
@@ -41,31 +117,9 @@ def merge(
     if not clips:
         raise InputFileError("", "No clips provided for merge")
     if len(clips) == 1:
-        # Single clip — nothing to merge, just copy to output
-        clip = _validate_input_path(clips[0])
-        output = output_path or _auto_output(clip, "merged")
-        _validate_output_path(output)
-        input_ext = os.path.splitext(clip)[1].lower()
-        output_ext = os.path.splitext(output)[1].lower()
-        if output_path is not None and input_ext != output_ext:
-            # Remux via FFmpeg to ensure correct container format
-            _run_ffmpeg(["-i", clip, "-c", "copy", *_movflags_args(output), output])
-        else:
-            shutil.copy2(clip, output)
-        info = probe(output)
-        return EditResult(
-            output_path=output,
-            duration=info.duration,
-            resolution=info.resolution,
-            size_mb=info.size_mb,
-            format="mp4",
-            operation="merge",
-            elapsed_ms=0.0,
-        )
+        return _merge_single_clip(_validate_input_path(clips[0]), output_path)
 
     clips = [_validate_input_path(c) for c in clips]
-
-    # Check if all clips have same properties — if not, normalize
     infos = [probe(c) for c in clips]
     resolutions = {i.display_resolution for i in infos}
     codecs = {i.codec for i in infos}
@@ -76,56 +130,17 @@ def merge(
     target_w = max(i.display_width for i in infos)
     target_h = max(i.display_height for i in infos)
 
-    working_clips: list[str] = []
-
     with _timed_operation() as timing:
         tmpdir = tempfile.mkdtemp(prefix="mcp_video_")
         try:
             if needs_normalize:
-                for i, clip in enumerate(clips):
-                    norm_path = os.path.join(tmpdir, f"clip_{i:04d}.mp4")
-                    info = infos[i]
-                    vf_parts = [
-                        f"scale={target_w}:{target_h}:force_original_aspect_ratio=decrease",
-                        f"pad={target_w}:{target_h}:(ow-iw)/2:(oh-ih)/2",
-                    ]
-                    if info.rotation == 90:
-                        vf_parts.insert(0, "transpose=2")
-                    elif info.rotation == 270:
-                        vf_parts.insert(0, "transpose=1")
-                    _run_ffmpeg(
-                        [
-                            "-i",
-                            clip,
-                            "-vf",
-                            ",".join(vf_parts),
-                            "-c:v",
-                            "libx264",
-                            "-preset",
-                            DEFAULT_PRESET,
-                            "-crf",
-                            str(DEFAULT_CRF),
-                            "-c:a",
-                            "aac",
-                            "-b:a",
-                            DEFAULT_AUDIO_BITRATE,
-                            "-r",
-                            str(DEFAULT_FPS),
-                            "-ar",
-                            str(DEFAULT_SAMPLE_RATE),
-                            "-ac",
-                            str(DEFAULT_AUDIO_CHANNELS),
-                            norm_path,
-                        ]
-                    )
-                    working_clips.append(norm_path)
+                working_clips = _normalize_clips(clips, infos, target_w, target_h, tmpdir)
             else:
                 working_clips = list(clips)
 
             output = output_path or _auto_output(clips[0], "merged")
             _validate_output_path(output)
 
-            # Resolve transition types list
             transition_types: list[str] | None = None
             if transitions and len(working_clips) > 1:
                 transition_types = list(transitions)
@@ -133,19 +148,9 @@ def merge(
                 transition_types = [transition] * (len(working_clips) - 1)
 
             if transition_types and len(working_clips) > 1:
-                # Use xfade filter for transitions
                 _merge_with_transitions(working_clips, output, transition_types, transition_duration)
             else:
-                # Simple concat
-                concat_file = os.path.join(tmpdir, "concat.txt")
-                with open(concat_file, "w") as f:
-                    for clip in working_clips:
-                        abs_path = os.path.abspath(clip).replace("\\", "\\\\").replace("'", "'\\''")
-                        f.write(f"file '{abs_path}'\n")
-                _run_ffmpeg(
-                    ["-f", "concat", "-safe", "0", "-i", concat_file, "-c", "copy", *_movflags_args(output), output]
-                )
-
+                _concat_clips(working_clips, output, tmpdir)
         finally:
             shutil.rmtree(tmpdir, ignore_errors=True)
 

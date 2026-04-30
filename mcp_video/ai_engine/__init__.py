@@ -11,8 +11,6 @@ from typing import Any, Callable
 from ..errors import InputFileError, MCPVideoError
 from ..ffmpeg_helpers import _validate_output_path
 
-logger = logging.getLogger(__name__)
-
 # Public API re-exports
 from .color import ai_color_grade as ai_color_grade
 from .download import _resolve_video_source as _resolve_video_source
@@ -40,6 +38,8 @@ from .transcribe import (
     _format_srt as _format_srt,
     _format_txt as _format_txt,
 )
+
+logger = logging.getLogger(__name__)
 
 _BLOCKED_SYSTEM_PREFIXES = tuple(
     str(Path(prefix).resolve())
@@ -235,7 +235,6 @@ def analyze_video(
     """
     if "\x00" in video:
         raise InputFileError(video, "Invalid path: contains null bytes")
-
     if not (0.0 <= scene_threshold <= 1.0):
         raise MCPVideoError(
             f"scene_threshold must be between 0.0 and 1.0, got {scene_threshold}",
@@ -248,7 +247,6 @@ def analyze_video(
     _tmp_dir: str | None = None
     try:
         local_video, _tmp_dir, source_url = _resolve_video_source(video)
-
         video_path = Path(local_video)
         if not video_path.exists():
             raise InputFileError(str(video_path))
@@ -267,84 +265,38 @@ def analyze_video(
             fallback={"path": str(video_path.resolve())},
         )
 
-        transcript_result = (
-            _run_analysis(
-                "transcript",
-                _build_transcript_result,
-                errors,
-                video_path,
-                output_srt=output_srt,
-                output_txt=output_txt,
-                output_md=output_md,
-                output_json=output_json,
-                whisper_model=whisper_model,
-                language=language,
-            )
-            if include_transcript
-            else None
-        )
+        transcript_result = _run_analysis(
+            "transcript",
+            _build_transcript_result,
+            errors,
+            video_path,
+            output_srt=output_srt,
+            output_txt=output_txt,
+            output_md=output_md,
+            output_json=output_json,
+            whisper_model=whisper_model,
+            language=language,
+        ) if include_transcript else None
 
-        scenes_result = (
-            _run_analysis(
-                "scenes",
-                lambda vp: _engine.detect_scenes(str(vp), threshold=scene_threshold).scenes,
-                errors,
-                video_path,
-            )
-            if include_scenes
-            else None
-        )
+        def _scenes():
+            return _engine.detect_scenes(str(video_path), threshold=scene_threshold).scenes
 
-        audio_result = (
-            _run_analysis(
-                "audio",
-                lambda vp: _waveform_to_dict(_engine.audio_waveform(str(vp))),
-                errors,
-                video_path,
-            )
-            if include_audio
-            else None
-        )
+        def _chapters():
+            raw = _effects.auto_chapters(str(video_path), threshold=scene_threshold)
+            return [{"timestamp": ts, "title": title} for ts, title in raw]
 
-        chapters_result = (
-            _run_analysis(
-                "chapters",
-                lambda vp: [
-                    {"timestamp": ts, "title": title}
-                    for ts, title in _effects.auto_chapters(str(vp), threshold=scene_threshold)
-                ],
-                errors,
-                video_path,
-            )
-            if include_chapters
-            else None
-        )
-
-        colors_result = _run_analysis("colors", _placeholder_colors, errors) if include_colors else None
-
-        quality_result = (
-            _run_analysis(
-                "quality",
-                lambda vp: _quality.quality_check(str(vp)),
-                errors,
-                video_path,
-            )
-            if include_quality
-            else None
-        )
+        analyses = [
+            ("scenes", include_scenes, _scenes),
+            ("audio", include_audio, lambda: _waveform_to_dict(_engine.audio_waveform(str(video_path)))),
+            ("chapters", include_chapters, _chapters),
+            ("colors", include_colors, _placeholder_colors),
+            ("quality", include_quality, lambda: _quality.quality_check(str(video_path))),
+        ]
+        results = {name: (_run_analysis(name, fn, errors) if flag else None) for name, flag, fn in analyses}
 
         return {
-            "success": True,
-            "video": str(video_path.resolve()),
-            "source_url": source_url,
-            "metadata": metadata,
-            "transcript": transcript_result,
-            "scenes": scenes_result,
-            "audio": audio_result,
-            "chapters": chapters_result,
-            "colors": colors_result,
-            "quality": quality_result,
-            "errors": errors,
+            "success": True, "video": str(video_path.resolve()), "source_url": source_url,
+            "metadata": metadata, "transcript": transcript_result, **results, "errors": errors,
         }
 
     finally:
