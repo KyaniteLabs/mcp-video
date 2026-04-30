@@ -22,7 +22,7 @@ on:
 jobs:
   base-cli-and-doctor:
     name: Base CLI and doctor
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, macOS, ARM64]
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
@@ -58,7 +58,7 @@ jobs:
 
   ffmpeg-smoke:
     name: FFmpeg operation smoke
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, macOS, ARM64]
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
@@ -80,7 +80,7 @@ jobs:
 
   image-extra-smoke:
     name: Image extra smoke
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, macOS, ARM64]
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
@@ -108,7 +108,7 @@ jobs:
 
   ai-module-smoke:
     name: AI module metadata smoke
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, macOS, ARM64]
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
