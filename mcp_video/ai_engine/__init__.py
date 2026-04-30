@@ -6,7 +6,8 @@ import json
 import logging
 import shutil
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
+from collections.abc import Callable
 
 from ..errors import InputFileError, MCPVideoError
 from ..ffmpeg_helpers import _validate_output_path
