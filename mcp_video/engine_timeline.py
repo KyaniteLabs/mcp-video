@@ -14,8 +14,6 @@ from .engine_probe import probe
 from .engine_resize import resize
 from .engine_runtime_utils import (
     _default_font,
-    _movflags_args,
-    _quality_args,
 )
 from .paths import (
     _auto_output,

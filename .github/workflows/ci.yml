@@ -10,7 +10,7 @@ on:
 jobs:
   changes:
     name: Change detection
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     outputs:
       code: ${{ steps.classify.outputs.code }}
       docker: ${{ steps.classify.outputs.docker }}
@@ -47,21 +47,27 @@ jobs:
 
   repository-readiness:
     name: Repository readiness
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
       - name: Create venv
-        run: python3.13 -m venv .venv
+        run: python -m venv .venv
       - name: Run repository readiness audit
         run: .venv/bin/python ./scripts/repo-readiness-audit.py
 
   lint:
     name: Lint
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
       - name: Create venv
-        run: python3.13 -m venv .venv
+        run: python -m venv .venv
       - name: Install ruff
         run: .venv/bin/pip install ruff
       - name: Ruff check
@@ -71,11 +77,14 @@ jobs:
 
   package-surface:
     name: Package surface
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
       - name: Create venv
-        run: python3.13 -m venv .venv
+        run: python -m venv .venv
       - name: Install build tools
         run: .venv/bin/pip install build
       - name: Build release artifacts
@@ -86,21 +95,26 @@ jobs:
   test:
     name: Test (Python 3.13)
     needs: changes
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
       - name: Skip tests
         if: github.event_name == 'pull_request' && needs.changes.outputs.code != 'true'
         run: echo "Code inputs unchanged; marking Python 3.13 test check successful."
       - uses: actions/checkout@v6
         if: github.event_name != 'pull_request' || needs.changes.outputs.code == 'true'
+      - uses: actions/setup-python@v6
+        if: github.event_name != 'pull_request' || needs.changes.outputs.code == 'true'
+        with:
+          python-version: '3.13'
       - name: Create venv
         if: github.event_name != 'pull_request' || needs.changes.outputs.code == 'true'
-        run: python3.13 -m venv .venv
+        run: python -m venv .venv
       - name: Ensure FFmpeg
         if: github.event_name != 'pull_request' || needs.changes.outputs.code == 'true'
         run: |
           if ! command -v ffmpeg &>/dev/null; then
-            brew install ffmpeg || (echo "FFmpeg not available; skipping" && exit 0)
+            sudo apt-get update
+            sudo apt-get install -y ffmpeg
           fi
       - name: Install dependencies
         if: github.event_name != 'pull_request' || needs.changes.outputs.code == 'true'
@@ -112,7 +126,7 @@ jobs:
   compatibility:
     name: Compatibility (Python ${{ matrix.python-version }})
     needs: changes
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     strategy:
       fail-fast: false
       matrix:
@@ -123,14 +137,19 @@ jobs:
         run: echo "Code inputs unchanged; marking Python ${{ matrix.python-version }} compatibility check successful."
       - uses: actions/checkout@v6
         if: github.event_name != 'pull_request' || needs.changes.outputs.code == 'true'
+      - uses: actions/setup-python@v6
+        if: github.event_name != 'pull_request' || needs.changes.outputs.code == 'true'
+        with:
+          python-version: ${{ matrix.python-version }}
       - name: Create venv
         if: github.event_name != 'pull_request' || needs.changes.outputs.code == 'true'
-        run: python${{ matrix.python-version }} -m venv .venv
+        run: python -m venv .venv
       - name: Ensure FFmpeg
         if: github.event_name != 'pull_request' || needs.changes.outputs.code == 'true'
         run: |
           if ! command -v ffmpeg &>/dev/null; then
-            brew install ffmpeg || (echo "FFmpeg not available; skipping" && exit 0)
+            sudo apt-get update
+            sudo apt-get install -y ffmpeg
           fi
       - name: Install dependencies
         if: github.event_name != 'pull_request' || needs.changes.outputs.code == 'true'
@@ -142,7 +161,7 @@ jobs:
   docker:
     name: Docker build
     needs: changes
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@v6
       - name: Skip Docker build

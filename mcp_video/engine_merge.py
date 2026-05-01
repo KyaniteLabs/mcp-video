@@ -12,7 +12,6 @@ from .defaults import (
     DEFAULT_FPS,
     DEFAULT_PRESET,
     DEFAULT_SAMPLE_RATE,
-    DEFAULT_AUDIO_BITRATE,
 )
 from .engine_probe import get_duration, probe
 from .engine_runtime_utils import _build_edit_result, _movflags_args, _timed_operation
@@ -230,11 +229,9 @@ def _merge_with_transitions(
         audio_filter = "".join(audio_parts) + f"concat=n={n}:v=0:a=1[aout]"
         filter_complex = f"{filter_str};{audio_filter}"
         map_args = ["-map", "[vout]", "-map", "[aout]"]
-        audio_codec_args = ["-c:a", "aac", "-b:a", DEFAULT_AUDIO_BITRATE]
     else:
         filter_complex = filter_str
         map_args = ["-map", "[vout]"]
-        audio_codec_args = ["-an"]
 
     if has_audio:
         _run_ffmpeg(
