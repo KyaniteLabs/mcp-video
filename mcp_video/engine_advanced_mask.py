@@ -7,7 +7,7 @@ import tempfile
 
 
 from .engine_probe import probe
-from .engine_runtime_utils import _auto_output, _movflags_args, _quality_args, _run_ffmpeg, _timed_operation
+from .engine_runtime_utils import _auto_output, _build_edit_result, _movflags_args, _quality_args, _run_ffmpeg, _timed_operation
 from .ffmpeg_helpers import _validate_input_path, _validate_output_path, _escape_ffmpeg_filter_value
 from .models import EditResult
 
@@ -42,15 +42,11 @@ def luma_key(
     with _timed_operation() as timing:
         _run_ffmpeg(["-i", input_path, "-vf", vf, *codec_args, *_movflags_args(output), output])
 
-    info = probe(output)
-    return EditResult(
-        output_path=output,
-        duration=info.duration,
-        resolution=info.resolution,
-        size_mb=info.size_mb,
+    return _build_edit_result(
+        output,
+        "luma_key",
+        timing,
         format="mov" if is_mov else "mp4",
-        operation="luma_key",
-        elapsed_ms=timing["elapsed_ms"],
     )
 
 
@@ -103,15 +99,11 @@ def shape_mask(
 
         shutil.rmtree(tmpdir, ignore_errors=True)
 
-    result_info = probe(output)
-    return EditResult(
-        output_path=output,
-        duration=result_info.duration,
-        resolution=result_info.resolution,
-        size_mb=result_info.size_mb,
+    return _build_edit_result(
+        output,
+        "shape_mask",
+        timing,
         format="mov",
-        operation="shape_mask",
-        elapsed_ms=timing["elapsed_ms"],
     )
 
 

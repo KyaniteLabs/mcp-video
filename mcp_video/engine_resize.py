@@ -5,7 +5,7 @@ from __future__ import annotations
 from .defaults import DEFAULT_AUDIO_BITRATE
 from .ffmpeg_helpers import _validate_input_path, _validate_output_path
 from .engine_probe import probe
-from .engine_runtime_utils import _auto_output, _movflags_args, _run_ffmpeg, _timed_operation
+from .engine_runtime_utils import _auto_output, _build_edit_result, _movflags_args, _run_ffmpeg, _timed_operation
 from .errors import MCPVideoError
 from .models import ASPECT_RATIOS, QUALITY_PRESETS, EditResult, QualityLevel
 
@@ -77,13 +77,8 @@ def resize(
             ]
         )
 
-    info = probe(output)
-    return EditResult(
-        output_path=output,
-        duration=info.duration,
-        resolution=info.resolution,
-        size_mb=info.size_mb,
-        format="mp4",
-        operation="resize",
-        elapsed_ms=timing["elapsed_ms"],
+    return _build_edit_result(
+        output,
+        "resize",
+        timing,
     )

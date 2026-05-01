@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from .defaults import DEFAULT_AUDIO_BITRATE
-from .engine_probe import probe
 from .engine_runtime_utils import (
     _auto_output,
+    _build_edit_result,
     _movflags_args,
     _quality_args,
     _require_filter,
@@ -80,15 +80,10 @@ def overlay_video(
             ]
         )
 
-    info = probe(output)
-    return EditResult(
-        output_path=output,
-        duration=info.duration,
-        resolution=info.resolution,
-        size_mb=info.size_mb,
-        format="mp4",
-        operation="overlay_video",
-        elapsed_ms=timing["elapsed_ms"],
+    return _build_edit_result(
+        output,
+        "overlay_video",
+        timing,
     )
 
 

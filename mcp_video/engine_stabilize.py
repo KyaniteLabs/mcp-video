@@ -8,9 +8,9 @@ import subprocess
 import tempfile
 
 from .defaults import DEFAULT_AUDIO_BITRATE
-from .engine_probe import probe
 from .engine_runtime_utils import (
     _auto_output,
+    _build_edit_result,
     _ffmpeg,
     _movflags_args,
     _quality_args,
@@ -74,15 +74,10 @@ def stabilize(
         finally:
             shutil.rmtree(tmpdir, ignore_errors=True)
 
-    result_info = probe(output)
-    return EditResult(
-        output_path=output,
-        duration=result_info.duration,
-        resolution=result_info.resolution,
-        size_mb=result_info.size_mb,
-        format="mp4",
-        operation="stabilize",
-        elapsed_ms=timing["elapsed_ms"],
+    return _build_edit_result(
+        output,
+        "stabilize",
+        timing,
     )
 
 

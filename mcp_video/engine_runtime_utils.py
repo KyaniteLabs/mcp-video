@@ -342,6 +342,37 @@ def _timed_operation() -> Generator[dict[str, float | None]]:
         timing["elapsed_ms"] = (time.monotonic() - start) * 1000
 
 
+def _build_edit_result(
+    output_path: str,
+    operation: str,
+    timing: dict[str, float | None],
+    format: str = "mp4",
+    *,
+    progress: float | None = None,
+    thumbnail_base64: str | None = None,
+) -> "EditResult":
+    """Build an EditResult by probing the output and filling standard fields.
+
+    Eliminates the repeated ``info = probe(output); return EditResult(...)``
+    pattern found in ~25 engine functions.
+    """
+    from .engine_probe import probe
+    from .models import EditResult
+
+    info = probe(output_path)
+    return EditResult(
+        output_path=output_path,
+        duration=info.duration,
+        resolution=info.resolution,
+        size_mb=info.size_mb,
+        format=format,
+        operation=operation,
+        elapsed_ms=timing["elapsed_ms"],
+        progress=progress,
+        thumbnail_base64=thumbnail_base64,
+    )
+
+
 def _parse_ffmpeg_time(time_str: str) -> float:
     """Parse FFmpeg time= value (HH:MM:SS.xx) to seconds."""
     m = re.match(r"(\d+):(\d+):(\d+)\.(\d+)", time_str)

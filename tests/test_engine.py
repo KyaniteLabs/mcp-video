@@ -172,6 +172,7 @@ class TestMerge:
 
         monkeypatch.setattr(engine_merge, "_validate_input_path", fake_validate)
         monkeypatch.setattr(engine_merge, "probe", fake_probe)
+        monkeypatch.setattr("mcp_video.engine_probe.probe", fake_probe)
         monkeypatch.setattr(engine_merge, "_run_ffmpeg", fake_run_ffmpeg)
 
         result = engine_merge.merge([original_a, original_b], output_path=output)
@@ -678,6 +679,7 @@ class TestMergeSingleClip:
             resolution = "640x480"
             size_mb = 0.1
         monkeypatch.setattr("mcp_video.engine_merge.probe", lambda p: FakeInfo())
+        monkeypatch.setattr("mcp_video.engine_probe.probe", lambda p: FakeInfo())
 
         result = _merge_single_clip(sample_video, str(tmp_path / "out.mp4"))
         assert len(copy_calls) == 1
@@ -694,6 +696,7 @@ class TestMergeSingleClip:
             resolution = "640x480"
             size_mb = 0.1
         monkeypatch.setattr("mcp_video.engine_merge.probe", lambda p: FakeInfo())
+        monkeypatch.setattr("mcp_video.engine_probe.probe", lambda p: FakeInfo())
 
         _merge_single_clip(sample_video, str(tmp_path / "out.mkv"))
         assert len(ffmpeg_calls) == 1

@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 
 from .engine_probe import probe
-from .engine_runtime_utils import _run_ffmpeg, _timed_operation
+from .engine_runtime_utils import _build_edit_result, _run_ffmpeg, _timed_operation
 from .ffmpeg_helpers import _validate_input_path
 from .models import EditResult
 
@@ -93,11 +93,9 @@ def hls_segment(
         with open(playlist_path, "w") as f:
             f.write("\n".join(master_lines) + "\n")
 
-    return EditResult(
-        output_path=playlist_path,
-        duration=info.duration,
-        resolution=info.resolution,
+    return _build_edit_result(
+        playlist_path,
+        "hls_segment",
+        timing,
         format="hls",
-        operation="hls_segment",
-        elapsed_ms=timing["elapsed_ms"],
     )

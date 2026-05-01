@@ -15,7 +15,7 @@ from .defaults import (
     DEFAULT_AUDIO_BITRATE,
 )
 from .engine_probe import get_duration, probe
-from .engine_runtime_utils import _auto_output, _movflags_args, _run_ffmpeg, _timed_operation
+from .engine_runtime_utils import _auto_output, _build_edit_result, _movflags_args, _run_ffmpeg, _timed_operation
 from .errors import InputFileError, MCPVideoError
 from .ffmpeg_helpers import _escape_ffmpeg_filter_value, _validate_input_path, _validate_output_path
 from .models import EditResult
@@ -73,15 +73,10 @@ def _merge_single_clip(clip: str, output_path: str | None) -> EditResult:
         _run_ffmpeg(["-i", clip, "-c", "copy", *_movflags_args(output), output])
     else:
         shutil.copy2(clip, output)
-    info = probe(output)
-    return EditResult(
-        output_path=output,
-        duration=info.duration,
-        resolution=info.resolution,
-        size_mb=info.size_mb,
-        format="mp4",
-        operation="merge",
-        elapsed_ms=0.0,
+    return _build_edit_result(
+        output,
+        "merge",
+        {"elapsed_ms": 0.0},
     )
 
 
@@ -154,15 +149,10 @@ def merge(
         finally:
             shutil.rmtree(tmpdir, ignore_errors=True)
 
-    info = probe(output)
-    return EditResult(
-        output_path=output,
-        duration=info.duration,
-        resolution=info.resolution,
-        size_mb=info.size_mb,
-        format="mp4",
-        operation="merge",
-        elapsed_ms=timing["elapsed_ms"],
+    return _build_edit_result(
+        output,
+        "merge",
+        timing,
     )
 
 

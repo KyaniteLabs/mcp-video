@@ -5,6 +5,7 @@ from __future__ import annotations
 from .engine_probe import probe
 from .engine_runtime_utils import (
     _auto_output,
+    _build_edit_result,
     _movflags_args,
     _quality_args,
     _run_ffmpeg,
@@ -61,13 +62,8 @@ def fade(
             ]
         )
 
-    result_info = probe(output)
-    return EditResult(
-        output_path=output,
-        duration=result_info.duration,
-        resolution=result_info.resolution,
-        size_mb=result_info.size_mb,
-        format="mp4",
-        operation="fade",
-        elapsed_ms=timing["elapsed_ms"],
+    return _build_edit_result(
+        output,
+        "fade",
+        timing,
     )

@@ -30,6 +30,15 @@ except Exception:
 logger = logging.getLogger(__name__)
 
 
+def _validation_error(message: str, code: str = "invalid_parameter") -> dict[str, Any]:
+    """Return a structured validation-error result for MCP tool handlers.
+
+    Eliminates the repeated 5-line ``return _error_result(MCPVideoError(...))``
+    pattern found in ~50+ server tool handlers.
+    """
+    return _error_result(MCPVideoError(message, error_type="validation_error", code=code))
+
+
 def _error_result(err: MCPVideoError | Exception) -> dict[str, Any]:
     if isinstance(err, MCPVideoError):
         return {"success": False, "error": err.to_dict()}

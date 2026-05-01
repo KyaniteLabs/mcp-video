@@ -7,7 +7,7 @@ from typing import Any
 
 from .engine_runtime_utils import _auto_output
 from .errors import MCPVideoError
-from .server_app import _error_result, _result, mcp
+from .server_app import _error_result, _result, _validation_error, mcp
 from .validation import VALID_MOGRAPH_STYLES
 from .ffmpeg_helpers import _validate_input_path
 
@@ -455,13 +455,8 @@ def video_subtitles_styled(
         Dict with success status and output_path.
     """
     if not os.path.isfile(subtitles_path):
-        return _error_result(
-            MCPVideoError(
-                f"Subtitles file not found: {subtitles_path}",
-                error_type="validation_error",
-                code="file_not_found",
-            )
-        )
+        return _validation_error(
+                f"Subtitles file not found: {subtitles_path}", code='file_not_found')
     try:
         input_path = _validate_input_path(input_path)
         subtitles_path = _validate_input_path(subtitles_path)
@@ -545,13 +540,8 @@ def video_mograph_progress(
         Dict with success status and output_path.
     """
     if style not in VALID_MOGRAPH_STYLES:
-        return _error_result(
-            MCPVideoError(
-                f"Invalid style: must be one of {sorted(VALID_MOGRAPH_STYLES)}, got '{style}'",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
+        return _validation_error(
+                f"Invalid style: must be one of {sorted(VALID_MOGRAPH_STYLES)}, got '{style}'")
     try:
         if not (1 <= fps <= 120):
             raise MCPVideoError(
@@ -617,13 +607,8 @@ def video_auto_chapters(
         List of (timestamp, description) chapter tuples.
     """
     if not 0.0 <= threshold <= 1.0:
-        return _error_result(
-            MCPVideoError(
-                f"threshold must be between 0.0 and 1.0, got {threshold}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
+        return _validation_error(
+                f"threshold must be between 0.0 and 1.0, got {threshold}")
     try:
         input_path = _validate_input_path(input_path)
         from .effects_engine import auto_chapters as _chapters
@@ -658,21 +643,11 @@ def transition_glitch(
         intensity: Glitch intensity 0-1 (default 0.3).
     """
     if duration <= 0:
-        return _error_result(
-            MCPVideoError(
-                f"duration must be positive, got {duration}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
+        return _validation_error(
+                f"duration must be positive, got {duration}")
     if not 0.0 <= intensity <= 1.0:
-        return _error_result(
-            MCPVideoError(
-                f"intensity must be between 0.0 and 1.0, got {intensity}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
+        return _validation_error(
+                f"intensity must be between 0.0 and 1.0, got {intensity}")
     try:
         clip1_path = _validate_input_path(clip1_path)
         clip2_path = _validate_input_path(clip2_path)
@@ -696,21 +671,11 @@ def transition_pixelate(
 ) -> dict[str, Any]:
     """Apply pixelate transition between two video clips."""
     if duration <= 0:
-        return _error_result(
-            MCPVideoError(
-                f"duration must be positive, got {duration}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
+        return _validation_error(
+                f"duration must be positive, got {duration}")
     if pixel_size < 2:
-        return _error_result(
-            MCPVideoError(
-                f"pixel_size must be at least 2, got {pixel_size}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
+        return _validation_error(
+                f"pixel_size must be at least 2, got {pixel_size}")
     try:
         clip1_path = _validate_input_path(clip1_path)
         clip2_path = _validate_input_path(clip2_path)
@@ -733,21 +698,11 @@ def transition_morph(
 ) -> dict[str, Any]:
     """Apply morph transition between two video clips."""
     if duration <= 0:
-        return _error_result(
-            MCPVideoError(
-                f"duration must be positive, got {duration}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
+        return _validation_error(
+                f"duration must be positive, got {duration}")
     if mesh_size < 2:
-        return _error_result(
-            MCPVideoError(
-                f"mesh_size must be at least 2, got {mesh_size}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
+        return _validation_error(
+                f"mesh_size must be at least 2, got {mesh_size}")
     try:
         clip1_path = _validate_input_path(clip1_path)
         clip2_path = _validate_input_path(clip2_path)

@@ -7,7 +7,7 @@ from typing import Any
 
 from .defaults import DEFAULT_QUALITY_GATE_SCORE
 from .errors import MCPVideoError
-from .server_app import _error_result, _result, mcp
+from .server_app import _error_result, _result, _validation_error, mcp
 from .ffmpeg_helpers import _validate_input_path
 from .validation import (
     VALID_COLOR_GRADE_STYLES,
@@ -31,29 +31,14 @@ def video_ai_remove_silence(
 ) -> dict[str, Any]:
     """Remove silent sections from video."""
     if not -70 <= silence_threshold <= 0:
-        return _error_result(
-            MCPVideoError(
-                f"silence_threshold must be between -70 and 0, got {silence_threshold}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
+        return _validation_error(
+                f"silence_threshold must be between -70 and 0, got {silence_threshold}")
     if min_silence_duration <= 0:
-        return _error_result(
-            MCPVideoError(
-                f"min_silence_duration must be positive, got {min_silence_duration}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
+        return _validation_error(
+                f"min_silence_duration must be positive, got {min_silence_duration}")
     if keep_margin < 0:
-        return _error_result(
-            MCPVideoError(
-                f"keep_margin must be non-negative, got {keep_margin}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
+        return _validation_error(
+                f"keep_margin must be non-negative, got {keep_margin}")
     try:
         input_path = _validate_input_path(input_path)
         from .ai_engine import ai_remove_silence
@@ -74,13 +59,8 @@ def video_ai_transcribe(
 ) -> dict[str, Any]:
     """Transcribe speech to text using Whisper."""
     if model not in VALID_WHISPER_MODELS:
-        return _error_result(
-            MCPVideoError(
-                f"Invalid model: must be one of {sorted(VALID_WHISPER_MODELS)}, got '{model}'",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
+        return _validation_error(
+                f"Invalid model: must be one of {sorted(VALID_WHISPER_MODELS)}, got '{model}'")
     try:
         input_path = _validate_input_path(input_path)
         from .ai_engine import ai_transcribe
@@ -134,21 +114,11 @@ def video_analyze(
         output_json: Optional path to write full JSON transcript data.
     """
     if whisper_model not in VALID_WHISPER_MODELS:
-        return _error_result(
-            MCPVideoError(
-                f"Invalid model: must be one of {sorted(VALID_WHISPER_MODELS)}, got '{whisper_model}'",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
+        return _validation_error(
+                f"Invalid model: must be one of {sorted(VALID_WHISPER_MODELS)}, got '{whisper_model}'")
     if not 0.0 <= scene_threshold <= 1.0:
-        return _error_result(
-            MCPVideoError(
-                f"scene_threshold must be between 0.0 and 1.0, got {scene_threshold}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
+        return _validation_error(
+                f"scene_threshold must be between 0.0 and 1.0, got {scene_threshold}")
     try:
         from .ai_engine.download import _is_url
 
@@ -186,13 +156,8 @@ def video_ai_scene_detect(
 ) -> dict[str, Any]:
     """Detect scene changes in video."""
     if not 0.0 <= threshold <= 1.0:
-        return _error_result(
-            MCPVideoError(
-                f"threshold must be between 0.0 and 1.0, got {threshold}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
+        return _validation_error(
+                f"threshold must be between 0.0 and 1.0, got {threshold}")
     try:
         input_path = _validate_input_path(input_path)
         from .ai_engine import ai_scene_detect
@@ -213,21 +178,11 @@ def video_ai_stem_separation(
 ) -> dict[str, Any]:
     """Separate audio into stems using Demucs."""
     if model not in VALID_DEMUCS_MODELS:
-        return _error_result(
-            MCPVideoError(
-                f"Invalid model: must be one of {sorted(VALID_DEMUCS_MODELS)}, got '{model}'",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
+        return _validation_error(
+                f"Invalid model: must be one of {sorted(VALID_DEMUCS_MODELS)}, got '{model}'")
     if stems is not None and not isinstance(stems, list):
-        return _error_result(
-            MCPVideoError(
-                f"stems must be a list, got {type(stems).__name__}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
+        return _validation_error(
+                f"stems must be a list, got {type(stems).__name__}")
     try:
         input_path = _validate_input_path(input_path)
         from .ai_engine import ai_stem_separation
@@ -248,21 +203,11 @@ def video_ai_upscale(
 ) -> dict[str, Any]:
     """Upscale video using AI super-resolution."""
     if scale not in {2, 4}:
-        return _error_result(
-            MCPVideoError(
-                f"scale must be 2 or 4, got {scale}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
+        return _validation_error(
+                f"scale must be 2 or 4, got {scale}")
     if model not in VALID_UPSCALE_MODELS:
-        return _error_result(
-            MCPVideoError(
-                f"Invalid model: must be one of {sorted(VALID_UPSCALE_MODELS)}, got '{model}'",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
+        return _validation_error(
+                f"Invalid model: must be one of {sorted(VALID_UPSCALE_MODELS)}, got '{model}'")
     try:
         input_path = _validate_input_path(input_path)
         from .ai_engine import ai_upscale
@@ -283,13 +228,8 @@ def video_ai_color_grade(
 ) -> dict[str, Any]:
     """Auto color grade video."""
     if style not in VALID_COLOR_GRADE_STYLES:
-        return _error_result(
-            MCPVideoError(
-                f"Invalid style: must be one of {sorted(VALID_COLOR_GRADE_STYLES)}, got '{style}'",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
+        return _validation_error(
+                f"Invalid style: must be one of {sorted(VALID_COLOR_GRADE_STYLES)}, got '{style}'")
     try:
         input_path = _validate_input_path(input_path)
         if reference_path is not None:
@@ -357,21 +297,11 @@ def video_release_checkpoint(
     quality gate, then writes a thumbnail and storyboard for human inspection.
     """
     if min_score < 0 or min_score > 100:
-        return _error_result(
-            MCPVideoError(
-                f"min_score must be 0-100, got {min_score}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
+        return _validation_error(
+                f"min_score must be 0-100, got {min_score}")
     if frame_count < 1:
-        return _error_result(
-            MCPVideoError(
-                f"frame_count must be at least 1, got {frame_count}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
+        return _validation_error(
+                f"frame_count must be at least 1, got {frame_count}")
     try:
         input_path = _validate_input_path(input_path)
         from .quality_guardrails import assert_quality
