@@ -25,6 +25,9 @@ jobs:
     runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@v6
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
       - name: Create venv
         run: python3.13 -m venv .venv
       - name: Install base package
@@ -59,12 +62,16 @@ jobs:
     runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@v6
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
       - name: Create venv
         run: python3.13 -m venv .venv
       - name: Ensure FFmpeg
         run: |
           if ! command -v ffmpeg &>/dev/null; then
-            brew install ffmpeg
+            sudo apt-get update
+            sudo apt-get install -y ffmpeg
           fi
           command -v ffmpeg >/dev/null
           command -v ffprobe >/dev/null
@@ -84,6 +91,9 @@ jobs:
     runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@v6
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
       - name: Create venv
         run: python3.13 -m venv .venv
       - name: Install image extra
@@ -110,6 +120,9 @@ jobs:
     runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@v6
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
       - name: Create venv
         run: python3.13 -m venv .venv
       - name: Install base package
