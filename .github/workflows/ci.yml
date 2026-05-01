@@ -50,32 +50,38 @@ jobs:
     runs-on: [self-hosted, macOS, ARM64]
     steps:
       - uses: actions/checkout@v6
+      - name: Create venv
+        run: python3.13 -m venv .venv
       - name: Run repository readiness audit
-        run: python3.13 ./scripts/repo-readiness-audit.py
+        run: .venv/bin/python ./scripts/repo-readiness-audit.py
 
   lint:
     name: Lint
     runs-on: [self-hosted, macOS, ARM64]
     steps:
       - uses: actions/checkout@v6
+      - name: Create venv
+        run: python3.13 -m venv .venv
       - name: Install ruff
-        run: python3.13 -m pip install ruff
+        run: .venv/bin/pip install ruff
       - name: Ruff check
-        run: python3.13 -m ruff check mcp_video/
+        run: .venv/bin/ruff check mcp_video/
       - name: Ruff format check
-        run: python3.13 -m ruff format --check mcp_video/
+        run: .venv/bin/ruff format --check mcp_video/
 
   package-surface:
     name: Package surface
     runs-on: [self-hosted, macOS, ARM64]
     steps:
       - uses: actions/checkout@v6
+      - name: Create venv
+        run: python3.13 -m venv .venv
       - name: Install build tools
-        run: python3.13 -m pip install build
+        run: .venv/bin/pip install build
       - name: Build release artifacts
-        run: python3.13 -m build --sdist --wheel
+        run: .venv/bin/python -m build --sdist --wheel
       - name: Check built artifact contents
-        run: python3.13 .github/scripts/check-built-artifacts.py dist
+        run: .venv/bin/python .github/scripts/check-built-artifacts.py dist
 
   test:
     name: Test (Python 3.13)
@@ -87,6 +93,9 @@ jobs:
         run: echo "Code inputs unchanged; marking Python 3.13 test check successful."
       - uses: actions/checkout@v6
         if: github.event_name != 'pull_request' || needs.changes.outputs.code == 'true'
+      - name: Create venv
+        if: github.event_name != 'pull_request' || needs.changes.outputs.code == 'true'
+        run: python3.13 -m venv .venv
       - name: Ensure FFmpeg
         if: github.event_name != 'pull_request' || needs.changes.outputs.code == 'true'
         run: |
@@ -95,10 +104,10 @@ jobs:
           fi
       - name: Install dependencies
         if: github.event_name != 'pull_request' || needs.changes.outputs.code == 'true'
-        run: python3.13 -m pip install -e ".[dev]"
+        run: .venv/bin/pip install -e ".[dev]"
       - name: Run tests
         if: github.event_name != 'pull_request' || needs.changes.outputs.code == 'true'
-        run: python3.13 -m pytest tests/ -q -m "not slow" --tb=short
+        run: .venv/bin/pytest tests/ -q -m "not slow" --tb=short
 
   compatibility:
     name: Compatibility (Python ${{ matrix.python-version }})
@@ -114,6 +123,9 @@ jobs:
         run: echo "Code inputs unchanged; marking Python ${{ matrix.python-version }} compatibility check successful."
       - uses: actions/checkout@v6
         if: github.event_name != 'pull_request' || needs.changes.outputs.code == 'true'
+      - name: Create venv
+        if: github.event_name != 'pull_request' || needs.changes.outputs.code == 'true'
+        run: python${{ matrix.python-version }} -m venv .venv
       - name: Ensure FFmpeg
         if: github.event_name != 'pull_request' || needs.changes.outputs.code == 'true'
         run: |
@@ -122,10 +134,10 @@ jobs:
           fi
       - name: Install dependencies
         if: github.event_name != 'pull_request' || needs.changes.outputs.code == 'true'
-        run: python${{ matrix.python-version }} -m pip install -e ".[dev]"
+        run: .venv/bin/pip install -e ".[dev]"
       - name: Run tests
         if: github.event_name != 'pull_request' || needs.changes.outputs.code == 'true'
-        run: python${{ matrix.python-version }} -m pytest tests/ -q -m "not slow" --tb=short
+        run: .venv/bin/pytest tests/ -q -m "not slow" --tb=short
 
   docker:
     name: Docker build
