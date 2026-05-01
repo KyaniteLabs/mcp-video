@@ -34,7 +34,7 @@ def thumbnail(
                 error_type="validation_error",
                 code="invalid_parameter",
             ) from exc
-        if requested_timestamp >= dur:
+        if dur > 0 and requested_timestamp >= dur:
             raise InputFileError(
                 input_path,
                 f"Timestamp {requested_timestamp:.3f}s exceeds video duration {dur:.3f}s",

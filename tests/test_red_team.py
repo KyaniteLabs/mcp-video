@@ -319,6 +319,19 @@ class TestBoundaryValues:
         with pytest.raises((InputFileError, ProcessingError, ValueError)):
             thumbnail(sample_video, timestamp=info.duration)
 
+    def test_thumbnail_allows_zero_duration_metadata(self, sample_video, tmp_path, monkeypatch):
+        """Missing/unknown duration metadata should not reject timestamp 0."""
+        import mcp_video.engine_thumbnail as engine_thumbnail
+
+        output = tmp_path / "frame.jpg"
+        monkeypatch.setattr(engine_thumbnail, "get_duration", lambda _path: 0.0)
+        monkeypatch.setattr(engine_thumbnail, "_run_ffmpeg", lambda _args: None)
+
+        result = engine_thumbnail.thumbnail(sample_video, timestamp=0, output_path=str(output))
+
+        assert result.timestamp == 0
+        assert result.frame_path == str(output)
+
     def test_trim_zero_duration(self, sample_video):
         """Trimming with zero duration should raise an error or succeed with a tiny file."""
         try:
