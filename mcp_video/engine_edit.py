@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from .defaults import DEFAULT_AUDIO_BITRATE, DEFAULT_CRF, DEFAULT_PRESET
+from .ffmpeg_helpers import _build_ffmpeg_cmd
 from .ffmpeg_helpers import _validate_input_path, _validate_output_path
-from .engine_runtime_utils import _build_edit_result, _movflags_args, _timed_operation
+from .engine_runtime_utils import _build_edit_result, _timed_operation
 from .paths import _auto_output
 from .ffmpeg_helpers import _run_ffmpeg
 from .errors import MCPVideoError
@@ -100,37 +100,21 @@ def trim(
                 code="invalid_parameter",
             )
 
-    args = []
+    prefix: list[str] = []
     if not accurate and start:
         # Input seeking — fast but may land on nearest keyframe
-        args.extend(["-ss", str(start)])
-    args.extend(["-i", input_path])
+        prefix.extend(["-ss", str(start)])
+    prefix.extend(["-i", input_path])
     if accurate and start:
         # Output seeking — frame accurate but slower
-        args.extend(["-ss", str(start)])
+        prefix.extend(["-ss", str(start)])
     if duration:
-        args.extend(["-t", str(duration)])
+        prefix.extend(["-t", str(duration)])
     elif end:
-        args.extend(["-to", str(end)])
-    args.extend(
-        [
-            "-c:v",
-            "libx264",
-            "-preset",
-            DEFAULT_PRESET,
-            "-crf",
-            str(DEFAULT_CRF),
-            "-c:a",
-            "aac",
-            "-b:a",
-            DEFAULT_AUDIO_BITRATE,
-            *_movflags_args(output),
-            output,
-        ]
-    )
+        prefix.extend(["-to", str(end)])
 
     with _timed_operation() as timing:
-        _run_ffmpeg(args)
+        _run_ffmpeg(prefix + _build_ffmpeg_cmd(output_path=output))
 
     return _build_edit_result(
         output,

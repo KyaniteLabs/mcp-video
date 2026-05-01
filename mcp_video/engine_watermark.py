@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from .engine_runtime_utils import (
     _build_edit_result,
-    _movflags_args,
-    _quality_args,
     _timed_operation,
 )
 from .paths import (
@@ -15,6 +13,7 @@ from .models import (
     _resolve_position,
 )
 from .ffmpeg_helpers import (
+    _build_ffmpeg_cmd,
     _run_ffmpeg,
 )
 from .ffmpeg_helpers import _validate_input_path, _validate_output_path
@@ -56,21 +55,18 @@ def watermark(
 
     with _timed_operation() as timing:
         _run_ffmpeg(
-            [
-                "-i",
+            _build_ffmpeg_cmd(
                 input_path,
-                "-i",
                 image_path,
-                "-filter_complex",
-                f"[1:v]format=rgba,colorchannelmixer=aa={opacity_fmt}[wm];[0:v][wm]overlay={overlay_pos}",
-                "-c:v",
-                "libx264",
-                *_quality_args(crf=crf, preset=preset),
-                "-c:a",
-                "copy",
-                *_movflags_args(output),
-                output,
-            ]
+                output_path=output,
+                audio_codec="copy",
+                crf=crf,
+                preset=preset,
+                extra=[
+                    "-filter_complex",
+                    f"[1:v]format=rgba,colorchannelmixer=aa={opacity_fmt}[wm];[0:v][wm]overlay={overlay_pos}",
+                ],
+            )
         )
 
     return _build_edit_result(

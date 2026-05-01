@@ -15,6 +15,7 @@ import shutil
 import subprocess
 import time
 from pathlib import Path
+from collections.abc import Callable
 from typing import Any
 
 from .errors import (
@@ -106,6 +107,144 @@ def _run_hyperframes(
 
 
 # ---------------------------------------------------------------------------
+# Operation schema registry
+# ---------------------------------------------------------------------------
+
+_SCHEMA: dict[str, dict[str, Any]] = {
+    "render": {
+        "subcommand": "render",
+        "positional": ["project_path"],
+        "flags": {
+            "output": "output_path",
+            "fps": "fps",
+            "quality": "quality",
+            "format": "format",
+            "workers": "workers",
+            "crf": "crf",
+        },
+        "timeout": 600,
+    },
+    "compositions": {
+        "subcommand": "compositions",
+        "positional": ["project_path"],
+        "fixed": ["--json"],
+        "timeout": 60,
+    },
+    "snapshot": {
+        "subcommand": "snapshot",
+        "positional": ["project_path"],
+        "fixed": ["--frames", "1"],
+        "computed": {
+            "at": lambda kw: str(kw.get("frame", 0) / 30.0),
+        },
+        "timeout": 120,
+    },
+    "add": {
+        "subcommand": "add",
+        "positional": ["block_name"],
+        "flags": {
+            "dir": "project_path",
+        },
+        "fixed": ["--json"],
+        "timeout": 60,
+    },
+    "init": {
+        "subcommand": "init",
+        "positional": ["name"],
+        "flags": {
+            "example": "template",
+        },
+        "fixed": ["--non-interactive", "--skip-skills"],
+        "cwd_key": "output_dir",
+        "timeout": 120,
+    },
+    "lint": {
+        "subcommand": "lint",
+        "positional": ["project_path"],
+        "fixed": ["--json"],
+        "timeout": 60,
+    },
+}
+
+
+def _hyperframes_op(
+    operation: str,
+    **kwargs: Any,
+) -> tuple[subprocess.CompletedProcess[str], Path]:
+    """Run a hyperframes subcommand from the schema registry.
+
+    Returns (completed_process, cwd_path).
+    """
+    spec = _SCHEMA.get(operation)
+    if spec is None:
+        raise MCPVideoError(
+            f"Unknown hyperframes operation: {operation}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
+
+    _require_hyperframes_deps()
+
+    cwd_key = spec.get("cwd_key", "project_path")
+    cwd_val = kwargs.get(cwd_key)
+    if cwd_val is None:
+        raise MCPVideoError(
+            f"Missing required parameter: {cwd_key}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
+
+    if cwd_key == "project_path":
+        cwd, _entry_point = _validate_project(cwd_val)
+    else:
+        cwd = Path(cwd_val).resolve()
+
+    args: list[str] = [spec["subcommand"]]
+
+    for pos_key in spec.get("positional", []):
+        val = kwargs.get(pos_key)
+        if val is None:
+            raise MCPVideoError(
+                f"Missing required parameter: {pos_key}",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        args.append(str(val))
+
+    for flag, kw_key in spec.get("flags", {}).items():
+        val = kwargs.get(kw_key)
+        if val is not None:
+            args.extend([f"--{flag}", str(val)])
+
+    for item in spec.get("fixed", []):
+        args.append(item)
+
+    for flag, compute in spec.get("computed", {}).items():
+        args.extend([f"--{flag}", str(compute(kwargs))])
+
+    result = _run_hyperframes(args, cwd=cwd, timeout=spec.get("timeout", 600))
+    if result.returncode != 0:
+        raise HyperframesRenderError(" ".join(args), result.returncode, result.stderr)
+
+    return result, cwd
+
+
+def _post_process_ops() -> dict[str, Callable]:
+    """Return the post-processing operation registry for render_and_post."""
+    from . import engine as _video_engine
+
+    return {
+        "resize": _video_engine.resize,
+        "convert": _video_engine.convert,
+        "add_audio": _video_engine.add_audio,
+        "normalize_audio": _video_engine.normalize_audio,
+        "add_text": _video_engine.add_text,
+        "fade": _video_engine.fade,
+        "watermark": _video_engine.watermark,
+    }
+
+
+# ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
@@ -122,35 +261,21 @@ def render(
     crf: int | None = None,
 ) -> HyperframesRenderResult:
     """Render a Hyperframes composition to video."""
-    _require_hyperframes_deps()
-    project, _entry_point = _validate_project(project_path)
-
     if output_path is None:
         os.makedirs("out", exist_ok=True)
-        output_path = os.path.join("out", f"{project.name}.mp4")
-
-    args = [
-        "render",
-        str(project),
-        "--output",
-        output_path,
-    ]
-    if fps is not None:
-        args += ["--fps", str(fps)]
-    if quality is not None:
-        args += ["--quality", quality]
-    if format is not None:
-        args += ["--format", format]
-    if workers is not None:
-        args += ["--workers", str(workers)]
-    if crf is not None:
-        args += ["--crf", str(crf)]
+        output_path = os.path.join("out", f"{Path(project_path).name}.mp4")
 
     start_time = time.time()
-    result = _run_hyperframes(args, cwd=project)
-
-    if result.returncode != 0:
-        raise HyperframesRenderError(" ".join(args), result.returncode, result.stderr)
+    _result, _project = _hyperframes_op(
+        "render",
+        project_path=project_path,
+        output_path=output_path,
+        fps=fps,
+        quality=quality,
+        format=format,
+        workers=workers,
+        crf=crf,
+    )
 
     render_time = round(time.time() - start_time, 1)
     size_mb = round(os.path.getsize(output_path) / (1024 * 1024), 2) if os.path.isfile(output_path) else None
@@ -214,14 +339,7 @@ def compositions(
     project_path: str,
 ) -> CompositionsResult:
     """List compositions in a Hyperframes project."""
-    _require_hyperframes_deps()
-    project, _entry_point = _validate_project(project_path)
-
-    args = ["compositions", str(project), "--json"]
-    result = _run_hyperframes(args, cwd=project, timeout=60)
-
-    if result.returncode != 0:
-        raise HyperframesRenderError(" ".join(args), result.returncode, result.stderr)
+    result, project = _hyperframes_op("compositions", project_path=project_path)
 
     raw = _parse_compositions_output(result.stdout)
 
@@ -281,26 +399,11 @@ def still(
     frame: int = 0,
 ) -> HyperframesStillResult:
     """Render a single frame from a Hyperframes composition."""
-    _require_hyperframes_deps()
-    project, _entry_point = _validate_project(project_path)
-
     if output_path is None:
         os.makedirs("out", exist_ok=True)
-        output_path = os.path.join("out", f"{project.name}_frame{frame}.png")
+        output_path = os.path.join("out", f"{Path(project_path).name}_frame{frame}.png")
 
-    args = [
-        "snapshot",
-        str(project),
-        "--frames",
-        "1",
-        "--at",
-        str(frame / 30.0),  # Convert frame to seconds at 30fps
-    ]
-
-    result = _run_hyperframes(args, cwd=project, timeout=120)
-
-    if result.returncode != 0:
-        raise HyperframesRenderError(" ".join(args), result.returncode, result.stderr)
+    _hyperframes_op("snapshot", project_path=project_path, frame=frame)
 
     return HyperframesStillResult(
         output_path=output_path,
@@ -328,18 +431,12 @@ def create_project(
 
     project_dir.mkdir(parents=True, exist_ok=True)
 
-    args = [
+    _hyperframes_op(
         "init",
-        name,
-        "--example",
-        template,
-        "--non-interactive",
-        "--skip-skills",
-    ]
-
-    result = _run_hyperframes(args, cwd=output_dir, timeout=120)
-    if result.returncode != 0:
-        raise HyperframesRenderError(" ".join(args), result.returncode, result.stderr)
+        name=name,
+        template=template,
+        output_dir=output_dir,
+    )
 
     # Discover created files
     files: list[str] = []
@@ -415,20 +512,11 @@ def add_block(
     block_name: str,
 ) -> HyperframesBlockResult:
     """Install a block from the Hyperframes catalog."""
-    _require_hyperframes_deps()
-    project, _entry_point = _validate_project(project_path)
-
-    args = [
+    result, project = _hyperframes_op(
         "add",
-        block_name,
-        "--dir",
-        str(project),
-        "--json",
-    ]
-
-    result = _run_hyperframes(args, cwd=project, timeout=60)
-    if result.returncode != 0:
-        raise HyperframesRenderError(" ".join(args), result.returncode, result.stderr)
+        project_path=project_path,
+        block_name=block_name,
+    )
 
     files_added: list[str] = []
     try:
@@ -455,20 +543,10 @@ def render_and_post(
     hyperframes_output = render_result.output_path
 
     # Step 2: Post-process with mcp-video engine
-    from . import engine as video_engine
+    op_map = _post_process_ops()
 
     operations: list[str] = []
     current_input = hyperframes_output
-
-    op_map = {
-        "resize": video_engine.resize,
-        "convert": video_engine.convert,
-        "add_audio": video_engine.add_audio,
-        "normalize_audio": video_engine.normalize_audio,
-        "add_text": video_engine.add_text,
-        "fade": video_engine.fade,
-        "watermark": video_engine.watermark,
-    }
 
     for i, op in enumerate(post_process):
         op_type = op.get("op", op.get("type", ""))

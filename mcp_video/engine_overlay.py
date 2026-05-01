@@ -2,11 +2,8 @@
 
 from __future__ import annotations
 
-from .defaults import DEFAULT_AUDIO_BITRATE
 from .engine_runtime_utils import (
     _build_edit_result,
-    _movflags_args,
-    _quality_args,
     _require_filter,
     _timed_operation,
 )
@@ -17,6 +14,7 @@ from .models import (
     _resolve_position,
 )
 from .ffmpeg_helpers import (
+    _build_ffmpeg_cmd,
     _run_ffmpeg,
     _sanitize_ffmpeg_number,
 )
@@ -67,23 +65,14 @@ def overlay_video(
 
     with _timed_operation() as timing:
         _run_ffmpeg(
-            [
-                "-i",
+            _build_ffmpeg_cmd(
                 background_path,
-                "-i",
                 overlay_path,
-                "-filter_complex",
-                filter_complex,
-                "-c:v",
-                "libx264",
-                *_quality_args(crf=crf, preset=preset),
-                "-c:a",
-                "aac",
-                "-b:a",
-                DEFAULT_AUDIO_BITRATE,
-                *_movflags_args(output),
-                output,
-            ]
+                output_path=output,
+                crf=crf,
+                preset=preset,
+                extra=["-filter_complex", filter_complex],
+            )
         )
 
     return _build_edit_result(

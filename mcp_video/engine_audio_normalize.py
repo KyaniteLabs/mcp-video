@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from .engine_runtime_utils import (
     _build_edit_result,
-    _movflags_args,
     _require_filter,
     _timed_operation,
 )
@@ -12,6 +11,7 @@ from .paths import (
     _auto_output,
 )
 from .ffmpeg_helpers import (
+    _build_ffmpeg_cmd,
     _run_ffmpeg,
     _sanitize_ffmpeg_number,
 )
@@ -53,20 +53,13 @@ def normalize_audio(
 
     with _timed_operation() as timing:
         _run_ffmpeg(
-            [
-                "-i",
+            _build_ffmpeg_cmd(
                 input_path,
-                "-af",
-                f"loudnorm=I={safe_target_lufs}:TP={safe_tp}:LRA={safe_lra}",
-                "-c:v",
-                "copy",
-                "-c:a",
-                "aac",
-                "-b:a",
-                "192k",
-                *_movflags_args(output),
-                output,
-            ]
+                output_path=output,
+                video_codec="copy",
+                audio_filter=f"loudnorm=I={safe_target_lufs}:TP={safe_tp}:LRA={safe_lra}",
+                audio_bitrate="192k",
+            )
         )
 
     return _build_edit_result(

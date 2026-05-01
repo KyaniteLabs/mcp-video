@@ -7,8 +7,6 @@ from .engine_probe import probe
 from .errors import MCPVideoError
 from .engine_runtime_utils import (
     _default_font,
-    _movflags_args,
-    _quality_args,
     _require_filter,
     _timed_operation,
 )
@@ -19,6 +17,7 @@ from .models import (
     _position_coords,
 )
 from .ffmpeg_helpers import (
+    _build_ffmpeg_cmd,
     _run_ffmpeg,
     _sanitize_ffmpeg_number,
 )
@@ -96,19 +95,14 @@ def add_text(
 
     with _timed_operation() as timing:
         _run_ffmpeg(
-            [
-                "-i",
+            _build_ffmpeg_cmd(
                 input_path,
-                "-vf",
-                vf,
-                "-c:v",
-                "libx264",
-                *_quality_args(crf=crf, preset=preset),
-                "-c:a",
-                "copy",
-                *_movflags_args(output),
-                output,
-            ]
+                output_path=output,
+                video_filter=vf,
+                audio_codec="copy",
+                crf=crf,
+                preset=preset,
+            )
         )
 
     info = probe(output)
