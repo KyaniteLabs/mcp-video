@@ -15,7 +15,8 @@ import shutil
 import subprocess
 import time
 from pathlib import Path
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from .errors import (
     HyperframesNotFoundError,
@@ -265,7 +266,7 @@ def render(
         output_path = os.path.join("out", f"{Path(project_path).name}.mp4")
 
     start_time = time.time()
-    result, _project = _hyperframes_op(
+    _result, _project = _hyperframes_op(
         "render",
         project_path=project_path,
         output_path=output_path,

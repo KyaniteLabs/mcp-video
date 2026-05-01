@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from .defaults import DEFAULT_AUDIO_BITRATE, DEFAULT_CRF, DEFAULT_PRESET
+from .ffmpeg_helpers import _build_ffmpeg_cmd
 from .ffmpeg_helpers import _validate_input_path, _validate_output_path
 from .engine_probe import probe
-from .engine_runtime_utils import _build_edit_result, _movflags_args, _timed_operation
+from .engine_runtime_utils import _build_edit_result, _timed_operation
 from .paths import _auto_output
 from .ffmpeg_helpers import _run_ffmpeg, _sanitize_ffmpeg_number
 from .errors import MCPVideoError
@@ -64,46 +64,28 @@ def speed(
     with _timed_operation() as timing:
         if has_audio:
             _run_ffmpeg(
-                [
-                    "-i",
+                _build_ffmpeg_cmd(
                     input_path,
-                    "-filter_complex",
-                    f"[0:v]{video_filter}[v];[0:a]{audio_filter}[a]",
-                    "-map",
-                    "[v]",
-                    "-map",
-                    "[a]",
-                    "-c:v",
-                    "libx264",
-                    "-preset",
-                    DEFAULT_PRESET,
-                    "-crf",
-                    str(DEFAULT_CRF),
-                    "-c:a",
-                    "aac",
-                    "-b:a",
-                    DEFAULT_AUDIO_BITRATE,
-                    *_movflags_args(output),
-                    output,
-                ]
+                    output_path=output,
+                    extra=[
+                        "-filter_complex",
+                        f"[0:v]{video_filter}[v];[0:a]{audio_filter}[a]",
+                        "-map",
+                        "[v]",
+                        "-map",
+                        "[a]",
+                    ],
+                )
             )
         else:
             _run_ffmpeg(
-                [
-                    "-i",
+                _build_ffmpeg_cmd(
                     input_path,
-                    "-vf",
-                    video_filter,
-                    "-an",
-                    "-c:v",
-                    "libx264",
-                    "-preset",
-                    DEFAULT_PRESET,
-                    "-crf",
-                    str(DEFAULT_CRF),
-                    *_movflags_args(output),
-                    output,
-                ]
+                    output_path=output,
+                    video_filter=video_filter,
+                    audio_codec=None,
+                    extra=["-an"],
+                )
             )
 
     return _build_edit_result(

@@ -17,7 +17,7 @@ from .defaults import (
 from .engine_probe import get_duration, probe
 from .engine_runtime_utils import _build_edit_result, _movflags_args, _timed_operation
 from .paths import _auto_output
-from .ffmpeg_helpers import _run_ffmpeg
+from .ffmpeg_helpers import _build_ffmpeg_cmd, _run_ffmpeg
 from .errors import InputFileError, MCPVideoError
 from .ffmpeg_helpers import _escape_ffmpeg_filter_value, _validate_input_path, _validate_output_path
 from .models import EditResult
@@ -47,29 +47,21 @@ def _normalize_clips(
         elif info.rotation == 270:
             vf_parts.insert(0, "transpose=1")
         _run_ffmpeg(
-            [
-                "-i",
+            _build_ffmpeg_cmd(
                 clip,
-                "-vf",
-                ",".join(vf_parts),
-                "-c:v",
-                "libx264",
-                "-preset",
-                DEFAULT_PRESET,
-                "-crf",
-                str(DEFAULT_CRF),
-                "-c:a",
-                "aac",
-                "-b:a",
-                DEFAULT_AUDIO_BITRATE,
-                "-r",
-                str(DEFAULT_FPS),
-                "-ar",
-                str(DEFAULT_SAMPLE_RATE),
-                "-ac",
-                str(DEFAULT_AUDIO_CHANNELS),
-                norm_path,
-            ]
+                output_path=norm_path,
+                video_filter=",".join(vf_parts),
+                crf=DEFAULT_CRF,
+                preset=DEFAULT_PRESET,
+                extra=[
+                    "-r",
+                    str(DEFAULT_FPS),
+                    "-ar",
+                    str(DEFAULT_SAMPLE_RATE),
+                    "-ac",
+                    str(DEFAULT_AUDIO_CHANNELS),
+                ],
+            )
         )
         working.append(norm_path)
     return working
@@ -244,20 +236,33 @@ def _merge_with_transitions(
         map_args = ["-map", "[vout]"]
         audio_codec_args = ["-an"]
 
-    _run_ffmpeg(
-        [
-            *inputs,
-            "-filter_complex",
-            filter_complex,
-            *map_args,
-            "-c:v",
-            "libx264",
-            "-preset",
-            DEFAULT_PRESET,
-            "-crf",
-            str(DEFAULT_CRF),
-            *audio_codec_args,
-            *_movflags_args(output),
-            output,
-        ]
-    )
+    if has_audio:
+        _run_ffmpeg(
+            _build_ffmpeg_cmd(
+                *clips,
+                output_path=output,
+                crf=DEFAULT_CRF,
+                preset=DEFAULT_PRESET,
+                extra=[
+                    "-filter_complex",
+                    filter_complex,
+                    *map_args,
+                ],
+            )
+        )
+    else:
+        _run_ffmpeg(
+            _build_ffmpeg_cmd(
+                *clips,
+                output_path=output,
+                audio_codec=None,
+                crf=DEFAULT_CRF,
+                preset=DEFAULT_PRESET,
+                extra=[
+                    "-an",
+                    "-filter_complex",
+                    filter_complex,
+                    *map_args,
+                ],
+            )
+        )

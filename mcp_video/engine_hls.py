@@ -6,7 +6,7 @@ import os
 
 from .engine_probe import probe
 from .engine_runtime_utils import _build_edit_result, _timed_operation
-from .ffmpeg_helpers import _run_ffmpeg
+from .ffmpeg_helpers import _build_ffmpeg_cmd, _run_ffmpeg
 from .ffmpeg_helpers import _validate_input_path
 from .models import EditResult
 
@@ -53,31 +53,25 @@ def hls_segment(
             scale_filter = f"scale=-2:{target_h}"
 
             _run_ffmpeg(
-                [
-                    "-i",
+                _build_ffmpeg_cmd(
                     input_path,
-                    "-vf",
-                    scale_filter,
-                    "-c:v",
-                    "libx264",
-                    "-crf",
-                    "23",
-                    "-preset",
-                    "fast",
-                    "-c:a",
-                    "aac",
-                    "-b:a",
-                    "128k",
-                    "-f",
-                    "hls",
-                    "-hls_time",
-                    str(segment_duration),
-                    "-hls_playlist_type",
-                    "vod",
-                    "-hls_segment_filename",
-                    os.path.join(q_dir, "segment_%03d.ts"),
-                    os.path.join(q_dir, "playlist.m3u8"),
-                ]
+                    output_path=os.path.join(q_dir, "playlist.m3u8"),
+                    video_filter=scale_filter,
+                    crf=23,
+                    preset="fast",
+                    audio_bitrate="128k",
+                    movflags=False,
+                    extra=[
+                        "-f",
+                        "hls",
+                        "-hls_time",
+                        str(segment_duration),
+                        "-hls_playlist_type",
+                        "vod",
+                        "-hls_segment_filename",
+                        os.path.join(q_dir, "segment_%03d.ts"),
+                    ],
+                )
             )
 
         # Write a master playlist that references all variants

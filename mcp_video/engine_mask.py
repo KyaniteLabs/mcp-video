@@ -14,6 +14,7 @@ from .paths import (
     _auto_output,
 )
 from .ffmpeg_helpers import (
+    _build_ffmpeg_cmd,
     _run_ffmpeg,
     _sanitize_ffmpeg_number,
 )
@@ -48,25 +49,20 @@ def apply_mask(
 
     with _timed_operation() as timing:
         _run_ffmpeg(
-            [
-                "-i",
+            _build_ffmpeg_cmd(
                 input_path,
-                "-i",
                 mask_path,
-                "-filter_complex",
-                filter_complex,
-                "-map",
-                "[out]",
-                "-map",
-                "0:a?",
-                "-c:v",
-                "libx264",
-                *_quality_args(),
-                "-c:a",
-                "copy",
-                *_movflags_args(output),
-                output,
-            ]
+                output_path=output,
+                audio_codec="copy",
+                extra=[
+                    "-filter_complex",
+                    filter_complex,
+                    "-map",
+                    "[out]",
+                    "-map",
+                    "0:a?",
+                ],
+            )
         )
 
     return _build_edit_result(

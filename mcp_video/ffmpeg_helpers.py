@@ -200,6 +200,77 @@ def _run_ffmpeg_with_progress(
     )
 
 
+def _build_ffmpeg_cmd(
+    *inputs: str,
+    output_path: str,
+    video_codec: str = "libx264",
+    video_filter: str | None = None,
+    audio_codec: str | None = "aac",
+    audio_filter: str | None = None,
+    audio_bitrate: str | None = None,
+    crf: int | None = None,
+    preset: str | None = None,
+    extra: list[str] | None = None,
+    movflags: bool = True,
+) -> list[str]:
+    """Build a standard FFmpeg argument list for video encoding.
+
+    Eliminates the repeated construction of::
+
+        ["-i", input, "-c:v", "libx264", *_quality_args(),
+         "-c:a", "aac", "-b:a", DEFAULT_AUDIO_BITRATE,
+         *_movflags_args(output), output]
+
+    found across 15+ engine functions.
+
+    Args:
+        *inputs: Input file paths. Each becomes a separate ``-i`` argument.
+        output_path: Output file path.
+        video_codec: Video codec (e.g. ``libx264``, ``copy``, ``prores_ks``).
+                     Use ``None`` to omit ``-c:v`` entirely.
+        video_filter: Video filter string. Adds ``-vf`` flag.
+        audio_codec: Audio codec (e.g. ``aac``, ``copy``, ``pcm_s16le``).
+                     Use ``None`` to omit ``-c:a`` entirely.
+        audio_filter: Audio filter string. Adds ``-af`` flag.
+        audio_bitrate: Audio bitrate (e.g. ``128k``). Defaults to
+                       ``DEFAULT_AUDIO_BITRATE`` when ``audio_codec == "aac"``.
+        crf: Constant Rate Factor. Passed to ``_quality_args()``.
+        preset: Encoding preset. Passed to ``_quality_args()``.
+        extra: Extra arguments inserted before movflags/output.
+        movflags: Whether to append ``-movflags +faststart`` for mp4/mov.
+    """
+    from .defaults import DEFAULT_AUDIO_BITRATE
+    from .engine_runtime_utils import _movflags_args, _quality_args
+
+    cmd: list[str] = []
+    for inp in inputs:
+        cmd.extend(["-i", inp])
+
+    if video_filter is not None:
+        cmd.extend(["-vf", video_filter])
+    if audio_filter is not None:
+        cmd.extend(["-af", audio_filter])
+
+    if video_codec is not None:
+        cmd.extend(["-c:v", video_codec])
+        if video_codec != "copy":
+            cmd.extend(_quality_args(crf=crf, preset=preset))
+
+    if audio_codec is not None:
+        cmd.extend(["-c:a", audio_codec])
+        if audio_codec == "aac":
+            cmd.extend(["-b:a", audio_bitrate or DEFAULT_AUDIO_BITRATE])
+
+    if extra:
+        cmd.extend(extra)
+
+    if movflags:
+        cmd.extend(_movflags_args(output_path))
+
+    cmd.append(output_path)
+    return cmd
+
+
 def _sanitize_ffmpeg_number(value: Any, name: str) -> float:
     """Ensure a value is numeric and finite before FFmpeg interpolation. Returns float(value)."""
     try:

@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from .defaults import DEFAULT_AUDIO_BITRATE, DEFAULT_CRF, DEFAULT_PRESET
+from .ffmpeg_helpers import _build_ffmpeg_cmd
 from .ffmpeg_helpers import _validate_input_path, _validate_output_path
-from .engine_runtime_utils import _movflags_args
 from .paths import _auto_output
 from .ffmpeg_helpers import _run_ffmpeg
 
@@ -18,22 +17,5 @@ def normalize(input_path: str, output_path: str | None = None) -> str:
     input_path = _validate_input_path(input_path)
     output = output_path or _auto_output(input_path, "normalized")
     _validate_output_path(output)
-    _run_ffmpeg(
-        [
-            "-i",
-            input_path,
-            "-c:v",
-            "libx264",
-            "-preset",
-            DEFAULT_PRESET,
-            "-crf",
-            str(DEFAULT_CRF),
-            "-c:a",
-            "aac",
-            "-b:a",
-            DEFAULT_AUDIO_BITRATE,
-            *_movflags_args(output),
-            output,
-        ]
-    )
+    _run_ffmpeg(_build_ffmpeg_cmd(input_path, output_path=output))
     return output

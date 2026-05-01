@@ -13,6 +13,7 @@ from .paths import (
     _auto_output_dir,
 )
 from .ffmpeg_helpers import (
+    _build_ffmpeg_cmd,
     _run_ffmpeg,
 )
 from .errors import MCPVideoError
@@ -44,19 +45,12 @@ def generate_subtitles(
         _validate_output_path(video_out)
         escaped_srt = _escape_ffmpeg_filter_value(srt_file)
         _run_ffmpeg(
-            [
-                "-i",
+            _build_ffmpeg_cmd(
                 input_path,
-                "-vf",
-                f"subtitles={escaped_srt}",
-                "-c:v",
-                "libx264",
-                *_quality_args(),
-                "-c:a",
-                "copy",
-                *_movflags_args(video_out),
-                video_out,
-            ]
+                output_path=video_out,
+                video_filter=f"subtitles={escaped_srt}",
+                audio_codec="copy",
+            )
         )
         return SubtitleResult(
             srt_path=srt_file,
