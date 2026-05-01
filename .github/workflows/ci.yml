@@ -50,7 +50,11 @@ jobs:
     runs-on: [self-hosted, macOS, ARM64]
     steps:
       - uses: actions/checkout@v6
+      - name: Prepare Python tool cache
+        run: mkdir -p "${{ github.workspace }}/.tool_cache"
       - uses: actions/setup-python@v5
+        env:
+          RUNNER_TOOL_CACHE: ${{ github.workspace }}/.tool_cache
         with:
           python-version: "3.12"
       - name: Run repository readiness audit
@@ -61,7 +65,11 @@ jobs:
     runs-on: [self-hosted, macOS, ARM64]
     steps:
       - uses: actions/checkout@v6
+      - name: Prepare Python tool cache
+        run: mkdir -p "${{ github.workspace }}/.tool_cache"
       - uses: actions/setup-python@v5
+        env:
+          RUNNER_TOOL_CACHE: ${{ github.workspace }}/.tool_cache
         with:
           python-version: "3.12"
       - name: Install ruff
@@ -76,7 +84,11 @@ jobs:
     runs-on: [self-hosted, macOS, ARM64]
     steps:
       - uses: actions/checkout@v6
+      - name: Prepare Python tool cache
+        run: mkdir -p "${{ github.workspace }}/.tool_cache"
       - uses: actions/setup-python@v5
+        env:
+          RUNNER_TOOL_CACHE: ${{ github.workspace }}/.tool_cache
         with:
           python-version: "3.12"
       - name: Install build tools
@@ -96,8 +108,13 @@ jobs:
         run: echo "Code inputs unchanged; marking Python 3.12 test check successful."
       - uses: actions/checkout@v6
         if: github.event_name != 'pull_request' || needs.changes.outputs.code == 'true'
+      - name: Prepare Python tool cache
+        if: github.event_name != 'pull_request' || needs.changes.outputs.code == 'true'
+        run: mkdir -p "${{ github.workspace }}/.tool_cache"
       - uses: actions/setup-python@v5
         if: github.event_name != 'pull_request' || needs.changes.outputs.code == 'true'
+        env:
+          RUNNER_TOOL_CACHE: ${{ github.workspace }}/.tool_cache
         with:
           python-version: "3.12"
           cache: pip
@@ -128,8 +145,13 @@ jobs:
         run: echo "Code inputs unchanged; marking Python ${{ matrix.python-version }} compatibility check successful."
       - uses: actions/checkout@v6
         if: github.event_name != 'pull_request' || needs.changes.outputs.code == 'true'
+      - name: Prepare Python tool cache
+        if: github.event_name != 'pull_request' || needs.changes.outputs.code == 'true'
+        run: mkdir -p "${{ github.workspace }}/.tool_cache"
       - uses: actions/setup-python@v5
         if: github.event_name != 'pull_request' || needs.changes.outputs.code == 'true'
+        env:
+          RUNNER_TOOL_CACHE: ${{ github.workspace }}/.tool_cache
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip

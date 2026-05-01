@@ -25,7 +25,11 @@ jobs:
     runs-on: [self-hosted, macOS, ARM64]
     steps:
       - uses: actions/checkout@v6
+      - name: Prepare Python tool cache
+        run: mkdir -p "${{ github.workspace }}/.tool_cache"
       - uses: actions/setup-python@v5
+        env:
+          RUNNER_TOOL_CACHE: ${{ github.workspace }}/.tool_cache
         with:
           python-version: "3.12"
           cache: pip
@@ -61,7 +65,11 @@ jobs:
     runs-on: [self-hosted, macOS, ARM64]
     steps:
       - uses: actions/checkout@v6
+      - name: Prepare Python tool cache
+        run: mkdir -p "${{ github.workspace }}/.tool_cache"
       - uses: actions/setup-python@v5
+        env:
+          RUNNER_TOOL_CACHE: ${{ github.workspace }}/.tool_cache
         with:
           python-version: "3.12"
           cache: pip
@@ -86,7 +94,11 @@ jobs:
     runs-on: [self-hosted, macOS, ARM64]
     steps:
       - uses: actions/checkout@v6
+      - name: Prepare Python tool cache
+        run: mkdir -p "${{ github.workspace }}/.tool_cache"
       - uses: actions/setup-python@v5
+        env:
+          RUNNER_TOOL_CACHE: ${{ github.workspace }}/.tool_cache
         with:
           python-version: "3.12"
           cache: pip
@@ -114,7 +126,11 @@ jobs:
     runs-on: [self-hosted, macOS, ARM64]
     steps:
       - uses: actions/checkout@v6
+      - name: Prepare Python tool cache
+        run: mkdir -p "${{ github.workspace }}/.tool_cache"
       - uses: actions/setup-python@v5
+        env:
+          RUNNER_TOOL_CACHE: ${{ github.workspace }}/.tool_cache
         with:
           python-version: "3.12"
           cache: pip
