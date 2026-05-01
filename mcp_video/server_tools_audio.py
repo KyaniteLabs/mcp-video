@@ -9,7 +9,7 @@ from typing import Any
 from .errors import MCPVideoError
 from .defaults import DEFAULT_PROCEDURAL_AUDIO_BED_WARNING_SECONDS
 from .limits import MAX_FREQUENCY, MIN_FREQUENCY
-from .server_app import _error_result, _result, mcp
+from .server_app import _result, _safe_tool, _validation_error, mcp
 from .ffmpeg_helpers import _validate_input_path
 from .validation import (
     VALID_AUDIO_EFFECT_TYPES,
@@ -35,6 +35,7 @@ def _audio_preset_warnings(preset: str, duration: float | None) -> list[str]:
 
 
 @mcp.tool()
+@_safe_tool
 def audio_synthesize(
     output_path: str | None = None,
     waveform: str = "sine",
@@ -65,56 +66,30 @@ def audio_synthesize(
         Dict with success status and output_path.
     """
     if waveform not in VALID_WAVEFORMS:
-        return _error_result(
-            MCPVideoError(
-                f"Invalid waveform: must be one of {sorted(VALID_WAVEFORMS)}, got '{waveform}'",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
+        return _validation_error(f"Invalid waveform: must be one of {sorted(VALID_WAVEFORMS)}, got '{waveform}'")
     if frequency < MIN_FREQUENCY or frequency > MAX_FREQUENCY:
-        return _error_result(
-            MCPVideoError(
-                f"Invalid frequency: must be {MIN_FREQUENCY}-{MAX_FREQUENCY}, got {frequency}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
+        return _validation_error(f"Invalid frequency: must be {MIN_FREQUENCY}-{MAX_FREQUENCY}, got {frequency}")
     if duration <= 0:
-        return _error_result(
-            MCPVideoError(
-                f"Invalid duration: must be > 0, got {duration}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
+        return _validation_error(f"Invalid duration: must be > 0, got {duration}")
     if volume < 0 or volume > 1:
-        return _error_result(
-            MCPVideoError(
-                f"Invalid volume: must be 0-1, got {volume}", error_type="validation_error", code="invalid_parameter"
-            )
-        )
+        return _validation_error(f"Invalid volume: must be 0-1, got {volume}")
     output = output_path or os.path.join(tempfile.gettempdir(), f"mcp_audio_{waveform}.wav")
-    try:
-        from .audio_engine import audio_synthesize as _synth
+    from .audio_engine import audio_synthesize as _synth
 
-        return _result(
-            _synth(
-                output=output,
-                waveform=waveform,
-                frequency=frequency,
-                duration=duration,
-                volume=volume,
-                effects=effects,
-            )
+    return _result(
+        _synth(
+            output=output,
+            waveform=waveform,
+            frequency=frequency,
+            duration=duration,
+            volume=volume,
+            effects=effects,
         )
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    )
 
 
 @mcp.tool()
+@_safe_tool
 def audio_preset(
     preset: str,
     output_path: str | None = None,
@@ -143,61 +118,33 @@ def audio_preset(
         Dict with success status and output_path.
     """
     if preset not in VALID_AUDIO_PRESETS:
-        return _error_result(
-            MCPVideoError(
-                f"Invalid preset: must be one of {sorted(VALID_AUDIO_PRESETS)}, got '{preset}'",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
+        return _validation_error(f"Invalid preset: must be one of {sorted(VALID_AUDIO_PRESETS)}, got '{preset}'")
     if pitch not in {"low", "mid", "high"}:
-        return _error_result(
-            MCPVideoError(
-                f"Invalid pitch: must be one of ['high', 'low', 'mid'], got '{pitch}'",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
+        return _validation_error(f"Invalid pitch: must be one of ['high', 'low', 'mid'], got '{pitch}'")
     if intensity < 0 or intensity > 1:
-        return _error_result(
-            MCPVideoError(
-                f"Invalid intensity: must be 0-1, got {intensity}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
+        return _validation_error(f"Invalid intensity: must be 0-1, got {intensity}")
     if duration is not None and duration <= 0:
-        return _error_result(
-            MCPVideoError(
-                f"Invalid duration: must be > 0, got {duration}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
+        return _validation_error(f"Invalid duration: must be > 0, got {duration}")
     output = output_path or os.path.join(tempfile.gettempdir(), f"mcp_audio_{preset}.wav")
-    try:
-        from .audio_engine import audio_preset as _preset
+    from .audio_engine import audio_preset as _preset
 
-        result = _result(
-            _preset(
-                preset=preset,
-                output=output,
-                pitch=pitch,
-                duration=duration,
-                intensity=intensity,
-            )
+    result = _result(
+        _preset(
+            preset=preset,
+            output=output,
+            pitch=pitch,
+            duration=duration,
+            intensity=intensity,
         )
-        warnings = _audio_preset_warnings(preset, duration)
-        if warnings:
-            result["warnings"] = warnings
-        return result
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    )
+    warnings = _audio_preset_warnings(preset, duration)
+    if warnings:
+        result["warnings"] = warnings
+    return result
 
 
 @mcp.tool()
+@_safe_tool
 def audio_sequence(
     sequence: list[dict[str, Any]],
     output_path: str,
@@ -221,59 +168,28 @@ def audio_sequence(
         Dict with success status and output_path.
     """
     if not isinstance(sequence, list) or len(sequence) < 1:
-        return _error_result(
-            MCPVideoError(
-                "Invalid sequence: must be a non-empty list", error_type="validation_error", code="invalid_parameter"
-            )
-        )
+        return _validation_error("Invalid sequence: must be a non-empty list")
     for i, event in enumerate(sequence):
         if not isinstance(event, dict):
-            return _error_result(
-                MCPVideoError(
-                    f"Invalid sequence[{i}]: must be a dict", error_type="validation_error", code="invalid_parameter"
-                )
-            )
+            return _validation_error(f"Invalid sequence[{i}]: must be a dict")
         evt_type = event.get("type")
         if evt_type not in VALID_AUDIO_SEQUENCE_TYPES:
-            return _error_result(
-                MCPVideoError(
-                    (
-                        f"Invalid sequence[{i}].type: must be one of "
-                        f"{sorted(VALID_AUDIO_SEQUENCE_TYPES)}, got '{evt_type}'"
-                    ),
-                    error_type="validation_error",
-                    code="invalid_parameter",
-                )
+            return _validation_error(
+                f"Invalid sequence[{i}].type: must be one of {sorted(VALID_AUDIO_SEQUENCE_TYPES)}, got '{evt_type}'"
             )
         evt_at = event.get("at")
         if not isinstance(evt_at, (int, float)):
-            return _error_result(
-                MCPVideoError(
-                    f"Invalid sequence[{i}].at: must be numeric, got {type(evt_at).__name__}",
-                    error_type="validation_error",
-                    code="invalid_parameter",
-                )
-            )
+            return _validation_error(f"Invalid sequence[{i}].at: must be numeric, got {type(evt_at).__name__}")
         evt_dur = event.get("duration")
         if evt_dur is not None and evt_dur <= 0:
-            return _error_result(
-                MCPVideoError(
-                    f"Invalid sequence[{i}].duration: must be > 0, got {evt_dur}",
-                    error_type="validation_error",
-                    code="invalid_parameter",
-                )
-            )
-    try:
-        from .audio_engine import audio_sequence as _sequence
+            return _validation_error(f"Invalid sequence[{i}].duration: must be > 0, got {evt_dur}")
+    from .audio_engine import audio_sequence as _sequence
 
-        return _result(_sequence(sequence=sequence, output=output_path))
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    return _result(_sequence(sequence=sequence, output=output_path))
 
 
 @mcp.tool()
+@_safe_tool
 def audio_compose(
     tracks: list[dict[str, Any]],
     duration: float,
@@ -296,63 +212,33 @@ def audio_compose(
         Dict with success status and output_path.
     """
     if duration <= 0:
-        return _error_result(
-            MCPVideoError(
-                f"Invalid duration: must be > 0, got {duration}",
+        return _validation_error(f"Invalid duration: must be > 0, got {duration}")
+    if not isinstance(tracks, list) or len(tracks) < 1:
+        return _validation_error("Invalid tracks: must be a non-empty list")
+    for i, track in enumerate(tracks):
+        if not isinstance(track, dict):
+            return _validation_error(f"Invalid tracks[{i}]: must be a dict")
+        if not isinstance(track.get("file"), str):
+            return _validation_error(f"Invalid tracks[{i}].file: must be a string")
+        vol = track.get("volume", 1.0)
+        if vol < 0 or vol > 1:
+            return _validation_error(f"Invalid tracks[{i}].volume: must be 0-1, got {vol}")
+    for _t in tracks:
+        track_file = _t.get("file", "")
+        if not track_file or not isinstance(track_file, str):
+            raise MCPVideoError(
+                "tracks must contain 'file' key with a non-empty path string",
                 error_type="validation_error",
                 code="invalid_parameter",
             )
-        )
-    if not isinstance(tracks, list) or len(tracks) < 1:
-        return _error_result(
-            MCPVideoError(
-                "Invalid tracks: must be a non-empty list", error_type="validation_error", code="invalid_parameter"
-            )
-        )
-    for i, track in enumerate(tracks):
-        if not isinstance(track, dict):
-            return _error_result(
-                MCPVideoError(
-                    f"Invalid tracks[{i}]: must be a dict", error_type="validation_error", code="invalid_parameter"
-                )
-            )
-        if not isinstance(track.get("file"), str):
-            return _error_result(
-                MCPVideoError(
-                    f"Invalid tracks[{i}].file: must be a string",
-                    error_type="validation_error",
-                    code="invalid_parameter",
-                )
-            )
-        vol = track.get("volume", 1.0)
-        if vol < 0 or vol > 1:
-            return _error_result(
-                MCPVideoError(
-                    f"Invalid tracks[{i}].volume: must be 0-1, got {vol}",
-                    error_type="validation_error",
-                    code="invalid_parameter",
-                )
-            )
-    try:
-        for _t in tracks:
-            track_file = _t.get("file", "")
-            if not track_file or not isinstance(track_file, str):
-                raise MCPVideoError(
-                    "tracks must contain 'file' key with a non-empty path string",
-                    error_type="validation_error",
-                    code="invalid_parameter",
-                )
-            _validate_input_path(track_file)
-        from .audio_engine import audio_compose as _compose
+        _validate_input_path(track_file)
+    from .audio_engine import audio_compose as _compose
 
-        return _result(_compose(tracks=tracks, duration=duration, output=output_path))
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    return _result(_compose(tracks=tracks, duration=duration, output=output_path))
 
 
 @mcp.tool()
+@_safe_tool
 def audio_effects(
     input_path: str,
     output_path: str,
@@ -373,39 +259,23 @@ def audio_effects(
         Dict with success status and output_path.
     """
     if not isinstance(effects, list) or len(effects) < 1:
-        return _error_result(
-            MCPVideoError(
-                "Invalid effects: must be a non-empty list", error_type="validation_error", code="invalid_parameter"
-            )
-        )
+        return _validation_error("Invalid effects: must be a non-empty list")
     for i, effect in enumerate(effects):
         if not isinstance(effect, dict):
-            return _error_result(
-                MCPVideoError(
-                    f"Invalid effects[{i}]: must be a dict", error_type="validation_error", code="invalid_parameter"
-                )
-            )
+            return _validation_error(f"Invalid effects[{i}]: must be a dict")
         eff_type = effect.get("type")
         if eff_type not in VALID_AUDIO_EFFECT_TYPES:
-            return _error_result(
-                MCPVideoError(
-                    f"Invalid effects[{i}].type: must be one of {sorted(VALID_AUDIO_EFFECT_TYPES)}, got '{eff_type}'",
-                    error_type="validation_error",
-                    code="invalid_parameter",
-                )
+            return _validation_error(
+                f"Invalid effects[{i}].type: must be one of {sorted(VALID_AUDIO_EFFECT_TYPES)}, got '{eff_type}'"
             )
-    try:
-        input_path = _validate_input_path(input_path)
-        from .audio_engine import audio_effects as _effects
+    input_path = _validate_input_path(input_path)
+    from .audio_engine import audio_effects as _effects
 
-        return _result(_effects(input_path=input_path, output=output_path, effects=effects))
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    return _result(_effects(input_path=input_path, output=output_path, effects=effects))
 
 
 @mcp.tool()
+@_safe_tool
 def video_add_generated_audio(
     input_path: str,
     audio_config: dict[str, Any],
@@ -425,24 +295,20 @@ def video_add_generated_audio(
     Returns:
         Dict with success status and output_path.
     """
-    try:
-        input_path = _validate_input_path(input_path)
-        if not isinstance(audio_config, dict) or not audio_config:
-            raise MCPVideoError(
-                "audio_config must be a non-empty dict",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        from .audio_engine import add_generated_audio as _add_gen_audio
+    input_path = _validate_input_path(input_path)
+    if not isinstance(audio_config, dict) or not audio_config:
+        raise MCPVideoError(
+            "audio_config must be a non-empty dict",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
+    from .audio_engine import add_generated_audio as _add_gen_audio
 
-        return _result(_add_gen_audio(input_path, audio_config, output_path))
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    return _result(_add_gen_audio(input_path, audio_config, output_path))
 
 
 @mcp.tool()
+@_safe_tool
 def video_audio_spatial(
     input_path: str,
     output_path: str,
@@ -451,27 +317,10 @@ def video_audio_spatial(
 ) -> dict[str, Any]:
     """Apply 3D spatial audio positioning."""
     if method not in VALID_SPATIAL_METHODS:
-        return _error_result(
-            MCPVideoError(
-                f"Invalid method: must be one of {sorted(VALID_SPATIAL_METHODS)}, got '{method}'",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
+        return _validation_error(f"Invalid method: must be one of {sorted(VALID_SPATIAL_METHODS)}, got '{method}'")
     if not isinstance(positions, list) or len(positions) == 0:
-        return _error_result(
-            MCPVideoError(
-                "positions must be a non-empty list",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
-    try:
-        input_path = _validate_input_path(input_path)
-        from .ai_engine import audio_spatial
+        return _validation_error("positions must be a non-empty list")
+    input_path = _validate_input_path(input_path)
+    from .ai_engine import audio_spatial
 
-        return _result(audio_spatial(input_path, output_path, positions, method))
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    return _result(audio_spatial(input_path, output_path, positions, method))

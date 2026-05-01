@@ -15,7 +15,9 @@ from .defaults import (
     DEFAULT_AUDIO_BITRATE,
 )
 from .engine_probe import get_duration, probe
-from .engine_runtime_utils import _auto_output, _movflags_args, _run_ffmpeg, _timed_operation
+from .engine_runtime_utils import _build_edit_result, _movflags_args, _timed_operation
+from .paths import _auto_output
+from .ffmpeg_helpers import _run_ffmpeg
 from .errors import InputFileError, MCPVideoError
 from .ffmpeg_helpers import _escape_ffmpeg_filter_value, _validate_input_path, _validate_output_path
 from .models import EditResult
@@ -46,16 +48,26 @@ def _normalize_clips(
             vf_parts.insert(0, "transpose=1")
         _run_ffmpeg(
             [
-                "-i", clip,
-                "-vf", ",".join(vf_parts),
-                "-c:v", "libx264",
-                "-preset", DEFAULT_PRESET,
-                "-crf", str(DEFAULT_CRF),
-                "-c:a", "aac",
-                "-b:a", DEFAULT_AUDIO_BITRATE,
-                "-r", str(DEFAULT_FPS),
-                "-ar", str(DEFAULT_SAMPLE_RATE),
-                "-ac", str(DEFAULT_AUDIO_CHANNELS),
+                "-i",
+                clip,
+                "-vf",
+                ",".join(vf_parts),
+                "-c:v",
+                "libx264",
+                "-preset",
+                DEFAULT_PRESET,
+                "-crf",
+                str(DEFAULT_CRF),
+                "-c:a",
+                "aac",
+                "-b:a",
+                DEFAULT_AUDIO_BITRATE,
+                "-r",
+                str(DEFAULT_FPS),
+                "-ar",
+                str(DEFAULT_SAMPLE_RATE),
+                "-ac",
+                str(DEFAULT_AUDIO_CHANNELS),
                 norm_path,
             ]
         )
@@ -73,15 +85,10 @@ def _merge_single_clip(clip: str, output_path: str | None) -> EditResult:
         _run_ffmpeg(["-i", clip, "-c", "copy", *_movflags_args(output), output])
     else:
         shutil.copy2(clip, output)
-    info = probe(output)
-    return EditResult(
-        output_path=output,
-        duration=info.duration,
-        resolution=info.resolution,
-        size_mb=info.size_mb,
-        format="mp4",
-        operation="merge",
-        elapsed_ms=0.0,
+    return _build_edit_result(
+        output,
+        "merge",
+        {"elapsed_ms": 0.0},
     )
 
 
@@ -92,9 +99,7 @@ def _concat_clips(clips: list[str], output: str, tmpdir: str) -> None:
         for clip in clips:
             abs_path = os.path.abspath(clip).replace("\\", "\\\\").replace("'", "'\\''")
             f.write(f"file '{abs_path}'\n")
-    _run_ffmpeg(
-        ["-f", "concat", "-safe", "0", "-i", concat_file, "-c", "copy", *_movflags_args(output), output]
-    )
+    _run_ffmpeg(["-f", "concat", "-safe", "0", "-i", concat_file, "-c", "copy", *_movflags_args(output), output])
 
 
 def merge(
@@ -154,15 +159,10 @@ def merge(
         finally:
             shutil.rmtree(tmpdir, ignore_errors=True)
 
-    info = probe(output)
-    return EditResult(
-        output_path=output,
-        duration=info.duration,
-        resolution=info.resolution,
-        size_mb=info.size_mb,
-        format="mp4",
-        operation="merge",
-        elapsed_ms=timing["elapsed_ms"],
+    return _build_edit_result(
+        output,
+        "merge",
+        timing,
     )
 
 

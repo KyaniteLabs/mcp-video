@@ -25,15 +25,13 @@ jobs:
     runs-on: [self-hosted, macOS, ARM64]
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
-        with:
-          python-version: "3.12"
-          cache: pip
+      - name: Create venv
+        run: python3.13 -m venv .venv
       - name: Install base package
-        run: pip install -e .
+        run: .venv/bin/pip install -e .
       - name: Import package and public facades
         run: |
-          python - <<'PY'
+          .venv/bin/python - <<'PY'
           import mcp_video
           import mcp_video.engine
           import mcp_video.server
@@ -43,12 +41,12 @@ jobs:
           PY
       - name: CLI help and version
         run: |
-          python -m mcp_video --version
-          python -m mcp_video --help
-          python -m mcp_video doctor --json | python -m json.tool >/tmp/mcp-video-doctor.json
+          .venv/bin/python -m mcp_video --version
+          .venv/bin/python -m mcp_video --help
+          .venv/bin/python -m mcp_video doctor --json | .venv/bin/python -m json.tool >/tmp/mcp-video-doctor.json
       - name: Validate doctor JSON
         run: |
-          python - <<'PY'
+          .venv/bin/python - <<'PY'
           import json
           data = json.load(open("/tmp/mcp-video-doctor.json"))
           assert data["success"] is True
@@ -61,21 +59,22 @@ jobs:
     runs-on: [self-hosted, macOS, ARM64]
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
-        with:
-          python-version: "3.12"
-          cache: pip
-      - name: Install FFmpeg
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+      - name: Create venv
+        run: python3.13 -m venv .venv
+      - name: Ensure FFmpeg
+        run: |
+          if ! command -v ffmpeg &>/dev/null; then
+            brew install ffmpeg || (echo "FFmpeg not available; skipping" && exit 0)
+          fi
       - name: Install package
-        run: pip install -e .
+        run: .venv/bin/pip install -e .
       - name: Create sample video
         run: |
           ffmpeg -y -f lavfi -i testsrc=size=160x120:rate=15 -f lavfi -i sine=frequency=440:sample_rate=44100 -t 1 -c:v libx264 -pix_fmt yuv420p -c:a aac sample.mp4
       - name: Smoke core FFmpeg path
         run: |
-          python -m mcp_video --format json info sample.mp4 | python -m json.tool >/tmp/info.json
-          python -m mcp_video --format json trim sample.mp4 --start 0 --duration 0.5 -o trimmed.mp4 | python -m json.tool >/tmp/trim.json
+          .venv/bin/python -m mcp_video --format json info sample.mp4 | .venv/bin/python -m json.tool >/tmp/info.json
+          .venv/bin/python -m mcp_video --format json trim sample.mp4 --start 0 --duration 0.5 -o trimmed.mp4 | .venv/bin/python -m json.tool >/tmp/trim.json
           test -s trimmed.mp4
 
   image-extra-smoke:
@@ -83,15 +82,13 @@ jobs:
     runs-on: [self-hosted, macOS, ARM64]
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
-        with:
-          python-version: "3.12"
-          cache: pip
+      - name: Create venv
+        run: python3.13 -m venv .venv
       - name: Install image extra
-        run: pip install -e ".[image]"
+        run: .venv/bin/pip install -e ".[image]"
       - name: Import image dependencies and analyze tiny image
         run: |
-          python - <<'PY'
+          .venv/bin/python - <<'PY'
           from pathlib import Path
           from PIL import Image
           import sklearn
@@ -111,15 +108,13 @@ jobs:
     runs-on: [self-hosted, macOS, ARM64]
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
-        with:
-          python-version: "3.12"
-          cache: pip
+      - name: Create venv
+        run: python3.13 -m venv .venv
       - name: Install base package
-        run: pip install -e .
+        run: .venv/bin/pip install -e .
       - name: Import AI module without heavyweight extras
         run: |
-          python - <<'PY'
+          .venv/bin/python - <<'PY'
           import mcp_video.ai_engine as ai_engine
           from mcp_video.doctor import run_diagnostics
 

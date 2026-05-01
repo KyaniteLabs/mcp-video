@@ -33,7 +33,7 @@ class TestEngineRotateAngles:
         from mcp_video.engine_rotate import rotate
 
         mock_info = SimpleNamespace(width=640, height=480, duration=1.0, resolution="640x480", size_mb=1.0, format="mp4")
-        with patch("mcp_video.engine_rotate.probe", return_value=mock_info):
+        with patch("mcp_video.engine_probe.probe", return_value=mock_info):
             with patch("mcp_video.engine_rotate._validate_input_path", return_value="/tmp/v.mp4"):
                 with patch("mcp_video.engine_rotate._run_ffmpeg"):
                     with patch("mcp_video.engine_rotate._timed_operation") as mock_timing:
@@ -46,7 +46,7 @@ class TestEngineRotateAngles:
         from mcp_video.engine_rotate import rotate
 
         mock_info = SimpleNamespace(width=640, height=480, duration=1.0, resolution="640x480", size_mb=1.0, format="mp4")
-        with patch("mcp_video.engine_rotate.probe", return_value=mock_info):
+        with patch("mcp_video.engine_probe.probe", return_value=mock_info):
             with patch("mcp_video.engine_rotate._validate_input_path", return_value="/tmp/v.mp4"):
                 with patch("mcp_video.engine_rotate._run_ffmpeg"):
                     with patch("mcp_video.engine_rotate._timed_operation") as mock_timing:
@@ -59,7 +59,7 @@ class TestEngineRotateAngles:
         from mcp_video.engine_rotate import rotate
 
         mock_info = SimpleNamespace(width=640, height=480, duration=1.0, resolution="640x480", size_mb=1.0, format="mp4")
-        with patch("mcp_video.engine_rotate.probe", return_value=mock_info):
+        with patch("mcp_video.engine_probe.probe", return_value=mock_info):
             with patch("mcp_video.engine_rotate._validate_input_path", return_value="/tmp/v.mp4"):
                 with patch("mcp_video.engine_rotate._run_ffmpeg"):
                     with patch("mcp_video.engine_rotate._timed_operation") as mock_timing:
@@ -72,7 +72,7 @@ class TestEngineRotateAngles:
         from mcp_video.engine_rotate import rotate
 
         mock_info = SimpleNamespace(width=640, height=480, duration=1.0, resolution="640x480", size_mb=1.0, format="mp4")
-        with patch("mcp_video.engine_rotate.probe", return_value=mock_info):
+        with patch("mcp_video.engine_probe.probe", return_value=mock_info):
             with patch("mcp_video.engine_rotate._validate_input_path", return_value="/tmp/v.mp4"):
                 with patch("mcp_video.engine_rotate._run_ffmpeg"):
                     with patch("mcp_video.engine_rotate._timed_operation") as mock_timing:
@@ -85,7 +85,7 @@ class TestEngineRotateAngles:
         from mcp_video.engine_rotate import rotate
 
         mock_info = SimpleNamespace(width=640, height=480, duration=1.0, resolution="640x480", size_mb=1.0, format="mp4")
-        with patch("mcp_video.engine_rotate.probe", return_value=mock_info):
+        with patch("mcp_video.engine_probe.probe", return_value=mock_info):
             with patch("mcp_video.engine_rotate._validate_input_path", return_value="/tmp/v.mp4"):
                 with patch("mcp_video.engine_rotate._run_ffmpeg"):
                     with patch("mcp_video.engine_rotate._timed_operation") as mock_timing:
@@ -112,13 +112,14 @@ class TestEngineReverseAudio:
             width=640, height=480, duration=1.0, resolution="640x480", audio_codec="aac", size_mb=1.0, format="mp4"
         )
         with patch("mcp_video.engine_reverse.probe", return_value=mock_info):
-            with patch("mcp_video.engine_reverse._validate_input_path", return_value="/tmp/v.mp4"):
-                with patch("mcp_video.engine_reverse._run_ffmpeg"):
-                    with patch("mcp_video.engine_reverse._timed_operation") as mock_timing:
-                        mock_timing.return_value.__enter__ = MagicMock(return_value={"elapsed_ms": 10})
-                        mock_timing.return_value.__exit__ = MagicMock(return_value=False)
-                        result = reverse("/tmp/v.mp4")
-                        assert result.operation == "reverse"
+            with patch("mcp_video.engine_probe.probe", return_value=mock_info):
+                with patch("mcp_video.engine_reverse._validate_input_path", return_value="/tmp/v.mp4"):
+                    with patch("mcp_video.engine_reverse._run_ffmpeg"):
+                        with patch("mcp_video.engine_reverse._timed_operation") as mock_timing:
+                            mock_timing.return_value.__enter__ = MagicMock(return_value={"elapsed_ms": 10})
+                            mock_timing.return_value.__exit__ = MagicMock(return_value=False)
+                            result = reverse("/tmp/v.mp4")
+                            assert result.operation == "reverse"
 
     def test_reverse_without_audio(self):
         from mcp_video.engine_reverse import reverse
@@ -127,13 +128,14 @@ class TestEngineReverseAudio:
             width=640, height=480, duration=1.0, resolution="640x480", audio_codec=None, size_mb=1.0, format="mp4"
         )
         with patch("mcp_video.engine_reverse.probe", return_value=mock_info):
-            with patch("mcp_video.engine_reverse._validate_input_path", return_value="/tmp/v.mp4"):
-                with patch("mcp_video.engine_reverse._run_ffmpeg"):
-                    with patch("mcp_video.engine_reverse._timed_operation") as mock_timing:
-                        mock_timing.return_value.__enter__ = MagicMock(return_value={"elapsed_ms": 10})
-                        mock_timing.return_value.__exit__ = MagicMock(return_value=False)
-                        result = reverse("/tmp/v.mp4")
-                        assert result.operation == "reverse"
+            with patch("mcp_video.engine_probe.probe", return_value=mock_info):
+                with patch("mcp_video.engine_reverse._validate_input_path", return_value="/tmp/v.mp4"):
+                    with patch("mcp_video.engine_reverse._run_ffmpeg"):
+                        with patch("mcp_video.engine_reverse._timed_operation") as mock_timing:
+                            mock_timing.return_value.__enter__ = MagicMock(return_value={"elapsed_ms": 10})
+                            mock_timing.return_value.__exit__ = MagicMock(return_value=False)
+                            result = reverse("/tmp/v.mp4")
+                            assert result.operation == "reverse"
 
 
 class TestEngineSplitScreen:
@@ -142,13 +144,14 @@ class TestEngineSplitScreen:
 
         mock_info = SimpleNamespace(width=640, height=480, duration=1.0, resolution="640x480", size_mb=1.0, format="mp4")
         with patch("mcp_video.engine_split_screen.probe", return_value=mock_info):
-            with patch("mcp_video.engine_split_screen._validate_input_path", return_value="/tmp/a.mp4"):
-                with patch("mcp_video.engine_split_screen._run_ffmpeg"):
-                    with patch("mcp_video.engine_split_screen._timed_operation") as mock_timing:
-                        mock_timing.return_value.__enter__ = MagicMock(return_value={"elapsed_ms": 10})
-                        mock_timing.return_value.__exit__ = MagicMock(return_value=False)
-                        result = split_screen("/tmp/a.mp4", "/tmp/b.mp4", layout="top-bottom")
-                        assert "split_screen" in result.operation
+            with patch("mcp_video.engine_probe.probe", return_value=mock_info):
+                with patch("mcp_video.engine_split_screen._validate_input_path", return_value="/tmp/a.mp4"):
+                    with patch("mcp_video.engine_split_screen._run_ffmpeg"):
+                        with patch("mcp_video.engine_split_screen._timed_operation") as mock_timing:
+                            mock_timing.return_value.__enter__ = MagicMock(return_value={"elapsed_ms": 10})
+                            mock_timing.return_value.__exit__ = MagicMock(return_value=False)
+                            result = split_screen("/tmp/a.mp4", "/tmp/b.mp4", layout="top-bottom")
+                            assert "split_screen" in result.operation
 
 
 class TestRunnerPlainCmd:

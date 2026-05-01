@@ -10,7 +10,7 @@ on:
 jobs:
   changes:
     name: Change detection
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     outputs:
       code: ${{ steps.classify.outputs.code }}
       docker: ${{ steps.classify.outputs.docker }}
@@ -47,74 +47,86 @@ jobs:
 
   repository-readiness:
     name: Repository readiness
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: '3.13'
+      - name: Create venv
+        run: python -m venv .venv
       - name: Run repository readiness audit
-        run: ./scripts/repo-readiness-audit.py
+        run: .venv/bin/python ./scripts/repo-readiness-audit.py
 
   lint:
     name: Lint
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: '3.13'
+      - name: Create venv
+        run: python -m venv .venv
       - name: Install ruff
-        run: pip install ruff
+        run: .venv/bin/pip install ruff
       - name: Ruff check
-        run: ruff check mcp_video/
+        run: .venv/bin/ruff check mcp_video/
       - name: Ruff format check
-        run: ruff format --check mcp_video/
+        run: .venv/bin/ruff format --check mcp_video/
 
   package-surface:
     name: Package surface
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: '3.13'
+      - name: Create venv
+        run: python -m venv .venv
       - name: Install build tools
-        run: pip install build
+        run: .venv/bin/pip install build
       - name: Build release artifacts
-        run: python -m build --sdist --wheel
+        run: .venv/bin/python -m build --sdist --wheel
       - name: Check built artifact contents
-        run: python3 .github/scripts/check-built-artifacts.py dist
+        run: .venv/bin/python .github/scripts/check-built-artifacts.py dist
 
   test:
-    name: Test (Python 3.12)
+    name: Test (Python 3.13)
     needs: changes
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
       - name: Skip tests
         if: github.event_name == 'pull_request' && needs.changes.outputs.code != 'true'
-        run: echo "Code inputs unchanged; marking Python 3.12 test check successful."
+        run: echo "Code inputs unchanged; marking Python 3.13 test check successful."
       - uses: actions/checkout@v6
         if: github.event_name != 'pull_request' || needs.changes.outputs.code == 'true'
       - uses: actions/setup-python@v6
         if: github.event_name != 'pull_request' || needs.changes.outputs.code == 'true'
         with:
-          python-version: "3.12"
-          cache: pip
-      - name: Install FFmpeg
+          python-version: '3.13'
+      - name: Create venv
         if: github.event_name != 'pull_request' || needs.changes.outputs.code == 'true'
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+        run: python -m venv .venv
+      - name: Ensure FFmpeg
+        if: github.event_name != 'pull_request' || needs.changes.outputs.code == 'true'
+        run: |
+          if ! command -v ffmpeg &>/dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y ffmpeg
+          fi
       - name: Install dependencies
         if: github.event_name != 'pull_request' || needs.changes.outputs.code == 'true'
-        run: pip install -e ".[dev]"
+        run: .venv/bin/pip install -e ".[dev]"
       - name: Run tests
         if: github.event_name != 'pull_request' || needs.changes.outputs.code == 'true'
-        run: pytest tests/ -q -m "not slow" --tb=short
+        run: .venv/bin/pytest tests/ -q -m "not slow" --tb=short
 
   compatibility:
     name: Compatibility (Python ${{ matrix.python-version }})
     needs: changes
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     strategy:
       fail-fast: false
       matrix:
@@ -129,21 +141,27 @@ jobs:
         if: github.event_name != 'pull_request' || needs.changes.outputs.code == 'true'
         with:
           python-version: ${{ matrix.python-version }}
-          cache: pip
-      - name: Install FFmpeg
+      - name: Create venv
         if: github.event_name != 'pull_request' || needs.changes.outputs.code == 'true'
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+        run: python -m venv .venv
+      - name: Ensure FFmpeg
+        if: github.event_name != 'pull_request' || needs.changes.outputs.code == 'true'
+        run: |
+          if ! command -v ffmpeg &>/dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y ffmpeg
+          fi
       - name: Install dependencies
         if: github.event_name != 'pull_request' || needs.changes.outputs.code == 'true'
-        run: pip install -e ".[dev]"
+        run: .venv/bin/pip install -e ".[dev]"
       - name: Run tests
         if: github.event_name != 'pull_request' || needs.changes.outputs.code == 'true'
-        run: pytest tests/ -q -m "not slow" --tb=short
+        run: .venv/bin/pytest tests/ -q -m "not slow" --tb=short
 
   docker:
     name: Docker build
     needs: changes
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@v6
       - name: Skip Docker build

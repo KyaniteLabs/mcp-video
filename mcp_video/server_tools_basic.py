@@ -5,36 +5,32 @@ from __future__ import annotations
 from typing import Any
 
 from .engine import add_audio, add_text, convert, merge, probe, resize, speed, trim
-from .errors import MCPVideoError
 from .limits import MAX_RESOLUTION, MAX_SPEED_FACTOR, MIN_SPEED_FACTOR, MIN_CRF, MAX_CRF
-from .server_app import _error_result, _result, mcp
+from .server_app import _result, _safe_tool, _validation_error, mcp
 from .validation import VALID_FORMATS, VALID_PRESETS
 from .ffmpeg_helpers import _validate_input_path
 
 
 @mcp.tool()
+@_safe_tool
 def video_info(input_path: str) -> dict[str, Any]:
     """Get metadata about a video file: duration, resolution, codec, fps, size.
 
     Args:
         input_path: Absolute path to the video file.
     """
-    try:
-        input_path = _validate_input_path(input_path)
-        info = probe(input_path)
-        data = info.model_dump()
-        data["display_width"] = info.display_width
-        data["display_height"] = info.display_height
-        data["display_resolution"] = info.display_resolution
-        data["aspect_ratio"] = info.aspect_ratio
-        return {"success": True, "info": data}
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    input_path = _validate_input_path(input_path)
+    info = probe(input_path)
+    data = info.model_dump()
+    data["display_width"] = info.display_width
+    data["display_height"] = info.display_height
+    data["display_resolution"] = info.display_resolution
+    data["aspect_ratio"] = info.aspect_ratio
+    return {"success": True, "info": data}
 
 
 @mcp.tool()
+@_safe_tool
 def video_trim(
     input_path: str,
     start: str = "0",
@@ -54,15 +50,10 @@ def video_trim(
         accurate: Frame-accurate seeking (slower).  Default False uses fast
             input seeking which may land on the nearest keyframe.
     """
-    try:
-        input_path = _validate_input_path(input_path)
-        return _result(
-            trim(input_path, start=start, duration=duration, end=end, output_path=output_path, accurate=accurate)
-        )
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    input_path = _validate_input_path(input_path)
+    return _result(
+        trim(input_path, start=start, duration=duration, end=end, output_path=output_path, accurate=accurate)
+    )
 
 
 VALID_XFADE_TRANSITIONS = {
@@ -84,6 +75,7 @@ VALID_XFADE_TRANSITIONS = {
 
 
 @mcp.tool()
+@_safe_tool
 def video_merge(
     clips: list[str],
     output_path: str | None = None,
@@ -101,45 +93,31 @@ def video_merge(
         transition_duration: Duration of each transition in seconds.
     """
     if transition is not None and transition not in VALID_XFADE_TRANSITIONS:
-        return _error_result(
-            MCPVideoError(
-                f"Invalid transition '{transition}'. Must be one of: {', '.join(sorted(VALID_XFADE_TRANSITIONS))}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
+        return _validation_error(
+            f"Invalid transition '{transition}'. Must be one of: {', '.join(sorted(VALID_XFADE_TRANSITIONS))}"
         )
     if transitions is not None:
         invalid = [t for t in transitions if t not in VALID_XFADE_TRANSITIONS]
         if invalid:
-            return _error_result(
-                MCPVideoError(
-                    (
-                        f"Invalid transition(s): {', '.join(invalid)}. "
-                        f"Must be one of: {', '.join(sorted(VALID_XFADE_TRANSITIONS))}"
-                    ),
-                    error_type="validation_error",
-                    code="invalid_parameter",
-                )
+            return _validation_error(
+                f"Invalid transition(s): {', '.join(invalid)}. "
+                f"Must be one of: {', '.join(sorted(VALID_XFADE_TRANSITIONS))}"
             )
-    try:
-        for _p in clips:
-            _validate_input_path(_p)
-        return _result(
-            merge(
-                clips,
-                output_path=output_path,
-                transition=transition,
-                transitions=transitions,
-                transition_duration=transition_duration,
-            )
+    for _p in clips:
+        _validate_input_path(_p)
+    return _result(
+        merge(
+            clips,
+            output_path=output_path,
+            transition=transition,
+            transitions=transitions,
+            transition_duration=transition_duration,
         )
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    )
 
 
 @mcp.tool()
+@_safe_tool
 def video_add_text(
     input_path: str,
     text: str,
@@ -172,48 +150,32 @@ def video_add_text(
         preset: Override FFmpeg encoding preset (ultrafast, fast, medium, slow, veryslow).
     """
     if crf is not None and not (MIN_CRF <= crf <= MAX_CRF):
-        return _error_result(
-            MCPVideoError(
-                f"crf must be {MIN_CRF}-{MAX_CRF}, got {crf}", error_type="validation_error", code="invalid_parameter"
-            )
-        )
+        return _validation_error(f"crf must be {MIN_CRF}-{MAX_CRF}, got {crf}")
     if preset is not None and preset not in VALID_PRESETS:
-        return _error_result(
-            MCPVideoError(f"Invalid preset: {preset}", error_type="validation_error", code="invalid_parameter")
+        return _validation_error(f"Invalid preset: {preset}")
+    input_path = _validate_input_path(input_path)
+    if size < 8 or size > 500:
+        return _validation_error(f"Font size must be between 8 and 500, got {size}")
+    return _result(
+        add_text(
+            input_path,
+            text=text,
+            position=position,
+            font=font,
+            size=size,
+            color=color,
+            shadow=shadow,
+            start_time=start_time,
+            duration=duration,
+            output_path=output_path,
+            crf=crf,
+            preset=preset,
         )
-    try:
-        input_path = _validate_input_path(input_path)
-        if size < 8 or size > 500:
-            return _error_result(
-                MCPVideoError(
-                    f"Font size must be between 8 and 500, got {size}",
-                    error_type="validation_error",
-                    code="invalid_parameter",
-                )
-            )
-        return _result(
-            add_text(
-                input_path,
-                text=text,
-                position=position,
-                font=font,
-                size=size,
-                color=color,
-                shadow=shadow,
-                start_time=start_time,
-                duration=duration,
-                output_path=output_path,
-                crf=crf,
-                preset=preset,
-            )
-        )
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    )
 
 
 @mcp.tool()
+@_safe_tool
 def video_add_audio(
     video_path: str,
     audio_path: str,
@@ -236,52 +198,30 @@ def video_add_audio(
         start_time: When the audio starts playing (seconds).
         output_path: Where to save the output. Auto-generated if omitted.
     """
-    try:
-        video_path = _validate_input_path(video_path)
-        audio_path = _validate_input_path(audio_path)
-        if not 0 <= volume <= 2.0:
-            return _error_result(
-                MCPVideoError(
-                    f"volume must be between 0.0 and 2.0, got {volume}",
-                    error_type="validation_error",
-                    code="invalid_parameter",
-                )
-            )
-        if fade_in is not None and fade_in < 0:
-            return _error_result(
-                MCPVideoError(
-                    f"fade_in must be non-negative, got {fade_in}",
-                    error_type="validation_error",
-                    code="invalid_parameter",
-                )
-            )
-        if fade_out is not None and fade_out < 0:
-            return _error_result(
-                MCPVideoError(
-                    f"fade_out must be non-negative, got {fade_out}",
-                    error_type="validation_error",
-                    code="invalid_parameter",
-                )
-            )
-        return _result(
-            add_audio(
-                video_path,
-                audio_path=audio_path,
-                volume=volume,
-                fade_in=fade_in,
-                fade_out=fade_out,
-                mix=mix,
-                start_time=start_time,
-                output_path=output_path,
-            )
+    video_path = _validate_input_path(video_path)
+    audio_path = _validate_input_path(audio_path)
+    if not 0 <= volume <= 2.0:
+        return _validation_error(f"volume must be between 0.0 and 2.0, got {volume}")
+    if fade_in is not None and fade_in < 0:
+        return _validation_error(f"fade_in must be non-negative, got {fade_in}")
+    if fade_out is not None and fade_out < 0:
+        return _validation_error(f"fade_out must be non-negative, got {fade_out}")
+    return _result(
+        add_audio(
+            video_path,
+            audio_path=audio_path,
+            volume=volume,
+            fade_in=fade_in,
+            fade_out=fade_out,
+            mix=mix,
+            start_time=start_time,
+            output_path=output_path,
         )
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    )
 
 
 @mcp.tool()
+@_safe_tool
 def video_resize(
     input_path: str,
     width: int | None = None,
@@ -301,56 +241,32 @@ def video_resize(
         output_path: Where to save the output. Auto-generated if omitted.
     """
     if width is not None and width > MAX_RESOLUTION:
-        return _error_result(
-            MCPVideoError(
-                f"Width {width} exceeds maximum resolution of {MAX_RESOLUTION}",
-                error_type="validation_error",
-                code="resolution_too_high",
-            )
+        return _validation_error(
+            f"Width {width} exceeds maximum resolution of {MAX_RESOLUTION}", code="resolution_too_high"
         )
     if width is not None and width <= 0:
-        return _error_result(
-            MCPVideoError(
-                f"Width must be positive, got {width}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
+        return _validation_error(f"Width must be positive, got {width}")
     if height is not None and height > MAX_RESOLUTION:
-        return _error_result(
-            MCPVideoError(
-                f"Height {height} exceeds maximum resolution of {MAX_RESOLUTION}",
-                error_type="validation_error",
-                code="resolution_too_high",
-            )
+        return _validation_error(
+            f"Height {height} exceeds maximum resolution of {MAX_RESOLUTION}", code="resolution_too_high"
         )
     if height is not None and height <= 0:
-        return _error_result(
-            MCPVideoError(
-                f"Height must be positive, got {height}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
+        return _validation_error(f"Height must be positive, got {height}")
+    input_path = _validate_input_path(input_path)
+    return _result(
+        resize(
+            input_path,
+            width=width,
+            height=height,
+            aspect_ratio=aspect_ratio,
+            quality=quality,
+            output_path=output_path,
         )
-    try:
-        input_path = _validate_input_path(input_path)
-        return _result(
-            resize(
-                input_path,
-                width=width,
-                height=height,
-                aspect_ratio=aspect_ratio,
-                quality=quality,
-                output_path=output_path,
-            )
-        )
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    )
 
 
 @mcp.tool()
+@_safe_tool
 def video_convert(
     input_path: str,
     format: str = "mp4",
@@ -370,30 +286,20 @@ def video_convert(
         output_path: Where to save the output. Auto-generated if omitted.
     """
     if format not in VALID_FORMATS:
-        return _error_result(
-            MCPVideoError(
-                f"Invalid format: {format}. Must be one of {sorted(VALID_FORMATS)}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
+        return _validation_error(f"Invalid format: {format}. Must be one of {sorted(VALID_FORMATS)}")
+    input_path = _validate_input_path(input_path)
+    return _result(
+        convert(
+            input_path,
+            format=format,
+            quality=quality,
+            output_path=output_path,
         )
-    try:
-        input_path = _validate_input_path(input_path)
-        return _result(
-            convert(
-                input_path,
-                format=format,
-                quality=quality,
-                output_path=output_path,
-            )
-        )
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    )
 
 
 @mcp.tool()
+@_safe_tool
 def video_speed(
     input_path: str,
     factor: float = 1.0,
@@ -407,23 +313,15 @@ def video_speed(
         output_path: Where to save the output. Auto-generated if omitted.
     """
     if not (MIN_SPEED_FACTOR <= factor <= MAX_SPEED_FACTOR):
-        return _error_result(
-            MCPVideoError(
-                f"Speed factor {factor} out of range [{MIN_SPEED_FACTOR}, {MAX_SPEED_FACTOR}]",
-                error_type="validation_error",
-                code="speed_out_of_range",
-            )
+        return _validation_error(
+            f"Speed factor {factor} out of range [{MIN_SPEED_FACTOR}, {MAX_SPEED_FACTOR}]", code="speed_out_of_range"
         )
-    try:
-        input_path = _validate_input_path(input_path)
-        return _result(speed(input_path, factor=factor, output_path=output_path))
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    input_path = _validate_input_path(input_path)
+    return _result(speed(input_path, factor=factor, output_path=output_path))
 
 
 @mcp.tool()
+@_safe_tool
 def search_tools(query: str) -> dict[str, Any]:
     """Search registered MCP tools by keyword.
 
@@ -434,28 +332,25 @@ def search_tools(query: str) -> dict[str, Any]:
     Args:
         query: Search term — e.g. "blur", "resize", "subtitle", "audio", "trim".
     """
-    try:
-        # Ensure all tool modules are loaded so the registry is complete.
-        # We import sibling modules (not the facade) to populate the registry.
-        from . import server_tools_advanced, server_tools_effects, server_tools_image, server_tools_media  # noqa: F401
+    # Ensure all tool modules are loaded so the registry is complete.
+    # We import sibling modules (not the facade) to populate the registry.
+    from . import server_tools_advanced, server_tools_effects, server_tools_image, server_tools_media  # noqa: F401
 
-        query_lower = query.lower()
-        matches: list[dict[str, Any]] = []
-        for name, tool in mcp._tool_manager._tools.items():
-            if name == "search_tools":
-                continue
-            desc = (tool.description or "").lower()
-            if query_lower in name.lower() or query_lower in desc:
-                # Extract required params from JSON schema
-                params = tool.parameters or {}
-                required = params.get("required", [])
-                matches.append(
-                    {
-                        "name": name,
-                        "description": (tool.description or "").split("\n")[0].strip(),
-                        "required_params": required,
-                    }
-                )
-        return {"success": True, "query": query, "count": len(matches), "tools": matches}
-    except Exception as e:
-        return _error_result(e)
+    query_lower = query.lower()
+    matches: list[dict[str, Any]] = []
+    for name, tool in mcp._tool_manager._tools.items():
+        if name == "search_tools":
+            continue
+        desc = (tool.description or "").lower()
+        if query_lower in name.lower() or query_lower in desc:
+            # Extract required params from JSON schema
+            params = tool.parameters or {}
+            required = params.get("required", [])
+            matches.append(
+                {
+                    "name": name,
+                    "description": (tool.description or "").split("\n")[0].strip(),
+                    "required_params": required,
+                }
+            )
+    return {"success": True, "query": query, "count": len(matches), "tools": matches}

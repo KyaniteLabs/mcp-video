@@ -2,14 +2,18 @@
 
 from __future__ import annotations
 
-from .engine_probe import probe
 from .engine_runtime_utils import (
-    _auto_output,
+    _build_edit_result,
     _movflags_args,
     _require_filter,
+    _timed_operation,
+)
+from .paths import (
+    _auto_output,
+)
+from .ffmpeg_helpers import (
     _run_ffmpeg,
     _sanitize_ffmpeg_number,
-    _timed_operation,
 )
 from .errors import MCPVideoError
 from .ffmpeg_helpers import _validate_input_path, _validate_output_path, _escape_ffmpeg_filter_value
@@ -65,13 +69,8 @@ def normalize_audio(
             ]
         )
 
-    info = probe(output)
-    return EditResult(
-        output_path=output,
-        duration=info.duration,
-        resolution=info.resolution,
-        size_mb=info.size_mb,
-        format="mp4",
-        operation="normalize_audio",
-        elapsed_ms=timing["elapsed_ms"],
+    return _build_edit_result(
+        output,
+        "normalize_audio",
+        timing,
     )

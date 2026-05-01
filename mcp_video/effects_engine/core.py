@@ -10,8 +10,8 @@ import math
 
 from ..errors import ProcessingError
 from ..defaults import DEFAULT_GLOW_MAX_SAFE_INTENSITY
-from ..engine_runtime_utils import _sanitize_ffmpeg_number
-from ..ffmpeg_helpers import _validate_input_path, _validate_output_path, _run_ffmpeg
+from ..ffmpeg_helpers import _sanitize_ffmpeg_number
+from ..ffmpeg_helpers import _validate_input_path, _validate_output_path, _run_command
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +74,7 @@ def effect_vignette(
         output,
     ]
 
-    _run_ffmpeg(cmd)
+    _run_command(cmd)
 
     return output
 
@@ -130,13 +130,13 @@ def effect_chromatic_aberration(
     ]
 
     try:
-        _run_ffmpeg(cmd)
+        _run_command(cmd)
     except ProcessingError as e:
         if "chromashift" not in e.full_stderr:
             raise
         filters = f"colorbalance=rs={intensity / 100}:bs=-{intensity / 100}"
         cmd[5] = filters
-        _run_ffmpeg(cmd)
+        _run_command(cmd)
 
     return output
 
@@ -195,7 +195,7 @@ def effect_scanlines(
         output,
     ]
 
-    _run_ffmpeg(cmd)
+    _run_command(cmd)
 
     return output
 
@@ -253,7 +253,7 @@ def effect_noise(
         output,
     ]
 
-    _run_ffmpeg(cmd)
+    _run_command(cmd)
 
     return output
 
@@ -316,7 +316,7 @@ def effect_glow(
     ]
 
     try:
-        _run_ffmpeg(cmd)
+        _run_command(cmd)
     except ProcessingError as e:
         if "gblur" not in e.full_stderr:
             raise
@@ -327,7 +327,7 @@ def effect_glow(
             f"[original][glow]blend=all_mode='screen':all_opacity={safe_intensity}"
         )
         cmd[5] = filters
-        _run_ffmpeg(cmd)
+        _run_command(cmd)
 
     return output
 

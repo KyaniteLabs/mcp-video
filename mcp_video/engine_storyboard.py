@@ -7,7 +7,8 @@ import shutil
 
 from .ffmpeg_helpers import _validate_input_path
 from .engine_probe import get_duration
-from .engine_runtime_utils import _auto_output_dir, _run_ffmpeg
+from .paths import _auto_output_dir
+from .ffmpeg_helpers import _run_ffmpeg
 from .errors import MCPVideoError, ProcessingError
 from .models import StoryboardResult
 

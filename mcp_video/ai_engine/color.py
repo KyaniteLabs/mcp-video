@@ -14,7 +14,7 @@ import subprocess
 from pathlib import Path
 
 from ..errors import InputFileError, ProcessingError
-from ..ffmpeg_helpers import _validate_output_path
+from ..ffmpeg_helpers import _validate_input_path, _validate_output_path
 from ..limits import DEFAULT_FFMPEG_TIMEOUT
 
 logger = logging.getLogger(__name__)
@@ -41,8 +41,7 @@ def ai_color_grade(
         FileNotFoundError: If video file doesn't exist
         RuntimeError: If FFmpeg processing fails
     """
-    if "\x00" in video:
-        raise InputFileError(video, "Invalid path: contains null bytes")
+    _validate_input_path(video)
 
     # Validate input file
     video_path = Path(video)
@@ -64,8 +63,6 @@ def ai_color_grade(
 
     # If reference provided, analyze and adjust to match
     if reference:
-        from ..ffmpeg_helpers import _validate_input_path
-
         _validate_input_path(reference)
         params = _match_reference_colors(video, reference)
 

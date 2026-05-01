@@ -146,7 +146,7 @@ def test_server_tool_modules_register_against_server_app_not_facade() -> None:
 def test_shared_ffmpeg_helpers_remain_canonical_for_core_utilities() -> None:
     """Prevent new copies of the canonical FFmpeg helper utilities."""
     allowed_definitions = {
-        "_run_ffmpeg": {"mcp_video/ffmpeg_helpers.py", "mcp_video/engine_runtime_utils.py"},
+        "_run_ffmpeg": {"mcp_video/ffmpeg_helpers.py"},
         "_get_video_duration": {"mcp_video/ffmpeg_helpers.py"},
         "_seconds_to_srt_time": {"mcp_video/ffmpeg_helpers.py"},
     }

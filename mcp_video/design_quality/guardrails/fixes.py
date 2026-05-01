@@ -98,4 +98,3 @@ class FixesMixin:
         return output_path
 
     # ============== UTILITY METHODS ==============
-

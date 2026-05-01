@@ -29,8 +29,7 @@ class ChecksMixin:
                     category="layout",
                     severity="warning",
                     message=(
-                        f"Non-standard aspect ratio ({aspect:.2f}). "
-                        f"Consider {closest:.2f} for better compatibility."
+                        f"Non-standard aspect ratio ({aspect:.2f}). Consider {closest:.2f} for better compatibility."
                     ),
                     fix_available=False,
                 )
@@ -66,8 +65,7 @@ class ChecksMixin:
                     category="typography",
                     severity="warning",
                     message=(
-                        "Very dark video may affect text readability. "
-                        "Consider brighter backgrounds for text overlays."
+                        "Very dark video may affect text readability. Consider brighter backgrounds for text overlays."
                     ),
                     fix_available=True,
                     auto_fix=lambda v: self._auto_fix_brightness(v, target=40),
@@ -396,4 +394,3 @@ class ChecksMixin:
             )
 
     # ============== SCORE CALCULATIONS ==============
-

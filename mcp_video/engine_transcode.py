@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from .defaults import DEFAULT_AUDIO_BITRATE, DEFAULT_CRF, DEFAULT_PRESET
 from .ffmpeg_helpers import _validate_input_path, _validate_output_path
-from .engine_runtime_utils import _auto_output, _movflags_args, _run_ffmpeg
+from .engine_runtime_utils import _movflags_args
+from .paths import _auto_output
+from .ffmpeg_helpers import _run_ffmpeg
 
 # ---------------------------------------------------------------------------
 # Normalize — convert to H.264/AAC for editing
