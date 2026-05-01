@@ -312,6 +312,13 @@ class TestBoundaryValues:
         with pytest.raises((InputFileError, ProcessingError, ValueError)):
             thumbnail(sample_video, timestamp=beyond_duration)
 
+    def test_thumbnail_at_exact_duration(self, sample_video):
+        """Thumbnail at EOF should be pre-validated before FFmpeg."""
+        info = probe(sample_video)
+
+        with pytest.raises((InputFileError, ProcessingError, ValueError)):
+            thumbnail(sample_video, timestamp=info.duration)
+
     def test_trim_zero_duration(self, sample_video):
         """Trimming with zero duration should raise an error or succeed with a tiny file."""
         try:
