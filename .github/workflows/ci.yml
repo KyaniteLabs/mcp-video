@@ -50,7 +50,7 @@ jobs:
     runs-on: [self-hosted, macOS, ARM64]
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - name: Run repository readiness audit
@@ -61,7 +61,7 @@ jobs:
     runs-on: [self-hosted, macOS, ARM64]
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - name: Install ruff
@@ -76,7 +76,7 @@ jobs:
     runs-on: [self-hosted, macOS, ARM64]
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - name: Install build tools
@@ -96,14 +96,17 @@ jobs:
         run: echo "Code inputs unchanged; marking Python 3.12 test check successful."
       - uses: actions/checkout@v6
         if: github.event_name != 'pull_request' || needs.changes.outputs.code == 'true'
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v5
         if: github.event_name != 'pull_request' || needs.changes.outputs.code == 'true'
         with:
           python-version: "3.12"
           cache: pip
-      - name: Install FFmpeg
+      - name: Ensure FFmpeg
         if: github.event_name != 'pull_request' || needs.changes.outputs.code == 'true'
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+        run: |
+          if ! command -v ffmpeg &>/dev/null; then
+            brew install ffmpeg || (echo "FFmpeg not available; skipping" && exit 0)
+          fi
       - name: Install dependencies
         if: github.event_name != 'pull_request' || needs.changes.outputs.code == 'true'
         run: pip install -e ".[dev]"
@@ -125,14 +128,17 @@ jobs:
         run: echo "Code inputs unchanged; marking Python ${{ matrix.python-version }} compatibility check successful."
       - uses: actions/checkout@v6
         if: github.event_name != 'pull_request' || needs.changes.outputs.code == 'true'
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v5
         if: github.event_name != 'pull_request' || needs.changes.outputs.code == 'true'
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
-      - name: Install FFmpeg
+      - name: Ensure FFmpeg
         if: github.event_name != 'pull_request' || needs.changes.outputs.code == 'true'
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+        run: |
+          if ! command -v ffmpeg &>/dev/null; then
+            brew install ffmpeg || (echo "FFmpeg not available; skipping" && exit 0)
+          fi
       - name: Install dependencies
         if: github.event_name != 'pull_request' || needs.changes.outputs.code == 'true'
         run: pip install -e ".[dev]"
