@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from .engine_edit import _time_to_seconds
-from .errors import MCPVideoError
+from .errors import MCPVideoError, ValidationError
 from .ffmpeg_helpers import _validate_input_path, _validate_output_path
 from .engine_probe import get_duration
 from .paths import _auto_output
@@ -27,13 +27,19 @@ def thumbnail(
         # Clamp to valid range
         dur = get_duration(input_path)
         try:
-            timestamp = min(_time_to_seconds(timestamp), dur * 0.99)
+            requested_timestamp = _time_to_seconds(timestamp)
         except ValueError as exc:
             raise MCPVideoError(
                 f"Invalid timestamp: '{timestamp}'. Expected seconds or HH:MM:SS format.",
                 error_type="validation_error",
                 code="invalid_parameter",
             ) from exc
+        if dur > 0 and requested_timestamp >= dur:
+            raise ValidationError(
+                "timestamp",
+                f"{requested_timestamp:.3f}s exceeds video duration {dur:.3f}s",
+            )
+        timestamp = requested_timestamp
 
     output = output_path or _auto_output(input_path, f"frame_{timestamp:.1f}s", ext=".jpg")
     _validate_output_path(output)
