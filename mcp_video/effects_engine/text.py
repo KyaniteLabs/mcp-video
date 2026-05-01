@@ -10,15 +10,16 @@ import os
 import tempfile
 import textwrap
 from pathlib import Path
+from collections.abc import Callable
 from typing import Any
 
 from ..defaults import DEFAULT_SAFE_SUBTITLE_FONT_SIZE, DEFAULT_SUBTITLE_MAX_CHARS_PER_LINE, DEFAULT_SUBTITLE_MAX_LINES
 from ..errors import InputFileError
-from ..engine_runtime_utils import _sanitize_ffmpeg_number
+from ..ffmpeg_helpers import _sanitize_ffmpeg_number
 from ..ffmpeg_helpers import (
     _validate_input_path,
     _validate_output_path,
-    _run_ffmpeg,
+    _run_command,
     _escape_ffmpeg_filter_value,
     _run_ffprobe_json,
 )
@@ -278,6 +279,129 @@ def _build_typewriter_filter(
     return filter_complex, cmd_path
 
 
+def _build_fade_filter(
+    text: str,
+    font: str,
+    size: int,
+    color: str,
+    position: str,
+    start: float,
+    duration: float,
+    video: str,
+    **_kw: Any,
+) -> tuple[str, str]:
+    """Build fade-in / fade-out drawtext filter."""
+    safe_text = _escape_ffmpeg_filter_value(text)
+    safe_font = _escape_ffmpeg_filter_value(font) if font is not None else font
+    safe_color = _escape_ffmpeg_filter_value(color) if color is not None else color
+    pos_map = {
+        "center": "(w-text_w)/2:(h-text_h)/2",
+        "top": "(w-text_w)/2:20",
+        "bottom": "(w-text_w)/2:h-text_h-20",
+        "top-left": "20:20",
+        "top-right": "w-text_w-20:20",
+        "bottom-left": "20:h-text_h-20",
+        "bottom-right": "w-text_w-20:h-text_h-20",
+    }
+    pos = pos_map.get(position, pos_map["center"])
+    fade_start = start
+    fade_end = start + 0.5
+    fade_out_start = start + duration - 0.5
+    fade_out_end = start + duration
+    alpha_expr = (
+        f"if(lt(t,{fade_start}),0,"
+        f"if(lt(t,{fade_end}),(t-{fade_start})/0.5,"
+        f"if(lt(t,{fade_out_start}),1,"
+        f"if(lt(t,{fade_out_end}),({fade_out_end}-t)/0.5,0))))"
+    )
+    filter_complex = (
+        f"drawtext=text='{safe_text}':font={safe_font}:fontsize={size}:fontcolor={safe_color}:"
+        f"x={pos.split(':')[0]}:y={pos.split(':')[1]}:"
+        f"enable='between(t\\,{start}\\,{start + duration})':"
+        f"alpha='{alpha_expr}'"
+    )
+    return filter_complex, ""
+
+
+def _build_slide_up_filter(
+    text: str,
+    font: str,
+    size: int,
+    color: str,
+    position: str,
+    start: float,
+    duration: float,
+    video: str,
+    **_kw: Any,
+) -> tuple[str, str]:
+    """Build slide-up drawtext filter."""
+    safe_text = _escape_ffmpeg_filter_value(text)
+    safe_font = _escape_ffmpeg_filter_value(font) if font is not None else font
+    safe_color = _escape_ffmpeg_filter_value(color) if color is not None else color
+    pos_map = {
+        "center": "(w-text_w)/2:(h-text_h)/2",
+        "top": "(w-text_w)/2:20",
+        "bottom": "(w-text_w)/2:h-text_h-20",
+        "top-left": "20:20",
+        "top-right": "w-text_w-20:20",
+        "bottom-left": "20:h-text_h-20",
+        "bottom-right": "w-text_w-20:h-text_h-20",
+    }
+    pos = pos_map.get(position, pos_map["center"])
+    y_offset = f"+50*(1-min(1,(t-{start})/0.3))"
+    pos = pos.replace("(h-text_h)/2", f"(h-text_h)/2{y_offset}")
+    filter_complex = (
+        f"drawtext=text='{safe_text}':font={safe_font}:fontsize={size}:fontcolor={safe_color}:"
+        f"x={pos.split(':')[0]}:y={pos.split(':')[1]}:"
+        f"enable='between(t\\,{start}\\,{start + duration})':"
+        f"alpha='1'"
+    )
+    return filter_complex, ""
+
+
+def _build_glitch_filter(
+    text: str,
+    font: str,
+    size: int,
+    color: str,
+    position: str,
+    start: float,
+    duration: float,
+    video: str,
+    **_kw: Any,
+) -> tuple[str, str]:
+    """Build glitch-style drawtext filter."""
+    safe_text = _escape_ffmpeg_filter_value(text)
+    safe_font = _escape_ffmpeg_filter_value(font) if font is not None else font
+    safe_color = _escape_ffmpeg_filter_value(color) if color is not None else color
+    pos_map = {
+        "center": "(w-text_w)/2:(h-text_h)/2",
+        "top": "(w-text_w)/2:20",
+        "bottom": "(w-text_w)/2:h-text_h-20",
+        "top-left": "20:20",
+        "top-right": "w-text_w-20:20",
+        "bottom-left": "20:h-text_h-20",
+        "bottom-right": "w-text_w-20:h-text_h-20",
+    }
+    pos = pos_map.get(position, pos_map["center"])
+    alpha_expr = "if(random(0)*lt(mod(t,0.2),0.1),0.8,1)"
+    filter_complex = (
+        f"drawtext=text='{safe_text}':font={safe_font}:fontsize={size}:fontcolor={safe_color}:"
+        f"x={pos.split(':')[0]}:y={pos.split(':')[1]}:"
+        f"enable='between(t\\,{start}\\,{start + duration})':"
+        f"alpha='{alpha_expr}'"
+    )
+    return filter_complex, ""
+
+
+_ANIMATION_STRATEGIES: dict[str, Callable[..., tuple[str, str]]] = {
+    "fade": _build_fade_filter,
+    "slide-up": _build_slide_up_filter,
+    "glitch": _build_glitch_filter,
+    "typewriter": _build_typewriter_filter,
+}
+
+
 def text_animated(
     video: str,
     text: str,
@@ -312,54 +436,18 @@ def text_animated(
     video = _validate_input_path(video)
     _validate_output_path(output)
 
-    safe_text = _escape_ffmpeg_filter_value(text)
-    safe_font = _escape_ffmpeg_filter_value(font) if font is not None else font
-    safe_color = _escape_ffmpeg_filter_value(color) if color is not None else color
-
-    cmd_path = ""
-    if animation == "typewriter":
-        filter_complex, cmd_path = _build_typewriter_filter(
-            text, font, size, color, position, start, duration, typewriter_speed, video
-        )
-    else:
-        pos_map = {
-            "center": "(w-text_w)/2:(h-text_h)/2",
-            "top": "(w-text_w)/2:20",
-            "bottom": "(w-text_w)/2:h-text_h-20",
-            "top-left": "20:20",
-            "top-right": "w-text_w-20:20",
-            "bottom-left": "20:h-text_h-20",
-            "bottom-right": "w-text_w-20:h-text_h-20",
-        }
-        pos = pos_map.get(position, pos_map["center"])
-
-        fade_start = start
-        fade_end = start + 0.5
-        fade_out_start = start + duration - 0.5
-        fade_out_end = start + duration
-
-        if animation == "fade":
-            alpha_expr = (
-                f"if(lt(t,{fade_start}),0,"
-                f"if(lt(t,{fade_end}),(t-{fade_start})/0.5,"
-                f"if(lt(t,{fade_out_start}),1,"
-                f"if(lt(t,{fade_out_end}),({fade_out_end}-t)/0.5,0))))"
-            )
-        elif animation == "slide-up":
-            y_offset = f"+50*(1-min(1,(t-{start})/0.3))"
-            pos = pos.replace("(h-text_h)/2", f"(h-text_h)/2{y_offset}")
-            alpha_expr = "1"
-        elif animation == "glitch":
-            alpha_expr = "if(random(0)*lt(mod(t,0.2),0.1),0.8,1)"
-        else:
-            alpha_expr = "1"
-
-        filter_complex = (
-            f"drawtext=text='{safe_text}':font={safe_font}:fontsize={size}:fontcolor={safe_color}:"
-            f"x={pos.split(':')[0]}:y={pos.split(':')[1]}:"
-            f"enable='between(t\\,{start}\\,{start + duration})':"
-            f"alpha='{alpha_expr}'"
-        )
+    strategy = _ANIMATION_STRATEGIES.get(animation, _build_fade_filter)
+    filter_complex, cmd_path = strategy(
+        text=text,
+        font=font,
+        size=size,
+        color=color,
+        position=position,
+        start=start,
+        duration=duration,
+        video=video,
+        typewriter_speed=typewriter_speed,
+    )
 
     cmd = [
         "ffmpeg",
@@ -380,7 +468,7 @@ def text_animated(
     ]
 
     try:
-        _run_ffmpeg(cmd)
+        _run_command(cmd)
     finally:
         if cmd_path:
             Path(cmd_path).unlink(missing_ok=True)
@@ -453,7 +541,7 @@ def text_subtitles(
     ]
 
     try:
-        _run_ffmpeg(cmd)
+        _run_command(cmd)
     finally:
         if prepared_subtitles != subtitles:
             Path(prepared_subtitles).unlink(missing_ok=True)

@@ -15,7 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Check forbidden tracked artifacts
-        run: python3 .github/scripts/check-forbidden-artifacts.py
+        run: python3.13 .github/scripts/check-forbidden-artifacts.py
 
   build:
     name: Build package
@@ -25,17 +25,16 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0  # Needed for hatch-vcs if ever adopted
-      - uses: actions/setup-python@v6
-        with:
-          python-version: "3.12"
+      - name: Create venv
+        run: python3.13 -m venv .venv
       - name: Install build dependencies
-        run: pip install build twine
+        run: .venv/bin/pip install build twine
       - name: Build package
-        run: python -m build
+        run: .venv/bin/python -m build
       - name: Check built artifact contents
-        run: python3 .github/scripts/check-built-artifacts.py dist
+        run: .venv/bin/python .github/scripts/check-built-artifacts.py dist
       - name: Validate distribution metadata
-        run: python -m twine check dist/*
+        run: .venv/bin/python -m twine check dist/*
       - name: Upload build artifacts
         uses: actions/upload-artifact@v7
         with:

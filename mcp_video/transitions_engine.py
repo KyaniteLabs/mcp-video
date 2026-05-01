@@ -1,6 +1,6 @@
 """Video transition effects using FFmpeg."""
 
-from .ffmpeg_helpers import _validate_input_path, _run_ffmpeg, _get_video_duration, _escape_ffmpeg_filter_value
+from .ffmpeg_helpers import _validate_input_path, _run_command, _get_video_duration, _escape_ffmpeg_filter_value
 from .errors import MCPVideoError
 
 
@@ -76,7 +76,7 @@ def transition_glitch(
         output,
     ]
 
-    _run_ffmpeg(cmd)
+    _run_command(cmd)
 
     return output
 
@@ -169,7 +169,7 @@ def transition_pixelate(
         output,
     ]
 
-    _run_ffmpeg(cmd)
+    _run_command(cmd)
 
     return output
 
@@ -238,6 +238,6 @@ def transition_morph(
         output,
     ]
 
-    _run_ffmpeg(cmd)
+    _run_command(cmd)
 
     return output

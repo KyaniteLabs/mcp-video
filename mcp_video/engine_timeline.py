@@ -13,13 +13,21 @@ from .engine_merge import merge
 from .engine_probe import probe
 from .engine_resize import resize
 from .engine_runtime_utils import (
-    _auto_output,
     _default_font,
     _movflags_args,
-    _position_coords,
     _quality_args,
+)
+from .paths import (
+    _auto_output,
+)
+from .models import (
+    _position_coords,
+)
+from .ffmpeg_helpers import (
     _run_ffmpeg,
     _sanitize_ffmpeg_number,
+)
+from .validation import (
     _validate_color,
 )
 from .errors import MCPVideoError

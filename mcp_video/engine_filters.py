@@ -7,13 +7,18 @@ from typing import Any
 from .defaults import DEFAULT_AUDIO_BITRATE
 from .engine_probe import probe
 from .engine_runtime_utils import (
-    _auto_output,
+    _build_edit_result,
     _movflags_args,
     _quality_args,
     _require_filter,
+    _timed_operation,
+)
+from .paths import (
+    _auto_output,
+)
+from .ffmpeg_helpers import (
     _run_ffmpeg,
     _sanitize_ffmpeg_number,
-    _timed_operation,
 )
 from .errors import MCPVideoError
 from .ffmpeg_helpers import _escape_ffmpeg_filter_value, _validate_input_path, _validate_output_path
@@ -94,15 +99,10 @@ def apply_filter(
         else:
             _run_video_filter(input_path, filter_string, output, crf, preset)
 
-    result_info = probe(output)
-    return EditResult(
-        output_path=output,
-        duration=result_info.duration,
-        resolution=result_info.resolution,
-        size_mb=result_info.size_mb,
-        format="mp4",
-        operation=f"filter_{filter_type}",
-        elapsed_ms=timing["elapsed_ms"],
+    return _build_edit_result(
+        output,
+        f"filter_{filter_type}",
+        timing,
     )
 
 

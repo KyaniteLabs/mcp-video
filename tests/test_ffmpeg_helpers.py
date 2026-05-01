@@ -18,11 +18,11 @@ def test_run_ffprobe_json_uses_named_timeout(monkeypatch):
     class Result:
         stdout = '{"format": {}, "streams": []}'
 
-    def fake_run_ffmpeg(cmd, timeout=0):
+    def fake_run_command(cmd, timeout=0):
         captured["timeout"] = timeout
         return Result()
 
-    monkeypatch.setattr(ffmpeg_helpers, "_run_ffmpeg", fake_run_ffmpeg)
+    monkeypatch.setattr(ffmpeg_helpers, "_run_command", fake_run_command)
 
     assert ffmpeg_helpers._run_ffprobe_json("/tmp/video.mp4") == {"format": {}, "streams": []}
     assert captured["timeout"] == FFPROBE_TIMEOUT

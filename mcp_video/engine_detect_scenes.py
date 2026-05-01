@@ -6,7 +6,8 @@ import re
 import subprocess
 
 from .engine_probe import probe
-from .engine_runtime_utils import _ffmpeg, _sanitize_ffmpeg_number
+from .engine_runtime_utils import _ffmpeg
+from .ffmpeg_helpers import _sanitize_ffmpeg_number
 from .errors import MCPVideoError, ProcessingError, parse_ffmpeg_error
 from .ffmpeg_helpers import _validate_input_path, _escape_ffmpeg_filter_value
 from .limits import DEFAULT_FFMPEG_TIMEOUT

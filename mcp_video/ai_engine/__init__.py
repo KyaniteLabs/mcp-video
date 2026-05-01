@@ -266,18 +266,22 @@ def analyze_video(
             fallback={"path": str(video_path.resolve())},
         )
 
-        transcript_result = _run_analysis(
-            "transcript",
-            _build_transcript_result,
-            errors,
-            video_path,
-            output_srt=output_srt,
-            output_txt=output_txt,
-            output_md=output_md,
-            output_json=output_json,
-            whisper_model=whisper_model,
-            language=language,
-        ) if include_transcript else None
+        transcript_result = (
+            _run_analysis(
+                "transcript",
+                _build_transcript_result,
+                errors,
+                video_path,
+                output_srt=output_srt,
+                output_txt=output_txt,
+                output_md=output_md,
+                output_json=output_json,
+                whisper_model=whisper_model,
+                language=language,
+            )
+            if include_transcript
+            else None
+        )
 
         def _scenes():
             return _engine.detect_scenes(str(video_path), threshold=scene_threshold).scenes
@@ -296,8 +300,13 @@ def analyze_video(
         results = {name: (_run_analysis(name, fn, errors) if flag else None) for name, flag, fn in analyses}
 
         return {
-            "success": True, "video": str(video_path.resolve()), "source_url": source_url,
-            "metadata": metadata, "transcript": transcript_result, **results, "errors": errors,
+            "success": True,
+            "video": str(video_path.resolve()),
+            "source_url": source_url,
+            "metadata": metadata,
+            "transcript": transcript_result,
+            **results,
+            "errors": errors,
         }
 
     finally:

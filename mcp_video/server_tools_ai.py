@@ -7,7 +7,7 @@ from typing import Any
 
 from .defaults import DEFAULT_QUALITY_GATE_SCORE
 from .errors import MCPVideoError
-from .server_app import _error_result, _result, mcp
+from .server_app import _error_result, _result, _safe_tool, _validation_error, mcp
 from .ffmpeg_helpers import _validate_input_path
 from .validation import (
     VALID_COLOR_GRADE_STYLES,
@@ -22,6 +22,7 @@ from .validation import (
 
 
 @mcp.tool()
+@_safe_tool
 def video_ai_remove_silence(
     input_path: str,
     output_path: str,
@@ -31,41 +32,19 @@ def video_ai_remove_silence(
 ) -> dict[str, Any]:
     """Remove silent sections from video."""
     if not -70 <= silence_threshold <= 0:
-        return _error_result(
-            MCPVideoError(
-                f"silence_threshold must be between -70 and 0, got {silence_threshold}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
+        return _validation_error(f"silence_threshold must be between -70 and 0, got {silence_threshold}")
     if min_silence_duration <= 0:
-        return _error_result(
-            MCPVideoError(
-                f"min_silence_duration must be positive, got {min_silence_duration}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
+        return _validation_error(f"min_silence_duration must be positive, got {min_silence_duration}")
     if keep_margin < 0:
-        return _error_result(
-            MCPVideoError(
-                f"keep_margin must be non-negative, got {keep_margin}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
-    try:
-        input_path = _validate_input_path(input_path)
-        from .ai_engine import ai_remove_silence
+        return _validation_error(f"keep_margin must be non-negative, got {keep_margin}")
+    input_path = _validate_input_path(input_path)
+    from .ai_engine import ai_remove_silence
 
-        return _result(ai_remove_silence(input_path, output_path, silence_threshold, min_silence_duration, keep_margin))
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    return _result(ai_remove_silence(input_path, output_path, silence_threshold, min_silence_duration, keep_margin))
 
 
 @mcp.tool()
+@_safe_tool
 def video_ai_transcribe(
     input_path: str,
     output_srt: str | None = None,
@@ -74,25 +53,15 @@ def video_ai_transcribe(
 ) -> dict[str, Any]:
     """Transcribe speech to text using Whisper."""
     if model not in VALID_WHISPER_MODELS:
-        return _error_result(
-            MCPVideoError(
-                f"Invalid model: must be one of {sorted(VALID_WHISPER_MODELS)}, got '{model}'",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
-    try:
-        input_path = _validate_input_path(input_path)
-        from .ai_engine import ai_transcribe
+        return _validation_error(f"Invalid model: must be one of {sorted(VALID_WHISPER_MODELS)}, got '{model}'")
+    input_path = _validate_input_path(input_path)
+    from .ai_engine import ai_transcribe
 
-        return _result(ai_transcribe(input_path, output_srt, model, language))
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    return _result(ai_transcribe(input_path, output_srt, model, language))
 
 
 @mcp.tool()
+@_safe_tool
 def video_analyze(
     input_path: str,
     whisper_model: str = "base",
@@ -134,51 +103,35 @@ def video_analyze(
         output_json: Optional path to write full JSON transcript data.
     """
     if whisper_model not in VALID_WHISPER_MODELS:
-        return _error_result(
-            MCPVideoError(
-                f"Invalid model: must be one of {sorted(VALID_WHISPER_MODELS)}, got '{whisper_model}'",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
+        return _validation_error(f"Invalid model: must be one of {sorted(VALID_WHISPER_MODELS)}, got '{whisper_model}'")
     if not 0.0 <= scene_threshold <= 1.0:
-        return _error_result(
-            MCPVideoError(
-                f"scene_threshold must be between 0.0 and 1.0, got {scene_threshold}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
-    try:
-        from .ai_engine.download import _is_url
+        return _validation_error(f"scene_threshold must be between 0.0 and 1.0, got {scene_threshold}")
+    from .ai_engine.download import _is_url
 
-        if not _is_url(input_path):
-            input_path = _validate_input_path(input_path)
-        from .ai_engine import analyze_video
+    if not _is_url(input_path):
+        input_path = _validate_input_path(input_path)
+    from .ai_engine import analyze_video
 
-        return analyze_video(
-            input_path,
-            whisper_model=whisper_model,
-            language=language,
-            scene_threshold=scene_threshold,
-            include_transcript=include_transcript,
-            include_scenes=include_scenes,
-            include_audio=include_audio,
-            include_quality=include_quality,
-            include_chapters=include_chapters,
-            include_colors=include_colors,
-            output_srt=output_srt,
-            output_txt=output_txt,
-            output_md=output_md,
-            output_json=output_json,
-        )
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    return analyze_video(
+        input_path,
+        whisper_model=whisper_model,
+        language=language,
+        scene_threshold=scene_threshold,
+        include_transcript=include_transcript,
+        include_scenes=include_scenes,
+        include_audio=include_audio,
+        include_quality=include_quality,
+        include_chapters=include_chapters,
+        include_colors=include_colors,
+        output_srt=output_srt,
+        output_txt=output_txt,
+        output_md=output_md,
+        output_json=output_json,
+    )
 
 
 @mcp.tool()
+@_safe_tool
 def video_ai_scene_detect(
     input_path: str,
     threshold: float = 0.3,
@@ -186,25 +139,15 @@ def video_ai_scene_detect(
 ) -> dict[str, Any]:
     """Detect scene changes in video."""
     if not 0.0 <= threshold <= 1.0:
-        return _error_result(
-            MCPVideoError(
-                f"threshold must be between 0.0 and 1.0, got {threshold}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
-    try:
-        input_path = _validate_input_path(input_path)
-        from .ai_engine import ai_scene_detect
+        return _validation_error(f"threshold must be between 0.0 and 1.0, got {threshold}")
+    input_path = _validate_input_path(input_path)
+    from .ai_engine import ai_scene_detect
 
-        return _result(ai_scene_detect(input_path, threshold, use_ai))
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    return _result(ai_scene_detect(input_path, threshold, use_ai))
 
 
 @mcp.tool()
+@_safe_tool
 def video_ai_stem_separation(
     input_path: str,
     output_dir: str,
@@ -213,33 +156,17 @@ def video_ai_stem_separation(
 ) -> dict[str, Any]:
     """Separate audio into stems using Demucs."""
     if model not in VALID_DEMUCS_MODELS:
-        return _error_result(
-            MCPVideoError(
-                f"Invalid model: must be one of {sorted(VALID_DEMUCS_MODELS)}, got '{model}'",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
+        return _validation_error(f"Invalid model: must be one of {sorted(VALID_DEMUCS_MODELS)}, got '{model}'")
     if stems is not None and not isinstance(stems, list):
-        return _error_result(
-            MCPVideoError(
-                f"stems must be a list, got {type(stems).__name__}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
-    try:
-        input_path = _validate_input_path(input_path)
-        from .ai_engine import ai_stem_separation
+        return _validation_error(f"stems must be a list, got {type(stems).__name__}")
+    input_path = _validate_input_path(input_path)
+    from .ai_engine import ai_stem_separation
 
-        return _result(ai_stem_separation(input_path, output_dir, stems, model))
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    return _result(ai_stem_separation(input_path, output_dir, stems, model))
 
 
 @mcp.tool()
+@_safe_tool
 def video_ai_upscale(
     input_path: str,
     output_path: str,
@@ -248,33 +175,17 @@ def video_ai_upscale(
 ) -> dict[str, Any]:
     """Upscale video using AI super-resolution."""
     if scale not in {2, 4}:
-        return _error_result(
-            MCPVideoError(
-                f"scale must be 2 or 4, got {scale}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
+        return _validation_error(f"scale must be 2 or 4, got {scale}")
     if model not in VALID_UPSCALE_MODELS:
-        return _error_result(
-            MCPVideoError(
-                f"Invalid model: must be one of {sorted(VALID_UPSCALE_MODELS)}, got '{model}'",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
-    try:
-        input_path = _validate_input_path(input_path)
-        from .ai_engine import ai_upscale
+        return _validation_error(f"Invalid model: must be one of {sorted(VALID_UPSCALE_MODELS)}, got '{model}'")
+    input_path = _validate_input_path(input_path)
+    from .ai_engine import ai_upscale
 
-        return _result(ai_upscale(input_path, output_path, scale, model))
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    return _result(ai_upscale(input_path, output_path, scale, model))
 
 
 @mcp.tool()
+@_safe_tool
 def video_ai_color_grade(
     input_path: str,
     output_path: str,
@@ -283,27 +194,17 @@ def video_ai_color_grade(
 ) -> dict[str, Any]:
     """Auto color grade video."""
     if style not in VALID_COLOR_GRADE_STYLES:
-        return _error_result(
-            MCPVideoError(
-                f"Invalid style: must be one of {sorted(VALID_COLOR_GRADE_STYLES)}, got '{style}'",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
-    try:
-        input_path = _validate_input_path(input_path)
-        if reference_path is not None:
-            reference_path = _validate_input_path(reference_path)
-        from .ai_engine import ai_color_grade
+        return _validation_error(f"Invalid style: must be one of {sorted(VALID_COLOR_GRADE_STYLES)}, got '{style}'")
+    input_path = _validate_input_path(input_path)
+    if reference_path is not None:
+        reference_path = _validate_input_path(reference_path)
+    from .ai_engine import ai_color_grade
 
-        return _result(ai_color_grade(input_path, output_path, reference_path, style))
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    return _result(ai_color_grade(input_path, output_path, reference_path, style))
 
 
 @mcp.tool()
+@_safe_tool
 def video_quality_check(
     input_path: str,
     fail_on_warning: bool = False,
@@ -317,34 +218,29 @@ def video_quality_check(
         input_path: Absolute path to video file
         fail_on_warning: If True, treat warnings as failures
     """
-    try:
-        input_path = _validate_input_path(input_path)
-        from .quality_guardrails import quality_check
+    input_path = _validate_input_path(input_path)
+    from .quality_guardrails import quality_check
 
-        report = quality_check(input_path, fail_on_warning)
-        if fail_on_warning and not report.get("all_passed", False):
-            return _error_result(
-                MCPVideoError(
-                    f"Quality gate failed: score {report.get('overall_score')} below release threshold",
-                    error_type="quality_error",
-                    code="quality_gate_failed",
-                    suggested_action={
-                        "auto_fix": False,
-                        "description": (
-                            "Inspect storyboard/thumbnail, fix visual/audio issues, "
-                            "then rerun quality checks."
-                        ),
-                    },
-                )
+    report = quality_check(input_path, fail_on_warning)
+    if fail_on_warning and not report.get("all_passed", False):
+        return _error_result(
+            MCPVideoError(
+                f"Quality gate failed: score {report.get('overall_score')} below release threshold",
+                error_type="quality_error",
+                code="quality_gate_failed",
+                suggested_action={
+                    "auto_fix": False,
+                    "description": (
+                        "Inspect storyboard/thumbnail, fix visual/audio issues, then rerun quality checks."
+                    ),
+                },
             )
-        return _result(report)
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+        )
+    return _result(report)
 
 
 @mcp.tool()
+@_safe_tool
 def video_release_checkpoint(
     input_path: str,
     output_dir: str | None = None,
@@ -357,49 +253,33 @@ def video_release_checkpoint(
     quality gate, then writes a thumbnail and storyboard for human inspection.
     """
     if min_score < 0 or min_score > 100:
-        return _error_result(
-            MCPVideoError(
-                f"min_score must be 0-100, got {min_score}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
+        return _validation_error(f"min_score must be 0-100, got {min_score}")
     if frame_count < 1:
-        return _error_result(
-            MCPVideoError(
-                f"frame_count must be at least 1, got {frame_count}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
-    try:
-        input_path = _validate_input_path(input_path)
-        from .quality_guardrails import assert_quality
-        from .engine_thumbnail import thumbnail
-        from .engine_storyboard import storyboard
+        return _validation_error(f"frame_count must be at least 1, got {frame_count}")
+    input_path = _validate_input_path(input_path)
+    from .quality_guardrails import assert_quality
+    from .engine_thumbnail import thumbnail
+    from .engine_storyboard import storyboard
 
-        report = assert_quality(input_path, min_score=min_score)
-        review_dir = output_dir or f"{os.path.splitext(input_path)[0]}_release_review"
-        os.makedirs(review_dir, exist_ok=True)
-        thumb = thumbnail(input_path, output_path=os.path.join(review_dir, "thumbnail.jpg"))
-        board = storyboard(input_path, output_dir=os.path.join(review_dir, "storyboard"), frame_count=frame_count)
-        return _result(
-            {
-                "video": input_path,
-                "quality": report,
-                "thumbnail": thumb.frame_path,
-                "storyboard": board.model_dump(),
-                "review_required": True,
-                "instructions": "Open the thumbnail/storyboard and inspect the final video before publishing.",
-            }
-        )
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    report = assert_quality(input_path, min_score=min_score)
+    review_dir = output_dir or f"{os.path.splitext(input_path)[0]}_release_review"
+    os.makedirs(review_dir, exist_ok=True)
+    thumb = thumbnail(input_path, output_path=os.path.join(review_dir, "thumbnail.jpg"))
+    board = storyboard(input_path, output_dir=os.path.join(review_dir, "storyboard"), frame_count=frame_count)
+    return _result(
+        {
+            "video": input_path,
+            "quality": report,
+            "thumbnail": thumb.frame_path,
+            "storyboard": board.model_dump(),
+            "review_required": True,
+            "instructions": "Open the thumbnail/storyboard and inspect the final video before publishing.",
+        }
+    )
 
 
 @mcp.tool()
+@_safe_tool
 def video_design_quality_check(
     input_path: str,
     auto_fix: bool = False,
@@ -415,18 +295,14 @@ def video_design_quality_check(
         auto_fix: If True, automatically apply fixes
         strict: If True, treat warnings as errors
     """
-    try:
-        input_path = _validate_input_path(input_path)
-        from .design_quality import design_quality_check
+    input_path = _validate_input_path(input_path)
+    from .design_quality import design_quality_check
 
-        return _result(design_quality_check(input_path, auto_fix=auto_fix, strict=strict))
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    return _result(design_quality_check(input_path, auto_fix=auto_fix, strict=strict))
 
 
 @mcp.tool()
+@_safe_tool
 def video_fix_design_issues(
     input_path: str,
     output_path: str | None = None,
@@ -440,12 +316,7 @@ def video_fix_design_issues(
         input_path: Absolute path to input video
         output_path: Absolute path for output (auto-generated if omitted)
     """
-    try:
-        input_path = _validate_input_path(input_path)
-        from .design_quality import fix_design_issues
+    input_path = _validate_input_path(input_path)
+    from .design_quality import fix_design_issues
 
-        return _result(fix_design_issues(input_path, output_path))
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    return _result(fix_design_issues(input_path, output_path))

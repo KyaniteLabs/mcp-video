@@ -5,11 +5,16 @@ from __future__ import annotations
 from .defaults import DEFAULT_AUDIO_BITRATE
 from .engine_probe import probe
 from .engine_runtime_utils import (
-    _auto_output,
+    _build_edit_result,
     _has_audio,
     _movflags_args,
-    _run_ffmpeg,
     _timed_operation,
+)
+from .paths import (
+    _auto_output,
+)
+from .ffmpeg_helpers import (
+    _run_ffmpeg,
 )
 from .ffmpeg_helpers import _validate_input_path, _validate_output_path, _escape_ffmpeg_filter_value, _run_ffprobe_json
 from .models import EditResult
@@ -49,14 +54,22 @@ def _build_add_audio_args(
             delay = f"[1:a]adelay={safe_delay}|{safe_delay},"
         filter_complex = f"[0:a]anull[a0];{delay}[1:a]{af}[a1];[a0][a1]amix=inputs=2:duration=longest[aout]"
         return [
-            "-i", video_path,
-            "-i", audio_path,
-            "-filter_complex", filter_complex,
-            "-map", "0:v",
-            "-map", "[aout]",
-            "-c:v", "copy",
-            "-c:a", "aac",
-            "-b:a", DEFAULT_AUDIO_BITRATE,
+            "-i",
+            video_path,
+            "-i",
+            audio_path,
+            "-filter_complex",
+            filter_complex,
+            "-map",
+            "0:v",
+            "-map",
+            "[aout]",
+            "-c:v",
+            "copy",
+            "-c:a",
+            "aac",
+            "-b:a",
+            DEFAULT_AUDIO_BITRATE,
             *_movflags_args(output),
             output,
         ]
@@ -76,9 +89,12 @@ def _build_add_audio_args(
 
     args.extend(
         [
-            "-c:v", "copy",
-            "-c:a", "aac",
-            "-b:a", DEFAULT_AUDIO_BITRATE,
+            "-c:v",
+            "copy",
+            "-c:a",
+            "aac",
+            "-b:a",
+            DEFAULT_AUDIO_BITRATE,
             "-shortest",
             *_movflags_args(output),
             output,
@@ -108,12 +124,9 @@ def add_audio(
 
     with _timed_operation() as timing:
         filters = _build_audio_filters(volume, fade_in, fade_out, video_info.duration)
-        cmd = _build_add_audio_args(
-            video_path, audio_path, filters, mix, start_time, source_has_audio, output
-        )
+        cmd = _build_add_audio_args(video_path, audio_path, filters, mix, start_time, source_has_audio, output)
         _run_ffmpeg(cmd)
 
-    info = probe(output)
     warnings = []
     if source_has_audio and not mix:
         warnings.append(
@@ -121,13 +134,4 @@ def add_audio(
             "preserve source audio and listen before publishing."
         )
 
-    return EditResult(
-        output_path=output,
-        duration=info.duration,
-        resolution=info.resolution,
-        size_mb=info.size_mb,
-        format="mp4",
-        operation="add_audio",
-        elapsed_ms=timing["elapsed_ms"],
-        warnings=warnings,
-    )
+    return _build_edit_result(output, "add_audio", timing).model_copy(update={"warnings": warnings})

@@ -19,7 +19,7 @@ def test_chromatic_aberration_falls_back_when_chromashift_missing(tmp_path, monk
             raise ProcessingError(" ".join(cmd), 1, "No such filter: 'chromashift'")
         Path(cmd[-1]).write_bytes(b"output")
 
-    monkeypatch.setattr(effects_engine.core, "_run_ffmpeg", fake_run_ffmpeg)
+    monkeypatch.setattr(effects_engine.core, "_run_command", fake_run_ffmpeg)
 
     result = effects_engine.effect_chromatic_aberration(str(input_path), str(output_path), intensity=3.0)
 
@@ -43,7 +43,7 @@ def test_glow_falls_back_when_gblur_missing(tmp_path, monkeypatch):
             raise ProcessingError(" ".join(cmd), 1, "No such filter: 'gblur'")
         Path(cmd[-1]).write_bytes(b"output")
 
-    monkeypatch.setattr(effects_engine.core, "_run_ffmpeg", fake_run_ffmpeg)
+    monkeypatch.setattr(effects_engine.core, "_run_command", fake_run_ffmpeg)
 
     result = effects_engine.effect_glow(str(input_path), str(output_path), radius=15)
 
@@ -65,7 +65,7 @@ def test_glow_uses_non_additive_blend_by_default(tmp_path, monkeypatch):
         calls.append(cmd.copy())
         Path(cmd[-1]).write_bytes(b"output")
 
-    monkeypatch.setattr(effects_engine.core, "_run_ffmpeg", fake_run_ffmpeg)
+    monkeypatch.setattr(effects_engine.core, "_run_command", fake_run_ffmpeg)
 
     result = effects_engine.effect_glow(str(input_path), str(output_path), intensity=0.5)
 
@@ -121,7 +121,7 @@ def test_chromatic_aberration_reraises_unrelated_processing_error(tmp_path, monk
     def fake_run_ffmpeg(cmd):
         raise error
 
-    monkeypatch.setattr(effects_engine.core, "_run_ffmpeg", fake_run_ffmpeg)
+    monkeypatch.setattr(effects_engine.core, "_run_command", fake_run_ffmpeg)
 
     try:
         effects_engine.effect_chromatic_aberration(str(input_path), str(output_path))

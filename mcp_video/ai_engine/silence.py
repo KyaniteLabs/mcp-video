@@ -15,9 +15,9 @@ import tempfile
 from pathlib import Path
 
 from ..errors import InputFileError, MCPVideoError, ProcessingError
-from ..ffmpeg_helpers import _run_ffprobe_json, _validate_output_path
+from ..ffmpeg_helpers import _run_ffprobe_json, _validate_input_path, _validate_output_path
 from ..limits import DEFAULT_FFMPEG_TIMEOUT
-from ..engine_runtime_utils import _sanitize_ffmpeg_number
+from ..ffmpeg_helpers import _sanitize_ffmpeg_number
 
 logger = logging.getLogger(__name__)
 
@@ -256,8 +256,7 @@ def ai_remove_silence(
     Returns:
         Path to output video
     """
-    if "\x00" in video:
-        raise InputFileError(video, "Invalid path: contains null bytes")
+    _validate_input_path(video)
 
     # Validate input file
     video_path = Path(video)

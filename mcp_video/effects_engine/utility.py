@@ -10,7 +10,7 @@ import subprocess
 from typing import Any
 
 from ..errors import MCPVideoError
-from ..ffmpeg_helpers import _validate_input_path, _run_ffmpeg
+from ..ffmpeg_helpers import _validate_input_path, _run_command, _run_ffmpeg
 
 logger = logging.getLogger(__name__)
 
@@ -145,7 +145,7 @@ def auto_chapters(
         "-",
     ]
 
-    result = _run_ffmpeg(cmd, timeout=60)
+    result = _run_command(cmd, timeout=60)
 
     chapter_num = 1
     for line in result.stderr.split("\n"):

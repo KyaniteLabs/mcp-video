@@ -5,10 +5,14 @@ from __future__ import annotations
 import os
 
 from .engine_runtime_utils import (
-    _auto_output_dir,
     _movflags_args,
     _quality_args,
     _require_filter,
+)
+from .paths import (
+    _auto_output_dir,
+)
+from .ffmpeg_helpers import (
     _run_ffmpeg,
 )
 from .errors import MCPVideoError

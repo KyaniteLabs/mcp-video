@@ -10,12 +10,16 @@ from collections.abc import Callable
 from .defaults import DEFAULT_AUDIO_BITRATE
 from .engine_probe import probe
 from .engine_runtime_utils import (
-    _auto_output,
     _generate_thumbnail_base64,
     _movflags_args,
+    _timed_operation,
+)
+from .paths import (
+    _auto_output,
+)
+from .ffmpeg_helpers import (
     _run_ffmpeg,
     _run_ffmpeg_with_progress,
-    _timed_operation,
 )
 from .ffmpeg_helpers import _validate_input_path, _validate_output_path
 from .errors import MCPVideoError

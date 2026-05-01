@@ -7,6 +7,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 from .defaults import DEFAULT_CRF
+from .errors import MCPVideoError as _MCPVideoError
 
 
 # --- Helpers ---
@@ -395,3 +396,118 @@ class WatermarkSettings(BaseModel):
     position: Position = "bottom-right"
     opacity: float = 0.7
     margin: int = 20
+
+
+# --- Position helpers ---
+
+
+def _validate_position(position: Position) -> None:
+    """Validate position dict values to prevent FFmpeg filter injection.
+
+    Only validates when position is a dict; named strings are safe by design.
+    """
+    if not isinstance(position, dict):
+        return
+    if "x_pct" in position and "y_pct" in position:
+        for key in ("x_pct", "y_pct"):
+            val = position[key]
+            if not isinstance(val, (int, float)) or isinstance(val, bool):
+                raise _MCPVideoError(
+                    (
+                        f"Invalid position: {position}. "
+                        "Must be a named position (top-left, top-center, etc.) "
+                        "or a dict with 'x'/'y' keys"
+                    ),
+                    error_type="validation_error",
+                    code="invalid_parameter",
+                )
+            if not (0.0 <= float(val) <= 1.0):
+                raise _MCPVideoError(
+                    (
+                        f"Invalid position: {position}. "
+                        "Must be a named position (top-left, top-center, etc.) "
+                        "or a dict with 'x'/'y' keys"
+                    ),
+                    error_type="validation_error",
+                    code="invalid_parameter",
+                )
+    elif "x" in position and "y" in position:
+        for key in ("x", "y"):
+            val = position[key]
+            if not isinstance(val, (int, float)) or isinstance(val, bool):
+                raise _MCPVideoError(
+                    (
+                        f"Invalid position: {position}. "
+                        "Must be a named position (top-left, top-center, etc.) "
+                        "or a dict with 'x'/'y' keys"
+                    ),
+                    error_type="validation_error",
+                    code="invalid_parameter",
+                )
+    else:
+        raise _MCPVideoError(
+            "Position dict must have 'x'+'y' (pixels) or 'x_pct'+'y_pct' (percentage)",
+            code="invalid_position_dict",
+        )
+
+
+def _position_coords(position: Position, width: int = 0, height: int = 0) -> str:
+    """Return drawtext x,y expression for a named position or dict coords.
+
+    Accepts:
+    - Named positions: "top-left", "top-center", etc.
+    - Pixel coordinates: {"x": 100, "y": 50}
+    - Percentage: {"x_pct": 0.5, "y_pct": 0.5}
+    """
+    _validate_position(position)
+    if isinstance(position, dict):
+        if "x_pct" in position and "y_pct" in position:
+            x_pct = position["x_pct"]
+            y_pct = position["y_pct"]
+            return f"x=w*{x_pct}-text_w/2:y=h*{y_pct}-text_h/2"
+        elif "x" in position and "y" in position:
+            return f"x={position['x']}:y={position['y']}"
+        else:
+            raise _MCPVideoError(
+                "Position dict must have 'x'+'y' (pixels) or 'x_pct'+'y_pct' (percentage)",
+                code="invalid_position_dict",
+            )
+
+    # These expressions use FFmpeg's text_w/text_h variables
+    mapping: dict[NamedPosition, str] = {
+        "top-left": "x=10:y=10",
+        "top-center": "x=(w-text_w)/2:y=10",
+        "top-right": "x=w-text_w-10:y=10",
+        "center-left": "x=10:y=(h-text_h)/2",
+        "center": "x=(w-text_w)/2:y=(h-text_h)/2",
+        "center-right": "x=w-text_w-10:y=(h-text_h)/2",
+        "bottom-left": "x=10:y=h-text_h-10",
+        "bottom-center": "x=(w-text_w)/2:y=h-text_h-10",
+        "bottom-right": "x=w-text_w-10:y=h-text_h-10",
+    }
+    return mapping.get(position, mapping["center"])
+
+
+def _resolve_position(
+    position: Position,
+    position_map: dict[NamedPosition, str],
+    default: NamedPosition = "center",
+) -> str:
+    """Resolve a Position (named or dict) to an FFmpeg overlay coordinate string.
+
+    Used by watermark, overlay_video, and similar overlay-based operations.
+    """
+    _validate_position(position)
+    if isinstance(position, dict):
+        if "x_pct" in position and "y_pct" in position:
+            x_pct = position["x_pct"]
+            y_pct = position["y_pct"]
+            return f"(main_w*{x_pct}-overlay_w/2):(main_h*{y_pct}-overlay_h/2)"
+        elif "x" in position and "y" in position:
+            return f"{position['x']}:{position['y']}"
+        else:
+            raise _MCPVideoError(
+                "Position dict must have 'x'+'y' (pixels) or 'x_pct'+'y_pct' (percentage)",
+                code="invalid_position_dict",
+            )
+    return position_map.get(position, position_map[default])

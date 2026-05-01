@@ -5,9 +5,9 @@ from __future__ import annotations
 import os
 from typing import Any
 
-from .engine_runtime_utils import _auto_output
+from .paths import _auto_output
 from .errors import MCPVideoError
-from .server_app import _error_result, _result, mcp
+from .server_app import _result, _safe_tool, _validation_error, mcp
 from .validation import VALID_MOGRAPH_STYLES
 from .ffmpeg_helpers import _validate_input_path
 
@@ -17,6 +17,7 @@ from .ffmpeg_helpers import _validate_input_path
 
 
 @mcp.tool()
+@_safe_tool
 def effect_vignette(
     input_path: str,
     output_path: str | None = None,
@@ -38,37 +39,33 @@ def effect_vignette(
     Returns:
         Dict with success status and output_path.
     """
-    try:
-        input_path = _validate_input_path(input_path)
-        if not (0.0 <= intensity <= 1.0):
-            raise MCPVideoError(
-                f"intensity must be between 0.0 and 1.0, got {intensity}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        if not (0.0 <= radius <= 1.0):
-            raise MCPVideoError(
-                f"radius must be between 0.0 and 1.0, got {radius}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        if not (0.0 <= smoothness <= 1.0):
-            raise MCPVideoError(
-                f"smoothness must be between 0.0 and 1.0, got {smoothness}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        from .effects_engine import effect_vignette as _vignette
+    input_path = _validate_input_path(input_path)
+    if not (0.0 <= intensity <= 1.0):
+        raise MCPVideoError(
+            f"intensity must be between 0.0 and 1.0, got {intensity}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
+    if not (0.0 <= radius <= 1.0):
+        raise MCPVideoError(
+            f"radius must be between 0.0 and 1.0, got {radius}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
+    if not (0.0 <= smoothness <= 1.0):
+        raise MCPVideoError(
+            f"smoothness must be between 0.0 and 1.0, got {smoothness}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
+    from .effects_engine import effect_vignette as _vignette
 
-        output = output_path or _auto_output(input_path, "vignette")
-        return _result(_vignette(input_path, output, intensity, radius, smoothness))
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    output = output_path or _auto_output(input_path, "vignette")
+    return _result(_vignette(input_path, output, intensity, radius, smoothness))
 
 
 @mcp.tool()
+@_safe_tool
 def effect_chromatic_aberration(
     input_path: str,
     output_path: str,
@@ -88,24 +85,20 @@ def effect_chromatic_aberration(
     Returns:
         Dict with success status and output_path.
     """
-    try:
-        input_path = _validate_input_path(input_path)
-        if intensity < 0:
-            raise MCPVideoError(
-                f"intensity must be non-negative, got {intensity}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        from .effects_engine import effect_chromatic_aberration as _chroma
+    input_path = _validate_input_path(input_path)
+    if intensity < 0:
+        raise MCPVideoError(
+            f"intensity must be non-negative, got {intensity}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
+    from .effects_engine import effect_chromatic_aberration as _chroma
 
-        return _result(_chroma(input_path, output_path, intensity, angle))
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    return _result(_chroma(input_path, output_path, intensity, angle))
 
 
 @mcp.tool()
+@_safe_tool
 def effect_scanlines(
     input_path: str,
     output_path: str,
@@ -127,36 +120,32 @@ def effect_scanlines(
     Returns:
         Dict with success status and output_path.
     """
-    try:
-        input_path = _validate_input_path(input_path)
-        if line_height < 1:
-            raise MCPVideoError(
-                f"line_height must be at least 1, got {line_height}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        if not (0.0 <= opacity <= 1.0):
-            raise MCPVideoError(
-                f"opacity must be between 0.0 and 1.0, got {opacity}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        if not (0.0 <= flicker <= 1.0):
-            raise MCPVideoError(
-                f"flicker must be between 0.0 and 1.0, got {flicker}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        from .effects_engine import effect_scanlines as _scanlines
+    input_path = _validate_input_path(input_path)
+    if line_height < 1:
+        raise MCPVideoError(
+            f"line_height must be at least 1, got {line_height}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
+    if not (0.0 <= opacity <= 1.0):
+        raise MCPVideoError(
+            f"opacity must be between 0.0 and 1.0, got {opacity}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
+    if not (0.0 <= flicker <= 1.0):
+        raise MCPVideoError(
+            f"flicker must be between 0.0 and 1.0, got {flicker}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
+    from .effects_engine import effect_scanlines as _scanlines
 
-        return _result(_scanlines(input_path, output_path, line_height, opacity, flicker))
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    return _result(_scanlines(input_path, output_path, line_height, opacity, flicker))
 
 
 @mcp.tool()
+@_safe_tool
 def effect_noise(
     input_path: str,
     output_path: str,
@@ -178,30 +167,26 @@ def effect_noise(
     Returns:
         Dict with success status and output_path.
     """
-    try:
-        input_path = _validate_input_path(input_path)
-        if not (0.0 <= intensity <= 1.0):
-            raise MCPVideoError(
-                f"intensity must be between 0.0 and 1.0, got {intensity}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        if mode not in ("film", "digital", "color"):
-            raise MCPVideoError(
-                f"mode must be film, digital, or color, got {mode}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        from .effects_engine import effect_noise as _noise
+    input_path = _validate_input_path(input_path)
+    if not (0.0 <= intensity <= 1.0):
+        raise MCPVideoError(
+            f"intensity must be between 0.0 and 1.0, got {intensity}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
+    if mode not in ("film", "digital", "color"):
+        raise MCPVideoError(
+            f"mode must be film, digital, or color, got {mode}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
+    from .effects_engine import effect_noise as _noise
 
-        return _result(_noise(input_path, output_path, intensity, mode, animated))
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    return _result(_noise(input_path, output_path, intensity, mode, animated))
 
 
 @mcp.tool()
+@_safe_tool
 def effect_glow(
     input_path: str,
     output_path: str,
@@ -223,36 +208,32 @@ def effect_glow(
     Returns:
         Dict with success status and output_path.
     """
-    try:
-        input_path = _validate_input_path(input_path)
-        if not (0.0 <= intensity <= 1.0):
-            raise MCPVideoError(
-                f"intensity must be between 0.0 and 1.0, got {intensity}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        if radius < 0:
-            raise MCPVideoError(
-                f"radius must be non-negative, got {radius}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        if not (0.0 <= threshold <= 1.0):
-            raise MCPVideoError(
-                f"threshold must be between 0.0 and 1.0, got {threshold}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        from .effects_engine import effect_glow as _glow
+    input_path = _validate_input_path(input_path)
+    if not (0.0 <= intensity <= 1.0):
+        raise MCPVideoError(
+            f"intensity must be between 0.0 and 1.0, got {intensity}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
+    if radius < 0:
+        raise MCPVideoError(
+            f"radius must be non-negative, got {radius}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
+    if not (0.0 <= threshold <= 1.0):
+        raise MCPVideoError(
+            f"threshold must be between 0.0 and 1.0, got {threshold}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
+    from .effects_engine import effect_glow as _glow
 
-        return _result(_glow(input_path, output_path, intensity, radius, threshold))
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    return _result(_glow(input_path, output_path, intensity, radius, threshold))
 
 
 @mcp.tool()
+@_safe_tool
 def video_layout_grid(
     clips: list[str],
     layout: str,
@@ -276,31 +257,27 @@ def video_layout_grid(
     Returns:
         Dict with success status and output_path.
     """
-    try:
-        for _p in clips:
-            _validate_input_path(_p)
-        if gap < 0:
-            raise MCPVideoError(
-                f"gap must be non-negative, got {gap}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        if padding < 0:
-            raise MCPVideoError(
-                f"padding must be non-negative, got {padding}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        from .effects_engine import layout_grid as _grid
+    for _p in clips:
+        _validate_input_path(_p)
+    if gap < 0:
+        raise MCPVideoError(
+            f"gap must be non-negative, got {gap}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
+    if padding < 0:
+        raise MCPVideoError(
+            f"padding must be non-negative, got {padding}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
+    from .effects_engine import layout_grid as _grid
 
-        return _result(_grid(clips, layout, output_path, gap, padding, background))
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    return _result(_grid(clips, layout, output_path, gap, padding, background))
 
 
 @mcp.tool()
+@_safe_tool
 def video_layout_pip(
     main_path: str,
     pip_path: str,
@@ -332,44 +309,40 @@ def video_layout_pip(
     Returns:
         Dict with success status and output_path.
     """
-    try:
-        main_path = _validate_input_path(main_path)
-        pip_path = _validate_input_path(pip_path)
-        if not (0.0 < size <= 1.0):
-            raise MCPVideoError(
-                f"size must be between 0.0 and 1.0, got {size}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        if border_width < 0:
-            raise MCPVideoError(
-                f"border_width must be non-negative, got {border_width}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        from .effects_engine import layout_pip as _pip
-
-        return _result(
-            _pip(
-                main_path,
-                pip_path,
-                output_path,
-                position=position,
-                size=size,
-                margin=margin,
-                rounded_corners=rounded_corners,
-                border=border,
-                border_color=border_color,
-                border_width=border_width,
-            )
+    main_path = _validate_input_path(main_path)
+    pip_path = _validate_input_path(pip_path)
+    if not (0.0 < size <= 1.0):
+        raise MCPVideoError(
+            f"size must be between 0.0 and 1.0, got {size}",
+            error_type="validation_error",
+            code="invalid_parameter",
         )
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    if border_width < 0:
+        raise MCPVideoError(
+            f"border_width must be non-negative, got {border_width}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
+    from .effects_engine import layout_pip as _pip
+
+    return _result(
+        _pip(
+            main_path,
+            pip_path,
+            output_path,
+            position=position,
+            size=size,
+            margin=margin,
+            rounded_corners=rounded_corners,
+            border=border,
+            border_color=border_color,
+            border_width=border_width,
+        )
+    )
 
 
 @mcp.tool()
+@_safe_tool
 def video_text_animated(
     input_path: str,
     text: str,
@@ -402,39 +375,35 @@ def video_text_animated(
     Returns:
         Dict with success status and output_path.
     """
-    try:
-        input_path = _validate_input_path(input_path)
-        if not (8 <= size <= 500):
-            raise MCPVideoError(
-                f"size must be between 8 and 500, got {size}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        if duration <= 0:
-            raise MCPVideoError(
-                f"duration must be positive, got {duration}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        if start < 0:
-            raise MCPVideoError(
-                f"start must be non-negative, got {start}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        from .effects_engine import text_animated as _text
-
-        output = output_path or _auto_output(input_path, "animated")
-        return _result(
-            _text(input_path, text, output, animation, font, size, color, position, start, duration, typewriter_speed)
+    input_path = _validate_input_path(input_path)
+    if not (8 <= size <= 500):
+        raise MCPVideoError(
+            f"size must be between 8 and 500, got {size}",
+            error_type="validation_error",
+            code="invalid_parameter",
         )
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    if duration <= 0:
+        raise MCPVideoError(
+            f"duration must be positive, got {duration}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
+    if start < 0:
+        raise MCPVideoError(
+            f"start must be non-negative, got {start}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
+    from .effects_engine import text_animated as _text
+
+    output = output_path or _auto_output(input_path, "animated")
+    return _result(
+        _text(input_path, text, output, animation, font, size, color, position, start, duration, typewriter_speed)
+    )
 
 
 @mcp.tool()
+@_safe_tool
 def video_subtitles_styled(
     input_path: str,
     subtitles_path: str,
@@ -455,26 +424,16 @@ def video_subtitles_styled(
         Dict with success status and output_path.
     """
     if not os.path.isfile(subtitles_path):
-        return _error_result(
-            MCPVideoError(
-                f"Subtitles file not found: {subtitles_path}",
-                error_type="validation_error",
-                code="file_not_found",
-            )
-        )
-    try:
-        input_path = _validate_input_path(input_path)
-        subtitles_path = _validate_input_path(subtitles_path)
-        from .effects_engine import text_subtitles as _subs
+        return _validation_error(f"Subtitles file not found: {subtitles_path}", code="file_not_found")
+    input_path = _validate_input_path(input_path)
+    subtitles_path = _validate_input_path(subtitles_path)
+    from .effects_engine import text_subtitles as _subs
 
-        return _result(_subs(input_path, subtitles_path, output_path, style))
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    return _result(_subs(input_path, subtitles_path, output_path, style))
 
 
 @mcp.tool()
+@_safe_tool
 def video_mograph_count(
     start: int,
     end: int,
@@ -498,29 +457,25 @@ def video_mograph_count(
     Returns:
         Dict with success status and output_path.
     """
-    try:
-        if not (1 <= fps <= 120):
-            raise MCPVideoError(
-                f"fps must be between 1 and 120, got {fps}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        if duration <= 0:
-            raise MCPVideoError(
-                f"duration must be positive, got {duration}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        from .effects_engine import mograph_count as _count
+    if not (1 <= fps <= 120):
+        raise MCPVideoError(
+            f"fps must be between 1 and 120, got {fps}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
+    if duration <= 0:
+        raise MCPVideoError(
+            f"duration must be positive, got {duration}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
+    from .effects_engine import mograph_count as _count
 
-        return _result(_count(start, end, duration, output_path, style=style, fps=fps))
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    return _result(_count(start, end, duration, output_path, style=style, fps=fps))
 
 
 @mcp.tool()
+@_safe_tool
 def video_mograph_progress(
     duration: float,
     output_path: str,
@@ -545,36 +500,26 @@ def video_mograph_progress(
         Dict with success status and output_path.
     """
     if style not in VALID_MOGRAPH_STYLES:
-        return _error_result(
-            MCPVideoError(
-                f"Invalid style: must be one of {sorted(VALID_MOGRAPH_STYLES)}, got '{style}'",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
+        return _validation_error(f"Invalid style: must be one of {sorted(VALID_MOGRAPH_STYLES)}, got '{style}'")
+    if not (1 <= fps <= 120):
+        raise MCPVideoError(
+            f"fps must be between 1 and 120, got {fps}",
+            error_type="validation_error",
+            code="invalid_parameter",
         )
-    try:
-        if not (1 <= fps <= 120):
-            raise MCPVideoError(
-                f"fps must be between 1 and 120, got {fps}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        if duration <= 0:
-            raise MCPVideoError(
-                f"duration must be positive, got {duration}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        from .effects_engine import mograph_progress as _progress
+    if duration <= 0:
+        raise MCPVideoError(
+            f"duration must be positive, got {duration}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
+    from .effects_engine import mograph_progress as _progress
 
-        return _result(_progress(duration, output_path, style=style, color=color, track_color=track_color, fps=fps))
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    return _result(_progress(duration, output_path, style=style, color=color, track_color=track_color, fps=fps))
 
 
 @mcp.tool()
+@_safe_tool
 def video_info_detailed(
     input_path: str,
 ) -> dict[str, Any]:
@@ -589,18 +534,14 @@ def video_info_detailed(
     Returns:
         Dict with duration, fps, resolution, bitrate, has_audio, scene_changes.
     """
-    try:
-        input_path = _validate_input_path(input_path)
-        from .effects_engine import video_info_detailed as _info
+    input_path = _validate_input_path(input_path)
+    from .effects_engine import video_info_detailed as _info
 
-        return _result(_info(input_path))
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    return _result(_info(input_path))
 
 
 @mcp.tool()
+@_safe_tool
 def video_auto_chapters(
     input_path: str,
     threshold: float = 0.3,
@@ -617,22 +558,11 @@ def video_auto_chapters(
         List of (timestamp, description) chapter tuples.
     """
     if not 0.0 <= threshold <= 1.0:
-        return _error_result(
-            MCPVideoError(
-                f"threshold must be between 0.0 and 1.0, got {threshold}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
-    try:
-        input_path = _validate_input_path(input_path)
-        from .effects_engine import auto_chapters as _chapters
+        return _validation_error(f"threshold must be between 0.0 and 1.0, got {threshold}")
+    input_path = _validate_input_path(input_path)
+    from .effects_engine import auto_chapters as _chapters
 
-        return _result(_chapters(input_path, threshold))
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    return _result(_chapters(input_path, threshold))
 
 
 # ---------------------------------------------------------------------------
@@ -641,6 +571,7 @@ def video_auto_chapters(
 
 
 @mcp.tool()
+@_safe_tool
 def transition_glitch(
     clip1_path: str,
     clip2_path: str,
@@ -658,35 +589,19 @@ def transition_glitch(
         intensity: Glitch intensity 0-1 (default 0.3).
     """
     if duration <= 0:
-        return _error_result(
-            MCPVideoError(
-                f"duration must be positive, got {duration}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
+        return _validation_error(f"duration must be positive, got {duration}")
     if not 0.0 <= intensity <= 1.0:
-        return _error_result(
-            MCPVideoError(
-                f"intensity must be between 0.0 and 1.0, got {intensity}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
-    try:
-        clip1_path = _validate_input_path(clip1_path)
-        clip2_path = _validate_input_path(clip2_path)
-        from .transitions_engine import transition_glitch
+        return _validation_error(f"intensity must be between 0.0 and 1.0, got {intensity}")
+    clip1_path = _validate_input_path(clip1_path)
+    clip2_path = _validate_input_path(clip2_path)
+    from .transitions_engine import transition_glitch
 
-        output = output_path or _auto_output(clip1_path, "transition")
-        return _result(transition_glitch(clip1_path, clip2_path, output, duration, intensity))
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    output = output_path or _auto_output(clip1_path, "transition")
+    return _result(transition_glitch(clip1_path, clip2_path, output, duration, intensity))
 
 
 @mcp.tool()
+@_safe_tool
 def transition_pixelate(
     clip1_path: str,
     clip2_path: str,
@@ -696,34 +611,18 @@ def transition_pixelate(
 ) -> dict[str, Any]:
     """Apply pixelate transition between two video clips."""
     if duration <= 0:
-        return _error_result(
-            MCPVideoError(
-                f"duration must be positive, got {duration}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
+        return _validation_error(f"duration must be positive, got {duration}")
     if pixel_size < 2:
-        return _error_result(
-            MCPVideoError(
-                f"pixel_size must be at least 2, got {pixel_size}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
-    try:
-        clip1_path = _validate_input_path(clip1_path)
-        clip2_path = _validate_input_path(clip2_path)
-        from .transitions_engine import transition_pixelate
+        return _validation_error(f"pixel_size must be at least 2, got {pixel_size}")
+    clip1_path = _validate_input_path(clip1_path)
+    clip2_path = _validate_input_path(clip2_path)
+    from .transitions_engine import transition_pixelate
 
-        return _result(transition_pixelate(clip1_path, clip2_path, output_path, duration, pixel_size))
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    return _result(transition_pixelate(clip1_path, clip2_path, output_path, duration, pixel_size))
 
 
 @mcp.tool()
+@_safe_tool
 def transition_morph(
     clip1_path: str,
     clip2_path: str,
@@ -733,28 +632,11 @@ def transition_morph(
 ) -> dict[str, Any]:
     """Apply morph transition between two video clips."""
     if duration <= 0:
-        return _error_result(
-            MCPVideoError(
-                f"duration must be positive, got {duration}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
+        return _validation_error(f"duration must be positive, got {duration}")
     if mesh_size < 2:
-        return _error_result(
-            MCPVideoError(
-                f"mesh_size must be at least 2, got {mesh_size}",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        )
-    try:
-        clip1_path = _validate_input_path(clip1_path)
-        clip2_path = _validate_input_path(clip2_path)
-        from .transitions_engine import transition_morph
+        return _validation_error(f"mesh_size must be at least 2, got {mesh_size}")
+    clip1_path = _validate_input_path(clip1_path)
+    clip2_path = _validate_input_path(clip2_path)
+    from .transitions_engine import transition_morph
 
-        return _result(transition_morph(clip1_path, clip2_path, output_path, duration, mesh_size))
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    return _result(transition_morph(clip1_path, clip2_path, output_path, duration, mesh_size))

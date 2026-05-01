@@ -20,9 +20,19 @@ def _model_dump(result: Any) -> Any:
     return result.model_dump() if hasattr(result, "model_dump") else result
 
 
+def _format_success_panel(
+    content: str | list[str],
+    title: str = "Done",
+    border_style: str = "green",
+) -> None:
+    """Print a success Panel with consistent styling."""
+    text = "\n".join(content) if isinstance(content, list) else content
+    console.print(Panel(text, border_style=border_style, title=title))
+
+
 def _format_path_panel(label: str, result: Any) -> None:
     path = _model_dump(result).get("output_path", result) if isinstance(_model_dump(result), dict) else result
-    console.print(Panel(f"[bold green]{label}:[/bold green] {path}", border_style="green", title="Done"))
+    _format_success_panel(f"[bold green]{label}:[/bold green] {path}")
 
 
 def _format_info_text(info: Any) -> None:
@@ -57,7 +67,7 @@ def _format_edit_text(result: Any) -> None:
         lines.append(f"[bold green]Size:[/bold green] {data['size_mb']:.2f} MB")
     if data.get("format"):
         lines.append(f"[bold green]Format:[/bold green] {data['format']}")
-    console.print(Panel("\n".join(lines), border_style="green", title="Done"))
+    _format_success_panel(lines)
 
 
 def _format_thumbnail_text(result: Any) -> None:
@@ -65,13 +75,8 @@ def _format_thumbnail_text(result: Any) -> None:
     data = _model_dump(result)
     frame_path = data.get("frame_path", "N/A")
     timestamp = data.get("timestamp", 0.0)
-    console.print(
-        Panel(
-            f"[bold green]Frame extracted:[/bold green] {frame_path}\n"
-            f"[bold green]Timestamp:[/bold green] {timestamp:.2f}s",
-            border_style="green",
-            title="Done",
-        )
+    _format_success_panel(
+        f"[bold green]Frame extracted:[/bold green] {frame_path}\n[bold green]Timestamp:[/bold green] {timestamp:.2f}s"
     )
 
 
@@ -87,7 +92,7 @@ def _format_storyboard_text(result: Any) -> None:
         lines.append(f"[bold green]Output dir:[/bold green] {frames[0].rsplit('/', 1)[0] if '/' in frames[0] else '.'}")
     if grid:
         lines.append(f"[bold green]Grid:[/bold green] {grid}")
-    console.print(Panel("\n".join(lines), border_style="green", title="Storyboard"))
+    _format_success_panel(lines, title="Storyboard")
 
 
 def _format_batch_text(result: dict) -> None:
@@ -113,7 +118,7 @@ def _format_batch_text(result: dict) -> None:
 
 def _format_extract_audio_text(result: Any) -> None:
     """Display extract-audio result."""
-    console.print(Panel(f"[bold green]Audio extracted:[/bold green] {result}", border_style="green", title="Done"))
+    _format_success_panel(f"[bold green]Audio extracted:[/bold green] {result}")
 
 
 def _format_doctor_text(report: dict[str, Any]) -> None:
@@ -161,7 +166,7 @@ def _format_export_frames(result: Any, image_format: str) -> None:
     ]
     if data.get("frame_paths"):
         lines.append(f"[bold green]Output dir:[/bold green] {data['frame_paths'][0].rsplit('/', 1)[0]}")
-    console.print(Panel("\n".join(lines), border_style="green", title="Frames Exported"))
+    _format_success_panel(lines, title="Frames Exported")
 
 
 def _format_compare_quality(result: Any) -> None:
@@ -216,7 +221,7 @@ def _format_generate_subtitles(result: Any) -> None:
     ]
     if data.get("video_path"):
         lines.append(f"[bold green]Video Path:[/bold green] {data['video_path']}")
-    console.print(Panel("\n".join(lines), border_style="green", title="Subtitles Generated"))
+    _format_success_panel(lines, title="Subtitles Generated")
 
 
 def _format_templates(_result: Any = None) -> None:
@@ -298,11 +303,11 @@ def _format_design_quality(result: Any) -> None:
         lines.append(f"[yellow]Warnings ({len(warnings)}):[/yellow]")
         for w in warnings[:5]:
             lines.append(f"  - {w}")
-    console.print(Panel("\n".join(lines), border_style="green", title="Design Quality"))
+    _format_success_panel(lines, title="Design Quality")
 
 
 def _format_fix_design_issues(result: str) -> None:
-    console.print(Panel(f"[bold green]Design fixed:[/bold green] {result}", border_style="green", title="Done"))
+    _format_success_panel(f"[bold green]Design fixed:[/bold green] {result}")
 
 
 def _format_ai_transcribe(result: Any, output: str | None) -> None:
@@ -312,7 +317,7 @@ def _format_ai_transcribe(result: Any, output: str | None) -> None:
     lines = [f"[bold green]SRT:[/bold green] {srt}"]
     if text:
         lines.append(f"[bold green]Preview:[/bold green] {text[:200]}...")
-    console.print(Panel("\n".join(lines), border_style="green", title="Transcription"))
+    _format_success_panel(lines, title="Transcription")
 
 
 def _format_video_analyze(result: dict[str, Any], no_transcript: bool) -> None:
@@ -330,9 +335,7 @@ def _format_video_analyze(result: dict[str, Any], no_transcript: bool) -> None:
         meta_lines.append(f"[bold]Audio codec:[/bold] {meta['audio_codec']}")
     if meta.get("size_bytes"):
         meta_lines.append(f"[bold]Size:[/bold] {meta['size_bytes'] // 1024:,} KB")
-    console.print(
-        Panel("\n".join(meta_lines) or "No metadata", title="[cyan]Metadata[/cyan]", border_style="cyan")
-    )
+    console.print(Panel("\n".join(meta_lines) or "No metadata", title="[cyan]Metadata[/cyan]", border_style="cyan"))
 
     transcript = result.get("transcript")
     if transcript:
@@ -407,9 +410,7 @@ def _format_video_analyze(result: dict[str, Any], no_transcript: bool) -> None:
 
 
 def _format_ai_upscale(result: str, scale: float) -> None:
-    console.print(
-        Panel(f"[bold green]Upscaled ({scale}x):[/bold green] {result}", border_style="green", title="Done")
-    )
+    _format_success_panel(f"[bold green]Upscaled ({scale}x):[/bold green] {result}")
 
 
 def _format_ai_stem_separation(result: Any) -> None:
@@ -420,7 +421,7 @@ def _format_ai_stem_separation(result: Any) -> None:
             lines.append(f"[bold green]{stem}:[/bold green] {path}")
     if not lines:
         lines.append("[dim]No stems found[/dim]")
-    console.print(Panel("\n".join(lines), border_style="green", title="Stem Separation"))
+    _format_success_panel(lines, title="Stem Separation")
 
 
 def _format_ai_scene_detect(result: Any) -> None:
@@ -445,13 +446,11 @@ def _format_ai_scene_detect(result: Any) -> None:
 
 
 def _format_ai_color_grade(result: str, style: str) -> None:
-    console.print(
-        Panel(f"[bold green]Color graded ({style}):[/bold green] {result}", border_style="green", title="Done")
-    )
+    _format_success_panel(f"[bold green]Color graded ({style}):[/bold green] {result}")
 
 
 def _format_ai_remove_silence(result: str) -> None:
-    console.print(Panel(f"[bold green]Silence removed:[/bold green] {result}", border_style="green", title="Done"))
+    _format_success_panel(f"[bold green]Silence removed:[/bold green] {result}")
 
 
 def _format_hyperframes_render(result: Any, project_path: str) -> None:
@@ -468,7 +467,7 @@ def _format_hyperframes_render(result: Any, project_path: str) -> None:
         lines.append(f"[bold green]Size:[/bold green] {data['size_mb']:.2f} MB")
     if data.get("render_time") is not None:
         lines.append(f"[bold green]Render time:[/bold green] {data['render_time']:.1f}s")
-    console.print(Panel("\n".join(lines), border_style="green", title="Hyperframes Render"))
+    _format_success_panel(lines, title="Hyperframes Render")
 
 
 def _format_hyperframes_compositions(result: Any, project_path: str) -> None:
@@ -492,14 +491,11 @@ def _format_hyperframes_compositions(result: Any, project_path: str) -> None:
 
 def _format_hyperframes_preview(result: Any) -> None:
     data = _model_dump(result) if hasattr(result, "model_dump") else (result if isinstance(result, dict) else {})
-    console.print(
-        Panel(
-            f"[bold green]Preview running:[/bold green] {data.get('url', 'N/A')}\n"
-            f"[bold green]Port:[/bold green] {data.get('port', 'N/A')}\n"
-            f"[bold green]Project:[/bold green] {data.get('project_path', 'N/A')}",
-            border_style="green",
-            title="Hyperframes Preview",
-        )
+    _format_success_panel(
+        f"[bold green]Preview running:[/bold green] {data.get('url', 'N/A')}\n"
+        f"[bold green]Port:[/bold green] {data.get('port', 'N/A')}\n"
+        f"[bold green]Project:[/bold green] {data.get('project_path', 'N/A')}",
+        title="Hyperframes Preview",
     )
 
 
@@ -512,7 +508,7 @@ def _format_hyperframes_still(result: Any, project_path: str) -> None:
     ]
     if data.get("resolution"):
         lines.append(f"[bold green]Resolution:[/bold green] {data['resolution']}")
-    console.print(Panel("\n".join(lines), border_style="green", title="Hyperframes Still"))
+    _format_success_panel(lines, title="Hyperframes Still")
 
 
 def _format_hyperframes_init(result: Any) -> None:
@@ -523,7 +519,7 @@ def _format_hyperframes_init(result: Any) -> None:
     ]
     if data.get("files"):
         lines.append(f"[bold green]Files created:[/bold green] {len(data['files'])}")
-    console.print(Panel("\n".join(lines), border_style="green", title="Hyperframes Project Created"))
+    _format_success_panel(lines, title="Hyperframes Project Created")
 
 
 def _format_hyperframes_add_block(result: Any) -> None:
@@ -534,7 +530,7 @@ def _format_hyperframes_add_block(result: Any) -> None:
     ]
     if data.get("files_added"):
         lines.append(f"[bold green]Files added:[/bold green] {len(data['files_added'])}")
-    console.print(Panel("\n".join(lines), border_style="green", title="Hyperframes Block Added"))
+    _format_success_panel(lines, title="Hyperframes Block Added")
 
 
 def _format_hyperframes_validate(result: Any) -> None:
@@ -570,7 +566,7 @@ def _format_hyperframes_pipeline(result: Any, project_path: str) -> None:
     ]
     if data.get("operations"):
         lines.append(f"[bold green]Post-process ops:[/bold green] {', '.join(data['operations'])}")
-    console.print(Panel("\n".join(lines), border_style="green", title="Hyperframes Pipeline"))
+    _format_success_panel(lines, title="Hyperframes Pipeline")
 
 
 def _format_extract_colors(result: Any) -> None:
@@ -616,7 +612,7 @@ def _format_analyze_product(result: Any) -> None:
     desc = data.get("description")
     if desc:
         lines.append(f"\n[bold green]AI Description:[/bold green] {desc}")
-    console.print(Panel("\n".join(lines), border_style="green", title="Product Analysis"))
+    _format_success_panel(lines, title="Product Analysis")
 
 
 def _format_error(e: Exception) -> None:

@@ -1233,7 +1233,7 @@ class TestUpscaleHelpers:
             (tmp_path / "frame_0002.png").write_text("frame2")
             return type("Result", (), {"returncode": 0, "stderr": ""})()
 
-        monkeypatch.setattr("mcp_video.ai_engine.upscale._run_ffmpeg", fake_run_ffmpeg)
+        monkeypatch.setattr("mcp_video.ai_engine.upscale._run_command", fake_run_ffmpeg)
         frames = _extract_frames("/fake/video.mp4", tmp_path)
 
         assert len(calls) == 1
@@ -1248,7 +1248,7 @@ class TestUpscaleHelpers:
         def fake_run_ffmpeg(cmd, timeout=None):
             return type("Result", (), {"returncode": 0, "stderr": ""})()
 
-        monkeypatch.setattr("mcp_video.ai_engine.upscale._run_ffmpeg", fake_run_ffmpeg)
+        monkeypatch.setattr("mcp_video.ai_engine.upscale._run_command", fake_run_ffmpeg)
         with pytest.raises(ProcessingError, match="No frames extracted"):
             _extract_frames("/fake/video.mp4", tmp_path)
 
@@ -1261,7 +1261,7 @@ class TestUpscaleHelpers:
             calls.append(cmd)
             return type("Result", (), {"returncode": 0, "stderr": ""})()
 
-        monkeypatch.setattr("mcp_video.ai_engine.upscale._run_ffmpeg", fake_run_ffmpeg)
+        monkeypatch.setattr("mcp_video.ai_engine.upscale._run_command", fake_run_ffmpeg)
         frame_pattern = tmp_path / "frame_%04d.png"
         output = tmp_path / "out.mp4"
         _reconstruct_video(frame_pattern, output, 30.0)
@@ -1284,7 +1284,7 @@ class TestUpscaleHelpers:
             calls.append(cmd)
             return type("Result", (), {"returncode": 0, "stderr": ""})()
 
-        monkeypatch.setattr("mcp_video.ai_engine.upscale._run_ffmpeg", fake_run_ffmpeg)
+        monkeypatch.setattr("mcp_video.ai_engine.upscale._run_command", fake_run_ffmpeg)
         frame_pattern = tmp_path / "frame_%04d.png"
         output = tmp_path / "out.mp4"
         _reconstruct_video(frame_pattern, output, 24.0, audio_source="/fake/audio.aac")
@@ -1304,7 +1304,7 @@ class TestUpscaleHelpers:
             calls.append(cmd)
             return type("Result", (), {"returncode": 0, "stderr": ""})()
 
-        monkeypatch.setattr("mcp_video.ai_engine.upscale._run_ffmpeg", fake_run_ffmpeg)
+        monkeypatch.setattr("mcp_video.ai_engine.upscale._run_command", fake_run_ffmpeg)
         audio_path = tmp_path / "audio.aac"
         result = _extract_audio("/fake/video.mp4", audio_path)
 
@@ -1320,7 +1320,7 @@ class TestUpscaleHelpers:
         def fake_run_ffmpeg(cmd, timeout=None):
             raise ProcessingError("ffmpeg", 1, "audio extract failed")
 
-        monkeypatch.setattr("mcp_video.ai_engine.upscale._run_ffmpeg", fake_run_ffmpeg)
+        monkeypatch.setattr("mcp_video.ai_engine.upscale._run_command", fake_run_ffmpeg)
         audio_path = tmp_path / "audio.aac"
         result = _extract_audio("/fake/video.mp4", audio_path)
 
