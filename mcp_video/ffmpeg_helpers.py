@@ -88,10 +88,17 @@ def _run_command(cmd: list[str], timeout: int = DEFAULT_FFMPEG_TIMEOUT) -> subpr
 
 
 def _run_ffmpeg(args: list[str]) -> subprocess.CompletedProcess[str]:
-    """Run FFmpeg with auto-discovered binary and -y flag."""
+    """Run FFmpeg-compatible commands.
+
+    Accepts either:
+    - raw FFmpeg arguments (e.g. ``["-i", input, ...]``), in which case the
+      runtime FFmpeg binary and ``-y`` are prepended, or
+    - a full ``ffmpeg`` / ``ffprobe`` command, which is executed verbatim for
+      backward compatibility with older call sites.
+    """
     from .engine_runtime_utils import _ffmpeg
 
-    cmd = [_ffmpeg(), "-y", *args]
+    cmd = list(args) if args and args[0] in {"ffmpeg", "ffprobe"} else [_ffmpeg(), "-y", *args]
     try:
         proc = subprocess.run(
             cmd,
