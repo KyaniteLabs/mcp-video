@@ -1,5 +1,7 @@
 """Tests for shared FFmpeg helper contracts."""
 
+import subprocess
+
 
 def test_ffprobe_timeout_constant_exists():
     from mcp_video import limits
@@ -73,3 +75,55 @@ def test_validate_output_path_accepts_safe_paths():
     assert _validate_output_path("output.mp4") == "output.mp4"
     assert _validate_output_path("/tmp/output.mp4") == "/tmp/output.mp4"
     assert _validate_output_path("foo/bar/baz.mp4") == "foo/bar/baz.mp4"
+
+
+def test_run_ffmpeg_prepends_runtime_binary_for_raw_args(monkeypatch):
+    from mcp_video import ffmpeg_helpers
+
+    captured = {}
+
+    def fake_ffmpeg():
+        return "/custom/ffmpeg"
+
+    def fake_run(cmd, capture_output, text, timeout):
+        captured["cmd"] = cmd
+        return subprocess.CompletedProcess(cmd, 0, "", "")
+
+    monkeypatch.setattr("mcp_video.engine_runtime_utils._ffmpeg", fake_ffmpeg)
+    monkeypatch.setattr(ffmpeg_helpers.subprocess, "run", fake_run)
+
+    ffmpeg_helpers._run_ffmpeg(["-i", "input.mp4", "output.mp4"])
+
+    assert captured["cmd"] == ["/custom/ffmpeg", "-y", "-i", "input.mp4", "output.mp4"]
+
+
+def test_run_ffmpeg_preserves_full_ffprobe_command(monkeypatch):
+    from mcp_video import ffmpeg_helpers
+
+    captured = {}
+
+    def fake_run(cmd, capture_output, text, timeout):
+        captured["cmd"] = cmd
+        return subprocess.CompletedProcess(cmd, 0, "320x240", "")
+
+    monkeypatch.setattr(ffmpeg_helpers.subprocess, "run", fake_run)
+
+    ffmpeg_helpers._run_ffmpeg(["ffprobe", "-v", "error", "video.mp4"])
+
+    assert captured["cmd"] == ["ffprobe", "-v", "error", "video.mp4"]
+
+
+def test_run_ffmpeg_preserves_full_ffmpeg_command(monkeypatch):
+    from mcp_video import ffmpeg_helpers
+
+    captured = {}
+
+    def fake_run(cmd, capture_output, text, timeout):
+        captured["cmd"] = cmd
+        return subprocess.CompletedProcess(cmd, 0, "", "")
+
+    monkeypatch.setattr(ffmpeg_helpers.subprocess, "run", fake_run)
+
+    ffmpeg_helpers._run_ffmpeg(["ffmpeg", "-y", "-i", "input.mp4", "output.mp4"])
+
+    assert captured["cmd"] == ["ffmpeg", "-y", "-i", "input.mp4", "output.mp4"]
