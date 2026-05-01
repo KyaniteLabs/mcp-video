@@ -11,7 +11,7 @@ permissions:
 jobs:
   surface-audit:
     name: Check tracked release surface
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@v6
       - name: Check forbidden tracked artifacts
@@ -20,7 +20,7 @@ jobs:
   build:
     name: Build package
     needs: surface-audit
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@v6
         with:
@@ -44,7 +44,7 @@ jobs:
   publish:
     name: Publish to PyPI
     needs: build
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     environment: pypi
     permissions:
       contents: read

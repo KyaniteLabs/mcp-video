@@ -22,9 +22,12 @@ on:
 jobs:
   base-cli-and-doctor:
     name: Base CLI and doctor
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@v6
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
       - name: Create venv
         run: python3.13 -m venv .venv
       - name: Install base package
@@ -56,15 +59,19 @@ jobs:
 
   ffmpeg-smoke:
     name: FFmpeg operation smoke
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@v6
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
       - name: Create venv
         run: python3.13 -m venv .venv
       - name: Ensure FFmpeg
         run: |
           if ! command -v ffmpeg &>/dev/null; then
-            brew install ffmpeg
+            sudo apt-get update
+            sudo apt-get install -y ffmpeg
           fi
           command -v ffmpeg >/dev/null
           command -v ffprobe >/dev/null
@@ -81,9 +88,12 @@ jobs:
 
   image-extra-smoke:
     name: Image extra smoke
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@v6
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
       - name: Create venv
         run: python3.13 -m venv .venv
       - name: Install image extra
@@ -107,9 +117,12 @@ jobs:
 
   ai-module-smoke:
     name: AI module metadata smoke
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@v6
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
       - name: Create venv
         run: python3.13 -m venv .venv
       - name: Install base package
