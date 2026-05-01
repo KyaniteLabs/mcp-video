@@ -15,7 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Check forbidden tracked artifacts
-        run: python3 .github/scripts/check-forbidden-artifacts.py
+        run: python3.13 .github/scripts/check-forbidden-artifacts.py
 
   build:
     name: Build package
@@ -25,21 +25,14 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0  # Needed for hatch-vcs if ever adopted
-      - name: Prepare Python tool cache
-        run: mkdir -p "${{ github.workspace }}/.tool_cache"
-      - uses: actions/setup-python@v5
-        env:
-          RUNNER_TOOL_CACHE: ${{ github.workspace }}/.tool_cache
-        with:
-          python-version: "3.12"
       - name: Install build dependencies
-        run: pip install build twine
+        run: python3.13 -m pip install build twine
       - name: Build package
-        run: python -m build
+        run: python3.13 -m build
       - name: Check built artifact contents
-        run: python3 .github/scripts/check-built-artifacts.py dist
+        run: python3.13 .github/scripts/check-built-artifacts.py dist
       - name: Validate distribution metadata
-        run: python -m twine check dist/*
+        run: python3.13 -m twine check dist/*
       - name: Upload build artifacts
         uses: actions/upload-artifact@v7
         with:
