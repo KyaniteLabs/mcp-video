@@ -17,6 +17,7 @@ from .paths import (
     _auto_output,
 )
 from .ffmpeg_helpers import (
+    _build_ffmpeg_cmd,
     _run_ffmpeg,
     _sanitize_ffmpeg_number,
 )
@@ -195,38 +196,25 @@ def _run_audio_filter(input_path: str, filter_type: FilterType, filter_string: s
             code="audio_filter_no_audio",
         )
     _run_filter_ffmpeg(
-        [
-            "-i",
+        _build_ffmpeg_cmd(
             input_path,
-            "-af",
-            filter_string,
-            "-c:v",
-            "copy",
-            "-c:a",
-            "aac",
-            "-b:a",
-            DEFAULT_AUDIO_BITRATE,
-            *_movflags_args(output),
-            output,
-        ]
+            output_path=output,
+            video_codec="copy",
+            audio_filter=filter_string,
+        )
     )
 
 
 def _run_video_filter(input_path: str, filter_string: str, output: str, crf: int | None, preset: str | None) -> None:
     _run_filter_ffmpeg(
-        [
-            "-i",
+        _build_ffmpeg_cmd(
             input_path,
-            "-vf",
-            filter_string,
-            "-c:v",
-            "libx264",
-            *_quality_args(crf=crf, preset=preset),
-            "-c:a",
-            "copy",
-            *_movflags_args(output),
-            output,
-        ]
+            output_path=output,
+            video_filter=filter_string,
+            audio_codec="copy",
+            crf=crf,
+            preset=preset,
+        )
     )
 
 

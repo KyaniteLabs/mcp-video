@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from .ffmpeg_helpers import _validate_input_path, _validate_output_path
+from .ffmpeg_helpers import _build_ffmpeg_cmd, _validate_input_path, _validate_output_path
 from .engine_probe import probe
-from .engine_runtime_utils import _build_edit_result, _movflags_args, _timed_operation
+from .engine_runtime_utils import _build_edit_result, _timed_operation
 from .paths import _auto_output
 from .ffmpeg_helpers import _run_ffmpeg
 from .errors import MCPVideoError
@@ -30,26 +30,15 @@ def preview(
 
     with _timed_operation() as timing:
         _run_ffmpeg(
-            [
-                "-i",
+            _build_ffmpeg_cmd(
                 input_path,
-                "-vf",
-                f"scale={w}:{h}",
-                "-c:v",
-                "libx264",
-                "-crf",
-                str(PREVIEW_PRESETS["crf"]),
-                "-preset",
-                PREVIEW_PRESETS["preset"],
-                "-c:a",
-                "aac",
-                "-b:a",
-                "64k",
-                "-ac",
-                "2",
-                *_movflags_args(output),
-                output,
-            ]
+                output_path=output,
+                video_filter=f"scale={w}:{h}",
+                crf=PREVIEW_PRESETS["crf"],
+                preset=PREVIEW_PRESETS["preset"],
+                audio_bitrate="64k",
+                extra=["-ac", "2"],
+            )
         )
 
     return _build_edit_result(

@@ -24,6 +24,7 @@ from .models import (
     _position_coords,
 )
 from .ffmpeg_helpers import (
+    _build_ffmpeg_cmd,
     _run_ffmpeg,
     _sanitize_ffmpeg_number,
 )
@@ -256,11 +257,7 @@ def _run_overlay_command(
                 *inputs,
                 "-filter_complex",
                 ";".join(filter_parts),
-                "-map",
-                f"[{last_label}]",
-                "-map",
-                "0:a?",
-                *_encode_args(output_path),
+                *_encode_args(output_path, extra=["-map", f"[{last_label}]", "-map", "0:a?"]),
             ]
         )
     elif image_overlays:
@@ -269,16 +266,17 @@ def _run_overlay_command(
                 *inputs,
                 "-filter_complex",
                 ";".join(filter_parts),
-                "-map",
-                f"[{prev_label}]",
-                "-map",
-                "0:a?",
-                *_encode_args(output_path),
+                *_encode_args(output_path, extra=["-map", f"[{prev_label}]", "-map", "0:a?"]),
             ]
         )
     elif vf_parts:
         _run_ffmpeg([*inputs, "-vf", ",".join(vf_parts), *_encode_args(output_path)])
 
 
-def _encode_args(output_path: str) -> list[str]:
-    return ["-c:v", "libx264", *_quality_args(), "-c:a", "copy", *_movflags_args(output_path), output_path]
+def _encode_args(output_path: str, extra: list[str] | None = None) -> list[str]:
+    return _build_ffmpeg_cmd(
+        output_path=output_path,
+        video_codec="libx264",
+        audio_codec="copy",
+        extra=extra,
+    )

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from .engine_runtime_utils import (
     _build_edit_result,
-    _movflags_args,
     _require_filter,
     _timed_operation,
 )
@@ -12,9 +11,9 @@ from .paths import (
     _auto_output,
 )
 from .ffmpeg_helpers import (
+    _build_ffmpeg_cmd,
     _run_ffmpeg,
 )
-from .defaults import DEFAULT_CRF, DEFAULT_PRESET
 from .ffmpeg_helpers import _validate_input_path, _validate_output_path, _escape_ffmpeg_filter_value
 from .models import EditResult
 
@@ -38,22 +37,12 @@ def subtitles(
 
     with _timed_operation() as timing:
         _run_ffmpeg(
-            [
-                "-i",
+            _build_ffmpeg_cmd(
                 input_path,
-                "-vf",
-                f"subtitles={escaped_sub_path}:force_style={escaped_style}",
-                "-c:v",
-                "libx264",
-                "-preset",
-                DEFAULT_PRESET,
-                "-crf",
-                str(DEFAULT_CRF),
-                "-c:a",
-                "copy",
-                *_movflags_args(output),
-                output,
-            ]
+                output_path=output,
+                video_filter=f"subtitles={escaped_sub_path}:force_style={escaped_style}",
+                audio_codec="copy",
+            )
         )
 
     return _build_edit_result(

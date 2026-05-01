@@ -7,12 +7,9 @@ import shutil
 import subprocess
 import tempfile
 
-from .defaults import DEFAULT_AUDIO_BITRATE
 from .engine_runtime_utils import (
     _build_edit_result,
     _ffmpeg,
-    _movflags_args,
-    _quality_args,
     _require_filter,
     _timed_operation,
 )
@@ -20,6 +17,7 @@ from .paths import (
     _auto_output,
 )
 from .ffmpeg_helpers import (
+    _build_ffmpeg_cmd,
     _run_ffmpeg,
     _sanitize_ffmpeg_number,
 )
@@ -59,21 +57,11 @@ def stabilize(
 
             safe_vectors_file = _escape_ffmpeg_filter_value(vectors_file)
             _run_ffmpeg(
-                [
-                    "-i",
+                _build_ffmpeg_cmd(
                     input_path,
-                    "-vf",
-                    f"vidstabtransform=input={safe_vectors_file}:smoothing={safe_smoothing}:zoom={safe_zooming}:crop=black",
-                    "-c:v",
-                    "libx264",
-                    *_quality_args(),
-                    "-c:a",
-                    "aac",
-                    "-b:a",
-                    DEFAULT_AUDIO_BITRATE,
-                    *_movflags_args(output),
-                    output,
-                ]
+                    output_path=output,
+                    video_filter=f"vidstabtransform=input={safe_vectors_file}:smoothing={safe_smoothing}:zoom={safe_zooming}:crop=black",
+                )
             )
         finally:
             shutil.rmtree(tmpdir, ignore_errors=True)

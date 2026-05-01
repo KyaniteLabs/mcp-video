@@ -2,17 +2,15 @@
 
 from __future__ import annotations
 
-from .defaults import DEFAULT_AUDIO_BITRATE
 from .engine_runtime_utils import (
     _build_edit_result,
-    _movflags_args,
-    _quality_args,
     _timed_operation,
 )
 from .paths import (
     _auto_output,
 )
 from .ffmpeg_helpers import (
+    _build_ffmpeg_cmd,
     _run_ffmpeg,
 )
 from .ffmpeg_helpers import _validate_input_path, _validate_output_path
@@ -59,21 +57,11 @@ def rotate(
 
     with _timed_operation() as timing:
         _run_ffmpeg(
-            [
-                "-i",
+            _build_ffmpeg_cmd(
                 input_path,
-                "-vf",
-                vf,
-                "-c:v",
-                "libx264",
-                *_quality_args(),
-                "-c:a",
-                "aac",
-                "-b:a",
-                DEFAULT_AUDIO_BITRATE,
-                *_movflags_args(output),
-                output,
-            ]
+                output_path=output,
+                video_filter=vf,
+            )
         )
 
     return _build_edit_result(

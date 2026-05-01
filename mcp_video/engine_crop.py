@@ -13,6 +13,7 @@ from .paths import (
     _auto_output,
 )
 from .ffmpeg_helpers import (
+    _build_ffmpeg_cmd,
     _run_ffmpeg,
 )
 from .errors import MCPVideoError
@@ -87,19 +88,12 @@ def crop(
 
     with _timed_operation() as timing:
         _run_ffmpeg(
-            [
-                "-i",
+            _build_ffmpeg_cmd(
                 input_path,
-                "-vf",
-                crop_filter,
-                "-c:v",
-                "libx264",
-                *_quality_args(),
-                "-c:a",
-                "copy",
-                *_movflags_args(output),
-                output,
-            ]
+                output_path=output,
+                video_filter=crop_filter,
+                audio_codec="copy",
+            )
         )
 
     return _build_edit_result(
