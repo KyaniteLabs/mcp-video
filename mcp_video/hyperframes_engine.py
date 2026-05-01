@@ -105,6 +105,33 @@ def _run_hyperframes(
         raise HyperframesNotFoundError("npx command not found") from None
 
 
+def _hyperframes_op(
+    subcommand: str,
+    *,
+    cwd: str | Path,
+    positional: list[str] = (),  # type: ignore[assignment]
+    flags: dict[str, str | int | float | None] = (),  # type: ignore[assignment]
+    fixed: list[str] = (),  # type: ignore[assignment]
+    timeout: int = 600,
+) -> subprocess.CompletedProcess[str]:
+    """Build and run a hyperframes CLI command.
+
+    Args:
+        subcommand: hyperframes subcommand (e.g. "render", "compositions").
+        cwd: Working directory for the subprocess.
+        positional: Positional args appended after subcommand.
+        flags: Mapping of CLI flag → value. Only truthy values are included.
+        fixed: Fixed args always appended (e.g. ["--json"]).
+        timeout: Subprocess timeout in seconds.
+    """
+    args: list[str] = [subcommand, *positional]
+    for flag, value in flags.items():
+        if value is not None and value != "":
+            args += [f"--{flag}", str(value)]
+    args.extend(fixed)
+    return _run_hyperframes(args, cwd=cwd, timeout=timeout)
+
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -129,30 +156,26 @@ def render(
         os.makedirs("out", exist_ok=True)
         output_path = os.path.join("out", f"{project.name}.mp4")
 
-    args = [
-        "render",
-        str(project),
-        "--output",
-        output_path,
-    ]
-    if fps is not None:
-        args += ["--fps", str(fps)]
-    if quality is not None:
-        args += ["--quality", quality]
-    if format is not None:
-        args += ["--format", format]
-    if workers is not None:
-        args += ["--workers", str(workers)]
-    if crf is not None:
-        args += ["--crf", str(crf)]
-
     start_time = time.time()
-    result = _run_hyperframes(args, cwd=project)
+    result = _hyperframes_op(
+        "render",
+        cwd=project,
+        positional=[str(project)],
+        flags={
+            "output": output_path,
+            "fps": fps,
+            "quality": quality,
+            "format": format,
+            "workers": workers,
+            "crf": crf,
+        },
+        timeout=600,
+    )
+    render_time = round(time.time() - start_time, 1)
 
     if result.returncode != 0:
-        raise HyperframesRenderError(" ".join(args), result.returncode, result.stderr)
+        raise HyperframesRenderError(f"render {project}", result.returncode, result.stderr)
 
-    render_time = round(time.time() - start_time, 1)
     size_mb = round(os.path.getsize(output_path) / (1024 * 1024), 2) if os.path.isfile(output_path) else None
 
     resolution = None
@@ -217,11 +240,16 @@ def compositions(
     _require_hyperframes_deps()
     project, _entry_point = _validate_project(project_path)
 
-    args = ["compositions", str(project), "--json"]
-    result = _run_hyperframes(args, cwd=project, timeout=60)
+    result = _hyperframes_op(
+        "compositions",
+        cwd=project,
+        positional=[str(project)],
+        fixed=["--json"],
+        timeout=60,
+    )
 
     if result.returncode != 0:
-        raise HyperframesRenderError(" ".join(args), result.returncode, result.stderr)
+        raise HyperframesRenderError(f"compositions {project}", result.returncode, result.stderr)
 
     raw = _parse_compositions_output(result.stdout)
 
@@ -288,19 +316,17 @@ def still(
         os.makedirs("out", exist_ok=True)
         output_path = os.path.join("out", f"{project.name}_frame{frame}.png")
 
-    args = [
+    result = _hyperframes_op(
         "snapshot",
-        str(project),
-        "--frames",
-        "1",
-        "--at",
-        str(frame / 30.0),  # Convert frame to seconds at 30fps
-    ]
-
-    result = _run_hyperframes(args, cwd=project, timeout=120)
+        cwd=project,
+        positional=[str(project)],
+        flags={"at": str(frame / 30.0)},
+        fixed=["--frames", "1"],
+        timeout=120,
+    )
 
     if result.returncode != 0:
-        raise HyperframesRenderError(" ".join(args), result.returncode, result.stderr)
+        raise HyperframesRenderError(f"snapshot {project}", result.returncode, result.stderr)
 
     return HyperframesStillResult(
         output_path=output_path,
@@ -328,18 +354,16 @@ def create_project(
 
     project_dir.mkdir(parents=True, exist_ok=True)
 
-    args = [
+    result = _hyperframes_op(
         "init",
-        name,
-        "--example",
-        template,
-        "--non-interactive",
-        "--skip-skills",
-    ]
-
-    result = _run_hyperframes(args, cwd=output_dir, timeout=120)
+        cwd=output_dir,
+        positional=[name],
+        flags={"example": template},
+        fixed=["--non-interactive", "--skip-skills"],
+        timeout=120,
+    )
     if result.returncode != 0:
-        raise HyperframesRenderError(" ".join(args), result.returncode, result.stderr)
+        raise HyperframesRenderError(f"init {name}", result.returncode, result.stderr)
 
     # Discover created files
     files: list[str] = []
@@ -387,7 +411,13 @@ def validate(
     # Run hyperframes lint if deps are available
     if shutil.which("npx") is not None:
         try:
-            result = _run_hyperframes(["lint", str(p), "--json"], cwd=p, timeout=60)
+            result = _hyperframes_op(
+                "lint",
+                cwd=p,
+                positional=[str(p)],
+                fixed=["--json"],
+                timeout=60,
+            )
             if result.returncode != 0:
                 try:
                     lint_data = json.loads(result.stdout)
@@ -418,17 +448,16 @@ def add_block(
     _require_hyperframes_deps()
     project, _entry_point = _validate_project(project_path)
 
-    args = [
+    result = _hyperframes_op(
         "add",
-        block_name,
-        "--dir",
-        str(project),
-        "--json",
-    ]
-
-    result = _run_hyperframes(args, cwd=project, timeout=60)
+        cwd=project,
+        positional=[block_name],
+        flags={"dir": str(project)},
+        fixed=["--json"],
+        timeout=60,
+    )
     if result.returncode != 0:
-        raise HyperframesRenderError(" ".join(args), result.returncode, result.stderr)
+        raise HyperframesRenderError(f"add {block_name}", result.returncode, result.stderr)
 
     files_added: list[str] = []
     try:
