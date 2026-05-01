@@ -18,20 +18,27 @@ from .runner import CommandRunner, _out, engine_cmd, plain_cmd
 
 
 def handle_initial_command(args: Any, *, use_json: bool) -> bool:
-    from ..doctor import run_diagnostics
-    from ..engine import add_text, probe, subtitles
     from ..engine import edit_timeline as _edit_timeline
     from ..models import Timeline
 
     runner = CommandRunner(args, use_json)
-    runner.register("doctor", lambda a, j: _out(run_diagnostics(), j or a.json, _format_doctor_text))
+
+    def _doctor(a, j):
+        from ..doctor import run_diagnostics
+
+        _out(run_diagnostics(), j or a.json, _format_doctor_text)
+
+    runner.register("doctor", _doctor)
     runner.register(
         "info",
-        lambda a, j: _out(
-            probe(a.input),
-            j,
-            _format_info_text,
-            json_transform=lambda r: {"success": True, "data": r.model_dump() if hasattr(r, "model_dump") else r},
+        plain_cmd(
+            "mcp_video.engine:probe",
+            "input",
+            formatter=_format_info_text,
+            json_transform=lambda r: {
+                "success": True,
+                "data": r.model_dump() if hasattr(r, "model_dump") else r,
+            },
         ),
     )
     runner.register(
@@ -43,7 +50,10 @@ def handle_initial_command(args: Any, *, use_json: bool) -> bool:
             formatter=_format_thumbnail_text,
             timestamp="timestamp",
             output_path="output",
-            json_transform=lambda r: {"success": True, **(r.model_dump() if hasattr(r, "model_dump") else r)},
+            json_transform=lambda r: {
+                "success": True,
+                **(r.model_dump() if hasattr(r, "model_dump") else r),
+            },
         ),
     )
     runner.register(
@@ -74,6 +84,8 @@ def handle_initial_command(args: Any, *, use_json: bool) -> bool:
     )
 
     def _add_text(a, j):
+        from ..engine import add_text
+
         _out(
             _with_spinner(
                 "Adding text...",
@@ -181,10 +193,16 @@ def handle_initial_command(args: Any, *, use_json: bool) -> bool:
     )
 
     def _subs(a, j):
+        from ..engine import subtitles
+
         kwargs = {"subtitle_path": a.subtitle, "output_path": a.output}
         if a.style is not None:
             kwargs["style"] = a.style
-        _out(_with_spinner("Burning subtitles...", subtitles, a.input, **kwargs), j, _format_edit_text)
+        _out(
+            _with_spinner("Burning subtitles...", subtitles, a.input, **kwargs),
+            j,
+            _format_edit_text,
+        )
 
     runner.register("subtitles", _subs)
     runner.register(
@@ -276,7 +294,11 @@ def handle_initial_command(args: Any, *, use_json: bool) -> bool:
         else:
             with open(timeline_arg) as f:
                 tl = Timeline.model_validate(_json.load(f))
-        _out(_with_spinner("Editing timeline...", _edit_timeline, tl, output_path=a.output), j, _format_edit_text)
+        _out(
+            _with_spinner("Editing timeline...", _edit_timeline, tl, output_path=a.output),
+            j,
+            _format_edit_text,
+        )
 
     runner.register("edit", _edit)
     return runner.dispatch()
