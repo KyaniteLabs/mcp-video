@@ -54,14 +54,22 @@ def _build_add_audio_args(
             delay = f"[1:a]adelay={safe_delay}|{safe_delay},"
         filter_complex = f"[0:a]anull[a0];{delay}[1:a]{af}[a1];[a0][a1]amix=inputs=2:duration=longest[aout]"
         return [
-            "-i", video_path,
-            "-i", audio_path,
-            "-filter_complex", filter_complex,
-            "-map", "0:v",
-            "-map", "[aout]",
-            "-c:v", "copy",
-            "-c:a", "aac",
-            "-b:a", DEFAULT_AUDIO_BITRATE,
+            "-i",
+            video_path,
+            "-i",
+            audio_path,
+            "-filter_complex",
+            filter_complex,
+            "-map",
+            "0:v",
+            "-map",
+            "[aout]",
+            "-c:v",
+            "copy",
+            "-c:a",
+            "aac",
+            "-b:a",
+            DEFAULT_AUDIO_BITRATE,
             *_movflags_args(output),
             output,
         ]
@@ -81,9 +89,12 @@ def _build_add_audio_args(
 
     args.extend(
         [
-            "-c:v", "copy",
-            "-c:a", "aac",
-            "-b:a", DEFAULT_AUDIO_BITRATE,
+            "-c:v",
+            "copy",
+            "-c:a",
+            "aac",
+            "-b:a",
+            DEFAULT_AUDIO_BITRATE,
             "-shortest",
             *_movflags_args(output),
             output,
@@ -113,9 +124,7 @@ def add_audio(
 
     with _timed_operation() as timing:
         filters = _build_audio_filters(volume, fade_in, fade_out, video_info.duration)
-        cmd = _build_add_audio_args(
-            video_path, audio_path, filters, mix, start_time, source_has_audio, output
-        )
+        cmd = _build_add_audio_args(video_path, audio_path, filters, mix, start_time, source_has_audio, output)
         _run_ffmpeg(cmd)
 
     warnings = []
@@ -125,6 +134,4 @@ def add_audio(
             "preserve source audio and listen before publishing."
         )
 
-    return _build_edit_result(
-        output, "add_audio", timing
-    ).model_copy(update={"warnings": warnings})
+    return _build_edit_result(output, "add_audio", timing).model_copy(update={"warnings": warnings})

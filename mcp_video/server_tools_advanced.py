@@ -185,11 +185,9 @@ def video_chroma_key(
     input_path = _validate_input_path(input_path)
     _validate_chroma_color(color)
     if not 0 <= similarity <= 1:
-        return _validation_error(
-                f"similarity must be between 0 and 1, got {similarity}")
+        return _validation_error(f"similarity must be between 0 and 1, got {similarity}")
     if not 0 <= blend <= 1:
-        return _validation_error(
-                f"blend must be between 0 and 1, got {blend}")
+        return _validation_error(f"blend must be between 0 and 1, got {blend}")
     return _result(chroma_key(input_path, color=color, similarity=similarity, blend=blend, output_path=output_path))
 
 
@@ -211,8 +209,7 @@ def video_normalize_audio(
     """
     input_path = _validate_input_path(input_path)
     if not -70 <= target_lufs <= -5:
-        return _validation_error(
-                f"target_lufs must be between -70 and -5, got {target_lufs}")
+        return _validation_error(f"target_lufs must be between -70 and -5, got {target_lufs}")
     return _result(normalize_audio(input_path, target_lufs=target_lufs, output_path=output_path))
 
 
@@ -248,11 +245,9 @@ def video_overlay(
         preset: Override FFmpeg encoding preset (ultrafast, fast, medium, slow, veryslow).
     """
     if width is not None and width <= 0:
-        return _validation_error(
-                f"width must be positive, got {width}")
+        return _validation_error(f"width must be positive, got {width}")
     if height is not None and height <= 0:
-        return _validation_error(
-                f"height must be positive, got {height}")
+        return _validation_error(f"height must be positive, got {height}")
     if crf is not None and not (0 <= crf <= 51):
         return _validation_error(f"crf must be 0-51, got {crf}")
     if preset is not None and preset not in VALID_PRESETS:
@@ -260,8 +255,7 @@ def video_overlay(
     background_path = _validate_input_path(background_path)
     overlay_path = _validate_input_path(overlay_path)
     if not 0 <= opacity <= 1:
-        return _validation_error(
-                f"opacity must be between 0 and 1, got {opacity}")
+        return _validation_error(f"opacity must be between 0 and 1, got {opacity}")
     return _result(
         overlay_video(
             background_path,
@@ -296,8 +290,7 @@ def video_split_screen(
         output_path: Where to save the output. Auto-generated if omitted.
     """
     if layout not in VALID_LAYOUTS:
-        return _validation_error(
-                f"Invalid layout: must be one of {sorted(VALID_LAYOUTS)}, got '{layout}'")
+        return _validation_error(f"Invalid layout: must be one of {sorted(VALID_LAYOUTS)}, got '{layout}'")
     left_path = _validate_input_path(left_path)
     right_path = _validate_input_path(right_path)
     return _result(split_screen(left_path, right_path=right_path, layout=layout, output_path=output_path))
@@ -319,11 +312,9 @@ def video_detect_scenes(
     """
     input_path = _validate_input_path(input_path)
     if not 0 <= threshold <= 1:
-        return _validation_error(
-                f"threshold must be between 0 and 1, got {threshold}")
+        return _validation_error(f"threshold must be between 0 and 1, got {threshold}")
     if min_scene_duration <= 0:
-        return _validation_error(
-                f"min_scene_duration must be positive, got {min_scene_duration}")
+        return _validation_error(f"min_scene_duration must be positive, got {min_scene_duration}")
     return _result(detect_scenes(input_path, threshold=threshold, min_scene_duration=min_scene_duration))
 
 
@@ -344,8 +335,7 @@ def video_create_from_images(
     for _p in images:
         _validate_input_path(_p)
     if fps <= 0 or fps > MAX_EXPORT_FRAMES_FPS:
-        return _validation_error(
-                f"fps must be between 1 and {MAX_EXPORT_FRAMES_FPS}, got {fps}")
+        return _validation_error(f"fps must be between 1 and {MAX_EXPORT_FRAMES_FPS}, got {fps}")
     return _result(create_from_images(images, output_path=output_path, fps=fps))
 
 
@@ -366,11 +356,9 @@ def video_export_frames(
         format: Output image format (jpg or png, default jpg).
     """
     if fps <= 0:
-        return _validation_error(
-                f"fps must be positive, got {fps}")
+        return _validation_error(f"fps must be positive, got {fps}")
     if fps > MAX_EXPORT_FRAMES_FPS:
-        return _validation_error(
-                f"FPS {fps} exceeds maximum of {MAX_EXPORT_FRAMES_FPS}", code='fps_too_high')
+        return _validation_error(f"FPS {fps} exceeds maximum of {MAX_EXPORT_FRAMES_FPS}", code="fps_too_high")
     input_path = _validate_input_path(input_path)
     return _result(export_frames(input_path, output_dir=output_dir, fps=fps, format=format))
 
@@ -390,8 +378,7 @@ def video_generate_subtitles(
         burn: If True, burn subtitles into the video (default False).
     """
     if not isinstance(entries, list) or len(entries) == 0:
-        return _validation_error(
-                "entries must be a non-empty list")
+        return _validation_error("entries must be a non-empty list")
     input_path = _validate_input_path(input_path)
     return _result(generate_subtitles(entries, input_path, burn=burn))
 
@@ -465,11 +452,9 @@ def video_stabilize(
     """
     input_path = _validate_input_path(input_path)
     if smoothing < 0:
-        return _validation_error(
-                f"smoothing must be non-negative, got {smoothing}")
+        return _validation_error(f"smoothing must be non-negative, got {smoothing}")
     if zooming < 0:
-        return _validation_error(
-                f"zooming must be non-negative, got {zooming}")
+        return _validation_error(f"zooming must be non-negative, got {zooming}")
     return _result(stabilize(input_path, smoothing=smoothing, zooming=zooming, output_path=output_path))
 
 
@@ -492,8 +477,7 @@ def video_apply_mask(
     input_path = _validate_input_path(input_path)
     mask_path = _validate_input_path(mask_path)
     if feather < 0:
-        return _validation_error(
-                f"feather must be non-negative, got {feather}")
+        return _validation_error(f"feather must be non-negative, got {feather}")
     return _result(apply_mask(input_path, mask_path=mask_path, feather=feather, output_path=output_path))
 
 
@@ -511,8 +495,7 @@ def video_audio_waveform(
     """
     input_path = _validate_input_path(input_path)
     if bins < 1 or bins > 1000:
-        return _validation_error(
-                f"bins must be between 1 and 1000, got {bins}")
+        return _validation_error(f"bins must be between 1 and 1000, got {bins}")
     return _result(audio_waveform(input_path, bins=bins))
 
 
@@ -547,10 +530,13 @@ def video_batch(
     }
     if operation not in VALID_BATCH_OPERATIONS:
         return _validation_error(
-                f"Unknown operation '{operation}'. Valid operations: {sorted(VALID_BATCH_OPERATIONS)}", code='invalid_operation')
+            f"Unknown operation '{operation}'. Valid operations: {sorted(VALID_BATCH_OPERATIONS)}",
+            code="invalid_operation",
+        )
     if len(inputs) > MAX_BATCH_SIZE:
         return _validation_error(
-                f"Batch size {len(inputs)} exceeds maximum of {MAX_BATCH_SIZE}", code='batch_too_large')
+            f"Batch size {len(inputs)} exceeds maximum of {MAX_BATCH_SIZE}", code="batch_too_large"
+        )
     return _result(_video_batch(inputs, operation, params, output_dir))
 
 

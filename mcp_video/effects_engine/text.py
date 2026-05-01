@@ -10,6 +10,7 @@ import os
 import tempfile
 import textwrap
 from pathlib import Path
+from collections.abc import Callable
 from typing import Any
 
 from ..defaults import DEFAULT_SAFE_SUBTITLE_FONT_SIZE, DEFAULT_SUBTITLE_MAX_CHARS_PER_LINE, DEFAULT_SUBTITLE_MAX_LINES

@@ -9,7 +9,7 @@ from typing import Any
 from .errors import MCPVideoError
 from .defaults import DEFAULT_PROCEDURAL_AUDIO_BED_WARNING_SECONDS
 from .limits import MAX_FREQUENCY, MIN_FREQUENCY
-from .server_app import _error_result, _result, _safe_tool, _validation_error, mcp
+from .server_app import _result, _safe_tool, _validation_error, mcp
 from .ffmpeg_helpers import _validate_input_path
 from .validation import (
     VALID_AUDIO_EFFECT_TYPES,
@@ -66,17 +66,13 @@ def audio_synthesize(
         Dict with success status and output_path.
     """
     if waveform not in VALID_WAVEFORMS:
-        return _validation_error(
-                f"Invalid waveform: must be one of {sorted(VALID_WAVEFORMS)}, got '{waveform}'")
+        return _validation_error(f"Invalid waveform: must be one of {sorted(VALID_WAVEFORMS)}, got '{waveform}'")
     if frequency < MIN_FREQUENCY or frequency > MAX_FREQUENCY:
-        return _validation_error(
-                f"Invalid frequency: must be {MIN_FREQUENCY}-{MAX_FREQUENCY}, got {frequency}")
+        return _validation_error(f"Invalid frequency: must be {MIN_FREQUENCY}-{MAX_FREQUENCY}, got {frequency}")
     if duration <= 0:
-        return _validation_error(
-                f"Invalid duration: must be > 0, got {duration}")
+        return _validation_error(f"Invalid duration: must be > 0, got {duration}")
     if volume < 0 or volume > 1:
-        return _validation_error(
-                f"Invalid volume: must be 0-1, got {volume}")
+        return _validation_error(f"Invalid volume: must be 0-1, got {volume}")
     output = output_path or os.path.join(tempfile.gettempdir(), f"mcp_audio_{waveform}.wav")
     from .audio_engine import audio_synthesize as _synth
 
@@ -122,17 +118,13 @@ def audio_preset(
         Dict with success status and output_path.
     """
     if preset not in VALID_AUDIO_PRESETS:
-        return _validation_error(
-                f"Invalid preset: must be one of {sorted(VALID_AUDIO_PRESETS)}, got '{preset}'")
+        return _validation_error(f"Invalid preset: must be one of {sorted(VALID_AUDIO_PRESETS)}, got '{preset}'")
     if pitch not in {"low", "mid", "high"}:
-        return _validation_error(
-                f"Invalid pitch: must be one of ['high', 'low', 'mid'], got '{pitch}'")
+        return _validation_error(f"Invalid pitch: must be one of ['high', 'low', 'mid'], got '{pitch}'")
     if intensity < 0 or intensity > 1:
-        return _validation_error(
-                f"Invalid intensity: must be 0-1, got {intensity}")
+        return _validation_error(f"Invalid intensity: must be 0-1, got {intensity}")
     if duration is not None and duration <= 0:
-        return _validation_error(
-                f"Invalid duration: must be > 0, got {duration}")
+        return _validation_error(f"Invalid duration: must be > 0, got {duration}")
     output = output_path or os.path.join(tempfile.gettempdir(), f"mcp_audio_{preset}.wav")
     from .audio_engine import audio_preset as _preset
 
@@ -176,27 +168,21 @@ def audio_sequence(
         Dict with success status and output_path.
     """
     if not isinstance(sequence, list) or len(sequence) < 1:
-        return _validation_error(
-                "Invalid sequence: must be a non-empty list")
+        return _validation_error("Invalid sequence: must be a non-empty list")
     for i, event in enumerate(sequence):
         if not isinstance(event, dict):
-            return _validation_error(
-                    f"Invalid sequence[{i}]: must be a dict")
+            return _validation_error(f"Invalid sequence[{i}]: must be a dict")
         evt_type = event.get("type")
         if evt_type not in VALID_AUDIO_SEQUENCE_TYPES:
             return _validation_error(
-                    (
-                        f"Invalid sequence[{i}].type: must be one of "
-                        f"{sorted(VALID_AUDIO_SEQUENCE_TYPES)}, got '{evt_type}'"
-                    ))
+                f"Invalid sequence[{i}].type: must be one of {sorted(VALID_AUDIO_SEQUENCE_TYPES)}, got '{evt_type}'"
+            )
         evt_at = event.get("at")
         if not isinstance(evt_at, (int, float)):
-            return _validation_error(
-                    f"Invalid sequence[{i}].at: must be numeric, got {type(evt_at).__name__}")
+            return _validation_error(f"Invalid sequence[{i}].at: must be numeric, got {type(evt_at).__name__}")
         evt_dur = event.get("duration")
         if evt_dur is not None and evt_dur <= 0:
-            return _validation_error(
-                    f"Invalid sequence[{i}].duration: must be > 0, got {evt_dur}")
+            return _validation_error(f"Invalid sequence[{i}].duration: must be > 0, got {evt_dur}")
     from .audio_engine import audio_sequence as _sequence
 
     return _result(_sequence(sequence=sequence, output=output_path))
@@ -226,22 +212,17 @@ def audio_compose(
         Dict with success status and output_path.
     """
     if duration <= 0:
-        return _validation_error(
-                f"Invalid duration: must be > 0, got {duration}")
+        return _validation_error(f"Invalid duration: must be > 0, got {duration}")
     if not isinstance(tracks, list) or len(tracks) < 1:
-        return _validation_error(
-                "Invalid tracks: must be a non-empty list")
+        return _validation_error("Invalid tracks: must be a non-empty list")
     for i, track in enumerate(tracks):
         if not isinstance(track, dict):
-            return _validation_error(
-                    f"Invalid tracks[{i}]: must be a dict")
+            return _validation_error(f"Invalid tracks[{i}]: must be a dict")
         if not isinstance(track.get("file"), str):
-            return _validation_error(
-                    f"Invalid tracks[{i}].file: must be a string")
+            return _validation_error(f"Invalid tracks[{i}].file: must be a string")
         vol = track.get("volume", 1.0)
         if vol < 0 or vol > 1:
-            return _validation_error(
-                    f"Invalid tracks[{i}].volume: must be 0-1, got {vol}")
+            return _validation_error(f"Invalid tracks[{i}].volume: must be 0-1, got {vol}")
     for _t in tracks:
         track_file = _t.get("file", "")
         if not track_file or not isinstance(track_file, str):
@@ -278,16 +259,15 @@ def audio_effects(
         Dict with success status and output_path.
     """
     if not isinstance(effects, list) or len(effects) < 1:
-        return _validation_error(
-                "Invalid effects: must be a non-empty list")
+        return _validation_error("Invalid effects: must be a non-empty list")
     for i, effect in enumerate(effects):
         if not isinstance(effect, dict):
-            return _validation_error(
-                    f"Invalid effects[{i}]: must be a dict")
+            return _validation_error(f"Invalid effects[{i}]: must be a dict")
         eff_type = effect.get("type")
         if eff_type not in VALID_AUDIO_EFFECT_TYPES:
             return _validation_error(
-                    f"Invalid effects[{i}].type: must be one of {sorted(VALID_AUDIO_EFFECT_TYPES)}, got '{eff_type}'")
+                f"Invalid effects[{i}].type: must be one of {sorted(VALID_AUDIO_EFFECT_TYPES)}, got '{eff_type}'"
+            )
     input_path = _validate_input_path(input_path)
     from .audio_engine import audio_effects as _effects
 
@@ -337,11 +317,9 @@ def video_audio_spatial(
 ) -> dict[str, Any]:
     """Apply 3D spatial audio positioning."""
     if method not in VALID_SPATIAL_METHODS:
-        return _validation_error(
-                f"Invalid method: must be one of {sorted(VALID_SPATIAL_METHODS)}, got '{method}'")
+        return _validation_error(f"Invalid method: must be one of {sorted(VALID_SPATIAL_METHODS)}, got '{method}'")
     if not isinstance(positions, list) or len(positions) == 0:
-        return _validation_error(
-                "positions must be a non-empty list")
+        return _validation_error("positions must be a non-empty list")
     input_path = _validate_input_path(input_path)
     from .ai_engine import audio_spatial
 

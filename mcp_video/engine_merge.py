@@ -48,16 +48,26 @@ def _normalize_clips(
             vf_parts.insert(0, "transpose=1")
         _run_ffmpeg(
             [
-                "-i", clip,
-                "-vf", ",".join(vf_parts),
-                "-c:v", "libx264",
-                "-preset", DEFAULT_PRESET,
-                "-crf", str(DEFAULT_CRF),
-                "-c:a", "aac",
-                "-b:a", DEFAULT_AUDIO_BITRATE,
-                "-r", str(DEFAULT_FPS),
-                "-ar", str(DEFAULT_SAMPLE_RATE),
-                "-ac", str(DEFAULT_AUDIO_CHANNELS),
+                "-i",
+                clip,
+                "-vf",
+                ",".join(vf_parts),
+                "-c:v",
+                "libx264",
+                "-preset",
+                DEFAULT_PRESET,
+                "-crf",
+                str(DEFAULT_CRF),
+                "-c:a",
+                "aac",
+                "-b:a",
+                DEFAULT_AUDIO_BITRATE,
+                "-r",
+                str(DEFAULT_FPS),
+                "-ar",
+                str(DEFAULT_SAMPLE_RATE),
+                "-ac",
+                str(DEFAULT_AUDIO_CHANNELS),
                 norm_path,
             ]
         )
@@ -89,9 +99,7 @@ def _concat_clips(clips: list[str], output: str, tmpdir: str) -> None:
         for clip in clips:
             abs_path = os.path.abspath(clip).replace("\\", "\\\\").replace("'", "'\\''")
             f.write(f"file '{abs_path}'\n")
-    _run_ffmpeg(
-        ["-f", "concat", "-safe", "0", "-i", concat_file, "-c", "copy", *_movflags_args(output), output]
-    )
+    _run_ffmpeg(["-f", "concat", "-safe", "0", "-i", concat_file, "-c", "copy", *_movflags_args(output), output])
 
 
 def merge(

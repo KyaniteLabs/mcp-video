@@ -244,4 +244,3 @@ class ScoringMixin:
         return (fps_score + smoothness * 100) / 2
 
     # ============== AUTO-FIX METHODS ==============
-

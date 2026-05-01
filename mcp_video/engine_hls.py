@@ -32,7 +32,7 @@ def hls_segment(
         EditResult with the playlist path as ``output_path``.
     """
     input_path = _validate_input_path(input_path)
-    info = probe(input_path)
+    _info = probe(input_path)
 
     if output_dir is None:
         base, _ = os.path.splitext(input_path)

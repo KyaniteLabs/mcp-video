@@ -5,9 +5,8 @@ from __future__ import annotations
 from typing import Any
 import re
 
-from .errors import MCPVideoError
 from .limits import MAX_CRF, MAX_PORT, MAX_RESOLUTION, MIN_CRF, MIN_PORT
-from .server_app import _error_result, _result, _safe_tool, _validation_error, mcp
+from .server_app import _result, _safe_tool, _validation_error, mcp
 from .validation import VALID_HYPERFRAMES_FORMATS, VALID_HYPERFRAMES_QUALITIES, VALID_HYPERFRAMES_TEMPLATES
 from .ffmpeg_helpers import _validate_project_path
 
@@ -40,19 +39,16 @@ def hyperframes_render(
     """
     if quality is not None and quality not in VALID_HYPERFRAMES_QUALITIES:
         return _validation_error(
-                f"Invalid quality: must be one of {sorted(VALID_HYPERFRAMES_QUALITIES)}, got '{quality}'")
+            f"Invalid quality: must be one of {sorted(VALID_HYPERFRAMES_QUALITIES)}, got '{quality}'"
+        )
     if format is not None and format not in VALID_HYPERFRAMES_FORMATS:
-        return _validation_error(
-                f"Invalid format: must be one of {sorted(VALID_HYPERFRAMES_FORMATS)}, got '{format}'")
+        return _validation_error(f"Invalid format: must be one of {sorted(VALID_HYPERFRAMES_FORMATS)}, got '{format}'")
     if width is not None and (width < 1 or width > MAX_RESOLUTION):
-        return _validation_error(
-                f"Invalid width: must be 1-{MAX_RESOLUTION}, got {width}")
+        return _validation_error(f"Invalid width: must be 1-{MAX_RESOLUTION}, got {width}")
     if height is not None and (height < 1 or height > MAX_RESOLUTION):
-        return _validation_error(
-                f"Invalid height: must be 1-{MAX_RESOLUTION}, got {height}")
+        return _validation_error(f"Invalid height: must be 1-{MAX_RESOLUTION}, got {height}")
     if crf is not None and (crf < MIN_CRF or crf > MAX_CRF):
-        return _validation_error(
-                f"Invalid crf: must be {MIN_CRF}-{MAX_CRF}, got {crf}")
+        return _validation_error(f"Invalid crf: must be {MIN_CRF}-{MAX_CRF}, got {crf}")
     project_path = _validate_project_path(project_path)
     from .hyperframes_engine import render
 
@@ -100,8 +96,7 @@ def hyperframes_preview(
         port: Port for the preview server (default 3002).
     """
     if port < MIN_PORT or port > MAX_PORT:
-        return _validation_error(
-                f"Invalid port: must be {MIN_PORT}-{MAX_PORT}, got {port}")
+        return _validation_error(f"Invalid port: must be {MIN_PORT}-{MAX_PORT}, got {port}")
     project_path = _validate_project_path(project_path)
     from .hyperframes_engine import preview
 
@@ -143,11 +138,11 @@ def hyperframes_init(
         template: Project template (blank, warm-grain, swiss-grid). Default blank.
     """
     if not re.match(r"^[a-zA-Z0-9_-]+$", name):
-        return _validation_error(
-                "Invalid name: must match ^[a-zA-Z0-9_-]+$")
+        return _validation_error("Invalid name: must match ^[a-zA-Z0-9_-]+$")
     if template not in VALID_HYPERFRAMES_TEMPLATES:
         return _validation_error(
-                f"Invalid template: must be one of {sorted(VALID_HYPERFRAMES_TEMPLATES)}, got '{template}'")
+            f"Invalid template: must be one of {sorted(VALID_HYPERFRAMES_TEMPLATES)}, got '{template}'"
+        )
     from .hyperframes_engine import create_project
 
     return _result(create_project(name, output_dir=output_dir, template=template))
@@ -166,8 +161,7 @@ def hyperframes_add_block(
         block_name: Registry item name (e.g. claude-code-window, shader-wipe).
     """
     if not re.match(r"^[a-zA-Z0-9_-]+$", block_name):
-        return _validation_error(
-                "Invalid block_name: must match ^[a-zA-Z0-9_-]+$")
+        return _validation_error("Invalid block_name: must match ^[a-zA-Z0-9_-]+$")
     project_path = _validate_project_path(project_path)
     from .hyperframes_engine import add_block
 
@@ -206,8 +200,7 @@ def hyperframes_to_mcpvideo(
         output_path: Where to save the final output. Auto-generated if omitted.
     """
     if not isinstance(post_process, list) or len(post_process) < 1:
-        return _validation_error(
-                "Invalid post_process: must be a non-empty list")
+        return _validation_error("Invalid post_process: must be a non-empty list")
     project_path = _validate_project_path(project_path)
     from .hyperframes_engine import render_and_post
 

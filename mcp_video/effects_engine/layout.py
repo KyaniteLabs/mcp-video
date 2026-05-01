@@ -8,7 +8,13 @@ from __future__ import annotations
 import logging
 
 from ..errors import MCPVideoError
-from ..ffmpeg_helpers import _validate_input_path, _validate_output_path, _run_command, _escape_ffmpeg_filter_value
+from ..ffmpeg_helpers import (
+    _run_ffmpeg,
+    _validate_input_path,
+    _validate_output_path,
+    _run_command,
+    _escape_ffmpeg_filter_value,
+)
 
 logger = logging.getLogger(__name__)
 

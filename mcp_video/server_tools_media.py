@@ -61,11 +61,9 @@ def video_preview(
     input_path = _validate_input_path(input_path)
     MAX_SCALE_FACTOR = 16
     if scale_factor < 2:
-        return _validation_error(
-                f"scale_factor must be at least 2, got {scale_factor}")
+        return _validation_error(f"scale_factor must be at least 2, got {scale_factor}")
     if scale_factor > MAX_SCALE_FACTOR:
-        return _validation_error(
-                f"scale_factor must be at most {MAX_SCALE_FACTOR}, got {scale_factor}")
+        return _validation_error(f"scale_factor must be at most {MAX_SCALE_FACTOR}, got {scale_factor}")
     return _result(preview(input_path, output_path=output_path, scale_factor=scale_factor))
 
 
@@ -86,8 +84,7 @@ def video_storyboard(
     input_path = _validate_input_path(input_path)
     MAX_FRAME_COUNT = 100
     if frame_count is not None and (frame_count < 1 or frame_count > MAX_FRAME_COUNT):
-        return _validation_error(
-                f"frame_count must be between 1 and {MAX_FRAME_COUNT}, got {frame_count}")
+        return _validation_error(f"frame_count must be between 1 and {MAX_FRAME_COUNT}, got {frame_count}")
     return _result(storyboard(input_path, output_dir=output_dir, frame_count=frame_count))
 
 
@@ -136,11 +133,9 @@ def video_watermark(
         preset: Override FFmpeg encoding preset (ultrafast, fast, medium, slow, veryslow).
     """
     if not 0 <= opacity <= 1:
-        return _validation_error(
-                f"opacity must be between 0 and 1, got {opacity}")
+        return _validation_error(f"opacity must be between 0 and 1, got {opacity}")
     if margin < 0:
-        return _validation_error(
-                f"margin must be non-negative, got {margin}")
+        return _validation_error(f"margin must be non-negative, got {margin}")
     if crf is not None and not (0 <= crf <= 51):
         return _validation_error(f"crf must be 0-51, got {crf}")
     if preset is not None and preset not in VALID_PRESETS:
@@ -182,8 +177,7 @@ def video_export(
         format: Output format (mp4, webm, gif, mov).
     """
     if format not in VALID_FORMATS:
-        return _validation_error(
-                f"Invalid format: {format}. Must be one of {sorted(VALID_FORMATS)}")
+        return _validation_error(f"Invalid format: {format}. Must be one of {sorted(VALID_FORMATS)}")
     input_path = _validate_input_path(input_path)
     return _result(
         export_video(
@@ -291,11 +285,9 @@ def video_fade(
         return _validation_error(f"Invalid preset: {preset}")
     input_path = _validate_input_path(input_path)
     if fade_in < 0:
-        return _validation_error(
-                f"fade_in must be non-negative, got {fade_in}")
+        return _validation_error(f"fade_in must be non-negative, got {fade_in}")
     if fade_out < 0:
-        return _validation_error(
-                f"fade_out must be non-negative, got {fade_out}")
+        return _validation_error(f"fade_out must be non-negative, got {fade_out}")
     return _result(
         fade(
             input_path,
@@ -343,17 +335,13 @@ def video_edit(
                     with open(timeline_str, encoding="utf-8") as f:
                         parsed_timeline = _json.load(f)
                 except (_json.JSONDecodeError, OSError) as exc:
-                    return _validation_error(
-                            f"Invalid timeline JSON file: {timeline_str} — {exc}", code='invalid_json')
+                    return _validation_error(f"Invalid timeline JSON file: {timeline_str} — {exc}", code="invalid_json")
             else:
                 return _validation_error(
-                        (
-                            "timeline must be a dict, valid JSON string, or path "
-                            f"to a .json file. Got: {timeline_str[:100]}"
-                        ))
+                    f"timeline must be a dict, valid JSON string, or path to a .json file. Got: {timeline_str[:100]}"
+                )
     if not isinstance(parsed_timeline, dict):
-        return _validation_error(
-                f"timeline must be a dict or JSON object. Got: {type(parsed_timeline).__name__}")
+        return _validation_error(f"timeline must be a dict or JSON object. Got: {type(parsed_timeline).__name__}")
     return _result(edit_timeline(parsed_timeline, output_path=output_path))
 
 
@@ -384,8 +372,7 @@ def video_template_preview(
     """
     template = template.lower().strip()
     if template not in TEMPLATES:
-        return _validation_error(
-                f"Unknown template: '{template}'. Available: {sorted(TEMPLATES.keys())}")
+        return _validation_error(f"Unknown template: '{template}'. Available: {sorted(TEMPLATES.keys())}")
 
     kwargs: dict[str, Any] = {}
     if caption is not None:
@@ -429,8 +416,7 @@ def video_extract_audio(
         format: Audio format (mp3, aac, wav, ogg, flac).
     """
     if format not in VALID_AUDIO_FORMATS:
-        return _validation_error(
-                f"Invalid audio format: {format}. Must be one of {sorted(VALID_AUDIO_FORMATS)}")
+        return _validation_error(f"Invalid audio format: {format}. Must be one of {sorted(VALID_AUDIO_FORMATS)}")
     input_path = _validate_input_path(input_path)
     result = extract_audio(input_path, output_path=output_path, format=format)
     if not os.path.isfile(result):

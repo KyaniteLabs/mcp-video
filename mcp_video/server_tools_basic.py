@@ -5,9 +5,8 @@ from __future__ import annotations
 from typing import Any
 
 from .engine import add_audio, add_text, convert, merge, probe, resize, speed, trim
-from .errors import MCPVideoError
 from .limits import MAX_RESOLUTION, MAX_SPEED_FACTOR, MIN_SPEED_FACTOR, MIN_CRF, MAX_CRF
-from .server_app import _error_result, _result, _safe_tool, _validation_error, mcp
+from .server_app import _result, _safe_tool, _validation_error, mcp
 from .validation import VALID_FORMATS, VALID_PRESETS
 from .ffmpeg_helpers import _validate_input_path
 
@@ -95,15 +94,15 @@ def video_merge(
     """
     if transition is not None and transition not in VALID_XFADE_TRANSITIONS:
         return _validation_error(
-                f"Invalid transition '{transition}'. Must be one of: {', '.join(sorted(VALID_XFADE_TRANSITIONS))}")
+            f"Invalid transition '{transition}'. Must be one of: {', '.join(sorted(VALID_XFADE_TRANSITIONS))}"
+        )
     if transitions is not None:
         invalid = [t for t in transitions if t not in VALID_XFADE_TRANSITIONS]
         if invalid:
             return _validation_error(
-                    (
-                        f"Invalid transition(s): {', '.join(invalid)}. "
-                        f"Must be one of: {', '.join(sorted(VALID_XFADE_TRANSITIONS))}"
-                    ))
+                f"Invalid transition(s): {', '.join(invalid)}. "
+                f"Must be one of: {', '.join(sorted(VALID_XFADE_TRANSITIONS))}"
+            )
     for _p in clips:
         _validate_input_path(_p)
     return _result(
@@ -151,14 +150,12 @@ def video_add_text(
         preset: Override FFmpeg encoding preset (ultrafast, fast, medium, slow, veryslow).
     """
     if crf is not None and not (MIN_CRF <= crf <= MAX_CRF):
-        return _validation_error(
-                f"crf must be {MIN_CRF}-{MAX_CRF}, got {crf}")
+        return _validation_error(f"crf must be {MIN_CRF}-{MAX_CRF}, got {crf}")
     if preset is not None and preset not in VALID_PRESETS:
         return _validation_error(f"Invalid preset: {preset}")
     input_path = _validate_input_path(input_path)
     if size < 8 or size > 500:
-        return _validation_error(
-                f"Font size must be between 8 and 500, got {size}")
+        return _validation_error(f"Font size must be between 8 and 500, got {size}")
     return _result(
         add_text(
             input_path,
@@ -204,14 +201,11 @@ def video_add_audio(
     video_path = _validate_input_path(video_path)
     audio_path = _validate_input_path(audio_path)
     if not 0 <= volume <= 2.0:
-        return _validation_error(
-                f"volume must be between 0.0 and 2.0, got {volume}")
+        return _validation_error(f"volume must be between 0.0 and 2.0, got {volume}")
     if fade_in is not None and fade_in < 0:
-        return _validation_error(
-                f"fade_in must be non-negative, got {fade_in}")
+        return _validation_error(f"fade_in must be non-negative, got {fade_in}")
     if fade_out is not None and fade_out < 0:
-        return _validation_error(
-                f"fade_out must be non-negative, got {fade_out}")
+        return _validation_error(f"fade_out must be non-negative, got {fade_out}")
     return _result(
         add_audio(
             video_path,
@@ -248,16 +242,16 @@ def video_resize(
     """
     if width is not None and width > MAX_RESOLUTION:
         return _validation_error(
-                f"Width {width} exceeds maximum resolution of {MAX_RESOLUTION}", code='resolution_too_high')
+            f"Width {width} exceeds maximum resolution of {MAX_RESOLUTION}", code="resolution_too_high"
+        )
     if width is not None and width <= 0:
-        return _validation_error(
-                f"Width must be positive, got {width}")
+        return _validation_error(f"Width must be positive, got {width}")
     if height is not None and height > MAX_RESOLUTION:
         return _validation_error(
-                f"Height {height} exceeds maximum resolution of {MAX_RESOLUTION}", code='resolution_too_high')
+            f"Height {height} exceeds maximum resolution of {MAX_RESOLUTION}", code="resolution_too_high"
+        )
     if height is not None and height <= 0:
-        return _validation_error(
-                f"Height must be positive, got {height}")
+        return _validation_error(f"Height must be positive, got {height}")
     input_path = _validate_input_path(input_path)
     return _result(
         resize(
@@ -292,8 +286,7 @@ def video_convert(
         output_path: Where to save the output. Auto-generated if omitted.
     """
     if format not in VALID_FORMATS:
-        return _validation_error(
-                f"Invalid format: {format}. Must be one of {sorted(VALID_FORMATS)}")
+        return _validation_error(f"Invalid format: {format}. Must be one of {sorted(VALID_FORMATS)}")
     input_path = _validate_input_path(input_path)
     return _result(
         convert(
@@ -321,7 +314,8 @@ def video_speed(
     """
     if not (MIN_SPEED_FACTOR <= factor <= MAX_SPEED_FACTOR):
         return _validation_error(
-                f"Speed factor {factor} out of range [{MIN_SPEED_FACTOR}, {MAX_SPEED_FACTOR}]", code='speed_out_of_range')
+            f"Speed factor {factor} out of range [{MIN_SPEED_FACTOR}, {MAX_SPEED_FACTOR}]", code="speed_out_of_range"
+        )
     input_path = _validate_input_path(input_path)
     return _result(speed(input_path, factor=factor, output_path=output_path))
 

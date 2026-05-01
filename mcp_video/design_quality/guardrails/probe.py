@@ -83,4 +83,3 @@ class ProbeMixin:
                     logger.debug("Contrast parsing failed: %s", exc)
                     pass
         return 50
-

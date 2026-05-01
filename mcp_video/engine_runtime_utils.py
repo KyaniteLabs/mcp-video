@@ -11,16 +11,14 @@ import tempfile
 import time
 from collections.abc import Generator
 from contextlib import contextmanager
-from typing import Any
 
 from .errors import (
     FFmpegNotFoundError,
     FFprobeNotFoundError,
     MCPVideoError,
-    ProcessingError,
-    parse_ffmpeg_error,
 )
-from .limits import DEFAULT_CRF, DEFAULT_FFMPEG_TIMEOUT, DEFAULT_PRESET, DOCTOR_COMMAND_TIMEOUT
+from .limits import DEFAULT_CRF, DEFAULT_PRESET, DOCTOR_COMMAND_TIMEOUT
+from .models import EditResult
 
 logger = logging.getLogger(__name__)
 
@@ -120,14 +118,13 @@ def _build_edit_result(
     *,
     progress: float | None = None,
     thumbnail_base64: str | None = None,
-) -> "EditResult":
+) -> EditResult:
     """Build an EditResult by probing the output and filling standard fields.
 
     Eliminates the repeated ``info = probe(output); return EditResult(...)``
     pattern found in ~25 engine functions.
     """
     from .engine_probe import probe
-    from .models import EditResult
 
     info = probe(output_path)
     return EditResult(

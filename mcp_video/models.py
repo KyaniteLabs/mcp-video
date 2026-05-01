@@ -7,6 +7,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 from .defaults import DEFAULT_CRF
+from .errors import MCPVideoError as _MCPVideoError
 
 
 # --- Helpers ---
@@ -398,8 +399,6 @@ class WatermarkSettings(BaseModel):
 
 
 # --- Position helpers ---
-
-from .errors import MCPVideoError as _MCPVideoError
 
 
 def _validate_position(position: Position) -> None:

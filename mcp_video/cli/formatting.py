@@ -76,8 +76,7 @@ def _format_thumbnail_text(result: Any) -> None:
     frame_path = data.get("frame_path", "N/A")
     timestamp = data.get("timestamp", 0.0)
     _format_success_panel(
-        f"[bold green]Frame extracted:[/bold green] {frame_path}\n"
-        f"[bold green]Timestamp:[/bold green] {timestamp:.2f}s"
+        f"[bold green]Frame extracted:[/bold green] {frame_path}\n[bold green]Timestamp:[/bold green] {timestamp:.2f}s"
     )
 
 
@@ -336,9 +335,7 @@ def _format_video_analyze(result: dict[str, Any], no_transcript: bool) -> None:
         meta_lines.append(f"[bold]Audio codec:[/bold] {meta['audio_codec']}")
     if meta.get("size_bytes"):
         meta_lines.append(f"[bold]Size:[/bold] {meta['size_bytes'] // 1024:,} KB")
-    console.print(
-        Panel("\n".join(meta_lines) or "No metadata", title="[cyan]Metadata[/cyan]", border_style="cyan")
-    )
+    console.print(Panel("\n".join(meta_lines) or "No metadata", title="[cyan]Metadata[/cyan]", border_style="cyan"))
 
     transcript = result.get("transcript")
     if transcript:

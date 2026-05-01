@@ -15,7 +15,7 @@ import tempfile
 from pathlib import Path
 
 from ..errors import InputFileError, MCPVideoError, ProcessingError
-from ..ffmpeg_helpers import _get_video_duration, _run_command, _run_ffmpeg, _validate_input_path, _validate_output_path
+from ..ffmpeg_helpers import _get_video_duration, _run_command, _validate_input_path, _validate_output_path
 from ..limits import DEFAULT_FFMPEG_TIMEOUT, MAX_AI_UPSCALE_FRAMES
 
 logger = logging.getLogger(__name__)
@@ -43,8 +43,7 @@ def _validate_upscale_resource_limits(video_path: str) -> None:
     frame_count = _estimate_frame_count(video_path)
     if frame_count > MAX_AI_UPSCALE_FRAMES:
         raise MCPVideoError(
-            f"Video frame count ({frame_count}) exceeds AI upscaling "
-            f"maximum of {MAX_AI_UPSCALE_FRAMES}",
+            f"Video frame count ({frame_count}) exceeds AI upscaling maximum of {MAX_AI_UPSCALE_FRAMES}",
             error_type="resource_error",
             code="frame_count_too_large",
         )
@@ -153,8 +152,7 @@ def _init_opencv_sr(scale: int, model_path: Path):
 
     if not hasattr(cv2, "dnn_superres"):
         raise MCPVideoError(
-            "OpenCV was built without dnn_superres module. "
-            "Install opencv-contrib-python for full AI support.",
+            "OpenCV was built without dnn_superres module. Install opencv-contrib-python for full AI support.",
             error_type="dependency_error",
             code="missing_opencv_contrib",
         )
@@ -292,9 +290,7 @@ def _ai_upscale_opencv(video_path: str, output_path: str, scale: int) -> str:
         for i, frame_path in enumerate(frames, 1):
             img = cv2.imread(str(frame_path))
             if img is None:
-                raise ProcessingError(
-                    "cv2.imread", 1, f"Failed to load frame: {frame_path}"
-                )
+                raise ProcessingError("cv2.imread", 1, f"Failed to load frame: {frame_path}")
             result_img = sr.upsample(img)
             cv2.imwrite(str(upscaled_dir / f"frame_{i:04d}.png"), result_img)
 
