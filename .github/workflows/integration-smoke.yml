@@ -64,8 +64,10 @@ jobs:
       - name: Ensure FFmpeg
         run: |
           if ! command -v ffmpeg &>/dev/null; then
-            brew install ffmpeg || (echo "FFmpeg not available; skipping" && exit 0)
+            brew install ffmpeg
           fi
+          command -v ffmpeg >/dev/null
+          command -v ffprobe >/dev/null
       - name: Install package
         run: .venv/bin/pip install -e .
       - name: Create sample video
