@@ -10,7 +10,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from ..ffmpeg_helpers import _run_ffmpeg, _escape_ffmpeg_filter_value
+from ..ffmpeg_helpers import _run_command, _escape_ffmpeg_filter_value
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +80,7 @@ def mograph_count(
                 str(frame_file),
             ]
 
-            _run_ffmpeg(cmd)
+            _run_command(cmd)
 
         # Combine frames into video
         cmd = [
@@ -99,7 +99,7 @@ def mograph_count(
             output,
         ]
 
-        _run_ffmpeg(cmd)
+        _run_command(cmd)
 
     return output
 
@@ -175,7 +175,7 @@ def mograph_progress(
                 str(frame_file),
             ]
 
-            _run_ffmpeg(cmd)
+            _run_command(cmd)
 
         # Combine frames
         cmd = [
@@ -194,7 +194,7 @@ def mograph_progress(
             output,
         ]
 
-        _run_ffmpeg(cmd)
+        _run_command(cmd)
 
     return output
 

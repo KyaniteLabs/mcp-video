@@ -4,13 +4,17 @@ from __future__ import annotations
 
 from .engine_probe import probe
 from .engine_runtime_utils import (
-    _auto_output,
     _build_edit_result,
     _movflags_args,
     _quality_args,
+    _timed_operation,
+)
+from .paths import (
+    _auto_output,
+)
+from .ffmpeg_helpers import (
     _run_ffmpeg,
     _sanitize_ffmpeg_number,
-    _timed_operation,
 )
 from .ffmpeg_helpers import _validate_input_path, _validate_output_path
 from .errors import MCPVideoError

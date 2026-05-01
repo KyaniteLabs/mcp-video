@@ -15,7 +15,7 @@ import tempfile
 from pathlib import Path
 
 from ..errors import InputFileError, MCPVideoError, ProcessingError
-from ..ffmpeg_helpers import _get_video_duration, _run_ffmpeg, _validate_output_path
+from ..ffmpeg_helpers import _get_video_duration, _run_command, _run_ffmpeg, _validate_input_path, _validate_output_path
 from ..limits import DEFAULT_FFMPEG_TIMEOUT, MAX_AI_UPSCALE_FRAMES
 
 logger = logging.getLogger(__name__)
@@ -212,7 +212,7 @@ def _extract_frames(video_path: str, frames_dir: Path) -> list[Path]:
         Sorted list of extracted frame paths.
     """
     frame_pattern = frames_dir / "frame_%04d.png"
-    _run_ffmpeg(
+    _run_command(
         ["ffmpeg", "-y", "-i", video_path, "-vsync", "0", str(frame_pattern)],
         timeout=DEFAULT_FFMPEG_TIMEOUT,
     )
@@ -233,7 +233,7 @@ def _extract_audio(video_path: str, audio_path: Path) -> bool:
         True if audio was extracted successfully, False otherwise.
     """
     try:
-        _run_ffmpeg(
+        _run_command(
             ["ffmpeg", "-y", "-i", video_path, "-vn", "-c:a", "copy", str(audio_path)],
             timeout=DEFAULT_FFMPEG_TIMEOUT,
         )
@@ -260,7 +260,7 @@ def _reconstruct_video(
     if audio_source:
         cmd.extend(["-i", audio_source, "-c:a", "copy", "-shortest"])
     cmd.extend(["-c:v", "libx264", "-pix_fmt", "yuv420p", str(output_path)])
-    _run_ffmpeg(cmd, timeout=DEFAULT_FFMPEG_TIMEOUT)
+    _run_command(cmd, timeout=DEFAULT_FFMPEG_TIMEOUT)
 
 
 def _ai_upscale_opencv(video_path: str, output_path: str, scale: int) -> str:
@@ -329,8 +329,7 @@ def ai_upscale(
         RuntimeError: If Real-ESRGAN is not installed or processing fails
         FileNotFoundError: If input video doesn't exist
     """
-    if "\x00" in video:
-        raise InputFileError(video, "Invalid path: contains null bytes")
+    _validate_input_path(video)
 
     video_path = Path(video)
     if not video_path.exists():
@@ -433,7 +432,7 @@ def _get_video_fps(video_path: str) -> float | None:
         video_path,
     ]
     try:
-        result = _run_ffmpeg(cmd, timeout=DEFAULT_FFMPEG_TIMEOUT)
+        result = _run_command(cmd, timeout=DEFAULT_FFMPEG_TIMEOUT)
     except ProcessingError:
         return None
 
@@ -466,7 +465,7 @@ def _has_audio_stream(video_path: str) -> bool:
         video_path,
     ]
     try:
-        result = _run_ffmpeg(cmd, timeout=DEFAULT_FFMPEG_TIMEOUT)
+        result = _run_command(cmd, timeout=DEFAULT_FFMPEG_TIMEOUT)
     except ProcessingError:
         return False
     return result.returncode == 0 and "audio" in result.stdout.lower()

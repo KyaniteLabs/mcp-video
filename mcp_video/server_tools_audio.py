@@ -9,7 +9,7 @@ from typing import Any
 from .errors import MCPVideoError
 from .defaults import DEFAULT_PROCEDURAL_AUDIO_BED_WARNING_SECONDS
 from .limits import MAX_FREQUENCY, MIN_FREQUENCY
-from .server_app import _error_result, _result, _validation_error, mcp
+from .server_app import _error_result, _result, _safe_tool, _validation_error, mcp
 from .ffmpeg_helpers import _validate_input_path
 from .validation import (
     VALID_AUDIO_EFFECT_TYPES,
@@ -35,6 +35,7 @@ def _audio_preset_warnings(preset: str, duration: float | None) -> list[str]:
 
 
 @mcp.tool()
+@_safe_tool
 def audio_synthesize(
     output_path: str | None = None,
     waveform: str = "sine",
@@ -77,26 +78,22 @@ def audio_synthesize(
         return _validation_error(
                 f"Invalid volume: must be 0-1, got {volume}")
     output = output_path or os.path.join(tempfile.gettempdir(), f"mcp_audio_{waveform}.wav")
-    try:
-        from .audio_engine import audio_synthesize as _synth
+    from .audio_engine import audio_synthesize as _synth
 
-        return _result(
-            _synth(
-                output=output,
-                waveform=waveform,
-                frequency=frequency,
-                duration=duration,
-                volume=volume,
-                effects=effects,
-            )
+    return _result(
+        _synth(
+            output=output,
+            waveform=waveform,
+            frequency=frequency,
+            duration=duration,
+            volume=volume,
+            effects=effects,
         )
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    )
 
 
 @mcp.tool()
+@_safe_tool
 def audio_preset(
     preset: str,
     output_path: str | None = None,
@@ -137,29 +134,25 @@ def audio_preset(
         return _validation_error(
                 f"Invalid duration: must be > 0, got {duration}")
     output = output_path or os.path.join(tempfile.gettempdir(), f"mcp_audio_{preset}.wav")
-    try:
-        from .audio_engine import audio_preset as _preset
+    from .audio_engine import audio_preset as _preset
 
-        result = _result(
-            _preset(
-                preset=preset,
-                output=output,
-                pitch=pitch,
-                duration=duration,
-                intensity=intensity,
-            )
+    result = _result(
+        _preset(
+            preset=preset,
+            output=output,
+            pitch=pitch,
+            duration=duration,
+            intensity=intensity,
         )
-        warnings = _audio_preset_warnings(preset, duration)
-        if warnings:
-            result["warnings"] = warnings
-        return result
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    )
+    warnings = _audio_preset_warnings(preset, duration)
+    if warnings:
+        result["warnings"] = warnings
+    return result
 
 
 @mcp.tool()
+@_safe_tool
 def audio_sequence(
     sequence: list[dict[str, Any]],
     output_path: str,
@@ -204,17 +197,13 @@ def audio_sequence(
         if evt_dur is not None and evt_dur <= 0:
             return _validation_error(
                     f"Invalid sequence[{i}].duration: must be > 0, got {evt_dur}")
-    try:
-        from .audio_engine import audio_sequence as _sequence
+    from .audio_engine import audio_sequence as _sequence
 
-        return _result(_sequence(sequence=sequence, output=output_path))
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    return _result(_sequence(sequence=sequence, output=output_path))
 
 
 @mcp.tool()
+@_safe_tool
 def audio_compose(
     tracks: list[dict[str, Any]],
     duration: float,
@@ -253,26 +242,22 @@ def audio_compose(
         if vol < 0 or vol > 1:
             return _validation_error(
                     f"Invalid tracks[{i}].volume: must be 0-1, got {vol}")
-    try:
-        for _t in tracks:
-            track_file = _t.get("file", "")
-            if not track_file or not isinstance(track_file, str):
-                raise MCPVideoError(
-                    "tracks must contain 'file' key with a non-empty path string",
-                    error_type="validation_error",
-                    code="invalid_parameter",
-                )
-            _validate_input_path(track_file)
-        from .audio_engine import audio_compose as _compose
+    for _t in tracks:
+        track_file = _t.get("file", "")
+        if not track_file or not isinstance(track_file, str):
+            raise MCPVideoError(
+                "tracks must contain 'file' key with a non-empty path string",
+                error_type="validation_error",
+                code="invalid_parameter",
+            )
+        _validate_input_path(track_file)
+    from .audio_engine import audio_compose as _compose
 
-        return _result(_compose(tracks=tracks, duration=duration, output=output_path))
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    return _result(_compose(tracks=tracks, duration=duration, output=output_path))
 
 
 @mcp.tool()
+@_safe_tool
 def audio_effects(
     input_path: str,
     output_path: str,
@@ -303,18 +288,14 @@ def audio_effects(
         if eff_type not in VALID_AUDIO_EFFECT_TYPES:
             return _validation_error(
                     f"Invalid effects[{i}].type: must be one of {sorted(VALID_AUDIO_EFFECT_TYPES)}, got '{eff_type}'")
-    try:
-        input_path = _validate_input_path(input_path)
-        from .audio_engine import audio_effects as _effects
+    input_path = _validate_input_path(input_path)
+    from .audio_engine import audio_effects as _effects
 
-        return _result(_effects(input_path=input_path, output=output_path, effects=effects))
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    return _result(_effects(input_path=input_path, output=output_path, effects=effects))
 
 
 @mcp.tool()
+@_safe_tool
 def video_add_generated_audio(
     input_path: str,
     audio_config: dict[str, Any],
@@ -334,24 +315,20 @@ def video_add_generated_audio(
     Returns:
         Dict with success status and output_path.
     """
-    try:
-        input_path = _validate_input_path(input_path)
-        if not isinstance(audio_config, dict) or not audio_config:
-            raise MCPVideoError(
-                "audio_config must be a non-empty dict",
-                error_type="validation_error",
-                code="invalid_parameter",
-            )
-        from .audio_engine import add_generated_audio as _add_gen_audio
+    input_path = _validate_input_path(input_path)
+    if not isinstance(audio_config, dict) or not audio_config:
+        raise MCPVideoError(
+            "audio_config must be a non-empty dict",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
+    from .audio_engine import add_generated_audio as _add_gen_audio
 
-        return _result(_add_gen_audio(input_path, audio_config, output_path))
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    return _result(_add_gen_audio(input_path, audio_config, output_path))
 
 
 @mcp.tool()
+@_safe_tool
 def video_audio_spatial(
     input_path: str,
     output_path: str,
@@ -365,12 +342,7 @@ def video_audio_spatial(
     if not isinstance(positions, list) or len(positions) == 0:
         return _validation_error(
                 "positions must be a non-empty list")
-    try:
-        input_path = _validate_input_path(input_path)
-        from .ai_engine import audio_spatial
+    input_path = _validate_input_path(input_path)
+    from .ai_engine import audio_spatial
 
-        return _result(audio_spatial(input_path, output_path, positions, method))
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    return _result(audio_spatial(input_path, output_path, positions, method))

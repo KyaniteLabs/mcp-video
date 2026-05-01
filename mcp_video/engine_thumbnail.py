@@ -6,7 +6,8 @@ from .engine_edit import _time_to_seconds
 from .errors import MCPVideoError
 from .ffmpeg_helpers import _validate_input_path, _validate_output_path
 from .engine_probe import get_duration
-from .engine_runtime_utils import _auto_output, _run_ffmpeg
+from .paths import _auto_output
+from .ffmpeg_helpers import _run_ffmpeg
 from .models import ThumbnailResult
 
 

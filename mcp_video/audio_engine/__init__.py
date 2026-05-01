@@ -31,6 +31,7 @@ from typing import Any
 
 from ..defaults import DEFAULT_FFMPEG_TIMEOUT
 from ..errors import InputFileError, MCPVideoError, ProcessingError
+from ..ffmpeg_helpers import _validate_input_path
 
 
 def add_generated_audio(
@@ -79,8 +80,7 @@ def add_generated_audio(
         audio_path = tmp.name
 
     # Input validation before FFmpeg
-    if "\x00" in video:
-        raise InputFileError(video, "Path contains null bytes")
+    _validate_input_path(video)
     if not os.path.isfile(video):
         raise InputFileError(video)
 

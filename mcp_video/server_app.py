@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import functools
 import logging
 from typing import Any
 
@@ -37,6 +38,36 @@ def _validation_error(message: str, code: str = "invalid_parameter") -> dict[str
     pattern found in ~50+ server tool handlers.
     """
     return _error_result(MCPVideoError(message, error_type="validation_error", code=code))
+
+
+def _safe_tool(fn: Any) -> Any:
+    """Decorator that wraps an MCP tool handler with standard error handling.
+
+    Catches ``MCPVideoError`` and unexpected exceptions, returning structured
+    error results via ``_error_result()``.  Preserves the original function
+    signature so ``@mcp.tool()`` can introspect parameters correctly.
+
+    Eliminates the repeated 4-line try/except wrapper found in ~85+ server
+    tool handlers::
+
+        try:
+            ...
+        except MCPVideoError as e:
+            return _error_result(e)
+        except Exception as e:
+            return _error_result(e)
+    """
+
+    @functools.wraps(fn)
+    def wrapper(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        try:
+            return fn(*args, **kwargs)
+        except MCPVideoError as e:
+            return _error_result(e)
+        except Exception as e:
+            return _error_result(e)
+
+    return wrapper
 
 
 def _error_result(err: MCPVideoError | Exception) -> dict[str, Any]:

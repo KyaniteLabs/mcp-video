@@ -6,11 +6,15 @@ single authoritative copy of each helper.
 
 from __future__ import annotations
 
+import math
 import os
+import re
 import subprocess
+import threading
+from collections.abc import Callable
 from typing import Any
 
-from .errors import InputFileError, MCPVideoError, ProcessingError
+from .errors import InputFileError, MCPVideoError, ProcessingError, parse_ffmpeg_error
 from .limits import DEFAULT_FFMPEG_TIMEOUT, FFPROBE_TIMEOUT, MAX_FILE_SIZE_MB
 
 
@@ -64,8 +68,8 @@ def _validate_output_path(path: str) -> str:
     return path
 
 
-def _run_ffmpeg(cmd: list[str], timeout: int = DEFAULT_FFMPEG_TIMEOUT) -> subprocess.CompletedProcess[str]:
-    """Run an FFmpeg/FFprobe command with timeout and error handling."""
+def _run_command(cmd: list[str], timeout: int = DEFAULT_FFMPEG_TIMEOUT) -> subprocess.CompletedProcess[str]:
+    """Run an arbitrary command with timeout and error handling."""
     # Ensure output directory exists — find the last non-flag argument (the output file)
     for arg in reversed(cmd):
         if not arg.startswith("-") and not arg.startswith("ffmpeg") and not arg.startswith("ffprobe"):
@@ -80,6 +84,138 @@ def _run_ffmpeg(cmd: list[str], timeout: int = DEFAULT_FFMPEG_TIMEOUT) -> subpro
         raise ProcessingError(cmd_str, -1, f"FFmpeg command timed out after {timeout}s") from None
     if result.returncode != 0:
         raise ProcessingError(cmd_str, result.returncode, result.stderr)
+    return result
+
+
+def _run_ffmpeg(args: list[str]) -> subprocess.CompletedProcess[str]:
+    """Run FFmpeg with auto-discovered binary and -y flag."""
+    from .engine_runtime_utils import _ffmpeg
+
+    cmd = [_ffmpeg(), "-y", *args]
+    try:
+        proc = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=DEFAULT_FFMPEG_TIMEOUT,
+        )
+    except subprocess.TimeoutExpired as e:
+        raise ProcessingError(" ".join(cmd), -1, f"FFmpeg command timed out after {DEFAULT_FFMPEG_TIMEOUT}s") from e
+    if proc.returncode != 0:
+        raise parse_ffmpeg_error(proc.stderr)
+    return proc
+
+
+_TIME_RE = re.compile(r"time=(\d+:\d+:\d+\.\d+)")
+
+
+def _parse_ffmpeg_time(time_str: str) -> float:
+    """Parse FFmpeg time= value (HH:MM:SS.xx) to seconds."""
+    m = re.match(r"(\d+):(\d+):(\d+)\.(\d+)", time_str)
+    if not m:
+        return 0.0
+    frac = m.group(4)
+    return int(m.group(1)) * 3600 + int(m.group(2)) * 60 + int(m.group(3)) + int(frac) / (10 ** len(frac))
+
+
+def _run_ffmpeg_with_progress(
+    args: list[str],
+    estimated_duration: float | None = None,
+    on_progress: Callable[[float], None] | None = None,
+) -> subprocess.CompletedProcess[str]:
+    """Run FFmpeg with real-time progress reporting.
+
+    Parses FFmpeg stderr for time= output and calls on_progress(percent).
+    Falls back to _run_ffmpeg if estimated_duration is not provided.
+    """
+    from .engine_runtime_utils import _ffmpeg
+
+    if estimated_duration is None or estimated_duration <= 0 or on_progress is None:
+        return _run_ffmpeg(args)
+
+    cmd = [_ffmpeg(), "-y", *args]
+    proc = subprocess.Popen(
+        cmd,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+
+    stderr_lines: list[str] = []
+    progress_errors: list[BaseException] = []
+    _MAX_STDERR_LINES = 10_000
+    _MAX_STDERR_BYTES = 1_000_000  # ~1 MB hard cap
+    _stderr_bytes = 0
+
+    def _read_stderr() -> None:
+        nonlocal _stderr_bytes
+        while proc.stderr is not None:
+            line = proc.stderr.readline()
+            if not line:
+                break
+            line_bytes = len(line.encode("utf-8", errors="replace"))
+            if len(stderr_lines) < _MAX_STDERR_LINES and _stderr_bytes + line_bytes <= _MAX_STDERR_BYTES:
+                stderr_lines.append(line)
+                _stderr_bytes += line_bytes
+
+            match = _TIME_RE.search(line)
+            if match:
+                current_time = _parse_ffmpeg_time(match.group(1))
+                pct = min(100.0, (current_time / estimated_duration) * 100)
+                try:
+                    on_progress(pct)
+                except BaseException as exc:  # propagate callback failures from the reader thread
+                    progress_errors.append(exc)
+                    if proc.poll() is None:
+                        proc.terminate()
+                    break
+
+    reader = threading.Thread(target=_read_stderr)
+    reader.start()
+
+    try:
+        proc.wait(timeout=DEFAULT_FFMPEG_TIMEOUT)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        proc.wait()
+        reader.join(timeout=5)
+        raise ProcessingError(" ".join(cmd), -1, f"FFmpeg command timed out after {DEFAULT_FFMPEG_TIMEOUT}s") from None
+    finally:
+        reader.join(timeout=5)
+
+    stderr = "".join(stderr_lines)
+    if progress_errors:
+        raise progress_errors[0]
+    if proc.returncode != 0:
+        raise parse_ffmpeg_error(stderr)
+
+    # Report 100% on success
+    on_progress(100.0)
+
+    return subprocess.CompletedProcess(
+        cmd,
+        proc.returncode,
+        "",
+        stderr,
+    )
+
+
+def _sanitize_ffmpeg_number(value: Any, name: str) -> float:
+    """Ensure a value is numeric and finite before FFmpeg interpolation. Returns float(value)."""
+    try:
+        result = float(value)
+    except (TypeError, ValueError):
+        raise MCPVideoError(
+            f"Invalid {name}: expected number, got {type(value).__name__}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        ) from None
+    if not math.isfinite(result):
+        raise MCPVideoError(
+            f"Invalid {name}: must be a finite number, got {result}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
     return result
 
 
@@ -109,7 +245,7 @@ def _get_video_duration(video_path: str) -> float:
         "default=noprint_wrappers=1:nokey=1",
         video_path,
     ]
-    result = _run_ffmpeg(cmd)
+    result = _run_command(cmd)
     stdout = result.stdout.strip()
     if not stdout:
         raise ProcessingError(" ".join(cmd), result.returncode, result.stderr)
@@ -135,7 +271,7 @@ def _run_ffprobe_json(path: str) -> dict[str, Any]:
         "-show_streams",
         path,
     ]
-    result = _run_ffmpeg(cmd, timeout=FFPROBE_TIMEOUT)
+    result = _run_command(cmd, timeout=FFPROBE_TIMEOUT)
     try:
         return _json.loads(result.stdout)
     except _json.JSONDecodeError as e:

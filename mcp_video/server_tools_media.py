@@ -20,13 +20,14 @@ from .engine import (
     watermark,
 )
 from .errors import MCPVideoError
-from .server_app import _error_result, _result, _validation_error, mcp
+from .server_app import _error_result, _result, _safe_tool, _validation_error, mcp
 from .templates import TEMPLATES, preview_template
 from .validation import VALID_AUDIO_FORMATS, VALID_FORMATS, VALID_PRESETS
 from .ffmpeg_helpers import _get_video_duration, _validate_input_path
 
 
 @mcp.tool()
+@_safe_tool
 def video_thumbnail(
     input_path: str,
     timestamp: float | str | None = None,
@@ -39,16 +40,12 @@ def video_thumbnail(
         timestamp: Time in seconds to extract frame. Defaults to 10% of video duration.
         output_path: Where to save the frame image. Auto-generated if omitted.
     """
-    try:
-        input_path = _validate_input_path(input_path)
-        return _result(thumbnail(input_path, timestamp=timestamp, output_path=output_path))
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    input_path = _validate_input_path(input_path)
+    return _result(thumbnail(input_path, timestamp=timestamp, output_path=output_path))
 
 
 @mcp.tool()
+@_safe_tool
 def video_preview(
     input_path: str,
     output_path: str | None = None,
@@ -61,23 +58,19 @@ def video_preview(
         output_path: Where to save the preview. Auto-generated if omitted.
         scale_factor: Downscale factor (4 = 1/4 resolution).
     """
-    try:
-        input_path = _validate_input_path(input_path)
-        MAX_SCALE_FACTOR = 16
-        if scale_factor < 2:
-            return _validation_error(
-                    f"scale_factor must be at least 2, got {scale_factor}")
-        if scale_factor > MAX_SCALE_FACTOR:
-            return _validation_error(
-                    f"scale_factor must be at most {MAX_SCALE_FACTOR}, got {scale_factor}")
-        return _result(preview(input_path, output_path=output_path, scale_factor=scale_factor))
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    input_path = _validate_input_path(input_path)
+    MAX_SCALE_FACTOR = 16
+    if scale_factor < 2:
+        return _validation_error(
+                f"scale_factor must be at least 2, got {scale_factor}")
+    if scale_factor > MAX_SCALE_FACTOR:
+        return _validation_error(
+                f"scale_factor must be at most {MAX_SCALE_FACTOR}, got {scale_factor}")
+    return _result(preview(input_path, output_path=output_path, scale_factor=scale_factor))
 
 
 @mcp.tool()
+@_safe_tool
 def video_storyboard(
     input_path: str,
     output_dir: str | None = None,
@@ -90,20 +83,16 @@ def video_storyboard(
         output_dir: Directory to save frames. Auto-generated if omitted.
         frame_count: Number of key frames to extract.
     """
-    try:
-        input_path = _validate_input_path(input_path)
-        MAX_FRAME_COUNT = 100
-        if frame_count is not None and (frame_count < 1 or frame_count > MAX_FRAME_COUNT):
-            return _validation_error(
-                    f"frame_count must be between 1 and {MAX_FRAME_COUNT}, got {frame_count}")
-        return _result(storyboard(input_path, output_dir=output_dir, frame_count=frame_count))
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    input_path = _validate_input_path(input_path)
+    MAX_FRAME_COUNT = 100
+    if frame_count is not None and (frame_count < 1 or frame_count > MAX_FRAME_COUNT):
+        return _validation_error(
+                f"frame_count must be between 1 and {MAX_FRAME_COUNT}, got {frame_count}")
+    return _result(storyboard(input_path, output_dir=output_dir, frame_count=frame_count))
 
 
 @mcp.tool()
+@_safe_tool
 def video_subtitles(
     input_path: str,
     subtitle_path: str,
@@ -116,17 +105,13 @@ def video_subtitles(
         subtitle_path: Absolute path to the subtitle file (.srt or .vtt).
         output_path: Where to save the output. Auto-generated if omitted.
     """
-    try:
-        input_path = _validate_input_path(input_path)
-        subtitle_path = _validate_input_path(subtitle_path)
-        return _result(subtitles(input_path, subtitle_path=subtitle_path, output_path=output_path))
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    input_path = _validate_input_path(input_path)
+    subtitle_path = _validate_input_path(subtitle_path)
+    return _result(subtitles(input_path, subtitle_path=subtitle_path, output_path=output_path))
 
 
 @mcp.tool()
+@_safe_tool
 def video_watermark(
     input_path: str,
     image_path: str,
@@ -160,28 +145,24 @@ def video_watermark(
         return _validation_error(f"crf must be 0-51, got {crf}")
     if preset is not None and preset not in VALID_PRESETS:
         return _validation_error(f"Invalid preset: {preset}")
-    try:
-        input_path = _validate_input_path(input_path)
-        image_path = _validate_input_path(image_path)
-        return _result(
-            watermark(
-                input_path,
-                image_path=image_path,
-                position=position,
-                opacity=opacity,
-                margin=margin,
-                output_path=output_path,
-                crf=crf,
-                preset=preset,
-            )
+    input_path = _validate_input_path(input_path)
+    image_path = _validate_input_path(image_path)
+    return _result(
+        watermark(
+            input_path,
+            image_path=image_path,
+            position=position,
+            opacity=opacity,
+            margin=margin,
+            output_path=output_path,
+            crf=crf,
+            preset=preset,
         )
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    )
 
 
 @mcp.tool()
+@_safe_tool
 def video_export(
     input_path: str,
     output_path: str | None = None,
@@ -203,23 +184,19 @@ def video_export(
     if format not in VALID_FORMATS:
         return _validation_error(
                 f"Invalid format: {format}. Must be one of {sorted(VALID_FORMATS)}")
-    try:
-        input_path = _validate_input_path(input_path)
-        return _result(
-            export_video(
-                input_path,
-                output_path=output_path,
-                quality=quality,
-                format=format,
-            )
+    input_path = _validate_input_path(input_path)
+    return _result(
+        export_video(
+            input_path,
+            output_path=output_path,
+            quality=quality,
+            format=format,
         )
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    )
 
 
 @mcp.tool()
+@_safe_tool
 def video_crop(
     input_path: str,
     width: int | None = None,
@@ -244,26 +221,22 @@ def video_crop(
         crop_percent: Alternative to width/height — percentage of video
             dimensions to keep, centered.  E.g. 50 = center 50%.
     """
-    try:
-        input_path = _validate_input_path(input_path)
-        return _result(
-            crop(
-                input_path,
-                width=width,
-                height=height,
-                x=x,
-                y=y,
-                output_path=output_path,
-                crop_percent=crop_percent,
-            )
+    input_path = _validate_input_path(input_path)
+    return _result(
+        crop(
+            input_path,
+            width=width,
+            height=height,
+            x=x,
+            y=y,
+            output_path=output_path,
+            crop_percent=crop_percent,
         )
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    )
 
 
 @mcp.tool()
+@_safe_tool
 def video_rotate(
     input_path: str,
     angle: int = 0,
@@ -280,24 +253,20 @@ def video_rotate(
         flip_vertical: Mirror the video vertically.
         output_path: Where to save the output. Auto-generated if omitted.
     """
-    try:
-        input_path = _validate_input_path(input_path)
-        return _result(
-            rotate(
-                input_path,
-                angle=angle,
-                flip_horizontal=flip_horizontal,
-                flip_vertical=flip_vertical,
-                output_path=output_path,
-            )
+    input_path = _validate_input_path(input_path)
+    return _result(
+        rotate(
+            input_path,
+            angle=angle,
+            flip_horizontal=flip_horizontal,
+            flip_vertical=flip_vertical,
+            output_path=output_path,
         )
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    )
 
 
 @mcp.tool()
+@_safe_tool
 def video_fade(
     input_path: str,
     fade_in: float = 0.0,
@@ -320,31 +289,27 @@ def video_fade(
         return _validation_error(f"crf must be 0-51, got {crf}")
     if preset is not None and preset not in VALID_PRESETS:
         return _validation_error(f"Invalid preset: {preset}")
-    try:
-        input_path = _validate_input_path(input_path)
-        if fade_in < 0:
-            return _validation_error(
-                    f"fade_in must be non-negative, got {fade_in}")
-        if fade_out < 0:
-            return _validation_error(
-                    f"fade_out must be non-negative, got {fade_out}")
-        return _result(
-            fade(
-                input_path,
-                fade_in=fade_in,
-                fade_out=fade_out,
-                output_path=output_path,
-                crf=crf,
-                preset=preset,
-            )
+    input_path = _validate_input_path(input_path)
+    if fade_in < 0:
+        return _validation_error(
+                f"fade_in must be non-negative, got {fade_in}")
+    if fade_out < 0:
+        return _validation_error(
+                f"fade_out must be non-negative, got {fade_out}")
+    return _result(
+        fade(
+            input_path,
+            fade_in=fade_in,
+            fade_out=fade_out,
+            output_path=output_path,
+            crf=crf,
+            preset=preset,
         )
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    )
 
 
 @mcp.tool()
+@_safe_tool
 def video_edit(
     timeline: dict[str, Any] | str,
     output_path: str | None = None,
@@ -389,15 +354,11 @@ def video_edit(
     if not isinstance(parsed_timeline, dict):
         return _validation_error(
                 f"timeline must be a dict or JSON object. Got: {type(parsed_timeline).__name__}")
-    try:
-        return _result(edit_timeline(parsed_timeline, output_path=output_path))
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    return _result(edit_timeline(parsed_timeline, output_path=output_path))
 
 
 @mcp.tool()
+@_safe_tool
 def video_template_preview(
     template: str,
     input_path: str | None = None,
@@ -438,30 +399,23 @@ def video_template_preview(
 
     probed_duration: float | None = None
     if input_path is not None:
-        try:
-            input_path = _validate_input_path(input_path)
-        except MCPVideoError as e:
-            return _error_result(e)
+        input_path = _validate_input_path(input_path)
         with contextlib.suppress(Exception):
             probed_duration = _get_video_duration(input_path)
 
     effective_duration = duration if duration is not None else probed_duration
 
-    try:
-        result = preview_template(
-            template_name=template,
-            video_path=input_path or "",
-            duration=effective_duration,
-            **kwargs,
-        )
-        return result
-    except MCPVideoError as e:
-        return _error_result(e)
-    except Exception as e:
-        return _error_result(e)
+    result = preview_template(
+        template_name=template,
+        video_path=input_path or "",
+        duration=effective_duration,
+        **kwargs,
+    )
+    return result
 
 
 @mcp.tool()
+@_safe_tool
 def video_extract_audio(
     input_path: str,
     output_path: str | None = None,
@@ -477,34 +431,21 @@ def video_extract_audio(
     if format not in VALID_AUDIO_FORMATS:
         return _validation_error(
                 f"Invalid audio format: {format}. Must be one of {sorted(VALID_AUDIO_FORMATS)}")
-    try:
-        input_path = _validate_input_path(input_path)
-        result = extract_audio(input_path, output_path=output_path, format=format)
-        if not os.path.isfile(result):
-            return _error_result(
-                MCPVideoError(
-                    f"Audio extraction completed but output file not found: {result}",
-                    error_type="processing_error",
-                    code="missing_output",
-                )
-            )
-        size_mb = os.path.getsize(result) / (1024 * 1024)
-        return {
-            "success": True,
-            "output_path": result,
-            "size_mb": round(size_mb, 2),
-            "format": format,
-            "operation": "extract_audio",
-        }
-    except MCPVideoError as e:
-        return _error_result(e)
-    except OSError as e:
+    input_path = _validate_input_path(input_path)
+    result = extract_audio(input_path, output_path=output_path, format=format)
+    if not os.path.isfile(result):
         return _error_result(
             MCPVideoError(
-                f"File error during audio extraction: {e}",
+                f"Audio extraction completed but output file not found: {result}",
                 error_type="processing_error",
-                code="file_error",
+                code="missing_output",
             )
         )
-    except Exception as e:
-        return _error_result(e)
+    size_mb = os.path.getsize(result) / (1024 * 1024)
+    return {
+        "success": True,
+        "output_path": result,
+        "size_mb": round(size_mb, 2),
+        "format": format,
+        "operation": "extract_audio",
+    }

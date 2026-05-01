@@ -16,7 +16,7 @@ import tempfile
 from pathlib import Path
 
 from ..errors import InputFileError, MCPVideoError, ProcessingError
-from ..ffmpeg_helpers import _get_video_duration, _validate_output_path
+from ..ffmpeg_helpers import _get_video_duration, _validate_input_path, _validate_output_path
 from ..limits import DEFAULT_FFMPEG_TIMEOUT, MAX_AUDIO_DURATION
 from ..validation import VALID_DEMUCS_MODELS
 
@@ -64,8 +64,7 @@ def ai_stem_separation(
         FileNotFoundError: If video file doesn't exist
     """
     _validate_demucs_model(model)
-    if "\x00" in video:
-        raise InputFileError(video, "Invalid path: contains null bytes")
+    _validate_input_path(video)
 
     # Check for demucs availability
     try:

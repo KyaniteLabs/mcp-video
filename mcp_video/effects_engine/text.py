@@ -14,11 +14,11 @@ from typing import Any
 
 from ..defaults import DEFAULT_SAFE_SUBTITLE_FONT_SIZE, DEFAULT_SUBTITLE_MAX_CHARS_PER_LINE, DEFAULT_SUBTITLE_MAX_LINES
 from ..errors import InputFileError
-from ..engine_runtime_utils import _sanitize_ffmpeg_number
+from ..ffmpeg_helpers import _sanitize_ffmpeg_number
 from ..ffmpeg_helpers import (
     _validate_input_path,
     _validate_output_path,
-    _run_ffmpeg,
+    _run_command,
     _escape_ffmpeg_filter_value,
     _run_ffprobe_json,
 )
@@ -467,7 +467,7 @@ def text_animated(
     ]
 
     try:
-        _run_ffmpeg(cmd)
+        _run_command(cmd)
     finally:
         if cmd_path:
             Path(cmd_path).unlink(missing_ok=True)
@@ -540,7 +540,7 @@ def text_subtitles(
     ]
 
     try:
-        _run_ffmpeg(cmd)
+        _run_command(cmd)
     finally:
         if prepared_subtitles != subtitles:
             Path(prepared_subtitles).unlink(missing_ok=True)

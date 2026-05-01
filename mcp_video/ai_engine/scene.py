@@ -14,7 +14,7 @@ import tempfile
 from pathlib import Path
 
 from ..errors import InputFileError, MCPVideoError, ProcessingError
-from ..ffmpeg_helpers import _run_ffprobe_json
+from ..ffmpeg_helpers import _run_ffprobe_json, _validate_input_path
 from ..limits import DEFAULT_FFMPEG_TIMEOUT, MAX_AI_SCENE_FRAMES, MAX_VIDEO_DURATION
 from .spatial import _standard_scene_detect
 
@@ -66,8 +66,7 @@ def ai_scene_detect(
         # Fall back to standard detection
         return _standard_scene_detect(video, threshold)
 
-    if "\x00" in video:
-        raise InputFileError(video, "Invalid path: contains null bytes")
+    _validate_input_path(video)
     video_path = Path(video)
     if not video_path.exists():
         raise InputFileError(video)

@@ -39,8 +39,6 @@ from .engine_rotate import rotate as rotate
 from .engine_reverse import reverse as reverse
 from .engine_fade import fade as fade
 from .engine_runtime_utils import (
-    _auto_output as _auto_output,
-    _auto_output_dir as _auto_output_dir,
     _check_filter_available as _check_filter_available,
     _default_font as _default_font,
     _ffmpeg as _ffmpeg,
@@ -50,17 +48,27 @@ from .engine_runtime_utils import (
     _get_video_stream as _get_video_stream,
     _has_audio as _has_audio,
     _movflags_args as _movflags_args,
-    _parse_ffmpeg_time as _parse_ffmpeg_time,
-    _position_coords as _position_coords,
     _quality_args as _quality_args,
     _require_filter as _require_filter,
-    _resolve_position as _resolve_position,
+)
+from .ffmpeg_helpers import (
+    _parse_ffmpeg_time as _parse_ffmpeg_time,
     _run_ffmpeg as _run_ffmpeg,
     _run_ffmpeg_with_progress as _run_ffmpeg_with_progress,
     _sanitize_ffmpeg_number as _sanitize_ffmpeg_number,
+)
+from .models import (
+    _position_coords as _position_coords,
+    _resolve_position as _resolve_position,
+    _validate_position as _validate_position,
+)
+from .paths import (
+    _auto_output as _auto_output,
+    _auto_output_dir as _auto_output_dir,
+)
+from .validation import (
     _validate_chroma_color as _validate_chroma_color,
     _validate_color as _validate_color,
-    _validate_position as _validate_position,
 )
 from .engine_speed import speed as speed
 from .engine_stabilize import stabilize as stabilize

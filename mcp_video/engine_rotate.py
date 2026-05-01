@@ -4,12 +4,16 @@ from __future__ import annotations
 
 from .defaults import DEFAULT_AUDIO_BITRATE
 from .engine_runtime_utils import (
-    _auto_output,
     _build_edit_result,
     _movflags_args,
     _quality_args,
-    _run_ffmpeg,
     _timed_operation,
+)
+from .paths import (
+    _auto_output,
+)
+from .ffmpeg_helpers import (
+    _run_ffmpeg,
 )
 from .ffmpeg_helpers import _validate_input_path, _validate_output_path
 from .errors import MCPVideoError
