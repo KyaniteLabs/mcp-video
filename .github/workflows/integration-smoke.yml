@@ -19,6 +19,10 @@ on:
       - "uv.lock"
       - ".github/workflows/integration-smoke.yml"
 
+concurrency:
+  group: integration-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   base-cli-and-doctor:
     name: Base CLI and doctor

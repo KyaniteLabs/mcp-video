@@ -7,6 +7,10 @@ on:
     branches: [master]
   workflow_dispatch:
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   changes:
     name: Change detection
@@ -53,6 +57,8 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.13'
+          cache: 'pip'
+          cache-dependency-path: 'pyproject.toml'
       - name: Create venv
         run: python -m venv .venv
       - name: Run repository readiness audit
@@ -66,6 +72,8 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.13'
+          cache: 'pip'
+          cache-dependency-path: 'pyproject.toml'
       - name: Create venv
         run: python -m venv .venv
       - name: Install ruff
@@ -83,6 +91,8 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.13'
+          cache: 'pip'
+          cache-dependency-path: 'pyproject.toml'
       - name: Create venv
         run: python -m venv .venv
       - name: Install build tools
