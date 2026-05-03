@@ -11,6 +11,38 @@ This project follows a simple release-note style:
 
 ## Unreleased
 
+## 1.3.1 - 2026-05-03
+
+### Security
+
+- Fixed command injection risk in `engine_stabilize.py` — vectors file path now validated as absolute.
+- Enabled SSL certificate verification for AI model downloads in `ai_engine/upscale.py`.
+- Redacted full filesystem paths from stabilization error messages.
+
+### Fixed
+
+- Added proper AI operation timeout (3600s) for demucs/whisper — prevents premature kills on long videos.
+- Increased FFmpeg stderr buffer from 1MB to 10MB — fixes truncated progress for long-running operations.
+- Fixed temp file leak in typewriter text effect — cleanup now happens even on write failure.
+- Added `OSError` handling in hyperframes for file size race conditions.
+- Added pitch shift semitones range validation (-48 to +48) — prevents FFmpeg filter chain overflow.
+- Capped pixel count in color extraction (50K max) — prevents memory exhaustion on large images.
+- Added try-finally cleanup for Whisper temp WAV files.
+- Added bitrate/size range validation in probe before integer conversion.
+- Added 1MB JSON size limit in CLI argument parser.
+- Added `threading.Lock` for thread-safe probe cache.
+- Centralized all timeout constants in `limits.py`.
+
+### Changed
+
+- Standardized tool count to **87 MCP tools** across all documentation and metadata files.
+- Removed duplicate Hyperframes Integration section from README.
+- Removed duplicate architecture entry from README.
+- Documented `video_cleanup` tool in TOOLS.md.
+- Updated test count in TESTING.md.
+- Marked shipped v1.3.0 features as completed in ROADMAP.md.
+- Updated server.json version to 1.3.1.
+
 ### Removed
 
 - **Remotion integration completely removed.** All Remotion MCP tools, CLI commands, client methods, engine modules, and tests have been deleted. The project now uses Hyperframes (HTML-native, Apache 2.0) as its sole code-based video creation engine.
@@ -22,6 +54,15 @@ This project follows a simple release-note style:
   - Removed `remotion` optional dependency, pytest marker, and keyword from `pyproject.toml`
   - Removed Remotion CI smoke test job
   - Updated all documentation to remove Remotion references
+
+### Design
+
+- Redesigned landing page: Space Grotesk + DM Sans typography, orange/teal video-editing palette.
+- Fixed broken mobile menu with proper responsive CSS.
+- Added inline SVG favicon, ARIA labels, skip-to-content link.
+- Improved hero headline: "87 Video Tools. Zero Cloud Costs."
+- Added Organization schema markup for better SEO.
+- Optimized font loading with preconnect hints.
 
 ## 1.3.0 - 2026-04-28
 
