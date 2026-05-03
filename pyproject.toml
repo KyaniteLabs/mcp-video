@@ -102,12 +102,12 @@ ignore = ["E501", "S603", "S607", "S311", "S310", "S112", "S110"]
 mcp-video = "mcp_video.__main__:main"
 
 [project.urls]
-Homepage = "https://github.com/pastorsimon1798/mcp-video"
-Documentation = "https://github.com/pastorsimon1798/mcp-video#readme"
-Repository = "https://github.com/pastorsimon1798/mcp-video"
-"Bug Tracker" = "https://github.com/pastorsimon1798/mcp-video/issues"
-Changelog = "https://github.com/pastorsimon1798/mcp-video/blob/master/CHANGELOG.md"
-Discussions = "https://github.com/pastorsimon1798/mcp-video/discussions"
+Homepage = "https://github.com/KyaniteLabs/mcp-video"
+Documentation = "https://github.com/KyaniteLabs/mcp-video#readme"
+Repository = "https://github.com/KyaniteLabs/mcp-video"
+"Bug Tracker" = "https://github.com/KyaniteLabs/mcp-video/issues"
+Changelog = "https://github.com/KyaniteLabs/mcp-video/blob/master/CHANGELOG.md"
+Discussions = "https://github.com/KyaniteLabs/mcp-video/discussions"
 
 [tool.hatch.build]
 exclude = [

@@ -6,7 +6,7 @@ Thanks for your interest in improving mcp-video. This is a focused project — e
 
 ```bash
 # Clone and install dev dependencies
-git clone https://github.com/pastorsimon1798/mcp-video.git
+git clone https://github.com/KyaniteLabs/mcp-video.git
 cd mcp-video
 python3 -m venv .venv
 source .venv/bin/activate
@@ -165,9 +165,9 @@ For workspace cleanup (stale worktrees/branches), run:
 To monitor GitHub CI and review comments on open PRs, run:
 
 ```bash
-./scripts/github-pr-monitor.py --owner Pastorsimon1798 --repo mcp-video
+./scripts/github-pr-monitor.py --owner KyaniteLabs --repo mcp-video
 # optional: target a specific PR
-./scripts/github-pr-monitor.py --owner Pastorsimon1798 --repo mcp-video --pr 17
+./scripts/github-pr-monitor.py --owner KyaniteLabs --repo mcp-video --pr 17
 ```
 
 ## Pull Request Process

@@ -324,6 +324,7 @@ python workflow.py /path/to/video.mp4
 | `01-social-media-clip` | 5 | Landscape → TikTok / Short / Reel |
 | `02-podcast-clip` | 6 | Highlight with chapters + burned captions |
 | `03-explainer-video` | 7 | Branded explainer from scratch |
+| `04-hyperframes-video` | 5 | Create from scratch with Hyperframes, then post-process |
 
 See [`workflows/CONTEXT.md`](workflows/CONTEXT.md) for the routing table.
 

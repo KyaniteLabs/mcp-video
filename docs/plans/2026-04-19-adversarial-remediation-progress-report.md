@@ -1,5 +1,7 @@
 # Adversarial Remediation Progress Report
 
+> **Historical document.** Remotion was removed in v1.3.0/v1.3.1. This report is preserved for reference only.
+
 Date: 2026-04-19
 
 ## Executive Status
