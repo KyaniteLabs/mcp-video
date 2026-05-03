@@ -14,8 +14,11 @@ jobs:
     runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
       - name: Check forbidden tracked artifacts
-        run: python3.13 .github/scripts/check-forbidden-artifacts.py
+        run: python .github/scripts/check-forbidden-artifacts.py
 
   build:
     name: Build package
@@ -25,8 +28,11 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0  # Needed for hatch-vcs if ever adopted
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
       - name: Create venv
-        run: python3.13 -m venv .venv
+        run: python -m venv .venv
       - name: Install build dependencies
         run: .venv/bin/pip install build twine
       - name: Build package
