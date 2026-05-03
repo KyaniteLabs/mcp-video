@@ -138,7 +138,7 @@ def ai_transcribe(
 
     finally:
         # Clean up temp audio file
-        if 'audio_path' in locals():
+        if "audio_path" in locals():
             Path(audio_path).unlink(missing_ok=True)
 
 

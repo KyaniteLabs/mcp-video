@@ -26,7 +26,7 @@ def output_json(data: Any) -> None:
 
 def _parse_json_arg(value: str, arg_name: str = "argument", json_mode: bool = False) -> Any:
     """Parse a JSON string argument, showing a friendly error on failure."""
-    if len(value.encode('utf-8')) > 1_048_576:  # 1MB limit
+    if len(value.encode("utf-8")) > 1_048_576:  # 1MB limit
         if json_mode:
             print(
                 json.dumps(
