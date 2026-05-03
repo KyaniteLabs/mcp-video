@@ -1,5 +1,7 @@
 # Explainer Video Audit Fixes — Design Document
 
+> **Historical document.** Remotion was removed in v1.3.0/v1.3.1. This design is preserved for reference only.
+
 **Date:** 2026-03-28
 **Scope:** Address all P0, P1, P2 priorities from VIDEO_AUDIT_RECOMMENDATIONS.md
 **Constraint:** No audio implementation. Code-only + mcp-video synthetic clips. Phase 3 explores audio options.

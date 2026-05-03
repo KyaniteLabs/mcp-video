@@ -1,5 +1,7 @@
 # Video Audit Fixes Implementation Plan
 
+> **Historical document.** Remotion was removed in v1.3.0/v1.3.1. This plan is preserved for reference only.
+>
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Address all P0/P1/P2 audit priorities — positive hook, real demos, captions, MCP primer, code comparison, improved CTA, animated architecture.

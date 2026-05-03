@@ -1,5 +1,7 @@
 # Current Edge Case & Failure Mode Audit
 
+> **Historical document.** Remotion was removed in v1.3.0/v1.3.1. This audit is preserved for reference only.
+>
 > Scope: current `master` at `b1cc7126ae11a5f6382f6ea50bccfb643140f51b` after PRs #131-#138.
 >
 > Purpose: supersede the earlier `EDGE_CASE_AUDIT_BACKLOG.md` snapshot by separating fixed items from issues still visible in the current codebase.

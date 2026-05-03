@@ -1,8 +1,10 @@
 # Hyperframes Integration Research
 
-**Issue:** [#153](https://github.com/Pastorsimon1798/mcp-video/issues/153)  
-**Date:** 2026-04-27  
-**Author:** Kimi Code CLI  
+> **Historical note.** This research led to the Hyperframes integration that shipped in v1.2.5. Remotion was later removed in v1.3.0/v1.3.1 due to licensing concerns.
+>
+> **Issue:** [#153](https://github.com/Pastorsimon1798/mcp-video/issues/153)
+> **Date:** 2026-04-27
+> **Author:** Kimi Code CLI  
 
 ---
 

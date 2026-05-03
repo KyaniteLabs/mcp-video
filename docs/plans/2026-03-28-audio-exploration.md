@@ -1,5 +1,7 @@
 # Audio Exploration for mcp-video Explainer
 
+> **Historical document.** Remotion was removed in v1.3.0/v1.3.1. This exploration is preserved for reference only.
+>
 > Status: Research only — no implementation in this phase.
 
 ## Current State
