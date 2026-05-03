@@ -7,8 +7,10 @@ MAX_FILE_SIZE_MB = 4096  # 4 GB
 
 # Processing limits
 DEFAULT_FFMPEG_TIMEOUT = 600  # 10 minutes
+DEFAULT_AI_TIMEOUT = 3600  # 1 hour for AI operations (demucs, whisper, etc.)
 DOCTOR_COMMAND_TIMEOUT = 10  # Short version/probe commands should not hang
 FFPROBE_TIMEOUT = 30  # Metadata probes should fail quickly
+QUALITY_GUARDRAILS_TIMEOUT = 120  # Quality check commands
 MAX_BATCH_SIZE = 50
 MAX_EXPORT_FRAMES_FPS = 60
 MAX_AI_SCENE_FRAMES = 600

@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import contextlib
 import os
+import threading
 
 from .errors import InputFileError, MCPVideoError
 from .ffmpeg_helpers import _run_ffprobe_json, _validate_input_path
 from .models import VideoInfo
 from .engine_runtime_utils import _get_audio_stream, _get_video_stream
-from .limits import MAX_VIDEO_DURATION
+from .limits import MAX_FILE_SIZE_MB, MAX_VIDEO_DURATION
 
 # ---------------------------------------------------------------------------
 # Probe cache — keyed by (path, mtime, size) so stale data is never returned
@@ -17,6 +18,7 @@ from .limits import MAX_VIDEO_DURATION
 
 _probe_cache: dict[tuple[str, float, int], VideoInfo] = {}
 _MAX_PROBE_CACHE = 256
+_probe_cache_lock = threading.Lock()
 
 
 def _cache_key(path: str) -> tuple[str, float, int]:
@@ -85,8 +87,10 @@ def _build_video_info(path: str, data: dict) -> VideoInfo:
     # Bitrate / size
     fmt = data.get("format", {})
     try:
-        bitrate = int(fmt.get("bit_rate", 0)) or None
-        size_bytes = int(fmt.get("size", 0)) or None
+        bitrate_raw = fmt.get("bit_rate", 0)
+        bitrate = int(bitrate_raw) if bitrate_raw and 0 < int(bitrate_raw) <= 1_000_000_000 else None
+        size_raw = fmt.get("size", 0)
+        size_bytes = int(size_raw) if size_raw and 0 < int(size_raw) <= MAX_FILE_SIZE_MB * 1024 * 1024 else None
     except (ValueError, TypeError):
         bitrate = size_bytes = None
     fmt_name = fmt.get("format_name")
@@ -116,29 +120,32 @@ def probe(path: str) -> VideoInfo:
     path = _validate_input_path(path)
     key = _cache_key(path)
 
-    cached = _probe_cache.get(key)
-    if cached is not None:
-        return cached
+    with _probe_cache_lock:
+        cached = _probe_cache.get(key)
+        if cached is not None:
+            return cached
 
     data = _run_ffprobe_json(path)
     info = _build_video_info(path, data)
 
-    # Evict oldest entries when cache is full
-    if len(_probe_cache) >= _MAX_PROBE_CACHE:
-        _probe_cache.pop(next(iter(_probe_cache)))
-    _probe_cache[key] = info
+    with _probe_cache_lock:
+        # Evict oldest entries when cache is full
+        if len(_probe_cache) >= _MAX_PROBE_CACHE:
+            _probe_cache.pop(next(iter(_probe_cache)))
+        _probe_cache[key] = info
 
     return info
 
 
 def invalidate_probe_cache(path: str | None = None) -> None:
     """Drop cached probe data. Pass a path to evict one entry, or None for all."""
-    if path is None:
-        _probe_cache.clear()
-    else:
-        keys_to_remove = [k for k in _probe_cache if k[0] == path]
-        for k in keys_to_remove:
-            del _probe_cache[k]
+    with _probe_cache_lock:
+        if path is None:
+            _probe_cache.clear()
+        else:
+            keys_to_remove = [k for k in _probe_cache if k[0] == path]
+            for k in keys_to_remove:
+                del _probe_cache[k]
 
 
 def get_duration(path: str) -> float:

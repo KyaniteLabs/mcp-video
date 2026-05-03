@@ -17,7 +17,7 @@ from pathlib import Path
 
 from ..errors import InputFileError, MCPVideoError, ProcessingError
 from ..ffmpeg_helpers import _get_video_duration, _validate_input_path, _validate_output_path
-from ..limits import DEFAULT_FFMPEG_TIMEOUT, MAX_AUDIO_DURATION
+from ..limits import DEFAULT_AI_TIMEOUT, DEFAULT_FFMPEG_TIMEOUT, MAX_AUDIO_DURATION
 from ..validation import VALID_DEMUCS_MODELS
 
 logger = logging.getLogger(__name__)
@@ -137,10 +137,10 @@ def ai_stem_separation(
         # Run demucs separation with a timeout.
         demucs_cmd = [sys.executable, "-m", "demucs.separate", *demucs_args]
         try:
-            result = subprocess.run(demucs_cmd, capture_output=True, text=True, timeout=DEFAULT_FFMPEG_TIMEOUT)
+            result = subprocess.run(demucs_cmd, capture_output=True, text=True, timeout=DEFAULT_AI_TIMEOUT)
         except subprocess.TimeoutExpired:
             raise ProcessingError(
-                " ".join(demucs_cmd), -1, f"Demucs command timed out after {DEFAULT_FFMPEG_TIMEOUT}s"
+                " ".join(demucs_cmd), -1, f"Demucs command timed out after {DEFAULT_AI_TIMEOUT}s"
             ) from None
         if result.returncode != 0:
             raise ProcessingError(" ".join(demucs_cmd), result.returncode, result.stderr)

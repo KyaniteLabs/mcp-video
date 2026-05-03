@@ -87,11 +87,11 @@ def ai_transcribe(
     _validate_transcribe_duration(str(video_path))
 
     # Step 1: Extract audio to temp WAV file
-    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
-        audio_path = tmp.name
-
     try:
         # Extract audio using ffmpeg: 16kHz mono 16-bit PCM (Whisper optimal format)
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
+            audio_path = tmp.name
+
         cmd = [
             "ffmpeg",
             "-y",
@@ -138,7 +138,8 @@ def ai_transcribe(
 
     finally:
         # Clean up temp audio file
-        Path(audio_path).unlink(missing_ok=True)
+        if 'audio_path' in locals():
+            Path(audio_path).unlink(missing_ok=True)
 
 
 def _format_srt(segments: list[dict[str, Any]]) -> str:

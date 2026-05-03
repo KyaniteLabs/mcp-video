@@ -268,6 +268,7 @@ def _build_typewriter_filter(
             f.write(cmd_content)
     except Exception:
         os.close(cmd_fd)
+        os.unlink(cmd_path, missing_ok=True)
         raise
 
     safe_cmd_path = _escape_ffmpeg_filter_value(cmd_path)

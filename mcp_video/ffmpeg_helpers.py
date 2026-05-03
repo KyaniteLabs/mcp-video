@@ -151,7 +151,7 @@ def _run_ffmpeg_with_progress(
     stderr_lines: list[str] = []
     progress_errors: list[BaseException] = []
     _MAX_STDERR_LINES = 10_000
-    _MAX_STDERR_BYTES = 1_000_000  # ~1 MB hard cap
+    _MAX_STDERR_BYTES = 10_000_000  # ~10 MB hard cap
     _stderr_bytes = 0
 
     def _read_stderr() -> None:

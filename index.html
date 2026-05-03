@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>mcp-video — 85 Video Editing Tools for AI Agents</title>
+    <title>mcp-video — 87 Video Editing Tools for AI Agents</title>
     <meta name="description" content="Open-source MCP server with 87 video editing tools. Trim, merge, filter, subtitle, stabilize, transcribe, and render with FFmpeg + Hyperframes. Works with Claude Code, Cursor, and any MCP client.">
     <meta name="author" content="Simon Gonzalez De Cruz">
     <meta name="robots" content="index, follow, max-image-preview:large">
@@ -12,7 +12,7 @@
     <link rel="sitemap" type="application/xml" href="https://pastorsimon1798.github.io/mcp-video/sitemap.xml">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://pastorsimon1798.github.io/mcp-video/">
-    <meta property="og:title" content="mcp-video — 85 Video Editing Tools for AI Agents">
+    <meta property="og:title" content="mcp-video — 87 Video Editing Tools for AI Agents">
     <meta property="og:description" content="Open-source MCP server that gives AI agents 87 video editing tools via FFmpeg and Hyperframes. Local, fast, free.">
     <meta property="og:site_name" content="mcp-video">
     <meta property="og:image" content="https://pastorsimon1798.github.io/mcp-video/og-social-preview.png">
@@ -20,12 +20,19 @@
     <meta property="og:image:height" content="1080">
     <meta property="og:image:alt" content="mcp-video — 87 video editing tools for AI agents">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="mcp-video — 85 Video Editing Tools for AI Agents">
+    <meta name="twitter:title" content="mcp-video — 87 Video Editing Tools for AI Agents">
     <meta name="twitter:description" content="Open-source MCP server with FFmpeg + Hyperframes. Works with Claude Code, Cursor, and any MCP client.">
     <meta name="twitter:image" content="https://pastorsimon1798.github.io/mcp-video/og-social-preview.png">
+
+    <!-- Fonts with proper preconnect -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230A0A0A' rx='6'/%3E%3Cpath d='M8 10h16v12H8z' fill='%23FF6B35' opacity='0.9'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%231A936F'/%3E%3Crect x='12' y='12' width='8' height='8' fill='%230A0A0A' rx='1'/%3E%3C/svg%3E">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230A0A0A' rx='6'/%3E%3Cpath d='M8 10h16v12H8z' fill='%23FF6B35' opacity='0.9'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%231A936F'/%3E%3Crect x='12' y='12' width='8' height='8' fill='%230A0A0A' rx='1'/%3E%3C/svg%3E">
+
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -61,6 +68,20 @@
       "sameAs": [
         "https://pypi.org/project/mcp-video/",
         "https://github.com/Pastorsimon1798/mcp-video"
+      ]
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "mcp-video",
+      "url": "https://pastorsimon1798.github.io/mcp-video/",
+      "logo": "https://pastorsimon1798.github.io/mcp-video/logo.png",
+      "description": "Open-source MCP server for AI-powered video editing",
+      "sameAs": [
+        "https://github.com/Pastorsimon1798/mcp-video",
+        "https://pypi.org/project/mcp-video/"
       ]
     }
     </script>
@@ -124,29 +145,46 @@
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         :root {
-            --bg: #050507;
-            --bg-elevated: #0c0c12;
-            --bg-card: #111118;
-            --bg-card-hover: #161620;
-            --border: #1e1e2a;
-            --border-subtle: #15151f;
-            --text: #f0f0f5;
-            --text-secondary: #a0a0b0;
-            --text-muted: #6b6b7b;
-            --accent: #6366f1;
-            --accent-light: #818cf8;
-            --accent-glow: rgba(99, 102, 241, 0.15);
-            --green: #22c55e;
-            --green-dim: rgba(34, 197, 94, 0.12);
-            --orange: #f59e0b;
-            --orange-dim: rgba(245, 158, 11, 0.12);
-            --pink: #ec4899;
-            --cyan: #06b6d4;
-            --radius-sm: 8px;
-            --radius: 12px;
-            --radius-lg: 16px;
-            --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+            --bg: #0A0A0A;
+            --bg-elevated: #111111;
+            --bg-card: #141414;
+            --bg-card-hover: #1A1A1A;
+            --border: #2A2A2A;
+            --border-subtle: #222222;
+            --text: #F5F5F5;
+            --text-secondary: #B8B8B8;
+            --text-muted: #888888;
+            --primary: #FF6B35;
+            --primary-dark: #E55A2B;
+            --primary-dim: rgba(255, 107, 53, 0.12);
+            --secondary: #1A936F;
+            --secondary-light: #22B88C;
+            --secondary-dim: rgba(26, 147, 111, 0.12);
+            --accent: #E71D36;
+            --accent-dim: rgba(231, 29, 54, 0.12);
+            --radius-sm: 6px;
+            --radius: 10px;
+            --radius-lg: 14px;
+            --font-heading: 'Space Grotesk', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+            --font-sans: 'DM Sans', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
             --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+        }
+
+        /* Skip to content */
+        .skip-link {
+            position: absolute;
+            top: -40px;
+            left: 0;
+            background: var(--primary);
+            color: white;
+            padding: 8px 16px;
+            z-index: 10000;
+            text-decoration: none;
+            font-weight: 600;
+            border-radius: 0 0 var(--radius-sm) 0;
+        }
+        .skip-link:focus {
+            top: 0;
         }
 
         html { scroll-behavior: smooth; }
@@ -157,91 +195,59 @@
             color: var(--text);
             line-height: 1.6;
             -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
             overflow-x: hidden;
         }
 
         ::selection {
-            background: var(--accent-glow);
-            color: var(--accent-light);
+            background: var(--primary);
+            color: white;
         }
 
-        /* ---- GRADIENT ORB BACKGROUND ---- */
-        .orb-bg {
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            pointer-events: none;
-            z-index: 0;
-            overflow: hidden;
-        }
-        .orb {
-            position: absolute;
-            border-radius: 50%;
-            filter: blur(120px);
-            opacity: 0.4;
-            animation: orbFloat 20s ease-in-out infinite;
-        }
-        .orb-1 {
-            width: 600px; height: 600px;
-            background: radial-gradient(circle, var(--accent), transparent 70%);
-            top: -200px; right: -100px;
-            animation-delay: 0s;
-        }
-        .orb-2 {
-            width: 500px; height: 500px;
-            background: radial-gradient(circle, var(--pink), transparent 70%);
-            top: 40%; left: -150px;
-            animation-delay: -7s;
-            opacity: 0.25;
-        }
-        .orb-3 {
-            width: 400px; height: 400px;
-            background: radial-gradient(circle, var(--cyan), transparent 70%);
-            bottom: 10%; right: 10%;
-            animation-delay: -14s;
-            opacity: 0.2;
-        }
-        @keyframes orbFloat {
-            0%, 100% { transform: translate(0, 0) scale(1); }
-            33% { transform: translate(30px, -30px) scale(1.05); }
-            66% { transform: translate(-20px, 20px) scale(0.95); }
-        }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
-        /* ---- NOISE OVERLAY ---- */
-        .noise {
+        /* ---- GRAIN TEXTURE ---- */
+        .grain {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
             pointer-events: none;
             z-index: 1;
-            opacity: 0.03;
-            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+            opacity: 0.035;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='grain'%3E%3CfeTurbulence type='turbulence' baseFrequency='0.7' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23grain)'/%3E%3C/svg%3E");
         }
 
         /* ---- NAV ---- */
         nav {
-            position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-            background: rgba(5, 5, 7, 0.7);
-            backdrop-filter: blur(20px) saturate(1.5);
+            position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+            background: rgba(10, 10, 10, 0.85);
+            backdrop-filter: blur(16px) saturate(1.8);
             border-bottom: 1px solid var(--border-subtle);
             padding: 0 1.5rem;
             height: 64px;
             display: flex; align-items: center; justify-content: space-between;
         }
         nav .logo {
-            font-weight: 800;
+            font-family: var(--font-heading);
+            font-weight: 700;
             font-size: 1.15rem;
-            letter-spacing: -0.03em;
+            letter-spacing: -0.02em;
             display: flex; align-items: center; gap: 0.5rem;
+            color: var(--text);
+            text-decoration: none;
         }
         nav .logo .logo-icon {
             width: 28px; height: 28px;
-            background: linear-gradient(135deg, var(--accent), var(--pink));
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
             border-radius: 6px;
             display: flex; align-items: center; justify-content: center;
-            font-size: 0.7rem;
-            font-weight: 900;
+            font-size: 0.65rem;
+            font-weight: 700;
             color: white;
         }
-        nav .logo span { color: var(--text-secondary); font-weight: 500; }
+        nav .logo span { color: var(--text-muted); font-weight: 500; }
         nav .links { display: flex; gap: 2rem; align-items: center; }
         nav .links a {
             color: var(--text-secondary); text-decoration: none; font-size: 0.875rem;
@@ -254,14 +260,16 @@
             position: absolute;
             bottom: -4px; left: 0;
             width: 0; height: 2px;
-            background: var(--accent);
+            background: var(--primary);
             transition: width 0.2s;
             border-radius: 1px;
         }
         nav .links a:hover { color: var(--text); }
         nav .links a:hover::after { width: 100%; }
+        nav .links a[aria-current] { color: var(--text); }
+        nav .links a[aria-current]::after { width: 100%; }
         nav .nav-cta {
-            background: var(--accent);
+            background: var(--primary);
             color: white;
             padding: 0.5rem 1rem;
             border-radius: var(--radius-sm);
@@ -271,13 +279,58 @@
             transition: all 0.2s;
         }
         nav .nav-cta:hover {
-            background: var(--accent-light);
+            background: var(--primary-dark);
             transform: translateY(-1px);
+            box-shadow: 0 4px 12px var(--primary-dim);
         }
         .mobile-menu-btn {
             display: none;
             background: none; border: none; color: var(--text);
             font-size: 1.5rem; cursor: pointer;
+            padding: 0.5rem;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .mobile-menu-btn:focus {
+            outline: 2px solid var(--primary);
+            outline-offset: 2px;
+            border-radius: 4px;
+        }
+
+        /* Mobile Navigation */
+        @media (max-width: 768px) {
+            nav .links {
+                position: fixed;
+                top: 64px;
+                left: 0;
+                right: 0;
+                flex-direction: column;
+                background: var(--bg-elevated);
+                border-bottom: 1px solid var(--border);
+                padding: 1rem 1.5rem;
+                gap: 0;
+                transform: translateY(-100%);
+                opacity: 0;
+                transition: transform 0.3s ease, opacity 0.3s ease;
+                pointer-events: none;
+            }
+            nav .links.mobile-open {
+                transform: translateY(0);
+                opacity: 1;
+                pointer-events: all;
+            }
+            nav .links a {
+                padding: 0.75rem 0;
+                border-bottom: 1px solid var(--border-subtle);
+                width: 100%;
+            }
+            nav .links a:last-child {
+                border-bottom: none;
+            }
+            nav .links .nav-cta {
+                margin-top: 0.5rem;
+                text-align: center;
+            }
+            .mobile-menu-btn { display: block; }
         }
 
         /* ---- HERO ---- */
@@ -287,21 +340,31 @@
             padding: 160px 2rem 100px;
             text-align: center;
         }
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 50%;
+            transform: translateX(-50%);
+            width: 800px; height: 600px;
+            background: radial-gradient(ellipse at top, var(--primary-dim) 0%, transparent 60%);
+            pointer-events: none;
+            opacity: 0.6;
+        }
         .hero-badge {
             display: inline-flex; align-items: center; gap: 0.5rem;
-            background: var(--green-dim);
-            border: 1px solid rgba(34, 197, 94, 0.2);
+            background: var(--secondary-dim);
+            border: 1px solid rgba(26, 147, 111, 0.25);
             border-radius: 999px;
             padding: 0.4rem 1rem;
             font-size: 0.8rem;
             font-weight: 600;
-            color: var(--green);
+            color: var(--secondary-light);
             margin-bottom: 1.5rem;
             letter-spacing: 0.02em;
         }
         .hero-badge .pulse {
             width: 6px; height: 6px;
-            background: var(--green);
+            background: var(--secondary);
             border-radius: 50%;
             animation: pulse 2s ease-in-out infinite;
         }
@@ -310,17 +373,18 @@
             50% { opacity: 0.5; transform: scale(0.8); }
         }
         .hero h1 {
+            font-family: var(--font-heading);
             font-size: clamp(2.8rem, 6vw, 4.5rem);
-            font-weight: 900;
-            letter-spacing: -0.04em;
+            font-weight: 700;
+            letter-spacing: -0.03em;
             line-height: 1.05;
             margin-bottom: 1.5rem;
+            color: var(--text);
         }
-        .hero h1 .gradient {
-            background: linear-gradient(135deg, var(--accent-light) 0%, var(--pink) 50%, var(--orange) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+        .hero h1 .highlight {
+            color: var(--primary);
+            position: relative;
+            display: inline-block;
         }
         .hero .subtitle {
             font-size: 1.25rem;
@@ -328,6 +392,10 @@
             max-width: 640px;
             margin: 0 auto 2.5rem;
             line-height: 1.6;
+        }
+        .hero .subtitle strong {
+            color: var(--text);
+            font-weight: 600;
         }
         .hero-stats {
             display: flex; gap: 2rem; justify-content: center;
@@ -337,10 +405,11 @@
             text-align: center;
         }
         .hero-stat .num {
+            font-family: var(--font-heading);
             font-size: 2rem;
-            font-weight: 800;
+            font-weight: 700;
             color: var(--text);
-            letter-spacing: -0.03em;
+            letter-spacing: -0.02em;
         }
         .hero-stat .label {
             font-size: 0.8rem;
@@ -363,14 +432,19 @@
             border: none; cursor: pointer;
             font-family: var(--font-sans);
         }
+        .btn:focus {
+            outline: 2px solid var(--primary);
+            outline-offset: 2px;
+        }
         .btn-primary {
-            background: linear-gradient(135deg, var(--accent), var(--accent-light));
+            background: var(--primary);
             color: white;
-            box-shadow: 0 4px 24px var(--accent-glow);
+            box-shadow: 0 4px 16px var(--primary-dim);
         }
         .btn-primary:hover {
+            background: var(--primary-dark);
             transform: translateY(-2px);
-            box-shadow: 0 8px 32px var(--accent-glow);
+            box-shadow: 0 8px 24px var(--primary-dim);
         }
         .btn-secondary {
             background: var(--bg-card);
@@ -393,7 +467,7 @@
             border: 1px solid var(--border);
             border-radius: var(--radius-lg);
             overflow: hidden;
-            box-shadow: 0 24px 64px rgba(0,0,0,0.4), 0 0 0 1px var(--border-subtle);
+            box-shadow: 0 24px 64px rgba(0,0,0,0.5), 0 0 0 1px var(--border-subtle);
         }
         .terminal-header {
             display: flex; align-items: center; gap: 0.5rem;
@@ -418,12 +492,12 @@
             line-height: 1.8;
             color: var(--text-secondary);
         }
-        .terminal-body .prompt { color: var(--accent-light); }
+        .terminal-body .prompt { color: var(--primary); }
         .terminal-body .cmd { color: var(--text); }
         .terminal-body .comment { color: var(--text-muted); }
-        .terminal-body .output { color: var(--green); }
-        .terminal-body .key { color: var(--orange); }
-        .terminal-body .str { color: var(--green); }
+        .terminal-body .output { color: var(--secondary-light); }
+        .terminal-body .key { color: var(--primary); }
+        .terminal-body .str { color: var(--secondary-light); }
 
         /* ---- SECTIONS ---- */
         section {
@@ -432,21 +506,28 @@
             padding: 100px 2rem;
         }
         .section-label {
-            font-size: 0.75rem; font-weight: 700;
+            font-family: var(--font-heading);
+            font-size: 0.75rem; font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.15em;
-            color: var(--accent-light);
+            color: var(--primary);
             margin-bottom: 0.75rem;
         }
         .section-title {
+            font-family: var(--font-heading);
             font-size: clamp(1.8rem, 4vw, 2.8rem);
-            font-weight: 800; letter-spacing: -0.03em;
+            font-weight: 700; letter-spacing: -0.02em;
             margin-bottom: 1rem; line-height: 1.15;
+            color: var(--text);
         }
         .section-desc {
             color: var(--text-secondary); font-size: 1.1rem;
             max-width: 600px; margin-bottom: 3rem;
             line-height: 1.7;
+        }
+        .section-desc strong {
+            color: var(--text);
+            font-weight: 600;
         }
 
         /* ---- GRIDS ---- */
@@ -461,24 +542,40 @@
             border-radius: var(--radius);
             padding: 1.5rem;
             transition: all 0.25s;
+            position: relative;
+            overflow: hidden;
+        }
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            opacity: 0;
+            transition: opacity 0.25s;
         }
         .card:hover {
             background: var(--bg-card-hover);
             border-color: var(--border);
             transform: translateY(-2px);
-            box-shadow: 0 12px 32px rgba(0,0,0,0.3);
+            box-shadow: 0 12px 32px rgba(0,0,0,0.4);
+        }
+        .card:hover::before {
+            opacity: 1;
         }
         .card .card-icon {
             width: 40px; height: 40px;
-            border-radius: 10px;
+            border-radius: 8px;
             display: flex; align-items: center; justify-content: center;
             margin-bottom: 1rem;
             font-size: 1.1rem;
         }
         .card h3 {
-            font-size: 1rem; font-weight: 700;
+            font-family: var(--font-heading);
+            font-size: 1rem; font-weight: 600;
             margin-bottom: 0.4rem;
             letter-spacing: -0.01em;
+            color: var(--text);
         }
         .card p {
             color: var(--text-secondary);
@@ -525,8 +622,17 @@
             font-family: var(--font-sans);
             font-weight: 500;
             transition: color 0.2s;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
         }
-        .code-block-header .copy-btn:hover { color: var(--text); }
+        .code-block-header .copy-btn:hover {
+            color: var(--text);
+            background: var(--bg-card-hover);
+        }
+        .code-block-header .copy-btn:focus {
+            outline: 2px solid var(--primary);
+            outline-offset: 2px;
+        }
         .code-block pre {
             padding: 1.25rem 1.5rem;
             font-family: var(--font-mono);
@@ -537,8 +643,8 @@
             white-space: pre;
         }
         .code-block .c { color: var(--text-muted); }
-        .code-block .k { color: var(--accent-light); }
-        .code-block .s { color: var(--green); }
+        .code-block .k { color: var(--primary); }
+        .code-block .s { color: var(--secondary-light); }
         .code-block .f { color: #f0abfc; }
         .code-block .n { color: #fbbf24; }
         .code-block .p { color: var(--text); }
@@ -557,12 +663,11 @@
             text-align: center;
         }
         .stats-bar .stat .num {
+            font-family: var(--font-heading);
             font-size: 2.5rem;
-            font-weight: 900;
-            background: linear-gradient(135deg, var(--text), var(--text-secondary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            letter-spacing: -0.04em;
+            font-weight: 700;
+            color: var(--text);
+            letter-spacing: -0.03em;
         }
         .stats-bar .stat .label {
             font-size: 0.8rem;
@@ -600,7 +705,7 @@
         }
         .compare-table tr:last-child td { border-bottom: none; }
         .compare-table .highlight { color: var(--text); font-weight: 600; }
-        .compare-table .check { color: var(--green); font-weight: 700; }
+        .compare-table .check { color: var(--secondary); font-weight: 700; }
         .compare-table .x { color: var(--text-muted); }
 
         /* ---- TOOL LIST ---- */
@@ -622,7 +727,7 @@
             border-color: var(--border);
         }
         .tool-item .tool-check {
-            color: var(--green);
+            color: var(--secondary);
             font-size: 0.9rem;
             margin-top: 2px;
             flex-shrink: 0;
@@ -631,7 +736,7 @@
             font-family: var(--font-mono);
             font-size: 0.8rem;
             font-weight: 600;
-            color: var(--accent-light);
+            color: var(--primary);
             margin-bottom: 0.15rem;
         }
         .tool-item .tool-desc {
@@ -650,7 +755,7 @@
         }
         .install-box .install-label {
             font-size: 0.75rem;
-            font-weight: 700;
+            font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.1em;
             color: var(--text-muted);
@@ -668,8 +773,17 @@
             align-items: center; flex-wrap: wrap; gap: 1rem;
             color: var(--text-muted); font-size: 0.85rem;
         }
-        footer a { color: var(--text-secondary); text-decoration: none; transition: color 0.2s; }
+        footer a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
         footer a:hover { color: var(--text); }
+        footer a:focus {
+            outline: 2px solid var(--primary);
+            outline-offset: 2px;
+            border-radius: 4px;
+        }
         .footer-links { display: flex; gap: 1.5rem; }
 
         /* ---- DIVIDER ---- */
@@ -693,16 +807,8 @@
         .delay-3 { animation-delay: 0.3s; }
         .delay-4 { animation-delay: 0.4s; }
 
-        /* ---- SCROLLBAR ---- */
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: var(--bg); }
-        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
-
         /* ---- RESPONSIVE ---- */
         @media (max-width: 768px) {
-            nav .links { display: none; }
-            .mobile-menu-btn { display: block; }
             .hero { padding: 120px 1.5rem 60px; }
             section { padding: 60px 1.5rem; }
             .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
@@ -714,30 +820,30 @@
 </head>
 <body>
 
+<a href="#main" class="skip-link">Skip to content</a>
+
 <!-- BACKGROUND EFFECTS -->
-<div class="orb-bg">
-    <div class="orb orb-1"></div>
-    <div class="orb orb-2"></div>
-    <div class="orb orb-3"></div>
-</div>
-<div class="noise"></div>
+<div class="grain"></div>
 
 <!-- NAV -->
-<nav>
-    <div class="logo">
+<nav role="navigation" aria-label="Main navigation">
+    <a href="#" class="logo">
         <div class="logo-icon">MV</div>
         mcp<span>-video</span>
-    </div>
+    </a>
     <div class="links">
-        <a href="#features">Features</a>
-        <a href="#tools">Tools</a>
-        <a href="#interfaces">Interfaces</a>
-        <a href="#install">Install</a>
-        <a href="llms.txt">llms.txt</a>
+        <a href="#features" aria-current="false">Features</a>
+        <a href="#tools" aria-current="false">Tools</a>
+        <a href="#interfaces" aria-current="false">Interfaces</a>
+        <a href="#install" aria-current="false">Install</a>
+        <a href="llms.txt" aria-current="false">llms.txt</a>
         <a href="https://github.com/pastorsimon1798/mcp-video" class="nav-cta">GitHub</a>
     </div>
-    <button class="mobile-menu-btn" onclick="document.querySelector('.links').classList.toggle('mobile-open')">☰</button>
+    <button class="mobile-menu-btn" aria-label="Toggle navigation menu" aria-expanded="false" onclick="document.querySelector('.links').classList.toggle('mobile-open'); this.setAttribute('aria-expanded', this.getAttribute('aria-expanded') === 'false' ? 'true' : 'false');">☰</button>
 </nav>
+
+<!-- MAIN CONTENT -->
+<main id="main">
 
 <!-- HERO -->
 <div class="hero">
@@ -746,17 +852,17 @@
         v1.3.0 — 87 tools tested & working
     </div>
     <h1 class="animate-in delay-1">
-        Video editing<br>
-        <span class="gradient">for AI agents.</span>
+        87 Video Tools.<br>
+        <span class="highlight">Zero Cloud Costs.</span>
     </h1>
     <p class="subtitle animate-in delay-2">
-        An open-source MCP server that gives Claude Code, Cursor, and any AI agent
-        <strong>87 video editing tools</strong> via FFmpeg and Hyperframes.
-        Local, fast, and completely free.
+        Local video processing for AI agents. An open-source MCP server that gives
+        <strong>Claude Code, Cursor, and any AI agent 87 video editing tools</strong> via
+        FFmpeg and Hyperframes. Fast, free, and 100% private.
     </p>
     <div class="hero-stats animate-in delay-3">
         <div class="hero-stat">
-            <div class="num">85</div>
+            <div class="num">87</div>
             <div class="label">Tools</div>
         </div>
         <div class="hero-stat">
@@ -768,7 +874,7 @@
             <div class="label">Commits</div>
         </div>
         <div class="hero-stat">
-            <div class="num">0$</div>
+            <div class="num">$0</div>
             <div class="label">Forever</div>
         </div>
     </div>
@@ -797,7 +903,7 @@
 <div><span class="prompt">$</span> <span class="cmd">mcp-video</span> add-text bw.mp4 "Hello World" -p center --size 48 -o final.mp4</div>
 <div class="output">✓ final.mp4 — text rendered</div>
 <div></div>
-<div><span class="comment"># Or use the Python client</span></div>
+<div class="comment"># Or use the Python client</div>
 <div><span class="prompt">$</span> <span class="cmd">python3</span> -c <span class="str">'from mcp_video import Client; c=Client(); c.trim("in.mp4", start=5, duration=10)'</span></div>
 <div class="output">✓ Trimmed to 10s — output: trimmed.mp4</div>
         </div>
@@ -811,7 +917,7 @@
     <div class="section-label">Features</div>
     <div class="section-title">Everything you need to edit video with AI.</div>
     <p class="section-desc">
-        87 tools across 10 categories. Every tool returns structured JSON with output paths, duration, and resolution. On failure, you get clear error messages with auto-fix suggestions.
+        <strong>87 tools</strong> across 10 categories. Every tool returns structured JSON with output paths, duration, and resolution. On failure, you get clear error messages with auto-fix suggestions.
     </p>
 
     <div class="stats-bar">
@@ -843,40 +949,40 @@
 
     <div class="grid-3">
         <div class="card">
-            <div class="card-icon" style="background: var(--green-dim);">✂️</div>
+            <div class="card-icon" style="background: var(--secondary-dim);">✂️</div>
             <h3>Core Editing</h3>
             <p>Trim, merge, crop, rotate, resize, convert, speed change, fade, watermark. The basics, done right.</p>
-            <span class="card-tag" style="background: var(--green-dim); color: var(--green);">10 tools</span>
+            <span class="card-tag" style="background: var(--secondary-dim); color: var(--secondary-light);">10 tools</span>
         </div>
         <div class="card">
-            <div class="card-icon" style="background: var(--accent-glow);">🎨</div>
+            <div class="card-icon" style="background: var(--primary-dim);">🎨</div>
             <h3>Filters & Effects</h3>
             <p>Blur, sharpen, grayscale, sepia, vignette, chromatic aberration, scanlines, noise, glow.</p>
-            <span class="card-tag" style="background: var(--accent-glow); color: var(--accent-light);">13 tools</span>
+            <span class="card-tag" style="background: var(--primary-dim); color: var(--primary);">13 tools</span>
         </div>
         <div class="card">
-            <div class="card-icon" style="background: var(--orange-dim);">🎬</div>
+            <div class="card-icon" style="background: var(--accent-dim);">🎬</div>
             <h3>Transitions</h3>
             <p>Glitch, pixelate, and morph transitions for seamless clip connections.</p>
-            <span class="card-tag" style="background: var(--orange-dim); color: var(--orange);">3 tools</span>
+            <span class="card-tag" style="background: var(--accent-dim); color: var(--accent);">3 tools</span>
         </div>
         <div class="card">
             <div class="card-icon" style="background: rgba(236, 72, 153, 0.12);">🎵</div>
             <h3>Audio Suite</h3>
             <p>Normalize, reverb, compress, pitch shift, noise reduction. Extract waveforms and generate sound effects.</p>
-            <span class="card-tag" style="background: rgba(236, 72, 153, 0.12); color: var(--pink);">7 tools</span>
+            <span class="card-tag" style="background: rgba(236, 72, 153, 0.12); color: #ec4899;">7 tools</span>
         </div>
         <div class="card">
             <div class="card-icon" style="background: rgba(6, 182, 212, 0.12);">🤖</div>
             <h3>AI-Powered</h3>
             <p>Whisper transcription, scene detection, stem separation, AI upscaling, color grading, spatial audio.</p>
-            <span class="card-tag" style="background: rgba(6, 182, 212, 0.12); color: var(--cyan);">10 tools</span>
+            <span class="card-tag" style="background: rgba(6, 182, 212, 0.12); color: #06b6d4;">10 tools</span>
         </div>
         <div class="card">
-            <div class="card-icon" style="background: var(--green-dim);">📐</div>
+            <div class="card-icon" style="background: var(--secondary-dim);">📐</div>
             <h3>Layout & MoGraph</h3>
             <p>Grid layouts, picture-in-picture, split-screen, animated text, count animations, progress bars.</p>
-            <span class="card-tag" style="background: var(--green-dim); color: var(--green);">8 tools</span>
+            <span class="card-tag" style="background: var(--secondary-dim); color: var(--secondary-light);">8 tools</span>
         </div>
     </div>
 </section>
@@ -895,7 +1001,7 @@
         <thead>
             <tr>
                 <th></th>
-                <th style="color: var(--accent-light);">mcp-video</th>
+                <th style="color: var(--primary);">mcp-video</th>
                 <th>Raw FFmpeg</th>
                 <th>Cloud APIs</th>
             </tr>
@@ -933,7 +1039,7 @@
             </tr>
             <tr>
                 <td class="highlight">Agent discovery</td>
-                <td><span class="check">✓</span> 85 self-documenting tools</td>
+                <td><span class="check">✓</span> 87 self-documenting tools</td>
                 <td><span class="x">✗</span> Memorize flags</td>
                 <td><span class="x">✗</span> Read docs</td>
             </tr>
@@ -1010,7 +1116,7 @@
             <div class="code-block">
                 <div class="code-block-header">
                     <span class="lang">JSON</span>
-                    <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                    <button class="copy-btn" onclick="copyCode(this)" aria-label="Copy code">Copy</button>
                 </div>
                 <pre>{
   <span class="s">"mcpServers"</span>: {
@@ -1028,7 +1134,7 @@
             <div class="code-block">
                 <div class="code-block-header">
                     <span class="lang">Python</span>
-                    <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                    <button class="copy-btn" onclick="copyCode(this)" aria-label="Copy code">Copy</button>
                 </div>
                 <pre><span class="k">from</span> mcp_video <span class="k">import</span> Client
 
@@ -1047,7 +1153,7 @@ result = editor.<span class="f">export</span>(final.output_path)
         <div class="code-block">
             <div class="code-block-header">
                 <span class="lang">Bash</span>
-                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                <button class="copy-btn" onclick="copyCode(this)" aria-label="Copy code">Copy</button>
             </div>
             <pre><span class="c"># Info with rich table output</span>
 $ mcp-video info video.mp4
@@ -1079,7 +1185,7 @@ $ mcp-video --format json info video.mp4</pre>
         <div class="code-block" style="margin-bottom: 0;">
             <div class="code-block-header">
                 <span class="lang">Terminal</span>
-                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                <button class="copy-btn" onclick="copyCode(this)" aria-label="Copy code">Copy</button>
             </div>
             <pre>pip install mcp-video</pre>
         </div>
@@ -1090,7 +1196,7 @@ $ mcp-video --format json info video.mp4</pre>
         <div class="code-block" style="margin-bottom: 0;">
             <div class="code-block-header">
                 <span class="lang">Terminal</span>
-                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                <button class="copy-btn" onclick="copyCode(this)" aria-label="Copy code">Copy</button>
             </div>
             <pre>pip install mcp-video[ai]</pre>
         </div>
@@ -1101,7 +1207,7 @@ $ mcp-video --format json info video.mp4</pre>
         <div class="code-block" style="margin-bottom: 0;">
             <div class="code-block-header">
                 <span class="lang">Terminal</span>
-                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                <button class="copy-btn" onclick="copyCode(this)" aria-label="Copy code">Copy</button>
             </div>
             <pre>mcp-video --version
 mcp-video doctor  <span class="c"># Check FFmpeg and optional deps</span></pre>
@@ -1129,7 +1235,7 @@ mcp-video doctor  <span class="c"># Check FFmpeg and optional deps</span></pre>
             <div class="label">Passing</div>
         </div>
         <div class="stat">
-            <div class="num">81</div>
+            <div class="num">87</div>
             <div class="label">Tools Verified</div>
         </div>
         <div class="stat">
@@ -1157,6 +1263,8 @@ mcp-video doctor  <span class="c"># Check FFmpeg and optional deps</span></pre>
         </div>
     </div>
 </section>
+
+</main>
 
 <!-- FOOTER -->
 <footer>
@@ -1190,6 +1298,27 @@ const observer = new IntersectionObserver((entries) => {
 document.querySelectorAll('.animate-in').forEach(el => {
     el.style.animationPlayState = 'paused';
     observer.observe(el);
+});
+
+// Update aria-current on scroll
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('nav .links a[href^="#"]');
+
+window.addEventListener('scroll', () => {
+    let current = '';
+    sections.forEach(section => {
+        const sectionTop = section.offsetTop;
+        if (scrollY >= sectionTop - 100) {
+            current = section.getAttribute('id');
+        }
+    });
+
+    navLinks.forEach(link => {
+        link.setAttribute('aria-current', 'false');
+        if (link.getAttribute('href') === `#${current}`) {
+            link.setAttribute('aria-current', 'true');
+        }
+    });
 });
 </script>
 

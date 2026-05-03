@@ -21,7 +21,7 @@ from .ffmpeg_helpers import (
     _run_ffmpeg,
     _sanitize_ffmpeg_number,
 )
-from .errors import ProcessingError, parse_ffmpeg_error
+from .errors import MCPVideoError, ProcessingError, parse_ffmpeg_error
 from .ffmpeg_helpers import _validate_input_path, _validate_output_path, _escape_ffmpeg_filter_value
 from .limits import DEFAULT_FFMPEG_TIMEOUT
 from .models import EditResult
@@ -74,6 +74,12 @@ def stabilize(
 
 
 def _detect_motion_vectors(input_path: str, vectors_file: str) -> None:
+    if not os.path.isabs(vectors_file):
+        raise MCPVideoError(
+            f"Vectors file path must be absolute, got: {vectors_file!r}",
+            error_type="validation_error",
+            code="invalid_path",
+        )
     safe_vectors_file = _escape_ffmpeg_filter_value(vectors_file)
     try:
         result = subprocess.run(
@@ -94,7 +100,7 @@ def _detect_motion_vectors(input_path: str, vectors_file: str) -> None:
         )
     except subprocess.TimeoutExpired as exc:
         raise ProcessingError(
-            f"ffmpeg -i {input_path} -vf vidstabdetect",
+            f"ffmpeg -i {os.path.basename(input_path)} -vf vidstabdetect",
             -1,
             f"Video stabilization analysis timed out after {DEFAULT_FFMPEG_TIMEOUT} seconds",
         ) from exc

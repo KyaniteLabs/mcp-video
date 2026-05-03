@@ -158,6 +158,8 @@ def extract_colors(
     # Resize for speed — max 200px on the longest side
     img.thumbnail((200, 200))
     pixels = np.array(img).reshape(-1, 3).astype(float)
+    if len(pixels) > 50000:
+        pixels = pixels[:50000]
 
     kmeans = MiniBatchKMeans(n_clusters=n_colors, random_state=42, n_init=3)
     labels = kmeans.fit_predict(pixels)
