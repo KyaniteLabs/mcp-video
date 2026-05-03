@@ -278,7 +278,11 @@ def render(
     )
 
     render_time = round(time.time() - start_time, 1)
-    size_mb = round(os.path.getsize(output_path) / (1024 * 1024), 2) if os.path.isfile(output_path) else None
+    try:
+        size = os.path.getsize(output_path) if os.path.isfile(output_path) else None
+        size_mb = round(size / (1024 * 1024), 2) if size is not None else None
+    except OSError:
+        size_mb = None
 
     resolution = None
     if width and height:

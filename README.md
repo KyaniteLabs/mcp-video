@@ -14,7 +14,7 @@
 <p align="center">
   <a href="https://pypi.org/project/mcp-video/"><img src="https://img.shields.io/pypi/v/mcp-video.svg" alt="PyPI"></a>
   <a href="https://github.com/KyaniteLabs/mcp-video/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/KyaniteLabs/mcp-video/.github/workflows/ci.yml?branch=master&label=CI" alt="CI"></a>
-  <img src="https://img.shields.io/badge/tools-86%20MCP%20tools-orange.svg" alt="Tools">
+  <img src="https://img.shields.io/badge/tools-87%20MCP%20tools-orange.svg" alt="Tools">
   <img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="License">
   <img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python">
 </p>
@@ -179,20 +179,21 @@ mcp-video template tiktok video.mp4 --caption "Check this out!"
 
 ## MCP Tools
 
-85 unique MCP tools across 10 categories, plus a `search_tools` meta-tool for fast discovery. All return structured JSON. See the [full tool reference](docs/TOOLS.md) for complete details.
+87 unique MCP tools across 10 categories, plus a `search_tools` meta-tool for fast discovery. All return structured JSON. See the [full tool reference](docs/TOOLS.md) for complete details.
 
 | Category | Count | Highlights |
 |----------|-------|------------|
-| **Core Video** | 29 | trim, merge, text, audio, resize, convert, filters, stabilize, chroma key, subtitles, watermark, batch, export, normalize audio |
+| **Core Video** | 30 | trim, merge, text, audio, resize, convert, filters, stabilize, chroma key, subtitles, watermark, batch, export, normalize audio, cleanup |
 | **AI-Powered** | 11 | transcribe (Whisper), scene detect, stem separation (Demucs), upscale, color grade |
 | **Hyperframes** | 8 | init, render, still, preview, compositions, validate, add block, pipeline |
 | **Audio Synthesis** | 7 | generate waveforms, presets, sequences, effects, spatial audio — pure NumPy |
-| **Visual Effects** | 6 | vignette, chromatic aberration, scanlines, noise, glow, mask |
+| **Visual Effects** | 8 | vignette, chromatic aberration, scanlines, noise, glow, mask, luma key, shape mask |
 | **Transitions** | 3 | glitch, pixelate, morph |
 | **Layout & Motion** | 6 | grid, pip, animated text, counters, progress bars, auto-chapters |
 | **Analysis** | 8 | scene detect, thumbnail, preview, storyboard, quality compare, metadata, waveform, release checkpoint |
 | **Image Analysis** | 3 | color extraction, palette generation, product analysis |
 | **Meta** | 1 | `search_tools` — keyword search across all tools |
+| **Resources** | 4 | prompts, workflows, templates, examples |
 
 **Tool discovery:**
 ```python
@@ -209,20 +210,6 @@ Create videos programmatically with [Hyperframes](https://hyperframes.io/) — a
 
 ```
 1. Create project     -> hyperframes_init
-2. Add blocks         -> hyperframes_add_block
-3. Preview live       -> hyperframes_preview
-4. Render             -> hyperframes_render
-5. Post-process       -> hyperframes_to_mcpvideo
-```
-
-See [Hyperframes docs](docs/TOOLS.md#hyperframes--html-native-video-8-tools) and the [Python client reference](docs/PYTHON_CLIENT.md).
-
-## Hyperframes Integration
-
-Create videos programmatically with [Hyperframes](https://hyperframes.io/) — an HTML-native framework for video.
-
-```
-1. Init project       -> hyperframes_init
 2. Add blocks         -> hyperframes_add_block
 3. Preview live       -> hyperframes_preview
 4. Render             -> hyperframes_render
@@ -357,7 +344,6 @@ mcp_video/
   effects_engine.py      # Visual effects + motion graphics
   transitions_engine.py  # Clip transitions
   ai_engine.py           # AI features (Whisper, Demucs, Real-ESRGAN)
-  hyperframes_engine.py  # Hyperframes CLI wrapper
   hyperframes_engine.py  # Hyperframes CLI wrapper
   image_engine.py        # Image color analysis
   quality_guardrails.py  # Automated quality checks

@@ -1,6 +1,6 @@
 # MCP Tools Reference
 
-85 unique MCP tools across 10 categories, plus a `search_tools` meta-tool. All return structured JSON with `success`, `output_path`, and operation metadata. On failure, they return `{"success": false, "error": {...}}` with auto-fix suggestions.
+87 unique MCP tools across 10 categories, plus a `search_tools` meta-tool. All return structured JSON with `success`, `output_path`, and operation metadata. On failure, they return `{"success": false, "error": {...}}` with auto-fix suggestions.
 
 ---
 
@@ -20,7 +20,7 @@ results = editor.search_tools("subtitle")
 
 ---
 
-## Core Editing (30 tools)
+## Core Editing (31 tools)
 
 | Tool | Description |
 |------|-------------|
@@ -54,6 +54,7 @@ results = editor.search_tools("subtitle")
 | `video_normalize_audio` | Normalize audio loudness to a target LUFS level |
 | `video_batch` | Apply the same operation to multiple video files |
 | `video_hls_segment` | Segment video into HLS format with multi-quality variants |
+| `video_cleanup` | Delete intermediate files after multi-step workflows, with optional keep list |
 
 ---
 

@@ -15,6 +15,7 @@ import contextlib
 from .ffmpeg_helpers import _validate_input_path
 from .errors import MCPVideoError
 from .defaults import DEFAULT_QUALITY_GATE_SCORE
+from .limits import FFPROBE_TIMEOUT, QUALITY_GUARDRAILS_TIMEOUT
 
 logger = logging.getLogger(__name__)
 
@@ -92,7 +93,7 @@ class VisualQualityGuardrails:
             "json",
         ]
         try:
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=QUALITY_GUARDRAILS_TIMEOUT)
             if result.returncode != 0:
                 diagnostic = _diagnostic(
                     "ffprobe_signalstats",
@@ -168,7 +169,7 @@ class VisualQualityGuardrails:
             "-",
         ]
         try:
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=QUALITY_GUARDRAILS_TIMEOUT)
             # Parse stderr for signalstats output
             stderr = result.stderr
             stats = {}
@@ -209,7 +210,7 @@ class VisualQualityGuardrails:
             "-",
         ]
         try:
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=QUALITY_GUARDRAILS_TIMEOUT)
             # Parse JSON from the output (it's embedded in stderr)
             stderr = result.stderr
 
@@ -256,7 +257,7 @@ class VisualQualityGuardrails:
             "json",
         ]
         try:
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=QUALITY_GUARDRAILS_TIMEOUT)
             if result.returncode != 0:
                 diagnostic = _diagnostic(
                     "ffprobe_rgb_means",
@@ -465,7 +466,7 @@ class VisualQualityGuardrails:
                 video,
             ]
             try:
-                result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=FFPROBE_TIMEOUT)
                 if "audio" not in result.stdout.lower():
                     return QualityReport(
                         check_name="audio_levels",

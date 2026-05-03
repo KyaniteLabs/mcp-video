@@ -44,6 +44,12 @@ def _get_color_preset_filter(preset: ColorPreset) -> str:
 
 def _build_pitch_shift_filter(semitones: float = 0) -> str:
     """Build FFmpeg audio filter string for pitch shifting."""
+    if not (-48 <= semitones <= 48):
+        raise MCPVideoError(
+            f"Pitch shift semitones must be between -48 and 48, got {semitones}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
     safe_semitones = _sanitize_ffmpeg_number(semitones, "semitones")
     rate_mult = 2 ** (safe_semitones / 12)
     new_rate = 44100 * rate_mult

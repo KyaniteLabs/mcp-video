@@ -18,7 +18,7 @@ This project follows a simple release-note style:
   - Removed `RemotionNotFoundError`, `RemotionProjectError`, `RemotionRenderError` from `errors.py`
   - Removed `VALID_REMOTION_TEMPLATES` from `validation.py`
   - Removed Remotion category from `doctor.py` checks
-  - Updated `test_public_surface.py`: 85 MCP tools (was 93), 86 CLI commands (was 94)
+  - Updated `test_public_surface.py`: 87 MCP tools (was 93), 88 CLI commands (was 94)
   - Removed `remotion` optional dependency, pytest marker, and keyword from `pyproject.toml`
   - Removed Remotion CI smoke test job
   - Updated all documentation to remove Remotion references
@@ -45,7 +45,7 @@ This project follows a simple release-note style:
 
 - **Merge auto-normalize** now handles fps mismatches, audio sample rate mismatches, and rotation-aware display dimensions during normalization.
 - **Remotion deprecation upgraded** from `DeprecationWarning` to `FutureWarning` for v1.3.0 timeline.
-- Public tool count updated from 90 to **93** unique MCP tools.
+- Public tool count updated from 90 to **87** unique MCP tools.
 
 ### Fixed
 

@@ -9,8 +9,9 @@ Optional dependencies:
 from __future__ import annotations
 
 import hashlib
-import math
 import logging
+import math
+import ssl
 import tempfile
 from pathlib import Path
 
@@ -113,7 +114,10 @@ def _download_fsrcnn_model(scale: int) -> Path:
         tmp_model = model_path.with_suffix(".tmp")
         max_model_bytes = 500 * (1 << 20)  # 500 MiB limit
         req = urllib.request.Request(url)
-        with urllib.request.urlopen(req, timeout=120) as resp, open(tmp_model, "wb") as fh:
+        ssl_context = ssl.create_default_context()
+        ssl_context.check_hostname = True
+        ssl_context.verify_mode = ssl.CERT_REQUIRED
+        with urllib.request.urlopen(req, timeout=120, context=ssl_context) as resp, open(tmp_model, "wb") as fh:
             total = 0
             while True:
                 chunk = resp.read(1 << 20)  # 1 MiB

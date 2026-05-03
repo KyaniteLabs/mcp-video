@@ -195,7 +195,7 @@ v1.2.0 shipped. 82 MCP tools, 832 tests, security hardened. Here's what's next.
 
 ## Low Impact (Nice to have)
 
-- [ ] **Custom font upload** — Currently only uses system fonts or a provided path. Allow passing a Google Fonts name and downloading it automatically.
+- [x] **Custom font upload** — `font_manager.py` downloads and caches Google Fonts by name for use in text overlays. *(Shipped in v1.3.0)*
 - [ ] **Video concatenation with transitions per-clip** — Already supported in `merge` via `transitions` parameter, but add a `video_edit` shortcut for simple "clip A -> fade -> clip B -> dissolve -> clip C" patterns.
 - [ ] **Audio waveform extraction** — Return a text-based waveform representation so agents can "see" the audio without playing it. Useful for finding silence or loud sections.
 - [x] **Subtitle generation from text** — Given a list of `[(start, end, text)]` tuples, generate an SRT file and burn it in one step. *(Shipped as `video_generate_subtitles`)*
@@ -224,8 +224,8 @@ Features that FFmpeg supports but mcp-video doesn't expose yet. Ordered by impac
 - [x] **Quality metrics** — PSNR, SSIM, VMAF calculation for comparing video quality
 
 ### Medium Impact
-- [ ] **HLS/DASH streaming** — Segment video for adaptive bitrate streaming
-- [ ] **Advanced codecs** — AV1 (`libaom-av1`), HEVC/H.265 (`libx265`), ProRes (`prores_ks`)
+- [x] **HLS/DASH streaming** — `hls_segment()` segments video into HTTP Live Streaming format with multi-quality variants. *(Shipped in v1.3.0)*
+- [x] **Advanced codecs** — `convert()` now supports `hevc` (H.265), `av1`, and `prores` output formats. *(Shipped in v1.3.0)*
 - [x] **Image sequences** — Create video from image sequences (`img2pipe`), export frames
 - [x] **Metadata editing** — Read/write video metadata tags, chapter support
 - [x] **Audio waveform extraction** — Text-based waveform for silence/loud section detection
@@ -233,6 +233,6 @@ Features that FFmpeg supports but mcp-video doesn't expose yet. Ordered by impac
 
 ### Low Impact
 - [x] **Ken Burns / zoom pan** — Animated zoom/pan effects via `zoompan` filter
-- [ ] **Advanced masking** — Complex mask operations beyond chroma key
+- [x] **Advanced masking** — New `luma_key()` (brightness-based masking) and `shape_mask()` (circle, rounded_rect, oval) tools. *(Shipped in v1.3.0)*
 - [ ] **Frame-accurate seeking** — Input seeking for speed, output seeking for accuracy
 - [x] **Two-pass encoding** — More efficient compression for target file sizes
