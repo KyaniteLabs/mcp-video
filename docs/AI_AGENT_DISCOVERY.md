@@ -22,7 +22,7 @@ This document is the short, explicit discovery map for agents, answer engines, a
 - `README.md` - install, quick start, tools, CLI, Python client, workflows.
 - `CLAUDE.md` - Layer 0 identity: what this project is, where to find staged pipelines.
 - `llms.txt` - compact machine-readable project map.
-- `mcp_video/server.py` - MCP tool registration layer (86 tools + search_tools meta-tool).
+- `mcp_video/server.py` - MCP tool registration layer (87 tools total, including `search_tools`).
 - `mcp_video/engine.py` - core FFmpeg operations.
 - `mcp_video/client/` - Python client mixins. Use `Client.inspect()`, `Client.pipeline()`, and `Client.release_checkpoint()` for guarded agent workflows.
 - `mcp_video/client/meta.py` - Client-side tool discovery (`search_tools`).
@@ -84,7 +84,7 @@ Cursor:
 
 High-leverage listing targets:
 
-- Official MCP Registry — metadata in `server.json` at the repo root, ready for submission via `npx @anthropic-ai/mcp-registry publish`. Identifier: `io.github.pastorsimon1798/mcp-video`.
+- Official MCP Registry — metadata in `server.json` at the repo root, ready for submission via `npx @anthropic-ai/mcp-registry publish`. Identifier: `io.github.KyaniteLabs/mcp-video`.
 - [Glama MCP Registry](https://glama.ai/mcp/servers) — Submit via GitHub repo URL.
 - [Smithery](https://smithery.ai) — `npx @anthropic-ai/mcp-registry publish`.
 - [MCP.so](https://mcp.so) — Submit via GitHub repo URL.
@@ -101,4 +101,4 @@ Track:
 - Issues opened by real users.
 - Discussion posts and show-and-tell examples.
 - Mentions in MCP directories and AI answer results.
-- MCP Registry publication status for `io.github.pastorsimon1798/mcp-video`.
+- MCP Registry publication status for `io.github.KyaniteLabs/mcp-video`.

@@ -1,6 +1,6 @@
 # MCP Tools Reference
 
-87 unique MCP tools across 10 categories, plus a `search_tools` meta-tool. All return structured JSON with `success`, `output_path`, and operation metadata. On failure, they return `{"success": false, "error": {...}}` with auto-fix suggestions.
+87 MCP tools across 10 categories, including the `search_tools` meta-tool. All return structured JSON with `success`, `output_path`, and operation metadata. On failure, they return `{"success": false, "error": {...}}` with auto-fix suggestions.
 
 ---
 
@@ -8,7 +8,7 @@
 
 | Tool | Description |
 |------|-------------|
-| `search_tools` | Search all registered MCP tools by keyword. Returns matching tool names, descriptions, and required parameters. Use this when you need to find the right tool without loading all 90 descriptions into context. |
+| `search_tools` | Search all registered MCP tools by keyword. Returns matching tool names, descriptions, and required parameters. Use this when you need to find the right tool without loading all 87 descriptions into context. |
 
 **Python Client:**
 ```python
@@ -20,7 +20,7 @@ results = editor.search_tools("subtitle")
 
 ---
 
-## Core Editing (31 tools)
+## Core Editing (32 tools)
 
 | Tool | Description |
 |------|-------------|
@@ -53,8 +53,9 @@ results = editor.search_tools("subtitle")
 | `video_export` | Render with quality and format settings |
 | `video_normalize_audio` | Normalize audio loudness to a target LUFS level |
 | `video_batch` | Apply the same operation to multiple video files |
+| `video_cleanup` | Remove mcp-video-managed intermediate files |
 | `video_hls_segment` | Segment video into HLS format with multi-quality variants |
-| `video_cleanup` | Delete intermediate files after multi-step workflows, with optional keep list |
+| `video_template_preview` | Preview social/video template operations before rendering |
 
 ---
 

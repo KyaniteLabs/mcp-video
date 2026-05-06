@@ -46,7 +46,7 @@ mcp-video includes 7 AI features: silence removal, Whisper transcription, scene 
 
 ## How many tools does it have?
 
-85 unique MCP tools across 10 categories: Meta / Discovery, Core Editing, AI-Powered, Hyperframes, Audio Synthesis, Visual Effects, Transitions, Layout & Motion Graphics, Analysis, and Image Analysis. Plus a `search_tools` meta-tool for fast discovery.
+87 MCP tools across 10 categories: Meta / Discovery, Core Editing, AI-Powered, Hyperframes, Audio Synthesis, Visual Effects, Transitions, Layout & Motion Graphics, Analysis, and Image Analysis. The count includes the `search_tools` meta-tool for fast discovery.
 
 ## Is it free?
 
@@ -58,7 +58,7 @@ Very fast. Since it wraps FFmpeg directly, operations like trimming, merging, an
 
 ## Can I use it in production?
 
-Yes. mcp-video has 900+ tests, comprehensive error handling with structured error types, input validation, and FFmpeg timeout protection. It's used in CI/CD pipelines for automated video quality checks.
+Yes. mcp-video currently collects 1054 tests and has comprehensive error handling with structured error types, input validation, and FFmpeg timeout protection. It's used in CI/CD pipelines for automated video quality checks.
 
 ## How do I contribute?
 

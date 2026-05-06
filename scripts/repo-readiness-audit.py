@@ -185,7 +185,7 @@ def main() -> int:
         )
 
     check(
-        "mcp-name: io.github.pastorsimon1798/mcp-video" in readme,
+        "mcp-name: io.github.KyaniteLabs/mcp-video" in readme,
         "README contains MCP Registry verification marker",
         "README missing MCP Registry verification marker",
         failures=failures,

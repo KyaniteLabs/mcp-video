@@ -1,18 +1,18 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.pastorsimon1798/mcp-video",
+  "name": "io.github.KyaniteLabs/mcp-video",
   "title": "mcp-video",
   "description": "Video editing MCP server for AI agents using FFmpeg and Hyperframes structured tools.",
-  "version": "1.3.1",
+  "version": "1.3.2",
   "repository": {
-    "url": "https://github.com/pastorsimon1798/mcp-video",
+    "url": "https://github.com/KyaniteLabs/mcp-video",
     "source": "github"
   },
   "packages": [
     {
       "registryType": "pypi",
       "identifier": "mcp-video",
-      "version": "1.3.1",
+      "version": "1.3.2",
       "transport": {
         "type": "stdio"
       }

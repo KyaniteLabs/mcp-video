@@ -63,10 +63,15 @@ def test_validate_output_path_rejects_null_bytes():
         assert "null bytes" in str(e).lower()
 
 
-def test_validate_output_path_accepts_parent_relative_paths():
+def test_validate_output_path_rejects_parent_relative_paths():
+    from mcp_video.errors import MCPVideoError
     from mcp_video.ffmpeg_helpers import _validate_output_path
 
-    assert _validate_output_path("../clips/output.mp4") == "../clips/output.mp4"
+    try:
+        _validate_output_path("../clips/output.mp4")
+        raise AssertionError("Expected MCPVideoError")
+    except MCPVideoError as e:
+        assert "traversal" in str(e).lower()
 
 
 def test_validate_output_path_accepts_safe_paths():
@@ -127,3 +132,60 @@ def test_run_ffmpeg_preserves_full_ffmpeg_command(monkeypatch):
     ffmpeg_helpers._run_ffmpeg(["ffmpeg", "-y", "-i", "input.mp4", "output.mp4"])
 
     assert captured["cmd"] == ["ffmpeg", "-y", "-i", "input.mp4", "output.mp4"]
+
+
+def test_validate_output_path_rejects_system_prefixes():
+    from mcp_video.errors import MCPVideoError
+    from mcp_video.ffmpeg_helpers import _validate_output_path
+
+    try:
+        _validate_output_path("/etc/mcp-video-output.mp4")
+        raise AssertionError("Expected MCPVideoError")
+    except MCPVideoError as e:
+        assert e.code == "unsafe_path"
+
+
+def test_validate_output_path_rejects_sensitive_home_dotfiles(monkeypatch, tmp_path):
+    from mcp_video.errors import MCPVideoError
+    from mcp_video.ffmpeg_helpers import _validate_output_path
+
+    monkeypatch.setenv("HOME", str(tmp_path))
+    ssh_config = tmp_path / ".ssh" / "config"
+    ssh_config.parent.mkdir()
+    ssh_config.write_text("Host *\n")
+
+    try:
+        _validate_output_path(str(ssh_config))
+        raise AssertionError("Expected MCPVideoError")
+    except MCPVideoError as e:
+        assert e.code == "unsafe_path"
+
+
+def test_validate_output_path_rejects_symlink_targets(tmp_path):
+    from mcp_video.errors import MCPVideoError
+    from mcp_video.ffmpeg_helpers import _validate_output_path
+
+    target = tmp_path / "target.mp4"
+    target.write_text("not media")
+    link = tmp_path / "link.mp4"
+    link.symlink_to(target)
+
+    try:
+        _validate_output_path(str(link))
+        raise AssertionError("Expected MCPVideoError")
+    except MCPVideoError as e:
+        assert e.code == "unsafe_path"
+
+
+def test_validate_output_path_rejects_existing_non_media_file(tmp_path):
+    from mcp_video.errors import MCPVideoError
+    from mcp_video.ffmpeg_helpers import _validate_output_path
+
+    existing = tmp_path / "notes.py"
+    existing.write_text("print('do not overwrite')\n")
+
+    try:
+        _validate_output_path(str(existing))
+        raise AssertionError("Expected MCPVideoError")
+    except MCPVideoError as e:
+        assert e.code == "unsafe_path"

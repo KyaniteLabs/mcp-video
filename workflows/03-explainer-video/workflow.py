@@ -30,8 +30,8 @@ os.makedirs(TMP_DIR, exist_ok=True)
 SCENES = [
     {"color": "#1a1a2e", "text": "Meet mcp-video", "duration": 5},
     {"color": "#16213e", "text": "Edit video with AI agents", "duration": 5},
-    {"color": "#0f3460", "text": "81 MCP tools at your command", "duration": 5},
-    {"color": "#533483", "text": "Built on FFmpeg + Hyperframes", "duration": 5},
+    {"color": "#0f3460", "text": "87 MCP tools at your command", "duration": 5},
+    {"color": "#533483", "text": "FFmpeg edits + Hyperframes creation", "duration": 5},
 ]
 
 FPS = 30
@@ -87,17 +87,17 @@ def _stage_soundtrack() -> str:
     )
     soundtrack = client.audio_compose(
         tracks=[
-            {"file": drone, "volume": 0.3, "start": 0},
-            {"file": chime, "volume": 0.8, "start": 0},
-            {"file": chime, "volume": 0.8, "start": 5},
-            {"file": chime, "volume": 0.8, "start": 10},
-            {"file": chime, "volume": 0.8, "start": 15},
+            {"file": drone.output_path, "volume": 0.3, "start": 0},
+            {"file": chime.output_path, "volume": 0.8, "start": 0},
+            {"file": chime.output_path, "volume": 0.8, "start": 5},
+            {"file": chime.output_path, "volume": 0.8, "start": 10},
+            {"file": chime.output_path, "volume": 0.8, "start": 15},
         ],
         duration=20,
         output=os.path.join(OUTPUT_DIR, "01_soundtrack.wav"),
     )
-    print(f"   -> {soundtrack}")
-    return soundtrack
+    print(f"   -> {soundtrack.output_path}")
+    return soundtrack.output_path
 
 
 def _stage_scenes() -> list[str]:
@@ -150,7 +150,7 @@ def _stage_assemble(fx_clips: list[str]) -> str:
     assembled = client.merge(
         clips=fx_clips,
         output=os.path.join(OUTPUT_DIR, "05_assembled.mp4"),
-        transitions=["fade", "pixelize", "dissolve"],
+        transitions=["fade", "wiperight", "dissolve"],
         transition_duration=0.5,
     )
     print(f"   -> {assembled.output_path}")

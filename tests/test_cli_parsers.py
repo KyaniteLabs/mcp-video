@@ -2,8 +2,6 @@
 
 import argparse
 
-import pytest
-
 
 def _get_subparser_names(parser_module):
     """Return set of subparser names added by a parser module."""
@@ -19,8 +17,16 @@ class TestParserCore:
 
         names = _get_subparser_names(core)
         expected = {
-            "doctor", "info", "extract-frame", "trim", "merge",
-            "edit", "blur", "color-grade", "template", "templates",
+            "doctor",
+            "info",
+            "extract-frame",
+            "trim",
+            "merge",
+            "edit",
+            "blur",
+            "color-grade",
+            "template",
+            "templates",
             "video-extract-frame",
         }
         assert expected <= names
@@ -32,9 +38,18 @@ class TestParserMedia:
 
         names = _get_subparser_names(media)
         expected = {
-            "convert", "crop", "extract-audio", "fade", "preview",
-            "resize", "rotate", "speed", "storyboard", "subtitles",
-            "thumbnail", "export",
+            "convert",
+            "crop",
+            "extract-audio",
+            "fade",
+            "preview",
+            "resize",
+            "rotate",
+            "speed",
+            "storyboard",
+            "subtitles",
+            "thumbnail",
+            "export",
         }
         assert expected <= names
 
@@ -45,9 +60,17 @@ class TestParserAdvanced:
 
         names = _get_subparser_names(advanced)
         expected = {
-            "apply-mask", "batch", "compare-quality", "create-from-images",
-            "detect-scenes", "export-frames", "generate-subtitles",
-            "read-metadata", "stabilize", "write-metadata", "audio-waveform",
+            "apply-mask",
+            "batch",
+            "compare-quality",
+            "create-from-images",
+            "detect-scenes",
+            "export-frames",
+            "generate-subtitles",
+            "read-metadata",
+            "stabilize",
+            "write-metadata",
+            "audio-waveform",
         }
         assert expected <= names
 
@@ -58,9 +81,13 @@ class TestParserAI:
 
         names = _get_subparser_names(ai)
         expected = {
-            "video-ai-transcribe", "video-analyze", "video-ai-upscale",
-            "video-ai-stem-separation", "video-ai-scene-detect",
-            "video-ai-color-grade", "video-ai-remove-silence",
+            "video-ai-transcribe",
+            "video-analyze",
+            "video-ai-upscale",
+            "video-ai-stem-separation",
+            "video-ai-scene-detect",
+            "video-ai-color-grade",
+            "video-ai-remove-silence",
         }
         assert expected <= names
 
@@ -71,9 +98,13 @@ class TestParserAudio:
 
         names = _get_subparser_names(audio)
         expected = {
-            "audio-synthesize", "audio-compose", "audio-preset",
-            "audio-sequence", "audio-effects",
-            "video-add-generated-audio", "video-audio-spatial",
+            "audio-synthesize",
+            "audio-compose",
+            "audio-preset",
+            "audio-sequence",
+            "audio-effects",
+            "video-add-generated-audio",
+            "video-audio-spatial",
             "normalize-audio",
         }
         assert expected <= names
@@ -85,11 +116,21 @@ class TestParserEffects:
 
         names = _get_subparser_names(effects)
         expected = {
-            "effect-vignette", "effect-glow", "effect-noise",
-            "effect-scanlines", "effect-chromatic-aberration",
-            "add-text", "add-audio", "chroma-key", "filter",
-            "overlay-video", "reverse", "split-screen",
-            "transition-glitch", "transition-morph", "transition-pixelate",
+            "effect-vignette",
+            "effect-glow",
+            "effect-noise",
+            "effect-scanlines",
+            "effect-chromatic-aberration",
+            "add-text",
+            "add-audio",
+            "chroma-key",
+            "filter",
+            "overlay-video",
+            "reverse",
+            "split-screen",
+            "transition-glitch",
+            "transition-morph",
+            "transition-pixelate",
             "watermark",
         }
         assert expected <= names
@@ -101,8 +142,11 @@ class TestParserLayout:
 
         names = _get_subparser_names(layout)
         expected = {
-            "video-layout-grid", "video-layout-pip",
-            "video-mograph-count", "video-mograph-progress", "video-text-animated",
+            "video-layout-grid",
+            "video-layout-pip",
+            "video-mograph-count",
+            "video-mograph-progress",
+            "video-text-animated",
         }
         assert expected <= names
 
@@ -113,7 +157,8 @@ class TestParserImage:
 
         names = _get_subparser_names(image)
         expected = {
-            "image-extract-colors", "image-generate-palette",
+            "image-extract-colors",
+            "image-generate-palette",
             "image-analyze-product",
         }
         assert expected <= names
@@ -125,9 +170,14 @@ class TestParserHyperframes:
 
         names = _get_subparser_names(hyperframes)
         expected = {
-            "hyperframes-render", "hyperframes-compositions",
-            "hyperframes-preview", "hyperframes-still", "hyperframes-init",
-            "hyperframes-add-block", "hyperframes-validate", "hyperframes-pipeline",
+            "hyperframes-render",
+            "hyperframes-compositions",
+            "hyperframes-preview",
+            "hyperframes-still",
+            "hyperframes-init",
+            "hyperframes-add-block",
+            "hyperframes-validate",
+            "hyperframes-pipeline",
         }
         assert expected <= names
 
@@ -138,8 +188,10 @@ class TestParserQuality:
 
         names = _get_subparser_names(quality)
         expected = {
-            "video-auto-chapters", "video-info-detailed",
-            "video-quality-check", "video-design-quality-check",
+            "video-auto-chapters",
+            "video-info-detailed",
+            "video-quality-check",
+            "video-design-quality-check",
             "video-fix-design-issues",
         }
         assert expected <= names

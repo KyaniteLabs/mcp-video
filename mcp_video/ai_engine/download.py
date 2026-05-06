@@ -69,6 +69,10 @@ def _is_url(s: str) -> bool:
     return s.lower().startswith(("http://", "https://"))
 
 
+def _is_http_url(s: object) -> bool:
+    return isinstance(s, str) and s.lower().startswith(("http://", "https://"))
+
+
 # --- SSRF protection: block private/reserved IP ranges ---
 def _is_safe_url(url: str) -> bool:
     """Reject URLs that resolve to private, loopback, or link-local IPs (SSRF protection)."""
@@ -169,7 +173,7 @@ def _download_direct_url(url: str, dest_dir: str) -> str:
     filename = re.sub(r"[^\w.\-]", "_", filename)
     dest = str(Path(dest_dir) / filename)
 
-    headers = {"User-Agent": "mcp-video/1.0 (+https://github.com/pastorsimon1798/mcp-video)"}
+    headers = {"User-Agent": "mcp-video/1.3 (+https://github.com/KyaniteLabs/mcp-video)"}
     req = urllib.request.Request(url, headers=headers)
     max_download_bytes = 2 * (1 << 30)  # 2 GiB limit
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
@@ -191,6 +195,30 @@ def _download_direct_url(url: str, dest_dir: str) -> str:
                     )
                 fh.write(chunk)
     return dest
+
+
+def _iter_ytdlp_info_urls(value: object):
+    """Yield network URLs from yt-dlp's nested metadata shape."""
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if key in {"url", "webpage_url", "original_url", "manifest_url"} and _is_http_url(item):
+                yield item
+            elif key in {"formats", "requested_formats", "requested_downloads", "entries", "fragments"}:
+                yield from _iter_ytdlp_info_urls(item)
+    elif isinstance(value, list | tuple):
+        for item in value:
+            yield from _iter_ytdlp_info_urls(item)
+
+
+def _validate_ytdlp_info_urls(info: object) -> None:
+    """Reject yt-dlp results that resolve media URLs to blocked networks."""
+    for media_url in _iter_ytdlp_info_urls(info):
+        if not _is_safe_url(media_url):
+            raise MCPVideoError(
+                f"URL blocked (SSRF protection): yt-dlp resolved media URL {media_url}",
+                error_type="validation_error",
+                code="ssrf_blocked",
+            )
 
 
 def _download_with_ytdlp(url: str, dest_dir: str) -> str:
@@ -216,10 +244,14 @@ def _download_with_ytdlp(url: str, dest_dir: str) -> str:
         "merge_output_format": "mp4",
         "socket_timeout": 120,
         "max_filesize": 2 * (1 << 30),  # 2 GiB limit
+        "proxy": "",
     }
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        info = ydl.extract_info(url, download=False)
+        _validate_ytdlp_info_urls(info)
         info = ydl.extract_info(url, download=True)
+        _validate_ytdlp_info_urls(info)
         filename = ydl.prepare_filename(info)
         # yt-dlp may have merged to .mp4 even if template said otherwise
         if not Path(filename).exists():

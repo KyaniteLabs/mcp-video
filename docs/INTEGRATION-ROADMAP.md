@@ -107,4 +107,5 @@ Remotion's custom freemium license (company-size gate, no derivative resale) cre
 |-------------|----------|--------|--------|---------|-----|
 | Blender MCP | LOW | 1-2 days | Defer | No | Medium |
 | Image Analysis | MEDIUM | 2-3 days | **Completed (v0.7.0)** | Yes | Medium |
+| Hyperframes | HIGH | Shipped | **Completed (v1.2.5)** | Yes | High |
 | Remotion | MEDIUM | 5-10 days | **Removed (v2.0.0)** | N/A | N/A |

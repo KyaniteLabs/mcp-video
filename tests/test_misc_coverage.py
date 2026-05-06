@@ -1,7 +1,6 @@
 """Targeted tests to raise coverage on small utility modules."""
 
 from pathlib import Path
-from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -67,9 +66,11 @@ class TestFontManager:
         cache_dir = tmp_path / "fonts"
         monkeypatch.setattr("mcp_video.font_manager._FONT_CACHE_DIR", str(cache_dir))
 
-        with patch("mcp_video.font_manager.urllib.request.urlretrieve", side_effect=URLError("network down")):
-            with pytest.raises(MCPVideoError, match="Failed to download"):
-                resolve_font("roboto")
+        with (
+            patch("mcp_video.font_manager.urllib.request.urlretrieve", side_effect=URLError("network down")),
+            pytest.raises(MCPVideoError, match="Failed to download"),
+        ):
+            resolve_font("roboto")
 
 
 class TestServerToolsImage:
@@ -185,30 +186,30 @@ class TestAudioEngineInit:
         out = str(tmp_path / "out.mp4")
 
         # Mock audio_sequence to avoid actual generation, then ffmpeg will fail
-        with patch("mcp_video.audio_engine.audio_sequence"):
-            with patch("subprocess.run") as mock_run:
-                mock_run.return_value = MagicMock(returncode=0, stderr="")
-                result = add_generated_audio(
-                    video,
-                    {"drone": {"frequency": 100, "volume": 0.2}, "events": []},
-                    out,
-                )
-                assert result == out
+        with patch("mcp_video.audio_engine.audio_sequence"), patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0, stderr="")
+            result = add_generated_audio(
+                video,
+                {"drone": {"frequency": 100, "volume": 0.2}, "events": []},
+                out,
+            )
+            assert result == out
 
     def test_add_generated_audio_ffmpeg_timeout(self, tmp_path):
         from mcp_video.audio_engine import add_generated_audio
-        from mcp_video.errors import ProcessingError
 
         video = str(tmp_path / "v.mp4")
         Path(video).write_bytes(b"fake")
         out = str(tmp_path / "out.mp4")
 
-        with patch("mcp_video.audio_engine.audio_sequence"):
-            with patch("subprocess.run", side_effect=TimeoutError("timeout")):
-                # The code catches subprocess.TimeoutExpired, not TimeoutError
-                # So this will actually raise a different error
-                with pytest.raises(Exception):
-                    add_generated_audio(video, {"events": [{"type": "tone"}]}, out)
+        with (
+            patch("mcp_video.audio_engine.audio_sequence"),
+            patch("subprocess.run", side_effect=TimeoutError("timeout")),
+            pytest.raises(Exception),
+        ):
+            # The code catches subprocess.TimeoutExpired, not TimeoutError
+            # So this will actually raise a different error
+            add_generated_audio(video, {"events": [{"type": "tone"}]}, out)
 
     def test_add_generated_audio_ffmpeg_error(self, tmp_path):
         from mcp_video.audio_engine import add_generated_audio
@@ -220,9 +221,8 @@ class TestAudioEngineInit:
 
         with patch("mcp_video.audio_engine.audio_sequence"):
             mock_result = MagicMock(returncode=1, stderr="ffmpeg error")
-            with patch("subprocess.run", return_value=mock_result):
-                with pytest.raises(ProcessingError):
-                    add_generated_audio(video, {"events": [{"type": "tone"}]}, out)
+            with patch("subprocess.run", return_value=mock_result), pytest.raises(ProcessingError):
+                add_generated_audio(video, {"events": [{"type": "tone"}]}, out)
 
 
 class TestServerToolsImageSuccess:
@@ -231,23 +231,29 @@ class TestServerToolsImageSuccess:
     def test_image_extract_colors_success(self):
         from mcp_video.server_tools_image import image_extract_colors
 
-        with patch("mcp_video.server_tools_image._validate_input_path", return_value="/tmp/img.jpg"):
-            with patch("mcp_video.image_engine.extract_colors", return_value={"colors": []}):
-                result = image_extract_colors("/tmp/img.jpg")
+        with (
+            patch("mcp_video.server_tools_image._validate_input_path", return_value="/tmp/img.jpg"),
+            patch("mcp_video.image_engine.extract_colors", return_value={"colors": []}),
+        ):
+            result = image_extract_colors("/tmp/img.jpg")
         assert result.get("success") is True
 
     def test_image_generate_palette_success(self):
         from mcp_video.server_tools_image import image_generate_palette
 
-        with patch("mcp_video.server_tools_image._validate_input_path", return_value="/tmp/img.jpg"):
-            with patch("mcp_video.image_engine.generate_palette", return_value={"palette": []}):
-                result = image_generate_palette("/tmp/img.jpg")
+        with (
+            patch("mcp_video.server_tools_image._validate_input_path", return_value="/tmp/img.jpg"),
+            patch("mcp_video.image_engine.generate_palette", return_value={"palette": []}),
+        ):
+            result = image_generate_palette("/tmp/img.jpg")
         assert result.get("success") is True
 
     def test_image_analyze_product_success(self):
         from mcp_video.server_tools_image import image_analyze_product
 
-        with patch("mcp_video.server_tools_image._validate_input_path", return_value="/tmp/img.jpg"):
-            with patch("mcp_video.image_engine.analyze_product", return_value={"description": "test"}):
-                result = image_analyze_product("/tmp/img.jpg", use_ai=True)
+        with (
+            patch("mcp_video.server_tools_image._validate_input_path", return_value="/tmp/img.jpg"),
+            patch("mcp_video.image_engine.analyze_product", return_value={"description": "test"}),
+        ):
+            result = image_analyze_product("/tmp/img.jpg", use_ai=True)
         assert result.get("success") is True

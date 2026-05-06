@@ -342,9 +342,20 @@ class TestTranscription:
             assert isinstance(result["segments"], list)
             assert isinstance(result["language"], str)
 
-    def test_transcribe_with_srt_output(self, skip_if_no_whisper, sample_speech_video):
+    def test_transcribe_with_srt_output(self, monkeypatch, sample_speech_video):
         """Test that SRT file is created when output_srt is provided."""
         from mcp_video.ai_engine import ai_transcribe
+
+        class FakeWhisperModel:
+            def transcribe(self, _audio_path, **_options):
+                return {
+                    "text": "hello launch",
+                    "language": "en",
+                    "segments": [{"start": 0.0, "end": 1.0, "text": "hello launch"}],
+                }
+
+        fake_whisper = types.SimpleNamespace(load_model=lambda _model: FakeWhisperModel())
+        monkeypatch.setitem(sys.modules, "whisper", fake_whisper)
 
         with tempfile.TemporaryDirectory() as tmpdir:
             output_srt = os.path.join(tmpdir, "output.srt")
@@ -1110,7 +1121,7 @@ def test_ai_upscale_import_error_message_mentions_opencv_contrib(sample_video, t
     output_video = str(tmp_path / "output.mp4")
 
     with (
-        patch("mcp_video.ai_engine._ai_upscale_opencv", side_effect=ImportError),
+        patch("mcp_video.ai_engine.upscale._ai_upscale_opencv", side_effect=ImportError),
         pytest.raises(MCPVideoError, match="opencv-contrib-python"),
     ):
         ai_upscale(sample_video, output_video, scale=2)
@@ -1329,18 +1340,14 @@ class TestUpscaleHelpers:
     def test_download_fsrcnn_model_uses_cache(self, monkeypatch, tmp_path):
         from mcp_video.ai_engine.upscale import _download_fsrcnn_model
 
-        monkeypatch.setattr(
-            "mcp_video.ai_engine.upscale.Path.home", lambda: tmp_path
-        )
+        monkeypatch.setattr("mcp_video.ai_engine.upscale.Path.home", lambda: tmp_path)
         cache_dir = tmp_path / ".cache" / "mcp-video" / "models"
         cache_dir.mkdir(parents=True, exist_ok=True)
         model_path = cache_dir / "FSRCNN_x2.pb"
         model_path.write_bytes(b"fake_model")
 
         # Patch hash verification to accept fake model
-        monkeypatch.setattr(
-            "mcp_video.ai_engine.upscale._verify_model_hash", lambda p, h: None
-        )
+        monkeypatch.setattr("mcp_video.ai_engine.upscale._verify_model_hash", lambda p, h: None)
 
         result = _download_fsrcnn_model(2)
         assert result == model_path

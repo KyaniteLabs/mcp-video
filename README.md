@@ -2,7 +2,7 @@
   <img src="og-social-preview.png" alt="mcp-video" width="100%">
 </p>
 
-<!-- mcp-name: io.github.pastorsimon1798/mcp-video -->
+<!-- mcp-name: io.github.KyaniteLabs/mcp-video -->
 
 <h1 align="center">mcp-video</h1>
 
@@ -179,15 +179,15 @@ mcp-video template tiktok video.mp4 --caption "Check this out!"
 
 ## MCP Tools
 
-87 unique MCP tools across 10 categories, plus a `search_tools` meta-tool for fast discovery. All return structured JSON. See the [full tool reference](docs/TOOLS.md) for complete details.
+87 MCP tools across 10 categories, including the `search_tools` meta-tool for fast discovery. All return structured JSON. See the [full tool reference](docs/TOOLS.md) for complete details.
 
 | Category | Count | Highlights |
 |----------|-------|------------|
-| **Core Video** | 30 | trim, merge, text, audio, resize, convert, filters, stabilize, chroma key, subtitles, watermark, batch, export, normalize audio, cleanup |
+| **Core Video** | 32 | trim, merge, text, audio, resize, convert, filters, stabilize, chroma key, subtitles, watermark, batch, cleanup, template preview, export |
 | **AI-Powered** | 11 | transcribe (Whisper), scene detect, stem separation (Demucs), upscale, color grade |
 | **Hyperframes** | 8 | init, render, still, preview, compositions, validate, add block, pipeline |
 | **Audio Synthesis** | 7 | generate waveforms, presets, sequences, effects, spatial audio — pure NumPy |
-| **Visual Effects** | 8 | vignette, chromatic aberration, scanlines, noise, glow, mask, luma key, shape mask |
+| **Visual Effects** | 8 | vignette, chromatic aberration, scanlines, noise, glow, luma key, mask, shape mask |
 | **Transitions** | 3 | glitch, pixelate, morph |
 | **Layout & Motion** | 6 | grid, pip, animated text, counters, progress bars, auto-chapters |
 | **Analysis** | 8 | scene detect, thumbnail, preview, storyboard, quality compare, metadata, waveform, release checkpoint |
@@ -206,10 +206,10 @@ results = editor.search_tools("subtitle")  # Find subtitle-related tools
 
 ## Hyperframes Integration
 
-Create videos programmatically with [Hyperframes](https://hyperframes.io/) — an HTML-native framework for video (Apache 2.0).
+Create videos programmatically with [Hyperframes](https://hyperframes.io/) — an HTML-native framework for video.
 
 ```
-1. Create project     -> hyperframes_init
+1. Init project       -> hyperframes_init
 2. Add blocks         -> hyperframes_add_block
 3. Preview live       -> hyperframes_preview
 4. Render             -> hyperframes_render
@@ -334,7 +334,7 @@ See [`workflows/CONTEXT.md`](workflows/CONTEXT.md) for the routing table.
 mcp_video/
   client/                # Python Client API (mixins per domain)
   client/meta.py         # Client discovery mixin (search_tools)
-  server.py              # MCP server (87 tools + 4 resources + search_tools meta-tool)
+  server.py              # MCP server (87 tools + 4 resources)
   server_tools_*.py      # Tool registration by category
   engine.py              # Core FFmpeg engine
   engine_*.py            # Specialized engines (thumbnail, edit, probe, etc.)

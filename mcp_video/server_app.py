@@ -20,7 +20,7 @@ mcp = FastMCP(
     ),
 )
 
-# Optional anonymous usage ping (disabled via MCP_VIDEO_ANALYTICS=0)
+# Optional anonymous usage ping (enabled only via MCP_VIDEO_ANALYTICS=1)
 try:
     from .analytics import ping
 

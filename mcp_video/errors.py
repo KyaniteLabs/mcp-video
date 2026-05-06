@@ -104,7 +104,7 @@ class CodecError(MCPVideoError):
                 "auto_fix": True,
                 "description": f"Auto-convert input from {codec} to H.264/AAC before editing",
             },
-            docs_url="https://github.com/pastorsimon1798/mcp-video#codec-compatibility",
+            docs_url="https://github.com/KyaniteLabs/mcp-video#codec-compatibility",
         )
 
 

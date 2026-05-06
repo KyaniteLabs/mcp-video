@@ -1,0 +1,35 @@
+name: PR safety
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - "mcp_video/**"
+      - "tests/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/pr-safety.yml"
+
+jobs:
+  hosted-pr-checks:
+    name: Hosted PR checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg
+          ffmpeg -version
+          ffprobe -version
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - name: Install package
+        run: python -m pip install -e ".[dev]"
+      - name: Lint
+        run: |
+          ruff check mcp_video/ tests/
+          ruff format --check mcp_video/ tests/
+      - name: Test
+        run: pytest tests/ -q -m "not slow" --tb=short

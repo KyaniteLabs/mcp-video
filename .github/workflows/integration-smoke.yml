@@ -2,14 +2,6 @@ name: Integration smoke
 
 on:
   workflow_dispatch:
-  pull_request:
-    branches: [master]
-    paths:
-      - "mcp_video/**"
-      - "tests/**"
-      - "pyproject.toml"
-      - "uv.lock"
-      - ".github/workflows/integration-smoke.yml"
   push:
     branches: [master]
     paths:
@@ -77,8 +69,8 @@ jobs:
             sudo apt-get update
             sudo apt-get install -y ffmpeg
           fi
-          command -v ffmpeg >/dev/null
-          command -v ffprobe >/dev/null
+          ffmpeg -version
+          ffprobe -version
       - name: Install package
         run: .venv/bin/pip install -e .
       - name: Create sample video
@@ -89,6 +81,27 @@ jobs:
           .venv/bin/python -m mcp_video --format json info sample.mp4 | .venv/bin/python -m json.tool >/tmp/info.json
           .venv/bin/python -m mcp_video --format json trim sample.mp4 --start 0 --duration 0.5 -o trimmed.mp4 | .venv/bin/python -m json.tool >/tmp/trim.json
           test -s trimmed.mp4
+      - name: Smoke MCP stdio path
+        run: |
+          .venv/bin/python - <<'PY'
+          import anyio
+          import sys
+          from mcp import ClientSession
+          from mcp.client.stdio import StdioServerParameters, stdio_client
+
+          async def main():
+              params = StdioServerParameters(command=sys.executable, args=["-m", "mcp_video", "--mcp"])
+              async with stdio_client(params) as (read, write):
+                  async with ClientSession(read, write) as session:
+                      await session.initialize()
+                      tools = await session.list_tools()
+                      assert any(tool.name == "video_info" for tool in tools.tools)
+                      result = await session.call_tool("video_info", {"input_path": "sample.mp4"})
+                      assert not result.isError
+                      assert result.content
+
+          anyio.run(main)
+          PY
 
   image-extra-smoke:
     name: Image extra smoke

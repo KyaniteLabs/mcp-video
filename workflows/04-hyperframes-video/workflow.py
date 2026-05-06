@@ -28,6 +28,10 @@ OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "output")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 
+def _value(result, key: str):
+    return result.get(key) if isinstance(result, dict) else getattr(result, key)
+
+
 def main() -> None:
     print("=" * 60)
     print("04-hyperframes-video workflow")
@@ -40,7 +44,7 @@ def main() -> None:
         template=TEMPLATE,
         output_dir=OUTPUT_DIR,
     )
-    project_path = project.project_path
+    project_path = _value(project, "project_path")
     print(f"   -> {project_path}")
 
     # Stage 2: Add blocks (optional — customize as needed)
@@ -56,8 +60,8 @@ def main() -> None:
     # Stage 3: Validate project
     print("\n[3/5] Validating project...")
     validation = client.hyperframes_validate(project_path)
-    if not validation.valid:
-        print(f"   -> Validation failed: {validation.issues}")
+    if not _value(validation, "valid"):
+        print(f"   -> Validation failed: {_value(validation, 'issues')}")
         sys.exit(1)
     print("   -> Project is valid")
 
@@ -68,14 +72,15 @@ def main() -> None:
         output=os.path.join(OUTPUT_DIR, "04_render.mp4"),
         quality="high",
     )
-    print(f"   -> {render.output_path}")
+    render_path = _value(render, "output_path")
+    print(f"   -> {render_path}")
 
     # Stage 5: Post-process with mcp-video
     print("\n[5/5] Post-processing with mcp-video...")
 
     # Example: add a watermark and export
     watermarked = client.watermark(
-        video=render.output_path,
+        video=render_path,
         image="logo.png",  # Replace with your logo path
         position="bottom-right",
         opacity=0.7,

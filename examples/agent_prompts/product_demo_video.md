@@ -48,13 +48,13 @@ clips:
   - /tmp/outro_norm.mp4
 transitions:
   - dissolve
-  - wipe-right
+  - wiperight
   - dissolve
   - fade
 transition_duration: 0.8
 output_path: /tmp/demo_merged.mp4
 ```
-Varied transitions keep things visually interesting. Dissolves for talking segments, wipe-right for screen recordings to suggest moving between features, and a fade for the closing.
+Varied transitions keep things visually interesting. Dissolves for talking segments, `wiperight` for screen recordings to suggest moving between features, and a fade for the closing.
 
 ### Step 4: Add the logo watermark
 

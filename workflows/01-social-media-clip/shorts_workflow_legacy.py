@@ -11,7 +11,6 @@ from a longer video. The workflow:
   5. Export the final short
 
 Requirements:
-  - mcp-video server running and accessible
   - mcp_video Python client installed
 
 Usage:
@@ -20,10 +19,9 @@ Usage:
 Replace placeholder paths with your actual file paths before running.
 """
 
-import asyncio
 import os
 
-from mcp_video.client import MCPVideoClient  # hypothetical client; adapt to actual SDK
+from mcp_video import Client
 
 # ---------------------------------------------------------------------------
 # Configuration -- replace these with your actual paths and preferences
@@ -39,8 +37,8 @@ LOGO_PATH = "/assets/logo.png"
 TARGET_LUFS = -14  # Target loudness for TikTok/Shorts (-14 LUFS)
 
 
-async def main() -> None:
-    client = MCPVideoClient()
+def main() -> None:
+    client = Client()
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
@@ -50,13 +48,13 @@ async def main() -> None:
     # Keeping Shorts under 60 seconds maximizes completion rate.
     # ------------------------------------------------------------------
     print("[1/5] Trimming highlight segment...")
-    trimmed = await client.video_trim(
-        input_path=INPUT_VIDEO,
+    trimmed = client.trim(
+        INPUT_VIDEO,
         start=CLIP_START,
         duration=CLIP_DURATION,
-        output_path=os.path.join(OUTPUT_DIR, "short_trimmed.mp4"),
+        output=os.path.join(OUTPUT_DIR, "short_trimmed.mp4"),
     )
-    print(f"   -> {trimmed.get('output_path')}")
+    print(f"   -> {trimmed.output_path}")
 
     # ------------------------------------------------------------------
     # Step 2: Resize to 9:16 vertical format for Shorts.
@@ -64,13 +62,13 @@ async def main() -> None:
     # center-cropping to keep the subject in frame.
     # ------------------------------------------------------------------
     print("[2/5] Resizing to 9:16 vertical format...")
-    resized = await client.video_resize(
-        input_path=trimmed["output_path"],
+    resized = client.resize(
+        trimmed.output_path,
         aspect_ratio="9:16",
         quality="high",
-        output_path=os.path.join(OUTPUT_DIR, "short_vertical.mp4"),
+        output=os.path.join(OUTPUT_DIR, "short_vertical.mp4"),
     )
-    print(f"   -> {resized.get('output_path')}")
+    print(f"   -> {resized.output_path}")
 
     # ------------------------------------------------------------------
     # Step 3: Add animated caption overlay.
@@ -78,8 +76,8 @@ async def main() -> None:
     # Shorts pattern. The typewriter animation draws the eye.
     # ------------------------------------------------------------------
     print("[3/5] Adding animated caption...")
-    captioned = await client.video_text_animated(
-        input_path=resized["output_path"],
+    captioned = client.text_animated(
+        resized.output_path,
         text=CAPTION_TEXT,
         animation="typewriter",
         font="Arial Black",
@@ -88,9 +86,9 @@ async def main() -> None:
         position="center",
         start=CAPTION_START,
         duration=CAPTION_DURATION,
-        output_path=os.path.join(OUTPUT_DIR, "short_captioned.mp4"),
+        output=os.path.join(OUTPUT_DIR, "short_captioned.mp4"),
     )
-    print(f"   -> {captioned.get('output_path')}")
+    print(f"   -> {captioned.output_path}")
 
     # ------------------------------------------------------------------
     # Step 4: Normalize audio levels.
@@ -99,12 +97,12 @@ async def main() -> None:
     # quiet after platform processing.
     # ------------------------------------------------------------------
     print("[4/5] Normalizing audio to -14 LUFS...")
-    normalized = await client.video_normalize_audio(
-        input_path=captioned["output_path"],
+    normalized = client.normalize_audio(
+        captioned.output_path,
         target_lufs=TARGET_LUFS,
-        output_path=os.path.join(OUTPUT_DIR, "short_normalized.mp4"),
+        output=os.path.join(OUTPUT_DIR, "short_normalized.mp4"),
     )
-    print(f"   -> {normalized.get('output_path')}")
+    print(f"   -> {normalized.output_path}")
 
     # ------------------------------------------------------------------
     # Step 5: Export the final video.
@@ -112,13 +110,13 @@ async def main() -> None:
     # TikTok, and Instagram Reels.
     # ------------------------------------------------------------------
     print("[5/5] Exporting final Short...")
-    final = await client.video_export(
-        input_path=normalized["output_path"],
+    final = client.export(
+        normalized.output_path,
         format="mp4",
         quality="high",
-        output_path=os.path.join(OUTPUT_DIR, "youtube_short_final.mp4"),
+        output=os.path.join(OUTPUT_DIR, "youtube_short_final.mp4"),
     )
-    print(f"   -> {final.get('output_path')}")
+    print(f"   -> {final.output_path}")
 
     # ------------------------------------------------------------------
     # Bonus: Run a quality check on the final output.
@@ -126,17 +124,15 @@ async def main() -> None:
     # before you upload. Fix with video_fix_design_issues if needed.
     # ------------------------------------------------------------------
     print("[bonus] Running quality check...")
-    qc = await client.video_quality_check(
-        input_path=final["output_path"],
-    )
-    if qc.get("passed"):
+    qc = client.quality_check(final.output_path)
+    if qc.get("all_passed"):
         print("   -> Quality check PASSED. Ready to upload!")
     else:
-        print(f"   -> Quality issues found: {qc.get('issues')}")
+        print(f"   -> Quality issues found: {qc.get('recommendations', [])}")
         print("   -> Consider running video_fix_design_issues to auto-correct.")
 
     print("\nDone! Upload youtube_short_final.mp4 to YouTube Shorts.")
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

@@ -195,6 +195,36 @@ class TestErrorTypeConsistency:
         assert result.returncode == 1
 
 
+class TestFilesystemSafety:
+    """MCP-facing destructive helpers stay inside safe file operations."""
+
+    def test_video_cleanup_rejects_unmanaged_file(self, tmp_path) -> None:
+        from mcp_video.server_tools_advanced import video_cleanup
+
+        victim = tmp_path / "important.mp4"
+        victim.write_bytes(b"keep")
+
+        result = video_cleanup([str(victim)])
+
+        assert result["success"] is False
+        assert result["failed"] == 1
+        assert victim.exists()
+        assert result["results"][0]["status"] == "failed"
+        assert "managed" in result["results"][0]["error"].lower()
+
+    def test_video_cleanup_allows_mcp_video_intermediate(self, tmp_path) -> None:
+        from mcp_video.server_tools_advanced import video_cleanup
+
+        intermediate = tmp_path / "clip_trimmed.mp4"
+        intermediate.write_bytes(b"generated")
+
+        result = video_cleanup([str(intermediate)])
+
+        assert result["success"] is True
+        assert result["removed"] == 1
+        assert not intermediate.exists()
+
+
 class TestTimeoutProtection:
     """All FFmpeg calls have timeouts."""
 

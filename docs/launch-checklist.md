@@ -7,7 +7,7 @@
 **Do say:** "I audited every video editing MCP server (there are 20+). Here's what they all get wrong, and how I fixed it."
 
 **Key differentiators:**
-1. 276 tests (almost all competitors have 0)
+1. 1054 tests collected (almost all competitors have 0)
 2. Progress callbacks (nobody does this — the #1 requested feature)
 3. Auto-fix error handling (parses FFmpeg errors into actionable fixes)
 4. Visual verification (returns thumbnail after every operation)
@@ -29,7 +29,7 @@ Most have 0 tests. None have progress reporting. All dump raw FFmpeg stderr when
 
 So I built mcp-video — the one that actually works.
 
-276 tests. Progress callbacks. Auto-fix errors. Visual verification.
+1054 tests collected. Progress callbacks. Auto-fix errors. Visual verification.
 
 Here's what it does:
 
@@ -52,19 +52,20 @@ What makes mcp-video different from the 20+ other video MCP servers:
 Progress callbacks — FFmpeg stderr parsed into real-time percentage
 Auto-fix errors — "Codec error: vp9" → "Auto-convert from vp9 to H.264/AAC"
 Visual verification — thumbnail returned after every operation
-276 tests — the next closest competitor has 0
+1054 tests collected — the next closest competitor has 0
 
 ---
 
 **Tweet 4 (tools):**
 
-19 MCP tools:
+87 MCP tools, including:
 
 video_info | video_trim | video_merge | video_add_text
 video_add_audio | video_resize | video_convert | video_speed
 video_thumbnail | video_preview | video_storyboard | video_subtitles
 video_watermark | video_crop | video_rotate | video_fade
 video_export | video_edit | video_extract_audio
+hyperframes_init | hyperframes_render | search_tools
 
 Plus 5 platform templates: TikTok, YouTube Shorts, Reels, YouTube, Instagram Post.
 
@@ -89,7 +90,7 @@ Also works as a CLI: `mcp-video trim video.mp4 -s 0:30 -d 15`
 
 pip install mcp-video
 
-GitHub: github.com/pastorsimon1798/mcp-video
+GitHub: github.com/KyaniteLabs/mcp-video
 Apache 2.0. Contributions welcome.
 
 If you build with MCP, I'd love to hear what tools you need.
@@ -98,7 +99,7 @@ If you build with MCP, I'd love to hear what tools you need.
 
 ## Hacker News Show HN Post
 
-**Title:** Show HN: mcp-video – The video editing MCP server that actually works (276 tests)
+**Title:** Show HN: mcp-video - The video editing MCP server that actually works (1054 tests)
 
 **Body:**
 
@@ -109,9 +110,9 @@ I audited 20+ video editing MCP servers before building mcp-video. Here's what I
 - All dump raw FFmpeg stderr when things fail
 - None have visual verification
 
-mcp-video fixes all of these. It's an open-source MCP server that wraps FFmpeg into 19 structured tools with:
+mcp-video fixes all of these. It's an open-source MCP server that wraps FFmpeg and Hyperframes into 87 structured tools with:
 
-- **276 tests** across the full testing pyramid (unit → integration → e2e)
+- **1054 tests collected** across the full testing pyramid (unit -> integration -> e2e)
 - **Progress callbacks** — parses FFmpeg stderr in real-time, returns percentage (0-100) to the agent
 - **Auto-fix error handling** — parses FFmpeg errors into structured responses with actionable suggestions ("Codec error: vp9" → "Auto-convert from vp9 to H.264/AAC")
 - **Visual verification** — returns a base64 thumbnail of the first frame after every operation, so agents can confirm results
@@ -136,11 +137,11 @@ Quick setup:
 }
 ```
 
-276 tests. Pure Python. Only depends on mcp + pydantic + ffmpeg.
+1054 tests collected. Pure Python. Core install only depends on mcp + pydantic + FFmpeg.
 
 pip install mcp-video
 
-GitHub: https://github.com/pastorsimon1798/mcp-video
+GitHub: https://github.com/KyaniteLabs/mcp-video
 
 ---
 
@@ -157,7 +158,7 @@ Hey everyone. I audited every video editing MCP server I could find before build
 The state of the field: most have 0 tests, none report progress, all dump raw FFmpeg stderr, and none let agents verify results visually.
 
 mcp-video fixes all of that:
-- 276 tests (unit, integration, e2e)
+- 1054 tests collected (unit, integration, e2e)
 - Real-time progress callbacks (parses FFmpeg stderr)
 - Auto-fix error handling (structured errors with suggested actions)
 - Visual verification (thumbnail returned after every operation)
@@ -179,29 +180,29 @@ Quick setup:
 
 Then: "Hey Claude, trim this video from 0:30 to 1:00 and add a title card."
 
-19 tools. Apache 2.0.
+87 tools. Apache 2.0.
 
 What tools would you want to see in a video editing MCP server?
 
-GitHub: https://github.com/pastorsimon1798/mcp-video
+GitHub: https://github.com/KyaniteLabs/mcp-video
 
 ---
 
 ### r/ClaudeAI
 
-**Title:** mcp-video — progress callbacks, visual verification, and 276 tests for video editing in Claude Code
+**Title:** mcp-video — progress callbacks, visual verification, and 1054 tests for video editing in Claude Code
 
 **Body:**
 
 If you've ever wanted Claude to edit video for you, this is how.
 
-mcp-video is an MCP server with 19 video editing tools. What makes it different from the 20+ other video MCP servers:
+mcp-video is an MCP server with 87 video editing and creation tools. What makes it different from the 20+ other video MCP servers:
 
 1. **Progress callbacks** — Long operations (convert, merge, export) now report real-time progress. Your agent can tell you "50% done..." instead of going silent.
 
 2. **Visual verification** — After every operation, mcp-video returns a thumbnail of the first frame. You can confirm the result looks right without opening the file.
 
-3. **276 tests** — The next closest competitor has 0.
+3. **1054 tests collected** — The next closest competitor has 0.
 
 4. **Auto-fix errors** — When FFmpeg fails, mcp-video parses the error and suggests a fix. "Codec error: vp9" → "Auto-convert from vp9 to H.264/AAC".
 
@@ -220,31 +221,31 @@ Everything runs locally. No cloud, no API keys, no per-minute billing. Your vide
 
 pip install mcp-video
 
-https://github.com/pastorsimon1798/mcp-video
+https://github.com/KyaniteLabs/mcp-video
 
 ---
 
 ### r/LocalLLaMA
 
-**Title:** mcp-video — open source video editing MCP server (276 tests, progress callbacks, works with Claude/Cursor)
+**Title:** mcp-video — open source video editing MCP server (1054 tests, progress callbacks, works with Claude/Cursor)
 
 **Body:**
 
 Built an MCP server for video editing. After auditing 20+ competitors, I focused on what they all get wrong: tests, error handling, and progress reporting.
 
-19 tools that wrap FFmpeg into a clean API for AI agents. Works with Claude Code, Cursor, and any MCP-compatible client.
+87 tools that wrap FFmpeg and Hyperframes into a clean API for AI agents. Works with Claude Code, Cursor, and any MCP-compatible client.
 
 What's different:
-- 276 tests (next closest competitor: 0)
+- 1054 tests collected (next closest competitor: 0)
 - Progress callbacks (real-time FFmpeg stderr parsing)
 - Auto-fix error handling (structured errors with suggested actions)
 - Visual verification (thumbnail returned after operations)
 - Timeline DSL for complex multi-track edits
 - Python client and CLI
 
-276 tests. Apache 2.0. pip install mcp-video.
+1054 tests collected. Apache 2.0. pip install mcp-video.
 
-https://github.com/pastorsimon1798/mcp-video
+https://github.com/KyaniteLabs/mcp-video
 
 ---
 
@@ -254,11 +255,11 @@ https://github.com/pastorsimon1798/mcp-video
 
 Hey [Name], I saw you've been building with MCP and thought you might be interested — I just shipped mcp-video, an open-source video editing MCP server.
 
-19 tools (trim, merge, text, audio, resize, crop, rotate, fade, convert, etc.) that work with Claude Code, Cursor, etc. It's the most tested video MCP server I'm aware of — 276 tests, progress callbacks, auto-fix error handling.
+87 tools (trim, merge, text, audio, resize, crop, rotate, fade, convert, Hyperframes render, and more) that work with Claude Code, Cursor, etc. It's the most tested video MCP server I'm aware of — 1054 tests collected, progress callbacks, auto-fix error handling.
 
 Would love your feedback if you get a chance to try it. What video editing capabilities would be most useful in your workflows?
 
-GitHub: https://github.com/pastorsimon1798/mcp-video
+GitHub: https://github.com/KyaniteLabs/mcp-video
 
 ### DM Template 2 (AI content creators)
 
@@ -272,8 +273,8 @@ Would you be interested in beta testing? Looking for people who edit video regul
 
 Hey [Name], been following your work on [their project]. I just built mcp-video — an MCP server for video editing.
 
-The architecture is: MCP server wrapping FFmpeg, with a Python client and CLI. 19 tools, 276 tests, progress callbacks, auto-fix errors, Apache 2.0.
+The architecture is: MCP server wrapping FFmpeg and Hyperframes, with a Python client and CLI. 87 tools, 1054 tests collected, progress callbacks, auto-fix errors, Apache 2.0.
 
 Curious if you've thought about adding video capabilities to [their project]? Would be happy to collaborate or share what I've learned about the MCP tool-building patterns.
 
-GitHub: https://github.com/pastorsimon1798/mcp-video
+GitHub: https://github.com/KyaniteLabs/mcp-video

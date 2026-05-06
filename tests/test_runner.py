@@ -66,11 +66,13 @@ class TestPlainCmd:
 class TestResolveEngine:
     def test_resolve_callable(self):
         def fn(): ...
+
         assert _resolve_engine(fn) is fn
 
     def test_resolve_string(self):
         resolved = _resolve_engine("json:loads")
         import json
+
         assert resolved is json.loads
 
     def test_resolve_invalid(self):

@@ -91,7 +91,7 @@ def _run_hyperframes(
     timeout: int = 600,
 ) -> subprocess.CompletedProcess[str]:
     """Run an npx hyperframes command and return the CompletedProcess."""
-    cmd = ["npx", "hyperframes", *args]
+    cmd = ["npx", "--yes", "--no-install", "hyperframes", *args]
     try:
         return subprocess.run(
             cmd,
@@ -372,22 +372,24 @@ def preview(
     startup_timeout: int = 10,
 ) -> HyperframesPreviewResult:
     """Launch Hyperframes preview studio (non-blocking)."""
+    if port < 1024 or port > 65535:
+        raise HyperframesProjectError(str(project_path), "Preview port must be between 1024 and 65535")
     _require_hyperframes_deps()
     project, _entry_point = _validate_project(project_path)
 
-    cmd = ["npx", "hyperframes", "preview", str(project), "--port", str(port)]
+    cmd = ["npx", "--yes", "--no-install", "hyperframes", "preview", str(project), "--port", str(port)]
     proc = subprocess.Popen(
         cmd,
         cwd=str(project),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
         text=True,
+        start_new_session=True,
     )
 
     time.sleep(min(startup_timeout, 2))
     if proc.poll() is not None:
-        stderr = proc.stderr.read() if proc.stderr else ""
-        raise HyperframesProjectError(f"Hyperframes preview exited immediately. stderr: {stderr[:500]}")
+        raise HyperframesProjectError(str(project), "Hyperframes preview exited immediately")
 
     return HyperframesPreviewResult(
         url=f"http://localhost:{port}",

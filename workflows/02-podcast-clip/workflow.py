@@ -24,11 +24,14 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 
 def _save_scenes(scenes_result, path: str) -> None:
+    data = scenes_result.model_dump() if hasattr(scenes_result, "model_dump") else scenes_result
     with open(path, "w") as f:
-        json.dump(scenes_result.model_dump(), f, indent=2)
+        json.dump(data, f, indent=2)
 
 
 def _save_chapters(chapters, path: str) -> None:
+    if isinstance(chapters, dict):
+        chapters = chapters.get("chapters", chapters.get("data", []))
     with open(path, "w") as f:
         json.dump([{"time": t, "title": title} for t, title in chapters], f, indent=2)
 
@@ -38,7 +41,10 @@ def _stage_detect(video: str) -> str:
     scenes = client.detect_scenes(video, threshold=0.3)
     path = os.path.join(OUTPUT_DIR, "01_scenes.json")
     _save_scenes(scenes, path)
-    print(f"   -> {path} ({scenes.scene_count} scenes)")
+    scene_count = getattr(scenes, "scene_count", None)
+    if scene_count is None and isinstance(scenes, dict):
+        scene_count = scenes.get("scene_count", len(scenes.get("scenes", [])))
+    print(f"   -> {path} ({scene_count} scenes)")
     return path
 
 
@@ -70,7 +76,8 @@ def _stage_transcribe(video: str) -> str:
     print("\n[4/6] Transcribing audio...")
     srt_path = os.path.join(OUTPUT_DIR, "04_transcript.srt")
     result = client.ai_transcribe(video, output_srt=srt_path)
-    print(f"   -> {srt_path} ({len(result['segments'])} segments)")
+    segments = result.get("segments", []) if isinstance(result, dict) else getattr(result, "segments", [])
+    print(f"   -> {srt_path} ({len(segments)} segments)")
     return srt_path
 
 
@@ -82,8 +89,8 @@ def _stage_captions(video: str, srt_path: str) -> str:
         output=os.path.join(OUTPUT_DIR, "05_captioned.mp4"),
         style={"font_size": 32, "font_color": "white", "outline": True},
     )
-    print(f"   -> {captioned}")
-    return captioned
+    print(f"   -> {captioned.output_path}")
+    return captioned.output_path
 
 
 def _stage_export(video: str) -> str:
