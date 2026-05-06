@@ -54,7 +54,7 @@ def create_test_video(output_path: str, color: str = "gray", duration: float = 2
         "-shortest",
         output_path,
     ]
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
     if result.returncode != 0:
         raise RuntimeError(f"Failed to create test video: {result.stderr}")
     return output_path
