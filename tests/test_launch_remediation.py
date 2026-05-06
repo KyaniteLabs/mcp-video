@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import builtins
+import logging
 import runpy
 import tarfile
 import zipfile
@@ -165,3 +167,23 @@ def test_built_artifact_checker_normalizes_wheel_root_paths(tmp_path):
 
     assert ".github/workflows/publish.yml" in offenders
     assert "dogfood_artifacts/showcase.mp4" in offenders
+
+
+def test_text_measurement_quietly_uses_fallback_without_pillow(monkeypatch, caplog):
+    from mcp_video.effects_engine import text as text_engine
+
+    real_import = builtins.__import__
+
+    def fake_import(name, *args, **kwargs):
+        if name == "PIL" or name.startswith("PIL."):
+            raise ImportError("No module named 'PIL'")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", fake_import)
+
+    with caplog.at_level(logging.WARNING):
+        width, height = text_engine._measure_text("fallback", "Arial", 40)
+
+    assert width > 0
+    assert height > 0
+    assert "PIL text measurement failed" not in caplog.text

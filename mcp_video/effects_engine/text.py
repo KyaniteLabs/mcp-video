@@ -131,6 +131,11 @@ def _get_video_dimensions(video_path: str) -> tuple[int, int]:
 
 def _load_pil_font(font_name: str, size: int):
     """Try to locate a TrueType font file for PIL."""
+    try:
+        from PIL import ImageFont
+    except ImportError:
+        return None
+
     import glob
     import platform
 
@@ -160,19 +165,13 @@ def _load_pil_font(font_name: str, size: int):
             base = os.path.splitext(os.path.basename(path))[0].replace(" ", "").replace("-", "").lower()
             if cleaned in base or base in cleaned:
                 try:
-                    from PIL import ImageFont
-
                     return ImageFont.truetype(path, size)
                 except OSError:
                     continue
     try:
-        from PIL import ImageFont
-
         return ImageFont.truetype(font_name, size)
     except OSError:
         try:
-            from PIL import ImageFont
-
             return ImageFont.truetype(f"{font_name}.ttf", size)
         except OSError:
             return None
