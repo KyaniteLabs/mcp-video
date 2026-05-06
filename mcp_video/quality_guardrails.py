@@ -197,6 +197,13 @@ class VisualQualityGuardrails:
             logger.warning("ffmpeg signalstats failed for %s: %s: %s", video, type(exc).__name__, exc)
             return {}
 
+    def _mean_signalstat(self, video: str, tag: str) -> float | None:
+        """Return the mean for a signalstats frame tag, if available."""
+        stats = self._run_ffprobe(video, f"lavfi.signalstats.{tag}")
+        if not stats or "mean" not in stats:
+            return None
+        return float(stats["mean"])
+
     def _analyze_loudnorm(self, video: str) -> dict[str, Any]:
         """Analyze audio loudness using loudnorm filter."""
         cmd = [
@@ -242,7 +249,12 @@ class VisualQualityGuardrails:
             return {"_error": diagnostic}
 
     def _get_rgb_means(self, video: str) -> dict[str, Any] | None:
-        """Get mean RGB values for color balance analysis."""
+        """Get approximate mean RGB values for color balance analysis.
+
+        FFmpeg's signalstats filter exposes YUV means, not RGB means. Convert
+        those means into RGB-ish values so the color balance check uses fields
+        that are actually emitted by signalstats.
+        """
         cmd = [
             "ffprobe",
             "-v",
@@ -252,7 +264,7 @@ class VisualQualityGuardrails:
             "-i",
             f"movie={_escape_lavfi_path(video)},signalstats",
             "-show_entries",
-            "frame_tags=lavfi.signalstats.RAVG,lavfi.signalstats.GAVG,lavfi.signalstats.BAVG",
+            "frame_tags=lavfi.signalstats.YAVG,lavfi.signalstats.UAVG,lavfi.signalstats.VAVG",
             "-of",
             "json",
         ]
@@ -274,29 +286,34 @@ class VisualQualityGuardrails:
                 logger.warning("ffprobe RGB means returned no frames for %s", video)
                 return {"_error": diagnostic}
 
-            # Average RGB across frames
-            r_vals, g_vals, b_vals = [], [], []
+            y_vals, u_vals, v_vals = [], [], []
             for frame in frames:
                 tags = frame.get("tags", {})
-                if "lavfi.signalstats.RAVG" in tags:
+                if "lavfi.signalstats.YAVG" in tags:
                     with contextlib.suppress(ValueError, TypeError):
-                        r_vals.append(float(tags["lavfi.signalstats.RAVG"]))
-                if "lavfi.signalstats.GAVG" in tags:
+                        y_vals.append(float(tags["lavfi.signalstats.YAVG"]))
+                if "lavfi.signalstats.UAVG" in tags:
                     with contextlib.suppress(ValueError, TypeError):
-                        g_vals.append(float(tags["lavfi.signalstats.GAVG"]))
-                if "lavfi.signalstats.BAVG" in tags:
+                        u_vals.append(float(tags["lavfi.signalstats.UAVG"]))
+                if "lavfi.signalstats.VAVG" in tags:
                     with contextlib.suppress(ValueError, TypeError):
-                        b_vals.append(float(tags["lavfi.signalstats.BAVG"]))
+                        v_vals.append(float(tags["lavfi.signalstats.VAVG"]))
 
-            if not (r_vals and g_vals and b_vals):
-                diagnostic = _diagnostic("ffprobe_rgb_means", "ffprobe returned incomplete RGB values")
-                logger.warning("ffprobe RGB means returned incomplete RGB values for %s", video)
+            if not (y_vals and u_vals and v_vals):
+                diagnostic = _diagnostic("ffprobe_rgb_means", "ffprobe returned incomplete YUV values")
+                logger.warning("ffprobe RGB means returned incomplete YUV values for %s", video)
                 return {"_error": diagnostic}
 
+            y = sum(y_vals) / len(y_vals)
+            u = sum(u_vals) / len(u_vals) - 128
+            v = sum(v_vals) / len(v_vals) - 128
+            r = max(0.0, min(255.0, y + 1.402 * v))
+            g = max(0.0, min(255.0, y - 0.344136 * u - 0.714136 * v))
+            b = max(0.0, min(255.0, y + 1.772 * u))
             return {
-                "r": sum(r_vals) / len(r_vals),
-                "g": sum(g_vals) / len(g_vals),
-                "b": sum(b_vals) / len(b_vals),
+                "r": r,
+                "g": g,
+                "b": b,
             }
         except subprocess.TimeoutExpired:
             diagnostic = _diagnostic("ffprobe_rgb_means", "ffprobe timed out")
@@ -359,18 +376,21 @@ class VisualQualityGuardrails:
 
     def check_contrast(self, video: str) -> QualityReport:
         """Check video has adequate contrast."""
-        stats = self._run_ffprobe(video, "lavfi.signalstats.YSTDV")
-
-        if not stats or "mean" not in stats:
+        y_high = self._mean_signalstat(video, "YHIGH")
+        y_low = self._mean_signalstat(video, "YLOW")
+        if y_high is None or y_low is None:
+            y_high = self._mean_signalstat(video, "YMAX")
+            y_low = self._mean_signalstat(video, "YMIN")
+        if y_high is None or y_low is None:
             return QualityReport(
                 check_name="contrast",
                 passed=False,
                 score=0.0,
                 message="Could not analyze contrast (analysis failed)",
-                details={"diagnostic": stats.get("_error")} if stats else {},
+                details={"diagnostic": _diagnostic("ffprobe_signalstats", "missing luminance range values")},
             )
 
-        y_std = stats["mean"]  # Standard deviation of luminance
+        y_std = max(0.0, (y_high - y_low) / 2.56)  # Approximate contrast on a 0-100 scale.
 
         # Standard deviation indicates contrast (higher = more contrast)
         passed = self.CONTRAST_MIN <= y_std <= self.CONTRAST_MAX
@@ -394,36 +414,29 @@ class VisualQualityGuardrails:
             passed=passed,
             score=score,
             message=message,
-            details={"y_std": y_std, "target_range": [self.CONTRAST_MIN, self.CONTRAST_MAX]},
+            details={
+                "y_std": y_std,
+                "y_low": y_low,
+                "y_high": y_high,
+                "target_range": [self.CONTRAST_MIN, self.CONTRAST_MAX],
+            },
         )
 
     def check_saturation(self, video: str) -> QualityReport:
         """Check saturation levels."""
-        # Analyze chroma channels (U and V in YUV)
-        u_stats = self._run_ffprobe(video, "lavfi.signalstats.UAVG")
-        v_stats = self._run_ffprobe(video, "lavfi.signalstats.VAVG")
-
-        if not u_stats or not v_stats:
-            diagnostics = [
-                stats.get("_error") for stats in (u_stats, v_stats) if isinstance(stats, dict) and stats.get("_error")
-            ]
+        sat_avg = self._mean_signalstat(video, "SATAVG")
+        if sat_avg is None:
             return QualityReport(
                 check_name="saturation",
                 passed=False,
                 score=0.0,
                 message="Could not analyze saturation (analysis failed)",
-                details={"diagnostics": diagnostics} if diagnostics else {},
+                details={"diagnostic": _diagnostic("ffprobe_signalstats", "missing SATAVG values")},
             )
 
-        u_mean = u_stats.get("mean", 128)
-        v_mean = v_stats.get("mean", 128)
-
-        # Chroma deviation from neutral gray (128) indicates saturation
-        # Calculate distance from neutral in UV plane
-        saturation = ((u_mean - 128) ** 2 + (v_mean - 128) ** 2) ** 0.5
-
-        # Scale to approximate percentage (typical max ~60)
-        saturation_pct = (saturation / 60) * 100
+        # signalstats SATAVG is a per-pixel saturation average. 181 is a
+        # practical full-saturation ceiling for 8-bit YUV in FFmpeg output.
+        saturation_pct = (sat_avg / 181) * 100
 
         passed = self.SATURATION_MIN <= saturation_pct <= self.SATURATION_MAX
 
@@ -444,7 +457,7 @@ class VisualQualityGuardrails:
             passed=passed,
             score=score,
             message=message,
-            details={"saturation_pct": saturation_pct, "u_mean": u_mean, "v_mean": v_mean},
+            details={"saturation_pct": saturation_pct, "sat_avg": sat_avg},
         )
 
     def check_audio_levels(self, video: str) -> QualityReport:

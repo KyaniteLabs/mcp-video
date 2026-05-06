@@ -1,6 +1,7 @@
 """Tests for CLI commands via subprocess — needs FFmpeg."""
 
 import json
+import os
 import subprocess
 import sys
 from types import SimpleNamespace
@@ -653,6 +654,30 @@ class TestCLICompositionHandlers:
         assert handled is True
         assert "Progress bar" in stdout
         assert output.name in stdout
+
+    @pytest.mark.parametrize("animation", ["typewriter", "slide-up"])
+    def test_video_text_animated_handles_font_paths_with_spaces(self, animation, sample_video, tmp_path):
+        font = "/System/Library/Fonts/Supplemental/Arial Black.ttf"
+        if not os.path.exists(font):
+            pytest.skip("macOS Arial Black fixture font not available")
+
+        output = tmp_path / f"{animation}.mp4"
+        result = run_cli(
+            "video-text-animated",
+            sample_video,
+            "Dogfood text",
+            "-a",
+            animation,
+            "--font",
+            font,
+            "--duration",
+            "1.0",
+            "-o",
+            str(output),
+        )
+
+        assert "Animated text" in result.stdout
+        assert output.exists()
 
     def test_transition_morph_outputs_text(self, sample_video, tmp_path):
         output = tmp_path / "morph.mp4"

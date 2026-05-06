@@ -54,7 +54,7 @@ def create_test_video(output_path: str, color: str = "gray", duration: float = 2
         "-shortest",
         output_path,
     ]
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
     if result.returncode != 0:
         raise RuntimeError(f"Failed to create test video: {result.stderr}")
     return output_path
@@ -78,6 +78,32 @@ def create_video_no_audio(output_path: str, color: str = "gray", duration: float
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
         raise RuntimeError(f"Failed to create test video: {result.stderr}")
+    return output_path
+
+
+def create_colorful_test_video(output_path: str, duration: float = 2.0) -> str:
+    """Create a colorful moving fixture with enough chroma/contrast for guardrails."""
+    cmd = [
+        "ffmpeg",
+        "-y",
+        "-f",
+        "lavfi",
+        "-i",
+        f"testsrc2=size=320x240:rate=24:duration={duration}",
+        "-f",
+        "lavfi",
+        "-i",
+        f"sine=frequency=1000:duration={duration}",
+        "-vf",
+        "hue=s=1.4,eq=brightness=0.03:contrast=1.1",
+        "-pix_fmt",
+        "yuv420p",
+        "-shortest",
+        output_path,
+    ]
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.returncode != 0:
+        raise RuntimeError(f"Failed to create colorful test video: {result.stderr}")
     return output_path
 
 
@@ -196,6 +222,21 @@ class TestVisualQualityGuardrails:
             details = report.details
             if details.get("color_cast"):
                 assert "red" in details["color_cast"] or report.score < 70
+
+    def test_colorful_fixture_has_usable_contrast_and_saturation(self, guardrails, tmp_path):
+        """Dogfood-style colorful video should not fail due missing signalstats fields."""
+        video_path = str(tmp_path / "colorful.mp4")
+        create_colorful_test_video(video_path)
+
+        contrast = guardrails.check_contrast(video_path)
+        saturation = guardrails.check_saturation(video_path)
+        color_balance = guardrails.check_color_balance(video_path)
+
+        assert contrast.passed is True
+        assert contrast.details["y_high"] > contrast.details["y_low"]
+        assert saturation.passed is True
+        assert saturation.details["sat_avg"] > 0
+        assert color_balance.score > 0
 
     def test_bad_color_cast_fixture_fails_quality_gate(self, tmp_path):
         from mcp_video.quality_guardrails import assert_quality

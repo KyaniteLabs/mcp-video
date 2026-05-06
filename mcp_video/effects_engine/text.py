@@ -9,8 +9,8 @@ import logging
 import os
 import tempfile
 import textwrap
-from pathlib import Path
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
 from ..defaults import DEFAULT_SAFE_SUBTITLE_FONT_SIZE, DEFAULT_SUBTITLE_MAX_CHARS_PER_LINE, DEFAULT_SUBTITLE_MAX_LINES
@@ -216,6 +216,14 @@ def _escape_sendcmd_value(value: str) -> str:
     return _escape_ffmpeg_filter_value(value)
 
 
+def _drawtext_font_option(font: str | None) -> str:
+    """Return a drawtext font option that works for both font names and paths."""
+    if font and os.path.exists(font):
+        return f"fontfile={_escape_ffmpeg_filter_value(font)}"
+    safe_font = _escape_ffmpeg_filter_value(font or "Arial")
+    return f"font={safe_font}"
+
+
 def _build_typewriter_filter(
     text: str,
     font: str,
@@ -225,14 +233,14 @@ def _build_typewriter_filter(
     start: float,
     duration: float,
     typewriter_speed: float,
-    video_path: str,
+    video: str,
 ) -> tuple[str, str]:
     """Build a filter chain and sendcmd file for character-by-character reveal.
 
     Returns:
         (filter_complex, cmd_file_path)
     """
-    video_w, video_h = _get_video_dimensions(video_path)
+    video_w, video_h = _get_video_dimensions(video)
     text_w, text_h = _measure_text(text, font, size)
     text_x, text_y = _text_position_xy(position, video_w, video_h, text_w, text_h)
 
@@ -246,7 +254,7 @@ def _build_typewriter_filter(
     char_duration = max(0.01, safe_speed)
     end_time = safe_start + safe_duration
 
-    safe_font = _escape_ffmpeg_filter_value(font) if font is not None else font
+    font_option = _drawtext_font_option(font)
     safe_color = _escape_ffmpeg_filter_value(color) if color is not None else color
     safe_size = int(_sanitize_ffmpeg_number(size, "size"))
     safe_text_x = int(_sanitize_ffmpeg_number(text_x, "text_x"))
@@ -275,7 +283,7 @@ def _build_typewriter_filter(
     safe_cmd_path = _escape_ffmpeg_filter_value(cmd_path)
     filter_complex = (
         f"sendcmd=f={safe_cmd_path},"
-        f"drawtext@1=text='':font={safe_font}:fontsize={safe_size}:fontcolor={safe_color}:"
+        f"drawtext@1=text='':{font_option}:fontsize={safe_size}:fontcolor={safe_color}:"
         f"x={safe_text_x}:y={safe_text_y}:enable='between(t\\,{safe_start}\\,{end_time})'"
     )
     return filter_complex, cmd_path
@@ -294,7 +302,7 @@ def _build_fade_filter(
 ) -> tuple[str, str]:
     """Build fade-in / fade-out drawtext filter."""
     safe_text = _escape_ffmpeg_filter_value(text)
-    safe_font = _escape_ffmpeg_filter_value(font) if font is not None else font
+    font_option = _drawtext_font_option(font)
     safe_color = _escape_ffmpeg_filter_value(color) if color is not None else color
     pos_map = {
         "center": "(w-text_w)/2:(h-text_h)/2",
@@ -317,7 +325,7 @@ def _build_fade_filter(
         f"if(lt(t,{fade_out_end}),({fade_out_end}-t)/0.5,0))))"
     )
     filter_complex = (
-        f"drawtext=text='{safe_text}':font={safe_font}:fontsize={size}:fontcolor={safe_color}:"
+        f"drawtext=text='{safe_text}':{font_option}:fontsize={size}:fontcolor={safe_color}:"
         f"x={pos.split(':')[0]}:y={pos.split(':')[1]}:"
         f"enable='between(t\\,{start}\\,{start + duration})':"
         f"alpha='{alpha_expr}'"
@@ -338,7 +346,7 @@ def _build_slide_up_filter(
 ) -> tuple[str, str]:
     """Build slide-up drawtext filter."""
     safe_text = _escape_ffmpeg_filter_value(text)
-    safe_font = _escape_ffmpeg_filter_value(font) if font is not None else font
+    font_option = _drawtext_font_option(font)
     safe_color = _escape_ffmpeg_filter_value(color) if color is not None else color
     pos_map = {
         "center": "(w-text_w)/2:(h-text_h)/2",
@@ -350,10 +358,10 @@ def _build_slide_up_filter(
         "bottom-right": "w-text_w-20:h-text_h-20",
     }
     pos = pos_map.get(position, pos_map["center"])
-    y_offset = f"+50*(1-min(1,(t-{start})/0.3))"
+    y_offset = f"+50*(1-min(1\\,(t-{start})/0.3))"
     pos = pos.replace("(h-text_h)/2", f"(h-text_h)/2{y_offset}")
     filter_complex = (
-        f"drawtext=text='{safe_text}':font={safe_font}:fontsize={size}:fontcolor={safe_color}:"
+        f"drawtext=text='{safe_text}':{font_option}:fontsize={size}:fontcolor={safe_color}:"
         f"x={pos.split(':')[0]}:y={pos.split(':')[1]}:"
         f"enable='between(t\\,{start}\\,{start + duration})':"
         f"alpha='1'"
@@ -374,7 +382,7 @@ def _build_glitch_filter(
 ) -> tuple[str, str]:
     """Build glitch-style drawtext filter."""
     safe_text = _escape_ffmpeg_filter_value(text)
-    safe_font = _escape_ffmpeg_filter_value(font) if font is not None else font
+    font_option = _drawtext_font_option(font)
     safe_color = _escape_ffmpeg_filter_value(color) if color is not None else color
     pos_map = {
         "center": "(w-text_w)/2:(h-text_h)/2",
@@ -388,7 +396,7 @@ def _build_glitch_filter(
     pos = pos_map.get(position, pos_map["center"])
     alpha_expr = "if(random(0)*lt(mod(t,0.2),0.1),0.8,1)"
     filter_complex = (
-        f"drawtext=text='{safe_text}':font={safe_font}:fontsize={size}:fontcolor={safe_color}:"
+        f"drawtext=text='{safe_text}':{font_option}:fontsize={size}:fontcolor={safe_color}:"
         f"x={pos.split(':')[0]}:y={pos.split(':')[1]}:"
         f"enable='between(t\\,{start}\\,{start + duration})':"
         f"alpha='{alpha_expr}'"
