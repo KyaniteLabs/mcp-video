@@ -150,3 +150,18 @@ def test_built_artifact_checker_accepts_package_only_wheel(tmp_path):
         zf.writestr("mcp_video-9.9.9.dist-info/METADATA", "Name: mcp-video\n")
 
     assert checker["find_offenders"](wheel) == []
+
+
+def test_built_artifact_checker_normalizes_wheel_root_paths(tmp_path):
+    checker = runpy.run_path(".github/scripts/check-built-artifacts.py")
+    wheel = tmp_path / "mcp_video-9.9.9-py3-none-any.whl"
+
+    with zipfile.ZipFile(wheel, "w") as zf:
+        zf.writestr("mcp_video/__init__.py", "")
+        zf.writestr(".github/workflows/publish.yml", "")
+        zf.writestr("dogfood_artifacts/showcase.mp4", "")
+
+    offenders = checker["find_offenders"](wheel)
+
+    assert ".github/workflows/publish.yml" in offenders
+    assert "dogfood_artifacts/showcase.mp4" in offenders

@@ -52,12 +52,14 @@ def find_offenders(artifact: Path) -> list[str]:
     else:
         raise ValueError(f"Unsupported artifact type: {artifact}")
 
-    return [
-        name
-        for name in names
-        if any(fragment in name for fragment in FORBIDDEN_SUBSTRINGS)
-        or any(name.endswith(suffix) for suffix in FORBIDDEN_SUFFIXES)
-    ]
+    offenders = []
+    for name in names:
+        normalized = f"/{name.lstrip('/')}"
+        if any(fragment in normalized for fragment in FORBIDDEN_SUBSTRINGS) or any(
+            normalized.endswith(suffix) for suffix in FORBIDDEN_SUFFIXES
+        ):
+            offenders.append(name)
+    return offenders
 
 
 def main() -> int:
