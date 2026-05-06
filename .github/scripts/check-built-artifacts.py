@@ -9,14 +9,33 @@ import zipfile
 from pathlib import Path
 
 FORBIDDEN_SUBSTRINGS = (
+    "/.github/",
+    "/.git/",
     "/.playwright-mcp/",
+    "/.pytest_cache/",
+    "/.ruff_cache/",
     "/.stitch/",
-    "/out/",
-    "/manual/",
+    "/__pycache__/",
+    "/demo/",
+    "/docs/",
+    "/dogfood_artifacts/",
     "/explainer-video/",
+    "/examples/",
+    "/manual/",
+    "/out/",
 )
 
 FORBIDDEN_SUFFIXES = (
+    "/.coverage",
+    "/.git",
+    "/index.html",
+    "/og-social-preview.png",
+    "/uv.lock",
+    ".mp3",
+    ".mp4",
+    ".mov",
+    ".wav",
+    ".webm",
     "/test_comprehensive.py",
     "/test_real_video.py",
 )

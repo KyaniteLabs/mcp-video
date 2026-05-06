@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import runpy
+import tarfile
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -107,3 +110,43 @@ def test_ytdlp_rejects_resolved_private_media_url(monkeypatch, tmp_path):
         _download_with_ytdlp("https://youtube.com/watch?v=unsafe", str(tmp_path))
 
     assert exc_info.value.code == "ssrf_blocked"
+
+
+def test_built_artifact_checker_rejects_dogfood_media_and_repo_metadata(tmp_path):
+    checker = runpy.run_path(".github/scripts/check-built-artifacts.py")
+    archive = tmp_path / "mcp_video-9.9.9.tar.gz"
+
+    with tarfile.open(archive, "w:gz") as tf:
+        for name, body in {
+            "mcp_video-9.9.9/mcp_video/__init__.py": b"",
+            "mcp_video-9.9.9/dogfood_artifacts/showcase.mp4": b"media",
+            "mcp_video-9.9.9/.git/config": b"repo",
+            "mcp_video-9.9.9/.github/workflows/publish.yml": b"ci",
+            "mcp_video-9.9.9/uv.lock": b"lock",
+            "mcp_video-9.9.9/og-social-preview.png": b"image",
+            "mcp_video-9.9.9/.coverage": b"coverage",
+        }.items():
+            path = tmp_path / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(body)
+            tf.add(path, arcname=name)
+
+    offenders = checker["find_offenders"](archive)
+
+    assert "mcp_video-9.9.9/dogfood_artifacts/showcase.mp4" in offenders
+    assert "mcp_video-9.9.9/.git/config" in offenders
+    assert "mcp_video-9.9.9/.github/workflows/publish.yml" in offenders
+    assert "mcp_video-9.9.9/uv.lock" in offenders
+    assert "mcp_video-9.9.9/og-social-preview.png" in offenders
+    assert "mcp_video-9.9.9/.coverage" in offenders
+
+
+def test_built_artifact_checker_accepts_package_only_wheel(tmp_path):
+    checker = runpy.run_path(".github/scripts/check-built-artifacts.py")
+    wheel = tmp_path / "mcp_video-9.9.9-py3-none-any.whl"
+
+    with zipfile.ZipFile(wheel, "w") as zf:
+        zf.writestr("mcp_video/__init__.py", "")
+        zf.writestr("mcp_video-9.9.9.dist-info/METADATA", "Name: mcp-video\n")
+
+    assert checker["find_offenders"](wheel) == []

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mcp-video"
-version = "1.3.2"
+version = "1.3.3"
 description = "Video editing MCP server for AI agents. 87 tools, 3 interfaces, rich CLI. Local, fast, free."
 readme = "README.md"
 license = "Apache-2.0"
@@ -111,6 +111,11 @@ Discussions = "https://github.com/KyaniteLabs/mcp-video/discussions"
 
 [tool.hatch.build]
 exclude = [
+    ".git/",
+    ".gitignore",
+    ".coverage",
+    ".pytest_cache/",
+    ".ruff_cache/",
     ".venv/",
     ".venv-build/",
     ".playwright-mcp/",
@@ -119,15 +124,31 @@ exclude = [
     "manual/",
     "out/",
     "explainer-video/",
+    "dogfood_artifacts/",
     "dist/",
     "build/",
     "test_comprehensive.py",
     "test_real_video.py",
+    "*.mp3",
+    "*.mp4",
+    "*.mov",
+    "*.wav",
+    "*.webm",
     "*.egg-info/",
 ]
 
 [tool.hatch.build.targets.wheel]
 packages = ["mcp_video"]
+
+[tool.hatch.build.targets.sdist]
+only-include = [
+    "/mcp_video",
+    "/CHANGELOG.md",
+    "/LICENSE",
+    "/README.md",
+    "/pyproject.toml",
+    "/server.json",
+]
 
 [tool.pytest.ini_options]
 markers = [
