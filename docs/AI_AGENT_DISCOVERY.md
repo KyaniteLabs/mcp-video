@@ -84,9 +84,9 @@ Cursor:
 
 High-leverage listing targets:
 
-- Official MCP Registry — metadata in `server.json` at the repo root, ready for submission via `npx @anthropic-ai/mcp-registry publish`. Identifier: `io.github.KyaniteLabs/mcp-video`.
+- Official MCP Registry — metadata in `server.json` at the repo root, published from the release workflow via `mcp-publisher` after PyPI publication. Identifier: `io.github.KyaniteLabs/mcp-video`.
 - [Glama MCP Registry](https://glama.ai/mcp/servers) — Submit via GitHub repo URL.
-- [Smithery](https://smithery.ai) — `npx @anthropic-ai/mcp-registry publish`.
+- [Smithery](https://smithery.ai) — Submit via GitHub repo URL once the official registry and Glama listings are fresh.
 - [MCP.so](https://mcp.so) — Submit via GitHub repo URL.
 - [Awesome MCP Servers](https://github.com/punkpeye/awesome-mcp-servers) — Submit via PR.
 - GitHub topics for `mcp`, `mcp-server`, `ffmpeg`, `video-editing`, `ai-agents`.

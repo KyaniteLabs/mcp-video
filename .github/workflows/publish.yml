@@ -34,7 +34,7 @@ jobs:
       - name: Create venv
         run: python -m venv .venv
       - name: Install build dependencies
-        run: .venv/bin/pip install build twine
+        run: .venv/bin/pip install build jsonschema twine
       - name: Verify release version is publishable
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
@@ -81,6 +81,26 @@ jobs:
               raise SystemExit(1)
           print(f"Release {tag} is aligned and PyPI version {version} is available.")
           PY
+      - name: Validate MCP registry metadata
+        run: |
+          .venv/bin/python - <<'PY'
+          import json
+          import urllib.request
+          from pathlib import Path
+
+          from jsonschema import Draft7Validator
+
+          server = json.loads(Path("server.json").read_text())
+          with urllib.request.urlopen(server["$schema"], timeout=20) as response:
+              schema = json.load(response)
+          errors = sorted(Draft7Validator(schema).iter_errors(server), key=lambda error: list(error.path))
+          if errors:
+              for error in errors:
+                  path = "/".join(str(part) for part in error.path) or "<root>"
+                  print(f"{path}: {error.message}")
+              raise SystemExit(1)
+          print(f"MCP registry metadata is valid for {server['name']} {server['version']}.")
+          PY
       - name: Build package
         run: .venv/bin/python -m build
       - name: Check built artifact contents
@@ -109,3 +129,21 @@ jobs:
           path: dist/
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+
+  publish-mcp-registry:
+    name: Publish to MCP Registry
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install mcp-publisher
+        run: |
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
+          ./mcp-publisher --help
+      - name: Authenticate to MCP Registry
+        run: ./mcp-publisher login github-oidc
+      - name: Publish server metadata
+        run: ./mcp-publisher publish

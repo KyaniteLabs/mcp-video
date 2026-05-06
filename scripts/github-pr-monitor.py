@@ -2,8 +2,8 @@
 """Monitor GitHub CI status + PR review activity (comments/reviews).
 
 Usage examples:
-  ./scripts/github-pr-monitor.py --owner Pastorsimon1798 --repo mcp-video
-  ./scripts/github-pr-monitor.py --owner Pastorsimon1798 --repo mcp-video --pr 17
+  ./scripts/github-pr-monitor.py --owner KyaniteLabs --repo mcp-video
+  ./scripts/github-pr-monitor.py --owner KyaniteLabs --repo mcp-video --pr 17
 
 Auth (optional):
   export GITHUB_TOKEN=ghp_xxx
@@ -158,7 +158,7 @@ def print_pr_summary(owner: str, repo: str, prs: list[dict[str, Any]], explicit_
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Monitor CI + review comments for a GitHub repo/PR.")
-    parser.add_argument("--owner", required=True, help="GitHub owner/org, e.g. Pastorsimon1798")
+    parser.add_argument("--owner", required=True, help="GitHub owner/org, e.g. KyaniteLabs")
     parser.add_argument("--repo", required=True, help="GitHub repository name, e.g. mcp-video")
     parser.add_argument("--pr", type=int, help="Specific PR number to inspect (default: first open PR)")
     parser.add_argument("--run-limit", type=int, default=5, help="How many recent workflow runs to show")

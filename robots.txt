@@ -19,5 +19,5 @@ Allow: /
 User-agent: Claude-User
 Allow: /
 
-Sitemap: https://pastorsimon1798.github.io/mcp-video/sitemap.xml
+Sitemap: https://kyanitelabs.github.io/mcp-video/sitemap.xml
 

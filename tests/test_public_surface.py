@@ -4,6 +4,14 @@ import re
 import subprocess
 import sys
 import asyncio
+import json
+from pathlib import Path
+
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
+
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 EXPECTED_CLI_COMMANDS = {
@@ -220,6 +228,66 @@ def test_server_tool_registry_keeps_public_tool_names():
 
     assert tool_names >= EXPECTED_SERVER_TOOLS
     assert len(tool_names) == 87
+
+
+def test_stdio_server_launches_and_lists_tools_like_registry_clients():
+    """Exercise the package the way registries launch it: stdio subprocess + MCP handshake."""
+
+    async def check_server() -> None:
+        params = StdioServerParameters(command=sys.executable, args=["-m", "mcp_video"])
+        async with stdio_client(params) as (read, write), ClientSession(read, write) as session:
+            init_result = await session.initialize()
+            tools_result = await session.list_tools()
+
+        tool_names = {tool.name for tool in tools_result.tools}
+        assert init_result.serverInfo.name == "mcp-video"
+        assert tool_names >= EXPECTED_SERVER_TOOLS
+        assert len(tool_names) == 87
+
+    asyncio.run(check_server())
+
+
+def test_public_discovery_files_do_not_point_at_old_personal_namespace():
+    checked_paths = [
+        ROOT / "README.md",
+        ROOT / "server.json",
+        ROOT / "pyproject.toml",
+        ROOT / "index.html",
+        ROOT / "robots.txt",
+        ROOT / "sitemap.xml",
+        ROOT / "docs" / "AI_AGENT_DISCOVERY.md",
+        ROOT / "scripts" / "github-pr-monitor.py",
+        ROOT / "mcp_video" / "ai_engine" / "download.py",
+        ROOT / "mcp_video" / "errors.py",
+    ]
+    stale_fragments = [
+        "pastorsimon1798.github.io/mcp-video",
+        "github.com/pastorsimon1798/mcp-video",
+        "github.com/Pastorsimon1798/mcp-video",
+        "io.github.pastorsimon1798/mcp-video",
+    ]
+
+    offenders = {
+        str(path.relative_to(ROOT)): fragment
+        for path in checked_paths
+        for fragment in stale_fragments
+        if fragment in path.read_text(encoding="utf-8")
+    }
+
+    assert offenders == {}
+
+
+def test_server_json_and_readme_match_registry_identity():
+    server = json.loads((ROOT / "server.json").read_text(encoding="utf-8"))
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+
+    assert server["name"] == "io.github.KyaniteLabs/mcp-video"
+    assert server["websiteUrl"] == "https://kyanitelabs.github.io/mcp-video/"
+    assert server["repository"]["url"] == "https://github.com/KyaniteLabs/mcp-video"
+    assert server["packages"][0]["identifier"] == "mcp-video"
+    assert server["packages"][0]["runtimeHint"] == "uvx"
+    assert server["packages"][0]["transport"]["type"] == "stdio"
+    assert f"mcp-name: {server['name']}" in readme
 
 
 def test_module_reexports():
