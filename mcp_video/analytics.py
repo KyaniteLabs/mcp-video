@@ -13,8 +13,13 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 _ANALYTICS_ENDPOINT = "https://mcp-video-analytics.vercel.app/api/ping"
-_ANALYTICS_ENABLED = os.environ.get("MCP_VIDEO_ANALYTICS", "1") == "1"
+_ANALYTICS_ENABLED = os.environ.get("MCP_VIDEO_ANALYTICS", "0") == "1"
 _INSTALL_ID_PATH = os.path.expanduser("~/.cache/mcp-video/install-id")
+
+
+def analytics_enabled() -> bool:
+    """Return whether anonymous analytics are explicitly enabled."""
+    return _ANALYTICS_ENABLED
 
 
 def _install_id() -> str:
@@ -38,7 +43,7 @@ def _install_id() -> str:
 def ping(event: str = "startup", metadata: dict[str, Any] | None = None) -> None:
     """Send an anonymous usage ping if analytics are enabled.
 
-    This is a no-op if ``MCP_VIDEO_ANALYTICS=0`` is set in the environment.
+    This is a no-op unless ``MCP_VIDEO_ANALYTICS=1`` is set in the environment.
     """
     if not _ANALYTICS_ENABLED:
         return

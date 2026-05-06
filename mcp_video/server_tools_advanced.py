@@ -34,6 +34,28 @@ from .server_app import _result, _safe_tool, _validation_error, mcp
 from .validation import VALID_LAYOUTS, VALID_PRESETS
 from .ffmpeg_helpers import _validate_input_path
 
+_CLEANUP_MANAGED_SUFFIXES = (
+    "_trimmed",
+    "_resized",
+    "_converted",
+    "_merged",
+    "_filtered",
+    "_watermark",
+    "_watermarked",
+    "_overlay",
+    "_preview",
+    "_thumbnail",
+    "_storyboard",
+    "_normalized",
+    "_stabilized",
+    "_reversed",
+    "_cropped",
+    "_rotated",
+    "_speed",
+    "_fade",
+    "_export",
+)
+
 
 @mcp.tool()
 @_safe_tool
@@ -565,6 +587,13 @@ def video_cleanup(
             continue
         try:
             p = _validate_input_path(path)
+            stem = os.path.splitext(os.path.basename(p))[0]
+            if not stem.startswith("mcp_video_") and not stem.endswith(_CLEANUP_MANAGED_SUFFIXES):
+                raise MCPVideoError(
+                    "Refusing to delete unmanaged file; only mcp-video intermediate outputs may be cleaned up",
+                    error_type="validation_error",
+                    code="unsafe_cleanup_path",
+                )
             os.remove(p)
             results.append({"path": p, "status": "removed"})
             removed += 1
@@ -575,7 +604,7 @@ def video_cleanup(
             results.append({"path": path, "status": "failed", "error": str(e)})
             failed += 1
     return {
-        "success": True,
+        "success": failed == 0,
         "removed": removed,
         "failed": failed,
         "results": results,

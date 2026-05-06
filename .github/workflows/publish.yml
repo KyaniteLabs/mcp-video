@@ -35,6 +35,52 @@ jobs:
         run: python -m venv .venv
       - name: Install build dependencies
         run: .venv/bin/pip install build twine
+      - name: Verify release version is publishable
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          .venv/bin/python - <<'PY'
+          import json
+          import os
+          import sys
+          import tomllib
+          import urllib.error
+          import urllib.request
+          from pathlib import Path
+
+          version = tomllib.loads(Path("pyproject.toml").read_text())["project"]["version"]
+          package_version = None
+          for line in Path("mcp_video/__init__.py").read_text().splitlines():
+              if line.startswith("__version__"):
+                  package_version = line.split("=", 1)[1].strip().strip('"')
+                  break
+          server = json.loads(Path("server.json").read_text())
+          tag = os.environ["RELEASE_TAG"]
+
+          failures = []
+          if tag != f"v{version}":
+              failures.append(f"release tag {tag!r} does not match pyproject version v{version}")
+          if package_version != version:
+              failures.append(f"mcp_video.__version__ {package_version!r} does not match {version!r}")
+          if server.get("version") != version:
+              failures.append(f"server.json version {server.get('version')!r} does not match {version!r}")
+          package_versions = {pkg.get("version") for pkg in server.get("packages", [])}
+          if package_versions != {version}:
+              failures.append(f"server.json package versions {sorted(package_versions)!r} do not match {version!r}")
+
+          try:
+              urllib.request.urlopen(f"https://pypi.org/pypi/mcp-video/{version}/json", timeout=20).close()
+          except urllib.error.HTTPError as exc:
+              if exc.code != 404:
+                  raise
+          else:
+              failures.append(f"mcp-video {version} already exists on PyPI")
+
+          if failures:
+              print("\\n".join(failures), file=sys.stderr)
+              raise SystemExit(1)
+          print(f"Release {tag} is aligned and PyPI version {version} is available.")
+          PY
       - name: Build package
         run: .venv/bin/python -m build
       - name: Check built artifact contents
@@ -62,4 +108,4 @@ jobs:
           name: dist
           path: dist/
       - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-upload@release/v1
+        uses: pypa/gh-action-pypi-publish@release/v1

@@ -172,7 +172,7 @@ class TestRender:
             call_args = mock_run.call_args
             cmd = call_args[0][0]
             assert cmd[0] == "npx"
-            assert cmd[1] == "hyperframes"
+            assert cmd[1:4] == ["--yes", "--no-install", "hyperframes"]
             assert "render" in cmd
             assert "/tmp/out.mp4" in cmd
             assert "--fps" in cmd
@@ -418,18 +418,20 @@ class TestPreview:
             call_args = mock_popen.call_args
             cmd = call_args[0][0]
             assert cmd[0] == "npx"
-            assert cmd[1] == "hyperframes"
+            assert cmd[1:4] == ["--yes", "--no-install", "hyperframes"]
             assert "preview" in cmd
             assert "--port" in cmd
             idx = cmd.index("--port")
             assert cmd[idx + 1] == "3001"
+            assert call_args.kwargs["stdout"] is subprocess.DEVNULL
+            assert call_args.kwargs["stderr"] is subprocess.DEVNULL
+            assert call_args.kwargs["start_new_session"] is True
 
     def test_raises_when_process_exits_immediately(self, sample_hyperframes_project):
         """preview() should raise HyperframesProjectError if the process crashes on startup."""
         project = str(sample_hyperframes_project)
         mock_proc = MagicMock()
         mock_proc.poll.return_value = 1
-        mock_proc.stderr.read.return_value = "some error"
 
         with (
             _mock_deps_ok(),
@@ -531,7 +533,7 @@ class TestCreateProject:
             call_args = mock_run.call_args
             cmd = call_args[0][0]
             assert cmd[0] == "npx"
-            assert cmd[1] == "hyperframes"
+            assert cmd[1:4] == ["--yes", "--no-install", "hyperframes"]
             assert "init" in cmd
             assert "test-project" in cmd
             assert "--example" in cmd

@@ -10,6 +10,7 @@ from .errors import MCPVideoError
 from .server_app import _result, _safe_tool, _validation_error, mcp
 from .validation import VALID_MOGRAPH_STYLES
 from .ffmpeg_helpers import _validate_input_path
+from .limits import MAX_MOGRAPH_FRAMES
 
 # ---------------------------------------------------------------------------
 # Visual Effects Tools (P1 Features)
@@ -469,6 +470,13 @@ def video_mograph_count(
             error_type="validation_error",
             code="invalid_parameter",
         )
+    total_frames = int(duration * fps)
+    if total_frames > MAX_MOGRAPH_FRAMES:
+        raise MCPVideoError(
+            f"mograph frame count {total_frames} exceeds maximum of {MAX_MOGRAPH_FRAMES}",
+            error_type="resource_error",
+            code="mograph_too_large",
+        )
     from .effects_engine import mograph_count as _count
 
     return _result(_count(start, end, duration, output_path, style=style, fps=fps))
@@ -512,6 +520,13 @@ def video_mograph_progress(
             f"duration must be positive, got {duration}",
             error_type="validation_error",
             code="invalid_parameter",
+        )
+    total_frames = int(duration * fps)
+    if total_frames > MAX_MOGRAPH_FRAMES:
+        raise MCPVideoError(
+            f"mograph frame count {total_frames} exceeds maximum of {MAX_MOGRAPH_FRAMES}",
+            error_type="resource_error",
+            code="mograph_too_large",
         )
     from .effects_engine import mograph_progress as _progress
 

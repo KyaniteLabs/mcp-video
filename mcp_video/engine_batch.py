@@ -14,6 +14,7 @@ from .engine_filters import apply_filter
 from .engine_resize import resize
 from .engine_speed import speed
 from .engine_watermark import watermark
+from .errors import MCPVideoError
 from .ffmpeg_helpers import _validate_input_path, _validate_output_path
 from .models import EditResult
 
@@ -33,7 +34,18 @@ def video_batch(
 
     params = params or {}
     if output_dir:
-        output_dir = _validate_output_path(output_dir)
+        try:
+            output_dir = _validate_output_path(output_dir)
+        except MCPVideoError as exc:
+            if exc.code != "unsafe_path":
+                raise
+            return {
+                "success": False,
+                "total": len(inputs),
+                "succeeded": 0,
+                "failed": len(inputs),
+                "results": [{"input": input_path, "success": False, "error": str(exc)} for input_path in inputs],
+            }
 
     results = []
     succeeded = 0

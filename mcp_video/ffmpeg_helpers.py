@@ -17,6 +17,45 @@ from typing import Any
 from .errors import InputFileError, MCPVideoError, ProcessingError, parse_ffmpeg_error
 from .limits import DEFAULT_FFMPEG_TIMEOUT, FFPROBE_TIMEOUT, MAX_FILE_SIZE_MB
 
+_BLOCKED_OUTPUT_PREFIXES = (
+    "/bin",
+    "/etc",
+    "/private/etc",
+    "/sbin",
+    "/System",
+    "/usr/bin",
+    "/usr/sbin",
+    "/var/db",
+    "/var/root",
+)
+_SENSITIVE_HOME_PARTS = {".aws", ".azure", ".config", ".docker", ".gnupg", ".kube", ".ssh"}
+_SAFE_EXISTING_OUTPUT_SUFFIXES = {
+    ".aac",
+    ".ass",
+    ".avi",
+    ".csv",
+    ".flac",
+    ".gif",
+    ".jpg",
+    ".jpeg",
+    ".json",
+    ".m3u8",
+    ".m4a",
+    ".m4v",
+    ".mkv",
+    ".mov",
+    ".mp3",
+    ".mp4",
+    ".png",
+    ".srt",
+    ".ts",
+    ".txt",
+    ".vtt",
+    ".wav",
+    ".webm",
+    ".webp",
+}
+
 
 def _validate_input_path(path: str) -> str:
     """Validate and resolve a file path. Rejects null bytes, symlinks, and oversize files."""
@@ -48,23 +87,61 @@ def _validate_project_path(path: str) -> str:
 
 
 def _validate_output_path(path: str) -> str:
-    """Validate an output file path without rejecting valid parent-relative paths."""
+    """Validate an output path before FFmpeg writes with ``-y``.
+
+    mcp-video intentionally lets users write normal media artifacts around their
+    projects and temp directories. It must not overwrite system files, symlink
+    targets, sensitive home dotfiles, or obviously non-media source/config files.
+    """
     if "\x00" in path:
         raise MCPVideoError(
             f"Output path contains null bytes: {path!r}",
             error_type="validation_error",
             code="invalid_output_path",
         )
-    # Parent-relative outputs such as ../clips/out.mp4 are valid local filesystem
-    # paths. Canonicalize before checking for unresolved traversal markers so
-    # auto-generated outputs from relative inputs do not become false positives.
-    parts = os.path.normpath(os.path.abspath(path)).split(os.sep)
-    if ".." in parts:
+    raw_parts = re.split(r"[\\/]+", path)
+    if ".." in raw_parts:
         raise MCPVideoError(
-            f"Output path contains unresolved directory traversal: {path!r}",
+            f"Output path contains directory traversal: {path!r}",
             error_type="validation_error",
             code="invalid_output_path",
         )
+    if os.path.islink(path):
+        raise MCPVideoError(
+            f"Output path resolves through a symlink: {path!r}",
+            error_type="validation_error",
+            code="unsafe_path",
+        )
+
+    resolved = os.path.realpath(path)
+    if any(resolved == prefix or resolved.startswith(prefix + os.sep) for prefix in _BLOCKED_OUTPUT_PREFIXES):
+        raise MCPVideoError(
+            f"Output path escapes safe directory: {path}",
+            error_type="validation_error",
+            code="unsafe_path",
+        )
+
+    home = os.path.realpath(os.path.expanduser("~"))
+    if resolved == home or resolved.startswith(home + os.sep):
+        rel_parts = set(os.path.relpath(resolved, home).split(os.sep))
+        if rel_parts & _SENSITIVE_HOME_PARTS:
+            raise MCPVideoError(
+                f"Output path targets a sensitive home directory: {path}",
+                error_type="validation_error",
+                code="unsafe_path",
+            )
+
+    if os.path.isdir(resolved):
+        return path
+
+    if os.path.exists(resolved):
+        suffix = os.path.splitext(resolved)[1].lower()
+        if suffix not in _SAFE_EXISTING_OUTPUT_SUFFIXES:
+            raise MCPVideoError(
+                f"Refusing to overwrite non-media output path: {path}",
+                error_type="validation_error",
+                code="unsafe_path",
+            )
     return path
 
 

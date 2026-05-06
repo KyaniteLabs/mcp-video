@@ -562,9 +562,7 @@ class TestBuildAddAudioArgs:
     def test_replace_without_filters_or_start(self):
         from mcp_video.engine_audio_ops import _build_add_audio_args
 
-        args = _build_add_audio_args(
-            "vid.mp4", "aud.wav", [], False, None, True, "out.mp4"
-        )
+        args = _build_add_audio_args("vid.mp4", "aud.wav", [], False, None, True, "out.mp4")
         assert "-i" in args
         assert "-map" in args
         assert "-shortest" in args
@@ -573,9 +571,7 @@ class TestBuildAddAudioArgs:
     def test_replace_with_start_time(self):
         from mcp_video.engine_audio_ops import _build_add_audio_args
 
-        args = _build_add_audio_args(
-            "vid.mp4", "aud.wav", [], False, 1.5, True, "out.mp4"
-        )
+        args = _build_add_audio_args("vid.mp4", "aud.wav", [], False, 1.5, True, "out.mp4")
         assert "-filter_complex" in args
         fc_idx = args.index("-filter_complex")
         assert "adelay=1500|1500" in args[fc_idx + 1]
@@ -583,18 +579,14 @@ class TestBuildAddAudioArgs:
     def test_replace_with_filters(self):
         from mcp_video.engine_audio_ops import _build_add_audio_args
 
-        args = _build_add_audio_args(
-            "vid.mp4", "aud.wav", ["volume=0.5"], False, None, True, "out.mp4"
-        )
+        args = _build_add_audio_args("vid.mp4", "aud.wav", ["volume=0.5"], False, None, True, "out.mp4")
         idx = args.index("-af")
         assert args[idx + 1] == "volume=0.5"
 
     def test_mix_with_source_audio(self):
         from mcp_video.engine_audio_ops import _build_add_audio_args
 
-        args = _build_add_audio_args(
-            "vid.mp4", "aud.wav", ["volume=0.5"], True, None, True, "out.mp4"
-        )
+        args = _build_add_audio_args("vid.mp4", "aud.wav", ["volume=0.5"], True, None, True, "out.mp4")
         assert "-filter_complex" in args
         fc_idx = args.index("-filter_complex")
         fc = args[fc_idx + 1]
@@ -605,9 +597,7 @@ class TestBuildAddAudioArgs:
     def test_mix_without_source_audio_uses_replace_branch(self):
         from mcp_video.engine_audio_ops import _build_add_audio_args
 
-        args = _build_add_audio_args(
-            "vid.mp4", "aud.wav", [], True, None, False, "out.mp4"
-        )
+        args = _build_add_audio_args("vid.mp4", "aud.wav", [], True, None, False, "out.mp4")
         # When mix=True but no source audio, _build_add_audio_args takes the replace branch
         assert "-filter_complex" not in args
         assert "-map" in args
@@ -673,11 +663,13 @@ class TestMergeSingleClip:
         copy_calls = []
         monkeypatch.setattr("mcp_video.engine_merge.shutil.copy2", lambda s, d: copy_calls.append((s, d)))
         monkeypatch.setattr("mcp_video.engine_merge._run_ffmpeg", lambda cmd: None)
+
         # Patch probe so it doesn't need the output file to exist
         class FakeInfo:
             duration = 1.0
             resolution = "640x480"
             size_mb = 0.1
+
         monkeypatch.setattr("mcp_video.engine_merge.probe", lambda p: FakeInfo())
         monkeypatch.setattr("mcp_video.engine_probe.probe", lambda p: FakeInfo())
 
@@ -691,10 +683,12 @@ class TestMergeSingleClip:
         ffmpeg_calls = []
         monkeypatch.setattr("mcp_video.engine_merge.shutil.copy2", lambda s, d: None)
         monkeypatch.setattr("mcp_video.engine_merge._run_ffmpeg", lambda cmd: ffmpeg_calls.append(cmd))
+
         class FakeInfo:
             duration = 1.0
             resolution = "640x480"
             size_mb = 0.1
+
         monkeypatch.setattr("mcp_video.engine_merge.probe", lambda p: FakeInfo())
         monkeypatch.setattr("mcp_video.engine_probe.probe", lambda p: FakeInfo())
 
