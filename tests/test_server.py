@@ -922,3 +922,11 @@ class TestSearchTools:
         assert result["success"] is True
         merge_tool = next(t for t in result["tools"] if t["name"] == "video_merge")
         assert "clips" in merge_tool["required_params"]
+
+    def test_search_includes_creation_tools(self):
+        result = search_tools("style")
+        assert result["success"] is True
+        names = [t["name"] for t in result["tools"]]
+        assert "video_project_create" in names
+        assert "style_pack_read" in names
+        assert "shot_prompt_render" in names

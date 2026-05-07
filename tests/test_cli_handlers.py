@@ -4,6 +4,7 @@ These tests verify that each handler module registers the expected commands
 and that dispatch routes to the correct handler.
 """
 
+import json
 import importlib
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
@@ -212,6 +213,7 @@ def _make_args(**kwargs):
         "block_name": None,
         "port": None,
         "workers": None,
+        "output_format": "mp4",
         "caption": None,
         "lra": None,
         "metrics": None,
@@ -309,6 +311,36 @@ class TestHandlersHyperframes:
         args = _make_args(command="__no_match__")
         result = handle_hyperframes_commands(args, use_json=False)
         assert result is False
+
+    def test_render_json_uses_output_format_without_clobbering_global_format(self, monkeypatch, capsys):
+        from mcp_video.cli.handlers_hyperframes import handle_hyperframes_commands
+
+        captured = {}
+
+        def fake_render(project_path, **kwargs):
+            captured["project_path"] = project_path
+            captured["kwargs"] = kwargs
+            return {"success": True, "output_path": "/tmp/render.webm"}
+
+        monkeypatch.setattr("mcp_video.hyperframes_engine.render", fake_render)
+        monkeypatch.setattr(
+            "mcp_video.cli.handlers_hyperframes._with_spinner",
+            lambda _label, fn, *args, **kwargs: fn(*args, **kwargs),
+        )
+        args = _make_args(
+            command="hyperframes-render",
+            project_path="/tmp/project",
+            output="/tmp/render.webm",
+            output_format="webm",
+        )
+
+        result = handle_hyperframes_commands(args, use_json=True)
+        data = json.loads(capsys.readouterr().out)
+
+        assert result is True
+        assert data["success"] is True
+        assert captured["project_path"] == "/tmp/project"
+        assert captured["kwargs"]["format"] == "webm"
 
 
 class TestHandlersImage:

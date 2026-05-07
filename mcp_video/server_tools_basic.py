@@ -326,7 +326,7 @@ def search_tools(query: str) -> dict[str, Any]:
     """Search registered MCP tools by keyword.
 
     Use this when you need to find the right tool for a task without reading
-    all 87 tool descriptions. Returns matching tools with their names,
+    all 91 tool descriptions. Returns matching tools with their names,
     descriptions, and required parameters.
 
     Args:
@@ -334,7 +334,16 @@ def search_tools(query: str) -> dict[str, Any]:
     """
     # Ensure all tool modules are loaded so the registry is complete.
     # We import sibling modules (not the facade) to populate the registry.
-    from . import server_tools_advanced, server_tools_effects, server_tools_image, server_tools_media  # noqa: F401
+    from . import (  # noqa: F401
+        server_tools_advanced,
+        server_tools_ai,
+        server_tools_audio,
+        server_tools_creation,
+        server_tools_effects,
+        server_tools_hyperframes,
+        server_tools_image,
+        server_tools_media,
+    )
 
     query_lower = query.lower()
     matches: list[dict[str, Any]] = []

@@ -11,6 +11,12 @@ This project follows a simple release-note style:
 
 ## Unreleased
 
+## 1.3.7 - 2026-05-06
+
+### Fixed
+
+- Fixed `search_tools()` / `Client.search_tools()` so discovery includes the full 91-tool MCP surface, including PUSHING CREATION, Hyperframes, audio, and AI tools.
+
 ## 1.3.6 - 2026-05-06
 
 ### Added

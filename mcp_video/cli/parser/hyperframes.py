@@ -21,7 +21,11 @@ def add_parsers(subparsers: argparse._SubParsersAction) -> None:
         help="Render quality (default: standard)",
     )
     hyperframes_render_p.add_argument(
-        "--format", default="mp4", choices=["mp4", "webm", "mov"], help="Output format (default: mp4)"
+        "--format",
+        dest="output_format",
+        default="mp4",
+        choices=["mp4", "webm", "mov"],
+        help="Output format (default: mp4)",
     )
     hyperframes_render_p.add_argument("--workers", help="Parallel render workers (number or 'auto')")
     hyperframes_render_p.add_argument("--crf", type=int, help="Override encoder CRF")

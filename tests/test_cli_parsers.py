@@ -181,6 +181,14 @@ class TestParserHyperframes:
         }
         assert expected <= names
 
+    def test_render_output_format_does_not_override_global_json_format(self):
+        from mcp_video.cli.parser import build_parser
+
+        args = build_parser().parse_args(["--format", "json", "hyperframes-render", "project", "--format", "webm"])
+
+        assert args.format == "json"
+        assert args.output_format == "webm"
+
 
 class TestParserQuality:
     def test_adds_expected_parsers(self):

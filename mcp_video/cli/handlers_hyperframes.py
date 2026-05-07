@@ -34,7 +34,7 @@ def handle_hyperframes_commands(args: Any, *, use_json: bool) -> bool:
             width=a.width,
             height=a.height,
             quality=a.quality,
-            format=a.format,
+            format=a.output_format,
             workers=a.workers,
             crf=a.crf,
         )
