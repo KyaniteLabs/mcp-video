@@ -23,3 +23,12 @@
 - [ ] New defaults live in `defaults.py`; validation constants live in `validation.py` or `limits.py`.
 - [ ] No generated media, logs, caches, local research dumps, or build artifacts were committed.
 - [ ] Documentation, README counts, or roadmap entries were updated when the public surface changed.
+
+<!-- EMPOWER_ORCHESTRATOR:START -->
+## Empower Orchestrator checklist
+
+- [ ] I checked whether this PR reveals a repeatable task or recurring agent failure.
+- [ ] If it does, I either shipped the smallest durable improvement or documented why not.
+- [ ] Any automation or durable system change included the scale/severity/reversibility/predictability blast-radius check.
+- [ ] Workers/subagents stayed inside their assigned scope and verification evidence is included before completion claims.
+<!-- EMPOWER_ORCHESTRATOR:END -->
