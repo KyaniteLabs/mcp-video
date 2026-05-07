@@ -142,7 +142,7 @@ def ai_scene_detect(
             hash_diff = prev_hash - curr_hash
 
             if hash_diff > hash_threshold:
-                scenes.append({"timestamp": hashes[i]["timestamp"], "frame": None, "hash_diff": hash_diff})
+                scenes.append({"timestamp": float(hashes[i]["timestamp"]), "frame": None, "hash_diff": int(hash_diff)})
 
     return scenes
 

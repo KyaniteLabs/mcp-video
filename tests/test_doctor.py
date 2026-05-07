@@ -91,6 +91,7 @@ def test_run_diagnostics_checks_optional_packages_without_importing_them():
     assert checks["openai-whisper"]["required"] is False
     assert "mcp-video[transcribe]" in checks["openai-whisper"]["install_hint"]
     assert "mcp-video[stems]" in checks["demucs"]["install_hint"]
+    assert "mcp-video[stems]" in checks["torchcodec"]["install_hint"]
     assert "mcp-video[upscale]" in checks["opencv-contrib-python"]["install_hint"]
     assert "mcp-video[ai-scene]" in checks["imagehash"]["install_hint"]
 

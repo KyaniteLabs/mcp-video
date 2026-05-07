@@ -71,6 +71,7 @@ PACKAGE_CHECKS = (
         'Install stem/upscale extras: pip install "mcp-video[stems]" or "mcp-video[upscale]"',
     ),
     ("torchaudio", "torchaudio", "ai", False, 'Install stem-separation extras: pip install "mcp-video[stems]"'),
+    ("torchcodec", "torchcodec", "ai", False, 'Install stem-separation extras: pip install "mcp-video[stems]"'),
     ("imagehash", "imagehash", "ai", False, 'Install AI scene extras: pip install "mcp-video[ai-scene]"'),
 )
 

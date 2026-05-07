@@ -68,7 +68,7 @@ python -m pytest tests/ -v -m "not hyperframes"
 ### 4. AI Stem Separation (`test_43_ai_stem_separation`)
 - Uses Facebook Demucs
 - Separates vocals, drums, bass, other
-- Provided by the `mcp-video[ai]` extra (`demucs`, `torch`, `torchaudio`)
+- Provided by the `mcp-video[ai]` extra (`demucs`, `torch`, `torchaudio`, `torchcodec`)
 
 ### 5. AI Upscale (`test_44_ai_upscale`)
 - OpenCV DNN with FSRCNN model (57KB, fast)

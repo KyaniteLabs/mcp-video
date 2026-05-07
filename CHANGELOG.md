@@ -11,6 +11,13 @@ This project follows a simple release-note style:
 
 ## Unreleased
 
+## 1.3.8 - 2026-05-06
+
+### Fixed
+
+- Fixed AI scene-detection JSON output so perceptual-hash differences are serialized as standard JSON numbers.
+- Added `torchcodec` to stem-separation extras and diagnostics so Demucs output works with current TorchAudio save behavior.
+
 ## 1.3.7 - 2026-05-06
 
 ### Fixed

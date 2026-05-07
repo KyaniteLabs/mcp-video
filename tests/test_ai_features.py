@@ -524,6 +524,56 @@ def test_ai_scene_detect_caps_ai_frame_extraction_rate(tmp_path, monkeypatch):
     assert vf_arg.startswith(f"fps=1/{expected_interval}")
 
 
+def test_ai_scene_detect_ai_mode_returns_json_safe_hash_diffs(tmp_path, monkeypatch):
+    """Perceptual hash results should not leak NumPy scalars into JSON responses."""
+    import json
+    import numpy as np
+
+    from mcp_video.ai_engine import ai_scene_detect
+
+    video = tmp_path / "video.mp4"
+    video.write_bytes(b"not a real video; subprocess is mocked")
+
+    class FakeHash:
+        def __init__(self, value: int):
+            self.value = value
+
+        def __sub__(self, other):
+            return np.int64(abs(self.value - other.value))
+
+    imagehash_module = types.ModuleType("imagehash")
+    hash_values = iter([FakeHash(0), FakeHash(42)])
+    imagehash_module.phash = lambda _img: next(hash_values)
+    image_module = types.ModuleType("PIL.Image")
+    seen_images = []
+
+    def fake_open(path):
+        seen_images.append(path)
+        return object()
+
+    image_module.open = fake_open
+    pil_module = types.ModuleType("PIL")
+    pil_module.Image = image_module
+    monkeypatch.setitem(sys.modules, "imagehash", imagehash_module)
+    monkeypatch.setitem(sys.modules, "PIL", pil_module)
+    monkeypatch.setitem(sys.modules, "PIL.Image", image_module)
+    monkeypatch.setattr("mcp_video.ai_engine.scene._run_ffprobe_json", lambda _path: {"format": {"duration": "1"}})
+
+    def fake_run(cmd, capture_output, text, timeout):
+        frame_pattern = Path(cmd[-1])
+        frame_pattern.parent.mkdir(parents=True, exist_ok=True)
+        (frame_pattern.parent / "frame_0001.jpg").write_bytes(b"one")
+        (frame_pattern.parent / "frame_0002.jpg").write_bytes(b"two")
+        return subprocess.CompletedProcess(cmd, 0, "", "")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    scenes = ai_scene_detect(str(video), threshold=0.3, use_ai=True)
+
+    assert scenes == [{"timestamp": 0.5, "frame": None, "hash_diff": 42}]
+    json.dumps({"scenes": scenes})
+
+
 def test_require_audio_stream_propagates_probe_errors(monkeypatch):
     from mcp_video.ai_engine.spatial import _require_audio_stream
     from mcp_video.errors import ProcessingError
