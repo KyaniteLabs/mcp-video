@@ -900,6 +900,15 @@ class TestServerToolPathValidation:
 
 
 class TestServerReleaseGuardrails:
+    def test_audio_synthesize_rejects_unknown_effect_key_before_render(self, tmp_path):
+        from mcp_video import server_tools_audio
+
+        result = server_tools_audio.audio_synthesize(str(tmp_path / "out.wav"), effects={"bitcrush": 0.5})
+
+        assert result["success"] is False
+        assert "effects" in result["error"]["message"].lower()
+        assert not (tmp_path / "out.wav").exists()
+
     def test_audio_preset_warns_for_long_procedural_music_bed(self, monkeypatch, tmp_path):
         from mcp_video import server_tools_audio
 

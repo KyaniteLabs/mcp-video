@@ -424,6 +424,10 @@ class TestClientValidators:
                     editor.convert("/nonexistent/video.mp4", format=fmt, quality=q)
                 assert not isinstance(exc_info.value, ValueError)
 
+    def test_audio_synthesize_rejects_unknown_effect_key(self, editor):
+        with pytest.raises(MCPVideoError, match="effects"):
+            editor.audio_synthesize(output="/tmp/out.wav", effects={"bitcrush": 0.5})
+
 
 class TestClientAudioEffectsValidation:
     def test_audio_effects_rejects_unknown_effect_type(self, editor):

@@ -309,6 +309,15 @@ class TestParameterBounds:
         with pytest.raises(MCPVideoError, match=r"[Vv]olume"):
             audio_synthesize("/tmp/test.wav", volume=1.5)
 
+    def test_audio_synthesize_rejects_unknown_effect_key(self, tmp_path) -> None:
+        """Unknown synth effect keys are rejected before producing output."""
+        from mcp_video.audio_engine import audio_synthesize
+
+        output = tmp_path / "out.wav"
+        with pytest.raises(MCPVideoError, match="effects"):
+            audio_synthesize(str(output), effects={"bitcrush": 0.5})
+        assert not output.exists()
+
     def test_audio_valid_bounds(self) -> None:
         """Valid bounds at edges are accepted."""
         from mcp_video.audio_engine import audio_synthesize

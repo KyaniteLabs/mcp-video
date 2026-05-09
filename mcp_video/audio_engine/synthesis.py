@@ -32,6 +32,24 @@ DEFAULT_SAMPLE_RATE = 44100
 DEFAULT_CHANNELS = 1
 DEFAULT_SAMPLE_WIDTH = 2  # 16-bit
 
+VALID_AUDIO_SYNTH_EFFECT_KEYS = {"envelope", "fade_in", "fade_out", "reverb", "lowpass"}
+
+
+def _validate_synth_effects(effects: dict[str, Any] | None) -> None:
+    """Validate synthesis effect keys before generating output."""
+    if effects is None:
+        return
+    if not isinstance(effects, dict):
+        raise MCPVideoError("effects must be a dict", error_type="validation_error", code="invalid_parameter")
+
+    unknown = sorted(set(effects) - VALID_AUDIO_SYNTH_EFFECT_KEYS)
+    if unknown:
+        raise MCPVideoError(
+            f"effects keys must be one of {sorted(VALID_AUDIO_SYNTH_EFFECT_KEYS)}, got unsupported keys {unknown}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
+
 
 def audio_synthesize(
     output: str,
@@ -62,6 +80,8 @@ def audio_synthesize(
         Path to generated WAV file
     """
     from ..limits import MAX_AUDIO_DURATION, MIN_FREQUENCY, MAX_FREQUENCY, MIN_SAMPLE_RATE, MAX_SAMPLE_RATE
+
+    _validate_synth_effects(effects)
 
     if not (MIN_FREQUENCY <= frequency <= MAX_FREQUENCY):
         raise MCPVideoError(
