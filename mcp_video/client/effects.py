@@ -123,6 +123,15 @@ class ClientEffectsMixin:
     _VALID_PIP_POSITIONS: ClassVar[set[str]] = {"top-left", "top-right", "bottom-left", "bottom-right"}
     _VALID_TEXT_ANIMATIONS: ClassVar[set[str]] = {"fade", "glitch", "slide-up", "typewriter"}
     _VALID_MOGRAPH_STYLES: ClassVar[set[str]] = {"bar", "circle", "dots"}
+    _VALID_TEXT_POSITIONS: ClassVar[set[str]] = {
+        "center",
+        "top",
+        "bottom",
+        "top-left",
+        "top-right",
+        "bottom-left",
+        "bottom-right",
+    }
 
     def layout_grid(
         self,
@@ -213,6 +222,7 @@ class ClientEffectsMixin:
         if not text or not text.strip():
             raise MCPVideoError("Text cannot be empty", error_type="validation_error", code="invalid_parameter")
         self._validate_choice("animation", animation, self._VALID_TEXT_ANIMATIONS)
+        self._validate_choice("position", position, self._VALID_TEXT_POSITIONS)
         from ..effects_engine import text_animated
 
         return self._to_edit_result(

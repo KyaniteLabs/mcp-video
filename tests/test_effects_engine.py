@@ -188,6 +188,21 @@ def test_text_animated_rejects_empty_text_before_ffmpeg(tmp_path, monkeypatch):
     assert not output_path.exists()
 
 
+def test_text_animated_rejects_unknown_position_before_ffmpeg(tmp_path, monkeypatch):
+    from mcp_video.effects_engine import text_animated
+    from mcp_video.effects_engine import text as text_engine
+
+    input_path = tmp_path / "input.mp4"
+    output_path = tmp_path / "output.mp4"
+    input_path.write_bytes(b"placeholder")
+    monkeypatch.setattr(text_engine, "_run_command", lambda cmd: output_path.write_bytes(b"output"))
+
+    with pytest.raises(MCPVideoError, match="position"):
+        text_animated(str(input_path), "Hello", str(output_path), position="middle-ish")
+
+    assert not output_path.exists()
+
+
 def test_text_animated_rejects_unknown_animation_before_ffmpeg(tmp_path, monkeypatch):
     from mcp_video.effects_engine import text_animated
     from mcp_video.effects_engine import text as text_engine

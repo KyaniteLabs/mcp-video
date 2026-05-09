@@ -15,6 +15,7 @@ from .limits import MAX_MOGRAPH_FRAMES
 VALID_TEXT_ANIMATIONS = {"fade", "glitch", "slide-up", "typewriter"}
 VALID_GRID_LAYOUTS = {"2x2", "3x1", "1x3", "2x3"}
 VALID_PIP_POSITIONS = {"top-left", "top-right", "bottom-left", "bottom-right"}
+VALID_TEXT_POSITIONS = {"center", "top", "bottom", "top-left", "top-right", "bottom-left", "bottom-right"}
 
 # ---------------------------------------------------------------------------
 # Visual Effects Tools (P1 Features)
@@ -397,6 +398,12 @@ def video_text_animated(
     if animation not in VALID_TEXT_ANIMATIONS:
         raise MCPVideoError(
             f"animation must be one of {sorted(VALID_TEXT_ANIMATIONS)}, got {animation}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
+    if position not in VALID_TEXT_POSITIONS:
+        raise MCPVideoError(
+            f"position must be one of {sorted(VALID_TEXT_POSITIONS)}, got {position}",
             error_type="validation_error",
             code="invalid_parameter",
         )

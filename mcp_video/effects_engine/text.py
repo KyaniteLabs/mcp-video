@@ -26,6 +26,17 @@ from ..ffmpeg_helpers import (
 
 logger = logging.getLogger(__name__)
 
+VALID_TEXT_POSITIONS = {"center", "top", "bottom", "top-left", "top-right", "bottom-left", "bottom-right"}
+
+
+def _validate_text_position(position: str) -> None:
+    if position not in VALID_TEXT_POSITIONS:
+        raise MCPVideoError(
+            f"position must be one of {sorted(VALID_TEXT_POSITIONS)}, got {position}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
+
 
 def _wrap_subtitle_text_for_safe_area(
     text: str,
@@ -444,6 +455,7 @@ def text_animated(
     """
     if not text or not text.strip():
         raise MCPVideoError("Text cannot be empty", error_type="validation_error", code="invalid_parameter")
+    _validate_text_position(position)
 
     video = _validate_input_path(video)
     _validate_output_path(output)

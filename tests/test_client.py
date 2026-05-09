@@ -413,6 +413,10 @@ class TestClientTextAnimatedValidation:
         with pytest.raises(MCPVideoError, match="animation"):
             editor.text_animated("/tmp/video.mp4", "Hello", "/tmp/out.mp4", animation="spin")
 
+    def test_text_animated_rejects_unknown_position(self, editor):
+        with pytest.raises(MCPVideoError, match="position"):
+            editor.text_animated("/tmp/video.mp4", "Hello", "/tmp/out.mp4", position="middle-ish")
+
 
 class TestClientAgentApiConsistency:
     def test_every_public_client_method_has_contract(self, editor):
