@@ -528,6 +528,14 @@ class TestClientAgentApiConsistency:
         with pytest.raises(MCPVideoError, match="audio_preset\\(\\) requires output_path"):
             editor.audio_preset("ui-blip")
 
+    def test_audio_preset_rejects_unknown_pitch(self, editor):
+        with pytest.raises(MCPVideoError, match="pitch"):
+            editor.audio_preset("ui-blip", output_path="/tmp/out.wav", pitch="bass")
+
+    def test_audio_preset_rejects_invalid_intensity(self, editor):
+        with pytest.raises(MCPVideoError, match="intensity"):
+            editor.audio_preset("typing", output_path="/tmp/out.wav", intensity=2.0)
+
     def test_scanlines_accepts_intensity_alias_with_warning(self, editor, monkeypatch):
         monkeypatch.setattr("mcp_video.effects_engine.effect_scanlines", lambda **kwargs: kwargs["output"])
 

@@ -50,6 +50,20 @@ class TestAudioPresetOrchestration:
         result = audio_preset("ui-blip", output, pitch="high")
         assert result == output
 
+    def test_unknown_pitch_rejected(self, tmp_path):
+        output = str(tmp_path / "out.wav")
+        from mcp_video.audio_engine.synthesis import audio_preset
+
+        with pytest.raises(MCPVideoError, match="pitch"):
+            audio_preset("ui-blip", output, pitch="bass")
+
+    def test_invalid_intensity_rejected(self, tmp_path):
+        output = str(tmp_path / "out.wav")
+        from mcp_video.audio_engine.synthesis import audio_preset
+
+        with pytest.raises(MCPVideoError, match="intensity"):
+            audio_preset("typing", output, intensity=2.0)
+
     def test_duration_override(self, tmp_path):
         output = str(tmp_path / "out.wav")
         from mcp_video.audio_engine.synthesis import audio_preset

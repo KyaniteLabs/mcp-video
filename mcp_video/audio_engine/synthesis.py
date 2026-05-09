@@ -169,6 +169,19 @@ def audio_preset(
     """
     from .presets import _PITCH_MULT, get_preset_config
 
+    if pitch not in _PITCH_MULT:
+        raise MCPVideoError(
+            f"pitch must be one of {sorted(_PITCH_MULT)}, got {pitch!r}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
+    if not isinstance(intensity, (int, float)) or intensity < 0 or intensity > 1:
+        raise MCPVideoError(
+            f"intensity must be between 0 and 1, got {intensity}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
+
     try:
         config = get_preset_config(preset)
     except KeyError as exc:
@@ -178,7 +191,7 @@ def audio_preset(
             code="invalid_parameter",
         ) from None
 
-    mult = _PITCH_MULT.get(pitch, 1.0)
+    mult = _PITCH_MULT[pitch]
     config["frequency"] = config["frequency"] * mult
 
     if duration is not None:
