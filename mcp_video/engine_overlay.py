@@ -61,7 +61,9 @@ def overlay_video(
     overlay_chain = _overlay_chain(scale_filter, safe_opacity)
     overlay_pos = _overlay_position(position)
     enable_expr = _enable_expression(start_time, duration)
-    filter_complex = f"[0:v]format=rgba[base];[1:v]{overlay_chain}[ov];[base][ov]overlay={overlay_pos}{enable_expr},format=yuv420p"
+    filter_complex = (
+        f"[0:v]format=rgba[base];[1:v]{overlay_chain}[ov];[base][ov]overlay={overlay_pos}{enable_expr},format=yuv420p"
+    )
 
     with _timed_operation() as timing:
         _run_ffmpeg(

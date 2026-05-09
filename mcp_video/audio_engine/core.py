@@ -280,7 +280,9 @@ def _float_to_pcm(samples: list[float]) -> bytes:
     return b"".join(pcm_data)
 
 
-def _pcm_to_float(pcm_bytes: bytes, sample_width: int = DEFAULT_SAMPLE_WIDTH, channels: int = DEFAULT_CHANNELS) -> list[float]:
+def _pcm_to_float(
+    pcm_bytes: bytes, sample_width: int = DEFAULT_SAMPLE_WIDTH, channels: int = DEFAULT_CHANNELS
+) -> list[float]:
     """Convert PCM bytes to mono float samples."""
     if sample_width not in {1, 2, 3, 4}:
         raise ValueError(f"Unsupported PCM sample width: {sample_width}")
