@@ -31,5 +31,9 @@ mcp-video gives AI agents structured tools for FFmpeg-based video editing, PUSHI
 - Sanitize filter strings to prevent injection attacks
 - Use timeouts on all subprocess calls
 
+## MCP Registry
+
+mcp-video is listed on the [official MCP Registry](https://registry.modelcontextprotocol.io/servers/io.github.KyaniteLabs/mcp-video) as `io.github.KyaniteLabs/mcp-video`. Registry metadata is in `server.json` at the repo root.
+
 ## Keywords
 video editing MCP server, AI agent video editing, cinematic video storyboard MCP, AI video style pack, FFmpeg automation, Claude Code video tools, Cursor MCP video tools, Codex video automation, Python video library, video automation CLI, Model Context Protocol, Hyperframes, local TTS, video background removal, subtitles, reels automation, shorts automation, video repurposing.

@@ -8,6 +8,10 @@ mcp-video is an open-source MCP server, Python library, and CLI that wraps FFmpe
 
 MCP (Model Context Protocol) is a standard protocol that lets AI agents like Claude Code and Cursor call external tools through a structured interface. Think of it as "USB-C for AI tools" — a universal connector between agents and capabilities.
 
+## Is mcp-video on the MCP Registry?
+
+Yes. mcp-video is listed on the [official MCP Registry](https://registry.modelcontextprotocol.io/servers/io.github.KyaniteLabs/mcp-video) as `io.github.KyaniteLabs/mcp-video`. Registry metadata is published automatically on each release via trusted publishing.
+
 ## Which AI agents work with mcp-video?
 
 Any MCP-compatible agent: Claude Code, Cursor, Windsurf, Cline, and any client that supports the MCP protocol. The server runs as a stdio transport, which is the standard MCP transport mode.

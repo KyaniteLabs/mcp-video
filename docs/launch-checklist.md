@@ -121,6 +121,7 @@ Three interfaces:
 - Python Client: Clean API for automation (`editor.trim("v.mp4", start="0:30", duration="15")`)
 - CLI: `mcp-video trim video.mp4 -s 0:30 -d 15`
 - CI-backed release process for package, registry, and repository readiness
+- Listed on the [MCP Registry](https://registry.modelcontextprotocol.io/servers/io.github.KyaniteLabs/mcp-video) (auto-published on release via `mcp-publisher`)
 
 Quick setup:
 ```json

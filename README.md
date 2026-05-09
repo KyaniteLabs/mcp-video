@@ -19,6 +19,7 @@
   <img src="https://img.shields.io/badge/MCP-103%20tools-orange.svg" alt="103 MCP tools">
   <img src="https://img.shields.io/badge/python-3.11%2B-blue.svg" alt="Python 3.11+">
   <img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="Apache 2.0">
+  <a href="https://registry.modelcontextprotocol.io/servers/io.github.KyaniteLabs/mcp-video"><img src="https://img.shields.io/badge/MCP-Registry-blue.svg" alt="MCP Registry"></a>
 </p>
 
 <p align="center">
@@ -28,7 +29,8 @@
   <a href="#tool-surface">Tools</a> &bull;
   <a href="docs/TOOLS.md">Tool Reference</a> &bull;
   <a href="docs/AI_AGENT_DISCOVERY.md">AI Discovery</a> &bull;
-  <a href="llms.txt">llms.txt</a>
+  <a href="llms.txt">llms.txt</a> &bull;
+  <a href="https://registry.modelcontextprotocol.io/servers/io.github.KyaniteLabs/mcp-video">MCP Registry</a>
 </p>
 
 ---
