@@ -1040,6 +1040,12 @@ def render_and_post(
     # Step 1: Render with Hyperframes
     render_result = render(project_path)
     hyperframes_output = render_result.output_path
+    if not render_result.success:
+        raise HyperframesRenderError(
+            "hyperframes render",
+            0,
+            f"Render completed but output artifact was not created: {hyperframes_output}",
+        )
 
     # Step 2: Post-process with mcp-video engine
     op_map = _post_process_ops()

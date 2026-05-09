@@ -1058,6 +1058,27 @@ class TestRenderAndPost:
             assert result.operations == ["convert", "add_audio"]
 
     @patch("mcp_video.hyperframes_engine.shutil.which")
+    def test_raises_when_render_artifact_is_missing(self, mock_which, sample_hyperframes_project):
+        """render_and_post() should not report success when Hyperframes produced no artifact."""
+
+        def _which(name: str):
+            if name in ("node", "npx"):
+                return f"/usr/bin/{name}"
+            return None
+
+        mock_which.side_effect = _which
+
+        project = str(sample_hyperframes_project)
+        fake_cp = _make_completed_process(stdout="rendered but no output")
+
+        with (
+            patch("mcp_video.hyperframes_engine.subprocess.run", return_value=fake_cp),
+            patch("mcp_video.hyperframes_engine._render_output_exists", return_value=False),
+            pytest.raises(HyperframesRenderError, match="output artifact"),
+        ):
+            render_and_post(project, post_process=[])
+
+    @patch("mcp_video.hyperframes_engine.shutil.which")
     def test_unknown_operation(self, mock_which, sample_hyperframes_project):
         """render_and_post() should raise MCPVideoError for unknown operations."""
 
