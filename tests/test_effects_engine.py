@@ -2,7 +2,9 @@
 
 from pathlib import Path
 
-from mcp_video.errors import ProcessingError
+import pytest
+
+from mcp_video.errors import MCPVideoError, ProcessingError
 
 
 def test_chromatic_aberration_falls_back_when_chromashift_missing(tmp_path, monkeypatch):
@@ -110,6 +112,21 @@ def test_subtitle_text_is_wrapped_for_safe_area():
     wrapped = _wrap_subtitle_payload_for_safe_area(source, max_chars_per_line=28)
 
     assert "The same source becomes\nYouTube, Shorts, and square\nsocial cuts." in wrapped
+
+
+def test_text_animated_rejects_unknown_animation_before_ffmpeg(tmp_path, monkeypatch):
+    from mcp_video.effects_engine import text_animated
+    from mcp_video.effects_engine import text as text_engine
+
+    input_path = tmp_path / "input.mp4"
+    output_path = tmp_path / "output.mp4"
+    input_path.write_bytes(b"placeholder")
+    monkeypatch.setattr(text_engine, "_run_command", lambda cmd: Path(cmd[-1]).write_bytes(b"output"))
+
+    with pytest.raises(MCPVideoError, match="animation"):
+        text_animated(str(input_path), "Hello", str(output_path), animation="spin")
+
+    assert not output_path.exists()
 
 
 def test_webvtt_metadata_blocks_are_preserved_during_safe_area_wrap():

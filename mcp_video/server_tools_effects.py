@@ -12,6 +12,8 @@ from .validation import VALID_MOGRAPH_STYLES
 from .ffmpeg_helpers import _validate_input_path
 from .limits import MAX_MOGRAPH_FRAMES
 
+VALID_TEXT_ANIMATIONS = {"fade", "glitch", "slide-up", "typewriter"}
+
 # ---------------------------------------------------------------------------
 # Visual Effects Tools (P1 Features)
 # ---------------------------------------------------------------------------
@@ -376,6 +378,12 @@ def video_text_animated(
     Returns:
         Dict with success status and output_path.
     """
+    if animation not in VALID_TEXT_ANIMATIONS:
+        raise MCPVideoError(
+            f"animation must be one of {sorted(VALID_TEXT_ANIMATIONS)}, got {animation}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
     input_path = _validate_input_path(input_path)
     if not (8 <= size <= 500):
         raise MCPVideoError(

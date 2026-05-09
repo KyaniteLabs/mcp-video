@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from ..defaults import DEFAULT_SAFE_SUBTITLE_FONT_SIZE, DEFAULT_SUBTITLE_MAX_CHARS_PER_LINE, DEFAULT_SUBTITLE_MAX_LINES
-from ..errors import InputFileError
+from ..errors import InputFileError, MCPVideoError
 from ..ffmpeg_helpers import _sanitize_ffmpeg_number
 from ..ffmpeg_helpers import (
     _validate_input_path,
@@ -445,7 +445,13 @@ def text_animated(
     video = _validate_input_path(video)
     _validate_output_path(output)
 
-    strategy = _ANIMATION_STRATEGIES.get(animation, _build_fade_filter)
+    strategy = _ANIMATION_STRATEGIES.get(animation)
+    if strategy is None:
+        raise MCPVideoError(
+            f"animation must be one of {sorted(_ANIMATION_STRATEGIES)}, got {animation}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
     filter_complex, cmd_path = strategy(
         text=text,
         font=font,

@@ -53,6 +53,7 @@ from mcp_video.server import (
     video_stabilize,
     video_storyboard,
     video_template_preview,
+    video_text_animated,
     video_thumbnail,
     video_trim,
     video_watermark,
@@ -181,6 +182,14 @@ class TestVideoAddTextTool:
             result = video_add_text(sample_video, text="Hello")
             assert result["success"] is False
             assert "error" in result
+
+
+class TestVideoTextAnimatedTool:
+    def test_rejects_unknown_animation_before_input_validation(self):
+        result = video_text_animated("/tmp/missing.mp4", text="Hello", animation="spin")
+
+        assert result["success"] is False
+        assert "animation" in result["error"]["message"]
 
 
 class TestVideoAddAudioTool:
