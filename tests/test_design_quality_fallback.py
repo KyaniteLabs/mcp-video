@@ -33,8 +33,7 @@ class TestGetMeanLumaFallback:
         """When ffmpeg stderr has no YAVG line, return None not 128."""
         with patch("mcp_video.design_quality.guardrails.probe.subprocess.run") as mock_run:
             mock_run.return_value = FakeCompletedProcess(
-                stderr="frame=   10 fps=0.0 q=-1.0 N/A\n"
-                       "some other output without signalstats\n",
+                stderr="frame=   10 fps=0.0 q=-1.0 N/A\nsome other output without signalstats\n",
             )
             result = guardrails._get_mean_luma("/tmp/nonexistent.mp4")
             assert result is None, f"Expected None on parse failure, got {result}"
@@ -57,8 +56,7 @@ class TestGetContrastFallback:
         """When ffmpeg stderr has no YSTD line, return None not 50."""
         with patch("mcp_video.design_quality.guardrails.probe.subprocess.run") as mock_run:
             mock_run.return_value = FakeCompletedProcess(
-                stderr="frame=   10 fps=0.0 q=-1.0 N/A\n"
-                       "some other output without signalstats\n",
+                stderr="frame=   10 fps=0.0 q=-1.0 N/A\nsome other output without signalstats\n",
             )
             result = guardrails._get_contrast("/tmp/nonexistent.mp4")
             assert result is None, f"Expected None on parse failure, got {result}"
@@ -86,10 +84,7 @@ class TestTechnicalScoreDoesNotRewardFailure:
             patch.object(guardrails, "_analyze_colors", return_value={"rgb_means": [128, 128, 128], "saturation": 50}),
         ):
             score = guardrails._calculate_technical_score("/tmp/test.mp4")
-            assert score < 100, (
-                f"Technical score should not be perfect when luma analysis "
-                f"failed, got {score}"
-            )
+            assert score < 100, f"Technical score should not be perfect when luma analysis failed, got {score}"
 
     def test_failed_contrast_does_not_score_100(self, guardrails):
         """When _get_contrast returns None, contrast score should not be 100."""
@@ -100,10 +95,7 @@ class TestTechnicalScoreDoesNotRewardFailure:
             patch.object(guardrails, "_analyze_colors", return_value={"rgb_means": [128, 128, 128], "saturation": 50}),
         ):
             score = guardrails._calculate_technical_score("/tmp/test.mp4")
-            assert score < 100, (
-                f"Technical score should not be perfect when contrast analysis "
-                f"failed, got {score}"
-            )
+            assert score < 100, f"Technical score should not be perfect when contrast analysis failed, got {score}"
 
 
 class TestCheckTypographyHandlesNone:
@@ -119,6 +111,5 @@ class TestCheckTypographyHandlesNone:
             guardrails._check_typography("/tmp/test.mp4")
             categories = [i.category for i in guardrails.issues]
             assert "typography" in categories, (
-                f"Expected a typography issue when luma analysis failed, "
-                f"got categories: {categories}"
+                f"Expected a typography issue when luma analysis failed, got categories: {categories}"
             )
