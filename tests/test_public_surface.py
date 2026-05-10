@@ -256,7 +256,7 @@ def test_server_tool_registry_keeps_public_tool_names():
     tool_names = {tool.name for tool in asyncio.run(mcp.list_tools())}
 
     assert tool_names >= EXPECTED_SERVER_TOOLS
-    assert len(tool_names) == 103
+    assert len(tool_names) == 115
 
 
 def test_hyperframes_tts_schema_can_list_voices_without_text():
@@ -281,7 +281,7 @@ def test_stdio_server_launches_and_lists_tools_like_registry_clients():
         tool_names = {tool.name for tool in tools_result.tools}
         assert init_result.serverInfo.name == "mcp-video"
         assert tool_names >= EXPECTED_SERVER_TOOLS
-        assert len(tool_names) == 103
+        assert len(tool_names) == 115
 
     asyncio.run(check_server())
 
