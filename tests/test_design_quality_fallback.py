@@ -98,6 +98,28 @@ class TestTechnicalScoreDoesNotRewardFailure:
             assert score < 100, f"Technical score should not be perfect when contrast analysis failed, got {score}"
 
 
+class TestProbeVideoStreamSelection:
+    """Design quality probing must use the video stream, not the first stream."""
+
+    def test_probe_selects_first_video_stream(self, guardrails):
+        """ffprobe should explicitly select v:0 so audio-first MP4s do not produce 0/0 FPS."""
+        with patch("mcp_video.design_quality.guardrails.probe.subprocess.run") as mock_run:
+            mock_run.return_value = FakeCompletedProcess(
+                stdout='{"streams":[{"width":1280,"height":720,"r_frame_rate":"30000/1001","duration":"8.0"}]}',
+            )
+            result = guardrails._probe_video("/tmp/audio-first.mp4")
+
+        cmd = mock_run.call_args.args[0]
+        assert "-select_streams" in cmd
+        assert cmd[cmd.index("-select_streams") + 1] == "v:0"
+        assert result["width"] == 1280
+
+    def test_get_fps_falls_back_when_probe_reports_zero_rate(self, guardrails):
+        """A 0/0 frame rate should not crash design quality scoring."""
+        with patch.object(guardrails, "_probe_video", return_value={"r_frame_rate": "0/0"}):
+            assert guardrails._get_fps("/tmp/audio-first.mp4") == 30.0
+
+
 class TestCheckTypographyHandlesNone:
     """_check_typography must not silently pass when luma analysis fails."""
 

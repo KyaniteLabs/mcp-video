@@ -28,6 +28,8 @@ class ProbeMixin:
             "ffprobe",
             "-v",
             "error",
+            "-select_streams",
+            "v:0",
             "-show_entries",
             "stream=width,height,r_frame_rate,duration",
             "-of",
@@ -47,8 +49,13 @@ class ProbeMixin:
         fps_str = probe.get("r_frame_rate", "30/1")
         if "/" in fps_str:
             num, den = fps_str.split("/")
-            return float(num) / float(den)
-        return float(fps_str)
+            numerator = float(num)
+            denominator = float(den)
+            if numerator <= 0 or denominator <= 0:
+                return 30.0
+            return numerator / denominator
+        fps = float(fps_str)
+        return fps if fps > 0 else 30.0
 
     def _get_duration(self, video_path: str) -> float:
         """Get video duration in seconds."""
