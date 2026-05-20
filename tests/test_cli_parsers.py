@@ -258,6 +258,29 @@ class TestParserQuality:
         }
         assert expected <= names
 
+    def test_quality_commands_accept_output_format_after_subcommand(self):
+        from mcp_video.cli.parser import build_parser
+
+        parser = build_parser()
+        cases = [
+            ["video-auto-chapters", "input.mp4", "--format", "json"],
+            ["video-info-detailed", "input.mp4", "--format", "json"],
+            ["video-quality-check", "input.mp4", "--format", "json"],
+            ["video-design-quality-check", "input.mp4", "--format", "json"],
+            ["video-fix-design-issues", "input.mp4", "--format", "json"],
+        ]
+
+        for argv in cases:
+            args = parser.parse_args(argv)
+            assert args.format == "json"
+
+    def test_quality_commands_keep_global_output_format(self):
+        from mcp_video.cli.parser import build_parser
+
+        args = build_parser().parse_args(["--format", "json", "video-quality-check", "input.mp4"])
+
+        assert args.format == "json"
+
 
 class TestParserInit:
     def test_build_parser_returns_parser(self):
