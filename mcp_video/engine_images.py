@@ -34,6 +34,7 @@ def create_from_images(
             code="invalid_parameter",
         )
     validated_images = [_validate_input_path(img) for img in images]
+    fps_arg = _format_fps_for_ffmpeg(fps)
 
     output = output_path or _auto_output(images[0], "from_images")
     _validate_output_path(output)
@@ -54,7 +55,7 @@ def create_from_images(
                     "libx264",
                     *_quality_args(),
                     "-r",
-                    f"{fps:g}",
+                    fps_arg,
                     "-pix_fmt",
                     "yuv420p",
                     *_movflags_args(output),
@@ -69,6 +70,13 @@ def create_from_images(
         "create_from_images",
         timing,
     )
+
+
+def _format_fps_for_ffmpeg(fps: float) -> str:
+    """Serialize FPS without rounding non-integer values before FFmpeg sees them."""
+    if float(fps).is_integer():
+        return str(int(fps))
+    return repr(float(fps))
 
 
 def _normalize_images(images: list[str], tmpdir: str) -> list[str]:

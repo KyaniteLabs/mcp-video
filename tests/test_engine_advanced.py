@@ -965,6 +965,12 @@ class TestImageSequences:
         )
         assert probe_result.stdout.strip() == "12/1"
 
+    def test_create_from_images_preserves_precise_non_integer_fps(self):
+        from mcp_video.engine_images import _format_fps_for_ffmpeg
+
+        assert _format_fps_for_ffmpeg(29.97002997) == "29.97002997"
+        assert _format_fps_for_ffmpeg(12.00001) == "12.00001"
+
     def test_create_from_images_empty_raises(self):
         from mcp_video.engine import create_from_images
 
