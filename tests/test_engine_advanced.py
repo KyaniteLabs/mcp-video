@@ -968,6 +968,9 @@ class TestImageSequences:
     def test_create_from_images_preserves_precise_non_integer_fps(self):
         from mcp_video.engine_images import _format_fps_for_ffmpeg
 
+        assert _format_fps_for_ffmpeg(30.0) == "30"
+        assert _format_fps_for_ffmpeg(24.0) == "24"
+        assert _format_fps_for_ffmpeg(30) == "30"
         assert _format_fps_for_ffmpeg(29.97002997) == "29.97002997"
         assert _format_fps_for_ffmpeg(12.00001) == "12.00001"
 

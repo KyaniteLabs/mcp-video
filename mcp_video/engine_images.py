@@ -74,9 +74,10 @@ def create_from_images(
 
 def _format_fps_for_ffmpeg(fps: float) -> str:
     """Serialize FPS without rounding non-integer values before FFmpeg sees them."""
-    if float(fps).is_integer():
-        return str(int(fps))
-    return repr(float(fps))
+    fps_value = float(fps)
+    if fps_value.is_integer():
+        return str(int(fps_value))
+    return repr(fps_value)
 
 
 def _normalize_images(images: list[str], tmpdir: str) -> list[str]:
