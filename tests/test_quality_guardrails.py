@@ -326,10 +326,38 @@ class TestVisualQualityGuardrails:
         report = guardrails.check_audio_levels(video_path)
 
         assert report.check_name == "audio_levels"
-        # Should detect no audio and still pass
-        if report.details.get("has_audio") is False:
-            assert report.passed is True
-            assert report.score == 100.0
+        assert report.details.get("has_audio") is False
+        assert report.passed is True
+        assert report.score == 100.0
+
+    def test_check_audio_levels_skips_loudnorm_for_silent_video(self, guardrails):
+        """No-audio videos should not turn loudnorm missing JSON into a hard failure."""
+        with (
+            patch(
+                "mcp_video.quality_guardrails._run_ffprobe_json", return_value={"streams": [{"codec_type": "video"}]}
+            ),
+            patch.object(guardrails, "_analyze_loudnorm") as loudnorm,
+        ):
+            report = guardrails.check_audio_levels("/tmp/silent.mp4")
+
+        loudnorm.assert_not_called()
+        assert report.passed is True
+        assert report.details == {"has_audio": False}
+
+    def test_check_audio_levels_reports_loudnorm_failure_when_audio_exists(self, guardrails):
+        """Real audio streams should still fail when loudnorm analysis cannot produce metrics."""
+        diagnostic = {"stage": "ffmpeg_loudnorm", "message": "ffmpeg loudnorm returned no JSON payload"}
+        with (
+            patch(
+                "mcp_video.quality_guardrails._run_ffprobe_json", return_value={"streams": [{"codec_type": "audio"}]}
+            ),
+            patch.object(guardrails, "_analyze_loudnorm", return_value={"_error": diagnostic}),
+        ):
+            report = guardrails.check_audio_levels("/tmp/with-audio.mp4")
+
+        assert report.passed is False
+        assert report.details["has_audio"] is True
+        assert report.details["diagnostic"] == diagnostic
 
     def test_run_all_checks(self, guardrails, tmp_path):
         """Test running all quality checks."""

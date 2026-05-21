@@ -274,7 +274,9 @@ def _format_video_info_detailed(result: dict[str, Any]) -> None:
 
 
 def _format_quality_check(result: Any) -> None:
-    data = result if isinstance(result, dict) else {}
+    data = _model_dump(result)
+    if not isinstance(data, dict):
+        data = {}
     table = Table(title="Quality Check")
     table.add_column("Check", style="bold cyan")
     table.add_column("Status")
@@ -284,7 +286,24 @@ def _format_quality_check(result: Any) -> None:
         for check, info in checks.items():
             status = "[green]PASS[/green]" if info.get("passed") else "[red]FAIL[/red]"
             table.add_row(check, status, str(info.get("value", "")))
-    overall = "[green]PASS[/green]" if data.get("passed") else "[red]FAIL[/red]"
+    elif isinstance(checks, list):
+        for info in checks:
+            if not isinstance(info, dict):
+                continue
+            status = "[green]PASS[/green]" if info.get("passed") else "[red]FAIL[/red]"
+            score = info.get("score")
+            message = info.get("message")
+            value_parts = []
+            if score is not None:
+                try:
+                    value_parts.append(f"{float(score):.1f}")
+                except (TypeError, ValueError):
+                    value_parts.append(escape(str(score)))
+            if message:
+                value_parts.append(escape(str(message)))
+            table.add_row(str(info.get("name", "unknown")), status, " — ".join(value_parts))
+    overall_passed = data.get("all_passed", data.get("passed", False))
+    overall = "[green]PASS[/green]" if overall_passed else "[red]FAIL[/red]"
     console.print(table)
     console.print(f"[bold]Overall: {overall}[/bold]")
 

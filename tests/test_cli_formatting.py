@@ -5,9 +5,10 @@ Console which we do not capture.
 """
 
 from types import SimpleNamespace
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 
+from mcp_video.cli import formatting
 from mcp_video.cli.formatting import (
     _format_ai_color_grade,
     _format_ai_remove_silence,
@@ -318,6 +319,27 @@ class TestFormattersDictOrModel:
             }
         )
         _format_quality_check({})
+
+    def test_format_quality_check_list_schema_prints_rows_and_all_passed(self):
+        with patch.object(formatting.console, "print") as print_mock:
+            _format_quality_check(
+                {
+                    "checks": [
+                        {
+                            "name": "audio_levels",
+                            "passed": True,
+                            "score": 100.0,
+                            "message": "No audio stream detected in video",
+                        },
+                        {"name": "contrast", "passed": False, "score": 42.0, "message": "Low contrast"},
+                    ],
+                    "all_passed": False,
+                }
+            )
+
+        table = print_mock.call_args_list[0].args[0]
+        assert table.row_count == 2
+        assert "FAIL" in print_mock.call_args_list[1].args[0]
 
     def test_format_video_analyze(self):
         _format_video_analyze(
