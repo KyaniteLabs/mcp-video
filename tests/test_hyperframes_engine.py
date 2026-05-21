@@ -33,6 +33,7 @@ from mcp_video.errors import (
     HyperframesNotFoundError,
     HyperframesProjectError,
     HyperframesRenderError,
+    InputFileError,
     MCPVideoError,
 )
 
@@ -277,6 +278,53 @@ class TestRender:
             assert cmd[cmd.index("--resolution") + 1] == "portrait"
             assert "--width" not in cmd
             assert "--height" not in cmd
+
+    def test_render_serializes_inline_variables(self, sample_hyperframes_project):
+        """render() should pass inline runtime data as JSON to Hyperframes."""
+        project = str(sample_hyperframes_project)
+        fake_cp = _make_completed_process(stdout="done")
+
+        with (
+            _mock_deps_ok(),
+            patch("mcp_video.hyperframes_engine.subprocess.run", return_value=fake_cp) as mock_run,
+            patch("os.path.isfile", return_value=True),
+            patch("os.path.getsize", return_value=2 * 1024 * 1024),
+        ):
+            render(project, output_path="/tmp/out.mp4", variables={"title": "Launch", "count": 3})
+
+        cmd = mock_run.call_args[0][0]
+        assert cmd[cmd.index("--variables") + 1] == '{"count":3,"title":"Launch"}'
+
+    def test_render_accepts_variables_file(self, sample_hyperframes_project, tmp_path):
+        """render() should pass variables_file to Hyperframes."""
+        project = str(sample_hyperframes_project)
+        variables_file = tmp_path / "variables.json"
+        variables_file.write_text('{"title":"Launch"}')
+        fake_cp = _make_completed_process(stdout="done")
+
+        with (
+            _mock_deps_ok(),
+            patch("mcp_video.hyperframes_engine.subprocess.run", return_value=fake_cp) as mock_run,
+            patch("os.path.isfile", return_value=True),
+            patch("os.path.getsize", return_value=2 * 1024 * 1024),
+        ):
+            render(project, output_path="/tmp/out.mp4", variables_file=str(variables_file))
+
+        cmd = mock_run.call_args[0][0]
+        assert cmd[cmd.index("--variables-file") + 1] == str(variables_file)
+
+    def test_render_validates_variables_file(self, sample_hyperframes_project):
+        """render() should reject missing variables_file before subprocess execution."""
+        project = str(sample_hyperframes_project)
+
+        with (
+            _mock_deps_ok(),
+            patch("mcp_video.hyperframes_engine.subprocess.run") as mock_run,
+            pytest.raises(InputFileError),
+        ):
+            render(project, output_path="/tmp/out.mp4", variables_file="/tmp/missing-variables.json")
+
+        mock_run.assert_not_called()
 
     def test_raises_on_nonzero_exit(self, sample_hyperframes_project):
         """render() should raise HyperframesRenderError on non-zero exit."""
@@ -651,6 +699,20 @@ class TestStill:
             idx = cmd.index("--at")
             assert cmd[idx + 1] == "1.4"
 
+    def test_forwards_runtime_variables_to_snapshot(self, sample_hyperframes_project, tmp_path):
+        """still() should pass runtime data through to the snapshot CLI."""
+        project = Path(sample_hyperframes_project)
+        variables_file = tmp_path / "runtime.json"
+        variables_file.write_text('{"headline":"Runtime"}')
+        fake_cp = _make_completed_process(stdout="Rendered frame.")
+
+        with _mock_deps_ok(), patch("mcp_video.hyperframes_engine.subprocess.run", return_value=fake_cp) as mock_run:
+            still(str(project), frame=42, variables={"headline": "Runtime"}, variables_file=str(variables_file))
+
+        cmd = mock_run.call_args[0][0]
+        assert cmd[cmd.index("--variables") + 1] == '{"headline":"Runtime"}'
+        assert cmd[cmd.index("--variables-file") + 1] == str(variables_file)
+
 
 class TestSnapshot:
     """Tests for Hyperframes 0.5 snapshot path handling."""
@@ -684,6 +746,32 @@ class TestSnapshot:
         assert "snapshot" in cmd
         assert "--at" in cmd
         assert cmd[cmd.index("--at") + 1] == "0.5,1.25"
+
+    def test_builds_runtime_data_args(self, sample_hyperframes_project, tmp_path):
+        project = str(sample_hyperframes_project)
+        variables_file = tmp_path / "vars.json"
+        variables_file.write_text('{"quote":"Hello"}')
+        fake_cp = _make_completed_process(stdout="captured")
+
+        with _mock_deps_ok(), patch("mcp_video.hyperframes_engine.subprocess.run", return_value=fake_cp) as mock_run:
+            snapshot(project, frames=1, variables={"quote": "Hello"}, variables_file=str(variables_file))
+
+        cmd = mock_run.call_args[0][0]
+        assert "snapshot" in cmd
+        assert cmd[cmd.index("--variables") + 1] == '{"quote":"Hello"}'
+        assert cmd[cmd.index("--variables-file") + 1] == str(variables_file)
+
+    def test_validates_variables_file(self, sample_hyperframes_project):
+        project = str(sample_hyperframes_project)
+
+        with (
+            _mock_deps_ok(),
+            patch("mcp_video.hyperframes_engine.subprocess.run") as mock_run,
+            pytest.raises(InputFileError),
+        ):
+            snapshot(project, frames=1, variables_file="/tmp/missing-snapshot-vars.json")
+
+        mock_run.assert_not_called()
 
     def test_still_returns_actual_snapshot_path_not_requested_path(self, sample_hyperframes_project):
         project = Path(sample_hyperframes_project)
