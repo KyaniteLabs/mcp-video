@@ -9,6 +9,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from mcp_video.hyperframes_engine import (
+    HYPERFRAMES_COMMAND_ENV,
+    _hyperframes_command_prefix,
     _require_hyperframes_deps,
     _validate_project,
     add_block,
@@ -51,7 +53,7 @@ def _make_completed_process(
 ) -> subprocess.CompletedProcess[str]:
     """Create a fake subprocess.CompletedProcess for mocking."""
     return subprocess.CompletedProcess(
-        args=["npx", "hyperframes"],
+        args=["hyperframes"],
         returncode=returncode,
         stdout=stdout,
         stderr=stderr,
@@ -59,14 +61,17 @@ def _make_completed_process(
 
 
 def _hyperframes_subcommand(cmd: list[str]) -> str:
-    return cmd[cmd.index("hyperframes") + 1]
+    for index, value in enumerate(cmd):
+        if Path(value).name in {"hyperframes", "hyperframes.cmd"}:
+            return cmd[index + 1]
+    raise AssertionError(f"hyperframes command not found in {cmd!r}")
 
 
 def _mock_deps_ok():
-    """Return a patcher that makes shutil.which find node and npx."""
+    """Return a patcher that makes shutil.which find Node and Hyperframes."""
 
     def _which(name: str):
-        if name in ("node", "npx"):
+        if name in ("node", "npm", "npx", "hyperframes"):
             return f"/usr/bin/{name}"
         return None
 
@@ -78,15 +83,24 @@ def _has_real_hyperframes_cli() -> bool:
     if os.environ.get("MCP_VIDEO_RUN_HYPERFRAMES_INTEGRATION") != "1":
         return False
     try:
+        command = [*_hyperframes_command_prefix(), "--version"]
         result = subprocess.run(
-            ["npx", "--yes", "hyperframes", "--version"],
+            command,
             capture_output=True,
             text=True,
             timeout=15,
         )
-    except (FileNotFoundError, subprocess.TimeoutExpired):
+    except (FileNotFoundError, HyperframesNotFoundError, subprocess.TimeoutExpired):
         return False
     return result.returncode == 0
+
+
+def _write_local_hyperframes_bin(project: Path) -> Path:
+    bin_path = project / "node_modules" / ".bin" / "hyperframes"
+    bin_path.parent.mkdir(parents=True)
+    bin_path.write_text("#!/bin/sh\n", encoding="utf-8")
+    bin_path.chmod(0o755)
+    return bin_path
 
 
 # ---------------------------------------------------------------------------
@@ -105,22 +119,24 @@ class TestRequireHyperframesDeps:
         mock_which.assert_called_with("node")
 
     @patch("mcp_video.hyperframes_engine.shutil.which")
-    def test_raises_when_npx_missing(self, mock_which):
-        """Should raise HyperframesNotFoundError when npx is not on PATH."""
+    def test_raises_when_hyperframes_missing(self, mock_which):
+        """Should raise HyperframesNotFoundError when the Hyperframes CLI is unavailable."""
 
         def _which(name: str):
             if name == "node":
                 return "/usr/bin/node"
+            if name == "npx":
+                return "/usr/bin/npx"
             return None
 
         mock_which.side_effect = _which
 
-        with pytest.raises(HyperframesNotFoundError, match="npx not found"):
+        with pytest.raises(HyperframesNotFoundError, match="Hyperframes CLI not found"):
             _require_hyperframes_deps()
 
     @patch("mcp_video.hyperframes_engine.shutil.which")
     def test_passes_when_both_found(self, mock_which):
-        """Should not raise when both node and npx are available."""
+        """Should not raise when Node and Hyperframes are available."""
 
         def _which(name: str):
             return f"/usr/bin/{name}"
@@ -128,6 +144,33 @@ class TestRequireHyperframesDeps:
         mock_which.side_effect = _which
 
         _require_hyperframes_deps()  # should not raise
+
+    def test_prefers_configured_hyperframes_command(self, monkeypatch):
+        monkeypatch.setenv(HYPERFRAMES_COMMAND_ENV, "/opt/hyperframes/bin/hyperframes --project-root /srv/app")
+
+        assert _hyperframes_command_prefix() == ["/opt/hyperframes/bin/hyperframes", "--project-root", "/srv/app"]
+
+    def test_prefers_local_node_modules_binary(self, tmp_path, monkeypatch):
+        monkeypatch.delenv(HYPERFRAMES_COMMAND_ENV, raising=False)
+        expected = _write_local_hyperframes_bin(tmp_path)
+        monkeypatch.setattr(
+            "mcp_video.hyperframes_engine.shutil.which", lambda name: "/usr/bin/node" if name == "node" else None
+        )
+
+        assert _hyperframes_command_prefix(cwd=tmp_path) == [str(expected)]
+
+    def test_does_not_fall_back_to_package_resolving_npx(self, monkeypatch):
+        monkeypatch.delenv(HYPERFRAMES_COMMAND_ENV, raising=False)
+
+        def _which(name: str):
+            if name in {"node", "npx"}:
+                return f"/usr/bin/{name}"
+            return None
+
+        monkeypatch.setattr("mcp_video.hyperframes_engine.shutil.which", _which)
+
+        with pytest.raises(HyperframesNotFoundError, match="set MCP_VIDEO_HYPERFRAMES_COMMAND"):
+            _hyperframes_command_prefix()
 
     def test_raises_with_correct_error_type(self):
         """HyperframesNotFoundError should have error_type='dependency_error'."""
@@ -183,7 +226,7 @@ class TestRender:
     """Tests for render()."""
 
     def test_builds_correct_cli_args(self, sample_hyperframes_project):
-        """render() should invoke npx hyperframes with the right arguments."""
+        """render() should invoke Hyperframes with the right arguments."""
         project = str(sample_hyperframes_project)
         fake_cp = _make_completed_process(stdout="Rendered.")
 
@@ -203,8 +246,8 @@ class TestRender:
 
             call_args = mock_run.call_args
             cmd = call_args[0][0]
-            assert cmd[0] == "npx"
-            assert cmd[1:3] == ["--yes", "hyperframes"]
+            assert Path(cmd[0]).name in {"hyperframes", "hyperframes.cmd"}
+            assert "npx" not in cmd[:3]
             assert "--no-install" not in cmd
             assert "render" in cmd
             assert "/tmp/out.mp4" in cmd
@@ -669,7 +712,7 @@ class TestPreview:
             assert result.port == 8080
 
     def test_launches_popen_with_correct_command(self, sample_hyperframes_project):
-        """preview() should launch npx hyperframes preview with --port."""
+        """preview() should launch Hyperframes preview with --port."""
         project = str(sample_hyperframes_project)
         mock_proc = MagicMock()
         mock_proc.poll.return_value = None
@@ -682,8 +725,8 @@ class TestPreview:
 
             call_args = mock_popen.call_args
             cmd = call_args[0][0]
-            assert cmd[0] == "npx"
-            assert cmd[1:3] == ["--yes", "hyperframes"]
+            assert Path(cmd[0]).name in {"hyperframes", "hyperframes.cmd"}
+            assert "npx" not in cmd[:3]
             assert "--no-install" not in cmd
             assert "preview" in cmd
             assert "--port" in cmd
@@ -847,7 +890,7 @@ class TestHyperframes05Tools:
 
         assert result.items[0]["name"] == "tiktok-follow"
         cmd = mock_run.call_args[0][0]
-        assert cmd[0] == "npx"
+        assert cmd[0] == "/usr/bin/hyperframes"
         assert _hyperframes_subcommand(cmd) == "catalog"
         assert "--json" in cmd
         assert "--tag" in cmd
@@ -878,7 +921,7 @@ class TestHyperframes05Tools:
 
         assert result.data["projectPath"].endswith("captured")
         cmd = mock_run.call_args[0][0]
-        assert cmd[0] == "npx"
+        assert cmd[0] == "/usr/bin/hyperframes"
         assert _hyperframes_subcommand(cmd) == "capture"
         assert "https://example.com" in cmd
         assert "--json" in cmd
@@ -991,7 +1034,7 @@ class TestCreateProject:
             create_project("safe-name", output_dir="bad\x00dir")
 
     def test_runs_hyperframes_init(self, tmp_path):
-        """create_project() should run npx hyperframes init with correct args."""
+        """create_project() should run Hyperframes init with correct args."""
         with _mock_deps_ok(), patch("mcp_video.hyperframes_engine.subprocess.run") as mock_run:
             mock_run.return_value = _make_completed_process(stdout="initialized")
 
@@ -1010,8 +1053,8 @@ class TestCreateProject:
 
             call_args = mock_run.call_args
             cmd = call_args[0][0]
-            assert cmd[0] == "npx"
-            assert cmd[1:3] == ["--yes", "hyperframes"]
+            assert Path(cmd[0]).name in {"hyperframes", "hyperframes.cmd"}
+            assert "npx" not in cmd[:3]
             assert "--no-install" not in cmd
             assert "init" in cmd
             assert "test-project" in cmd
@@ -1069,7 +1112,7 @@ class TestValidate:
 
         assert result.valid is False
         assert any("Node.js" in i for i in result.issues)
-        assert any("npx" in i for i in result.issues)
+        assert any("Hyperframes CLI" in i for i in result.issues)
 
     def test_valid_project(self, tmp_path):
         """validate() should return valid=True for a well-formed project."""
@@ -1115,7 +1158,7 @@ class TestAddBlock:
     """Tests for add_block()."""
 
     def test_adds_block_with_correct_args(self, sample_hyperframes_project):
-        """add_block() should invoke npx hyperframes add with the block name."""
+        """add_block() should invoke Hyperframes add with the block name."""
         project = str(sample_hyperframes_project)
         fake_cp = _make_completed_process(stdout='{"files": ["blocks/test.tsx"]}')
 
@@ -1157,7 +1200,7 @@ class TestRenderAndPost:
         """render_and_post() should render then apply resize."""
 
         def _which(name: str):
-            if name in ("node", "npx"):
+            if name in ("node", "npx", "hyperframes"):
                 return f"/usr/bin/{name}"
             if name in ("ffmpeg", "ffprobe"):
                 return f"/usr/bin/{name}"
@@ -1194,7 +1237,7 @@ class TestRenderAndPost:
         """render_and_post() should chain multiple post-processing ops."""
 
         def _which(name: str):
-            if name in ("node", "npx", "ffmpeg", "ffprobe"):
+            if name in ("node", "npx", "hyperframes", "ffmpeg", "ffprobe"):
                 return f"/usr/bin/{name}"
             return None
 
@@ -1228,7 +1271,7 @@ class TestRenderAndPost:
         """render_and_post() should not report success when Hyperframes produced no artifact."""
 
         def _which(name: str):
-            if name in ("node", "npx"):
+            if name in ("node", "npx", "hyperframes"):
                 return f"/usr/bin/{name}"
             return None
 
@@ -1249,7 +1292,7 @@ class TestRenderAndPost:
         """render_and_post() should raise MCPVideoError for unknown operations."""
 
         def _which(name: str):
-            if name in ("node", "npx"):
+            if name in ("node", "npx", "hyperframes"):
                 return f"/usr/bin/{name}"
             return None
 
@@ -1276,7 +1319,7 @@ class TestRenderAndPost:
         """render_and_post() should accept 'type' key as alias for 'op'."""
 
         def _which(name: str):
-            if name in ("node", "npx", "ffmpeg", "ffprobe"):
+            if name in ("node", "npx", "hyperframes", "ffmpeg", "ffprobe"):
                 return f"/usr/bin/{name}"
             return None
 
@@ -1317,19 +1360,19 @@ class TestErrorHandling:
         project = str(sample_hyperframes_project)
 
         with _mock_deps_ok(), patch("mcp_video.hyperframes_engine.subprocess.run") as mock_run:
-            mock_run.side_effect = subprocess.TimeoutExpired(cmd="npx", timeout=600)
+            mock_run.side_effect = subprocess.TimeoutExpired(cmd="hyperframes", timeout=600)
 
             with pytest.raises(HyperframesRenderError, match="timed out"):
                 render(project, output_path="/tmp/out.mp4")
 
-    def test_render_npx_not_found(self, sample_hyperframes_project):
-        """render() should raise HyperframesNotFoundError when npx binary is missing."""
+    def test_render_hyperframes_not_found(self, sample_hyperframes_project):
+        """render() should raise HyperframesNotFoundError when the CLI binary is missing."""
         project = str(sample_hyperframes_project)
 
         with _mock_deps_ok(), patch("mcp_video.hyperframes_engine.subprocess.run") as mock_run:
-            mock_run.side_effect = FileNotFoundError("npx not found")
+            mock_run.side_effect = FileNotFoundError("hyperframes not found")
 
-            with pytest.raises(HyperframesNotFoundError, match="npx command not found"):
+            with pytest.raises(HyperframesNotFoundError, match="hyperframes command not found"):
                 render(project, output_path="/tmp/out.mp4")
 
     def test_render_error_has_command_and_returncode(self, sample_hyperframes_project):
@@ -1399,7 +1442,7 @@ class TestErrorHandling:
 @pytest.mark.hyperframes
 @pytest.mark.skipif(
     not _has_real_hyperframes_cli(),
-    reason="requires a Hyperframes CLI available via npx --yes hyperframes",
+    reason="requires a local Hyperframes CLI",
 )
 class TestHyperframesIntegration:
     """Integration tests that require a real Node.js/Hyperframes installation."""

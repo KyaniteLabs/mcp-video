@@ -11,7 +11,8 @@ import sys
 from collections.abc import Callable
 from typing import Any
 
-from .hyperframes_engine import HYPERFRAMES_COMMAND_PREFIX
+from .errors import HyperframesNotFoundError
+from .hyperframes_engine import HYPERFRAMES_COMMAND_ENV, _hyperframes_command_prefix
 from .limits import DOCTOR_COMMAND_TIMEOUT
 
 WhichFn = Callable[[str], str | None]
@@ -52,7 +53,7 @@ COMMAND_CHECKS = (
         "category": "hyperframes",
         "required": False,
         "command": ["npx", "--version"],
-        "install_hint": "Install npx/npm for Hyperframes CLI execution.",
+        "install_hint": "Install npx/npm only if your chosen Hyperframes package layout uses it.",
     },
     {
         "name": "npm",
@@ -165,8 +166,12 @@ def _check_mcp_video(find_spec: FindSpecFn, package_version: PackageVersionFn) -
 
 
 def _check_hyperframes_cli(which: WhichFn, version_runner: VersionRunner) -> dict[str, Any]:
-    command = [*HYPERFRAMES_COMMAND_PREFIX, "--version"]
-    path = which("npx")
+    try:
+        prefix = _hyperframes_command_prefix(which=which)
+    except HyperframesNotFoundError:
+        prefix = ["hyperframes"]
+    command = [*prefix, "--version"]
+    path = prefix[0] if prefix != ["hyperframes"] else which("hyperframes")
     version = version_runner(command) if path else None
     ok = path is not None and version is not None
     return {
@@ -179,7 +184,7 @@ def _check_hyperframes_cli(which: WhichFn, version_runner: VersionRunner) -> dic
         "command": command,
         "install_hint": None
         if ok
-        else "Install Hyperframes or make it resolvable with: npx --yes hyperframes --version",
+        else (f"Install a pinned Hyperframes package, add hyperframes to PATH, or set {HYPERFRAMES_COMMAND_ENV}."),
     }
 
 

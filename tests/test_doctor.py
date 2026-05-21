@@ -11,10 +11,10 @@ def test_run_diagnostics_marks_required_tools_ok_when_present():
     from mcp_video.doctor import run_diagnostics
 
     def fake_which(name: str) -> str | None:
-        return f"/usr/bin/{name}" if name in {"ffmpeg", "ffprobe", "node", "npm", "npx"} else None
+        return f"/usr/bin/{name}" if name in {"ffmpeg", "ffprobe", "node", "npm", "npx", "hyperframes"} else None
 
     def fake_version(command: list[str]) -> str | None:
-        if command[:3] == ["npx", "--yes", "hyperframes"]:
+        if command[:1] == ["/usr/bin/hyperframes"]:
             return "0.6.31"
         if command[:2] == ["node", "-e"]:
             return "0.6.31"
@@ -52,7 +52,7 @@ def test_run_diagnostics_marks_required_tools_ok_when_present():
     assert checks["npm"]["ok"] is True
     assert checks["npx"]["ok"] is True
     assert checks["hyperframes"]["ok"] is True
-    assert checks["hyperframes"]["command"] == ["npx", "--yes", "hyperframes", "--version"]
+    assert checks["hyperframes"]["command"] == ["/usr/bin/hyperframes", "--version"]
     assert checks["@hyperframes/core"]["ok"] is True
 
 

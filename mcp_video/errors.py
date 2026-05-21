@@ -112,7 +112,7 @@ class HyperframesNotFoundError(MCPVideoError):
     """Hyperframes CLI or Node.js not found on PATH."""
 
     def __init__(self, detail: str = "") -> None:
-        msg = "Hyperframes requires Node.js 22+ and npx. Install Node.js from https://nodejs.org"
+        msg = "Hyperframes requires Node.js 22+ and a resolvable Hyperframes CLI."
         if detail:
             msg += f" — {detail}"
         super().__init__(
@@ -121,7 +121,10 @@ class HyperframesNotFoundError(MCPVideoError):
             code="hyperframes_not_found",
             suggested_action={
                 "auto_fix": False,
-                "description": "Install Node.js (v22+) and ensure npx is on PATH, then run: npx hyperframes --version",
+                "description": (
+                    "Install Node.js (v22+) and a pinned Hyperframes package, add hyperframes to PATH, "
+                    "or set MCP_VIDEO_HYPERFRAMES_COMMAND."
+                ),
             },
         )
 

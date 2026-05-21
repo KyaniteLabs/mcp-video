@@ -94,7 +94,7 @@ pip install mcp-video
 mcp-video doctor
 ```
 
-Hyperframes tools additionally need Node.js 22+ because they call the Hyperframes CLI through `npx`.
+Hyperframes tools additionally need Node.js 22+ and a resolvable Hyperframes CLI. Install/pin Hyperframes in the active Node package layout, add `hyperframes` to `PATH`, or set `MCP_VIDEO_HYPERFRAMES_COMMAND`.
 
 ## Quick Start
 

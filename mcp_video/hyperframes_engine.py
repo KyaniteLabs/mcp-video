@@ -1,4 +1,4 @@
-"""Hyperframes engine — subprocess wrappers calling npx hyperframes CLI.
+"""Hyperframes engine — subprocess wrappers calling the Hyperframes CLI.
 
 No pip packages needed — Hyperframes is external (Node.js).
 
@@ -11,11 +11,12 @@ from __future__ import annotations
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import time
 import contextlib
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Any
 
@@ -40,7 +41,9 @@ from .hyperframes_models import (
     HyperframesValidationResult,
 )
 
-HYPERFRAMES_COMMAND_PREFIX = ["npx", "--yes", "hyperframes"]
+HYPERFRAMES_COMMAND_ENV = "MCP_VIDEO_HYPERFRAMES_COMMAND"
+HYPERFRAMES_COMMAND_PREFIX = ["hyperframes"]
+_HYPERFRAMES_BINARY_NAMES = ("hyperframes", "hyperframes.cmd")
 
 
 # ---------------------------------------------------------------------------
@@ -58,12 +61,62 @@ def _validate_project_name(name: str) -> str:
     return name
 
 
-def _require_hyperframes_deps() -> None:
-    """Raise a helpful error if Node.js/npx are not available."""
+def _find_local_hyperframes_binary(cwd: str | Path | None) -> Path | None:
+    start = Path(cwd) if cwd is not None else Path.cwd()
+    try:
+        start = start.resolve()
+    except OSError:
+        start = start.absolute()
+    if start.is_file():
+        start = start.parent
+
+    for base in (start, *start.parents):
+        for name in _HYPERFRAMES_BINARY_NAMES:
+            candidate = base / "node_modules" / ".bin" / name
+            if candidate.is_file() and (name.endswith(".cmd") or os.access(candidate, os.X_OK)):
+                return candidate
+    return None
+
+
+def _hyperframes_command_prefix(
+    cwd: str | Path | None = None,
+    *,
+    env: Mapping[str, str] | None = None,
+    which: Callable[[str], str | None] | None = None,
+) -> list[str]:
+    env_map = os.environ if env is None else env
+    which_fn = shutil.which if which is None else which
+    configured = env_map.get(HYPERFRAMES_COMMAND_ENV)
+    if configured is not None:
+        command = shlex.split(configured)
+        if command:
+            return command
+        raise HyperframesNotFoundError(f"{HYPERFRAMES_COMMAND_ENV} is set but empty")
+
+    local_binary = _find_local_hyperframes_binary(cwd)
+    if local_binary is not None:
+        return [str(local_binary)]
+
+    path_binary = which_fn("hyperframes")
+    if path_binary:
+        return [path_binary]
+
+    raise HyperframesNotFoundError(
+        "Hyperframes CLI not found. Install a pinned Hyperframes package with "
+        "node_modules/.bin/hyperframes, add hyperframes to PATH, or set "
+        f"{HYPERFRAMES_COMMAND_ENV}."
+    )
+
+
+def _require_node() -> None:
     if shutil.which("node") is None:
         raise HyperframesNotFoundError("node not found on PATH")
-    if shutil.which("npx") is None:
-        raise HyperframesNotFoundError("npx not found on PATH")
+
+
+def _require_hyperframes_deps(cwd: str | Path | None = None) -> None:
+    """Raise a helpful error if Node.js/Hyperframes are not available."""
+    _require_node()
+    _hyperframes_command_prefix(cwd=cwd)
 
 
 def _find_entry_point(project: Path) -> Path:
@@ -95,8 +148,8 @@ def _run_hyperframes(
     cwd: str | Path,
     timeout: int = 600,
 ) -> subprocess.CompletedProcess[str]:
-    """Run an npx hyperframes command and return the CompletedProcess."""
-    cmd = [*HYPERFRAMES_COMMAND_PREFIX, *args]
+    """Run a Hyperframes command and return the CompletedProcess."""
+    cmd = [*_hyperframes_command_prefix(cwd=cwd), *args]
     try:
         return subprocess.run(
             cmd,
@@ -108,7 +161,7 @@ def _run_hyperframes(
     except subprocess.TimeoutExpired:
         raise HyperframesRenderError(" ".join(cmd), -1, "Render timed out") from None
     except FileNotFoundError:
-        raise HyperframesNotFoundError("npx command not found") from None
+        raise HyperframesNotFoundError(f"{cmd[0]} command not found") from None
 
 
 # ---------------------------------------------------------------------------
@@ -332,7 +385,7 @@ def _hyperframes_op(
             code="invalid_parameter",
         )
 
-    _require_hyperframes_deps()
+    _require_node()
 
     cwd_key = spec.get("cwd_key", "project_path")
     if cwd_key is None:
@@ -350,6 +403,8 @@ def _hyperframes_op(
             cwd, _entry_point = _validate_project(cwd_val)
         else:
             cwd = Path(cwd_val).resolve()
+
+    _require_hyperframes_deps(cwd=cwd)
 
     args: list[str] = [spec["subcommand"]]
 
@@ -716,10 +771,11 @@ def preview(
     """Launch Hyperframes preview studio (non-blocking)."""
     if port < 1024 or port > 65535:
         raise HyperframesProjectError(str(project_path), "Preview port must be between 1024 and 65535")
-    _require_hyperframes_deps()
+    _require_node()
     project, _entry_point = _validate_project(project_path)
+    _require_hyperframes_deps(cwd=project)
 
-    cmd = [*HYPERFRAMES_COMMAND_PREFIX, "preview", str(project), "--port", str(port)]
+    cmd = [*_hyperframes_command_prefix(cwd=project), "preview", str(project), "--port", str(port)]
     proc = subprocess.Popen(
         cmd,
         cwd=str(project),
@@ -773,7 +829,7 @@ def snapshot(
     variables_file: str | None = None,
 ) -> HyperframesSnapshotResult:
     """Capture key frames as PNG screenshots for visual verification."""
-    _require_hyperframes_deps()
+    _require_node()
     project, _entry_point = _validate_project(project_path)
     snapshot_dir = project / "snapshots"
     before = set(snapshot_dir.glob("*.png")) if snapshot_dir.is_dir() else set()
@@ -963,7 +1019,7 @@ def create_project(
     project_dir = Path(output_dir) / name
     _validate_output_path(str(project_dir))
 
-    _require_hyperframes_deps()
+    _require_hyperframes_deps(cwd=output_dir)
 
     if project_dir.exists() and any(project_dir.iterdir()):
         print(f"Warning: Project directory already exists and is not empty — files will be overwritten: {project_dir}")
@@ -1021,14 +1077,16 @@ def validate(
     except HyperframesProjectError:
         issues.append("No HTML entry point found (expected index.html)")
 
-    # Check Node.js/npx
+    # Check Node.js/Hyperframes
     if shutil.which("node") is None:
         issues.append("Node.js not found on PATH")
-    if shutil.which("npx") is None:
-        issues.append("npx not found on PATH")
+    try:
+        _hyperframes_command_prefix(cwd=p)
+    except HyperframesNotFoundError as e:
+        issues.append(f"Hyperframes CLI not found: {e}")
 
     # Run hyperframes lint if deps are available
-    if shutil.which("npx") is not None:
+    if shutil.which("node") is not None and not any("Hyperframes CLI not found" in issue for issue in issues):
         try:
             result = _run_hyperframes(["lint", str(p), "--json"], cwd=p, timeout=60)
             if result.returncode != 0:

@@ -39,7 +39,7 @@ dependencies = [
 client = ["pillow>=10.0"]
 image = ["pillow>=10.0", "scikit-learn>=1.3", "webcolors>=1.13"]
 image-ai = ["pillow>=10.0", "scikit-learn>=1.3", "webcolors>=1.13", "anthropic>=0.96.0"]
-hyperframes = []  # External: Node.js + Hyperframes CLI (npx hyperframes)
+hyperframes = []  # External: Node.js + resolvable Hyperframes CLI
 transcribe = ["openai-whisper>=20231117"]
 ai-scene = ["imagehash>=4.3", "Pillow>=10.0"]
 stems = ["demucs>=4.0", "torch>=2.0", "torchaudio>=2.0", "torchcodec>=0.8"]

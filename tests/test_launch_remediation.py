@@ -50,12 +50,16 @@ def test_mograph_frame_count_is_capped(monkeypatch):
     assert result["error"]["code"] == "mograph_too_large"
 
 
-def test_hyperframes_command_uses_package_resolving_npx(monkeypatch, tmp_path):
+def test_hyperframes_command_uses_local_pinned_binary(monkeypatch, tmp_path):
     from mcp_video import hyperframes_engine
 
     project = tmp_path / "project"
     project.mkdir()
     (project / "index.html").write_text("<html></html>")
+    local_bin = project / "node_modules" / ".bin" / "hyperframes"
+    local_bin.parent.mkdir(parents=True)
+    local_bin.write_text("#!/bin/sh\n", encoding="utf-8")
+    local_bin.chmod(0o755)
     captured = {}
 
     def fake_run(cmd, **kwargs):
@@ -68,12 +72,13 @@ def test_hyperframes_command_uses_package_resolving_npx(monkeypatch, tmp_path):
 
         return Result()
 
-    monkeypatch.setattr(hyperframes_engine.shutil, "which", lambda name: f"/usr/bin/{name}")
+    monkeypatch.setattr(hyperframes_engine.shutil, "which", lambda name: "/usr/bin/node" if name == "node" else None)
     monkeypatch.setattr(hyperframes_engine.subprocess, "run", fake_run)
 
     hyperframes_engine.compositions(str(project))
 
-    assert captured["cmd"][:3] == ["npx", "--yes", "hyperframes"]
+    assert captured["cmd"][:2] == [str(local_bin), "compositions"]
+    assert "npx" not in captured["cmd"]
     assert "--no-install" not in captured["cmd"]
 
 
