@@ -50,7 +50,7 @@ def test_mograph_frame_count_is_capped(monkeypatch):
     assert result["error"]["code"] == "mograph_too_large"
 
 
-def test_hyperframes_command_uses_no_install_npx(monkeypatch, tmp_path):
+def test_hyperframes_command_uses_package_resolving_npx(monkeypatch, tmp_path):
     from mcp_video import hyperframes_engine
 
     project = tmp_path / "project"
@@ -73,7 +73,8 @@ def test_hyperframes_command_uses_no_install_npx(monkeypatch, tmp_path):
 
     hyperframes_engine.compositions(str(project))
 
-    assert captured["cmd"][:4] == ["npx", "--yes", "--no-install", "hyperframes"]
+    assert captured["cmd"][:3] == ["npx", "--yes", "hyperframes"]
+    assert "--no-install" not in captured["cmd"]
 
 
 def test_ytdlp_rejects_resolved_private_media_url(monkeypatch, tmp_path):

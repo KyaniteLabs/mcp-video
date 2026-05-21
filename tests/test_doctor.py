@@ -4,36 +4,56 @@ import json
 import subprocess
 import sys
 from importlib.machinery import ModuleSpec
+from pathlib import Path
 
 
 def test_run_diagnostics_marks_required_tools_ok_when_present():
     from mcp_video.doctor import run_diagnostics
 
     def fake_which(name: str) -> str | None:
-        return f"/usr/bin/{name}" if name in {"ffmpeg", "ffprobe"} else None
+        return f"/usr/bin/{name}" if name in {"ffmpeg", "ffprobe", "node", "npm", "npx"} else None
 
     def fake_version(command: list[str]) -> str | None:
+        if command[:3] == ["npx", "--yes", "hyperframes"]:
+            return "0.6.31"
+        if command[:2] == ["node", "-e"]:
+            return "0.6.31"
         return f"{command[0]} version test"
 
-    present_packages = {"mcp", "pydantic", "rich"}
+    present_packages = {"mcp", "pydantic", "rich", "mcp_video"}
 
     def fake_find_spec(name: str) -> ModuleSpec | None:
-        return ModuleSpec(name, loader=None) if name in present_packages else None
+        if name not in present_packages:
+            return None
+        spec = ModuleSpec(name, loader=None)
+        if name == "mcp_video":
+            spec.origin = "/env/site-packages/mcp_video/__init__.py"
+        return spec
 
     report = run_diagnostics(
         which=fake_which,
         version_runner=fake_version,
         find_spec=fake_find_spec,
-        package_version=lambda name: "1.0.0" if name in present_packages else None,
+        package_version=lambda name: (
+            "1.4.0" if name == "mcp-video" else ("1.0.0" if name in present_packages else None)
+        ),
     )
 
     checks = {check["name"]: check for check in report["checks"]}
     assert report["success"] is True
     assert report["summary"]["required_ok"] is True
+    assert checks["mcp-video"]["ok"] is True
+    assert checks["mcp-video"]["version"] == "1.4.0"
+    assert checks["mcp-video"]["path"] == "/env/site-packages/mcp_video/__init__.py"
     assert checks["ffmpeg"]["ok"] is True
     assert checks["ffprobe"]["ok"] is True
     assert checks["node"]["required"] is False
-    assert checks["node"]["ok"] is False
+    assert checks["node"]["ok"] is True
+    assert checks["npm"]["ok"] is True
+    assert checks["npx"]["ok"] is True
+    assert checks["hyperframes"]["ok"] is True
+    assert checks["hyperframes"]["command"] == ["npx", "--yes", "hyperframes", "--version"]
+    assert checks["@hyperframes/core"]["ok"] is True
 
 
 def test_run_diagnostics_marks_required_tools_missing():
@@ -117,7 +137,7 @@ def test_run_diagnostics_explains_python313_basicsr_guard(monkeypatch):
 def test_run_diagnostics_requires_matching_distribution_for_package_checks():
     from mcp_video.doctor import run_diagnostics
 
-    present = {"mcp", "pydantic", "rich", "cv2"}
+    present = {"mcp", "pydantic", "rich", "cv2", "mcp_video"}
 
     def fake_find_spec(name: str) -> ModuleSpec | None:
         return ModuleSpec(name, loader=None) if name in present else None
@@ -138,6 +158,29 @@ def test_run_diagnostics_requires_matching_distribution_for_package_checks():
     assert checks["opencv-contrib-python"]["version"] is None
 
 
+def test_run_diagnostics_reports_mcp_video_import_path_when_distribution_metadata_missing():
+    from mcp_video.doctor import run_diagnostics
+
+    def fake_find_spec(name: str) -> ModuleSpec | None:
+        if name != "mcp_video":
+            return ModuleSpec(name, loader=None) if name in {"mcp", "pydantic", "rich"} else None
+        spec = ModuleSpec(name, loader=None)
+        spec.origin = str(Path("/repo/mcp_video/__init__.py"))
+        return spec
+
+    report = run_diagnostics(
+        which=lambda name: f"/usr/bin/{name}" if name in {"ffmpeg", "ffprobe"} else None,
+        version_runner=lambda command: f"{command[0]} version test",
+        find_spec=fake_find_spec,
+        package_version=lambda name: None,
+    )
+
+    checks = {check["name"]: check for check in report["checks"]}
+    assert checks["mcp-video"]["ok"] is True
+    assert checks["mcp-video"]["path"] == "/repo/mcp_video/__init__.py"
+    assert checks["mcp-video"]["version"] is None
+
+
 def test_cli_doctor_json_outputs_structured_report():
     result = subprocess.run(
         [sys.executable, "-m", "mcp_video", "doctor", "--json"],
@@ -151,6 +194,7 @@ def test_cli_doctor_json_outputs_structured_report():
     assert data["success"] is True
     assert "summary" in data
     assert isinstance(data["checks"], list)
+    assert any(check["name"] == "mcp-video" for check in data["checks"])
     assert any(check["name"] == "ffmpeg" for check in data["checks"])
 
 
@@ -165,4 +209,5 @@ def test_cli_doctor_text_outputs_summary():
     assert result.returncode == 0
     assert "mcp-video doctor" in result.stdout
     assert "ffmpeg" in result.stdout
+    assert "hyperframes" in result.stdout
     assert "openai-whisper" in result.stdout

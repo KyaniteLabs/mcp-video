@@ -73,10 +73,10 @@ def _mock_deps_ok():
 
 
 def _has_real_hyperframes_cli() -> bool:
-    """Return True only when the no-install Hyperframes CLI path works."""
+    """Return True only when the same package-resolving Hyperframes CLI path works."""
     try:
         result = subprocess.run(
-            ["npx", "--yes", "--no-install", "hyperframes", "--version"],
+            ["npx", "--yes", "hyperframes", "--version"],
             capture_output=True,
             text=True,
             timeout=15,
@@ -201,7 +201,8 @@ class TestRender:
             call_args = mock_run.call_args
             cmd = call_args[0][0]
             assert cmd[0] == "npx"
-            assert cmd[1:4] == ["--yes", "--no-install", "hyperframes"]
+            assert cmd[1:3] == ["--yes", "hyperframes"]
+            assert "--no-install" not in cmd
             assert "render" in cmd
             assert "/tmp/out.mp4" in cmd
             assert "--fps" in cmd
@@ -560,6 +561,44 @@ class TestCompositions:
             assert len(result.compositions) == 1
             assert result.compositions[0].id == "A"
 
+    def test_computes_frames_from_duration_seconds(self, sample_hyperframes_project):
+        """Seconds-based Hyperframes output should report frames, not raw seconds."""
+        project = str(sample_hyperframes_project)
+        comp_json = json.dumps(
+            {
+                "id": "main",
+                "width": 1080,
+                "height": 1920,
+                "fps": 30,
+                "duration": 5,
+            }
+        )
+        fake_cp = _make_completed_process(stdout=comp_json)
+
+        with _mock_deps_ok(), patch("mcp_video.hyperframes_engine.subprocess.run", return_value=fake_cp):
+            result = compositions(project)
+
+        assert result.compositions[0].duration_in_frames == 150
+
+    def test_computes_frames_from_duration_in_seconds_alias(self, sample_hyperframes_project):
+        """Alternate upstream duration key should still produce frame counts."""
+        project = str(sample_hyperframes_project)
+        comp_json = json.dumps(
+            {
+                "id": "main",
+                "width": 1080,
+                "height": 1920,
+                "fps": 29.97,
+                "durationInSeconds": 4,
+            }
+        )
+        fake_cp = _make_completed_process(stdout=comp_json)
+
+        with _mock_deps_ok(), patch("mcp_video.hyperframes_engine.subprocess.run", return_value=fake_cp):
+            result = compositions(project)
+
+        assert result.compositions[0].duration_in_frames == 120
+
     def test_handles_invalid_json(self, sample_hyperframes_project):
         """compositions() should return empty list when JSON is invalid."""
         project = str(sample_hyperframes_project)
@@ -641,7 +680,8 @@ class TestPreview:
             call_args = mock_popen.call_args
             cmd = call_args[0][0]
             assert cmd[0] == "npx"
-            assert cmd[1:4] == ["--yes", "--no-install", "hyperframes"]
+            assert cmd[1:3] == ["--yes", "hyperframes"]
+            assert "--no-install" not in cmd
             assert "preview" in cmd
             assert "--port" in cmd
             idx = cmd.index("--port")
@@ -968,7 +1008,8 @@ class TestCreateProject:
             call_args = mock_run.call_args
             cmd = call_args[0][0]
             assert cmd[0] == "npx"
-            assert cmd[1:4] == ["--yes", "--no-install", "hyperframes"]
+            assert cmd[1:3] == ["--yes", "hyperframes"]
+            assert "--no-install" not in cmd
             assert "init" in cmd
             assert "test-project" in cmd
             assert "--example" in cmd
@@ -1355,7 +1396,7 @@ class TestErrorHandling:
 @pytest.mark.hyperframes
 @pytest.mark.skipif(
     not _has_real_hyperframes_cli(),
-    reason="requires a locally installed Hyperframes CLI available via npx --no-install",
+    reason="requires a Hyperframes CLI available via npx --yes hyperframes",
 )
 class TestHyperframesIntegration:
     """Integration tests that require a real Node.js/Hyperframes installation."""

@@ -11,6 +11,7 @@ import sys
 from collections.abc import Callable
 from typing import Any
 
+from .hyperframes_engine import HYPERFRAMES_COMMAND_PREFIX
 from .limits import DOCTOR_COMMAND_TIMEOUT
 
 WhichFn = Callable[[str], str | None]
@@ -52,6 +53,13 @@ COMMAND_CHECKS = (
         "required": False,
         "command": ["npx", "--version"],
         "install_hint": "Install npx/npm for Hyperframes CLI execution.",
+    },
+    {
+        "name": "npm",
+        "category": "hyperframes",
+        "required": False,
+        "command": ["npm", "--version"],
+        "install_hint": "Install npm for Hyperframes package diagnostics.",
     },
 )
 
@@ -111,6 +119,7 @@ def _check_command(definition: dict[str, Any], which: WhichFn, version_runner: V
         "ok": ok,
         "path": path,
         "version": version,
+        "command": definition["command"],
         "install_hint": None if ok else definition["install_hint"],
     }
 
@@ -140,6 +149,61 @@ def _check_package(
     }
 
 
+def _check_mcp_video(find_spec: FindSpecFn, package_version: PackageVersionFn) -> dict[str, Any]:
+    spec = find_spec("mcp_video")
+    path = getattr(spec, "origin", None) if spec is not None else None
+    found = spec is not None
+    return {
+        "name": "mcp-video",
+        "category": "core",
+        "required": True,
+        "ok": found,
+        "path": path,
+        "version": package_version("mcp-video") if found else None,
+        "install_hint": None if found else "Install the local package: pip install mcp-video",
+    }
+
+
+def _check_hyperframes_cli(which: WhichFn, version_runner: VersionRunner) -> dict[str, Any]:
+    command = [*HYPERFRAMES_COMMAND_PREFIX, "--version"]
+    path = which("npx")
+    version = version_runner(command) if path else None
+    ok = path is not None and version is not None
+    return {
+        "name": "hyperframes",
+        "category": "hyperframes",
+        "required": False,
+        "ok": ok,
+        "path": path,
+        "version": version,
+        "command": command,
+        "install_hint": None
+        if ok
+        else "Install Hyperframes or make it resolvable with: npx --yes hyperframes --version",
+    }
+
+
+def _check_hyperframes_core(which: WhichFn, version_runner: VersionRunner) -> dict[str, Any]:
+    command = [
+        "node",
+        "-e",
+        "try { console.log(require('@hyperframes/core/package.json').version) } catch (err) { process.exit(1) }",
+    ]
+    path = which("node")
+    version = version_runner(command) if path else None
+    ok = path is not None and version is not None
+    return {
+        "name": "@hyperframes/core",
+        "category": "hyperframes",
+        "required": False,
+        "ok": ok,
+        "path": path,
+        "version": version,
+        "command": command,
+        "install_hint": None if ok else "Install @hyperframes/core in the active Node package layout.",
+    }
+
+
 def _summary(checks: list[dict[str, Any]]) -> dict[str, Any]:
     required = [check for check in checks if check["required"]]
     optional = [check for check in checks if not check["required"]]
@@ -163,7 +227,14 @@ def run_diagnostics(
     package_version: PackageVersionFn = _package_version,
 ) -> dict[str, Any]:
     """Return a structured report for core and optional integration dependencies."""
-    checks = [_check_command(definition, which, version_runner) for definition in COMMAND_CHECKS]
+    checks = [_check_mcp_video(find_spec, package_version)]
+    checks.extend(_check_command(definition, which, version_runner) for definition in COMMAND_CHECKS)
+    checks.extend(
+        [
+            _check_hyperframes_cli(which, version_runner),
+            _check_hyperframes_core(which, version_runner),
+        ]
+    )
     checks.extend(
         _check_package(*definition, find_spec=find_spec, package_version=package_version)
         for definition in PACKAGE_CHECKS

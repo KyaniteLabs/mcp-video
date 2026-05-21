@@ -14,6 +14,7 @@ import re
 import shutil
 import subprocess
 import time
+import contextlib
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -38,6 +39,8 @@ from .hyperframes_models import (
     HyperframesStillResult,
     HyperframesValidationResult,
 )
+
+HYPERFRAMES_COMMAND_PREFIX = ["npx", "--yes", "hyperframes"]
 
 
 # ---------------------------------------------------------------------------
@@ -93,7 +96,7 @@ def _run_hyperframes(
     timeout: int = 600,
 ) -> subprocess.CompletedProcess[str]:
     """Run an npx hyperframes command and return the CompletedProcess."""
-    cmd = ["npx", "--yes", "--no-install", "hyperframes", *args]
+    cmd = [*HYPERFRAMES_COMMAND_PREFIX, *args]
     try:
         return subprocess.run(
             cmd,
@@ -658,6 +661,26 @@ def _parse_compositions_output(stdout: str) -> list[dict[str, Any]]:
     return comps
 
 
+def _coerce_float(value: Any) -> float | None:
+    with contextlib.suppress(TypeError, ValueError):
+        return float(value)
+    return None
+
+
+def _composition_duration_frames(data: dict[str, Any]) -> int:
+    fps = _coerce_float(data.get("fps")) or 30.0
+    frame_value = data.get("durationInFrames", data.get("duration_in_frames"))
+    frames = _coerce_float(frame_value)
+    if frames and frames > 0:
+        return round(frames)
+
+    seconds = _coerce_float(data.get("durationInSeconds", data.get("duration")))
+    if seconds and seconds > 0:
+        return round(seconds * fps)
+
+    return 0
+
+
 def compositions(
     project_path: str,
 ) -> CompositionsResult:
@@ -674,7 +697,7 @@ def compositions(
                 width=c.get("width", 1920),
                 height=c.get("height", 1080),
                 fps=c.get("fps", 30),
-                duration_in_frames=c.get("durationInFrames", c.get("duration", 0)),
+                duration_in_frames=_composition_duration_frames(c),
                 default_props=c.get("defaultProps", {}),
             )
         )
@@ -696,7 +719,7 @@ def preview(
     _require_hyperframes_deps()
     project, _entry_point = _validate_project(project_path)
 
-    cmd = ["npx", "--yes", "--no-install", "hyperframes", "preview", str(project), "--port", str(port)]
+    cmd = [*HYPERFRAMES_COMMAND_PREFIX, "preview", str(project), "--port", str(port)]
     proc = subprocess.Popen(
         cmd,
         cwd=str(project),
