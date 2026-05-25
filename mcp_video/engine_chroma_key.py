@@ -19,6 +19,7 @@ from .ffmpeg_helpers import (
 )
 from .validation import (
     _validate_chroma_color,
+    _validate_normalized_float,
 )
 from .ffmpeg_helpers import _validate_input_path, _validate_output_path, _escape_ffmpeg_filter_value
 from .models import EditResult
@@ -52,6 +53,10 @@ def chroma_key(
 
     # Validate color is a safe 0xRRGGBB hex value (prevents FFmpeg filter injection)
     _validate_chroma_color(color)
+
+    # Validate similarity and blend are in [0.0, 1.0]
+    _validate_normalized_float(similarity, "similarity")
+    _validate_normalized_float(blend, "blend")
 
     safe_color = _escape_ffmpeg_filter_value(color)
     safe_similarity = _escape_ffmpeg_filter_value(str(_sanitize_ffmpeg_number(similarity, "similarity")))

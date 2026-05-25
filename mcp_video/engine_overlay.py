@@ -7,6 +7,7 @@ from .engine_runtime_utils import (
     _require_filter,
     _timed_operation,
 )
+from .engine_probe import probe
 from .paths import (
     _auto_output,
 )
@@ -20,6 +21,7 @@ from .ffmpeg_helpers import (
 )
 from .errors import MCPVideoError
 from .ffmpeg_helpers import _validate_input_path, _validate_output_path, _escape_ffmpeg_filter_value
+from .validation import _validate_timing_against_duration
 from .models import EditResult, NamedPosition, Position
 
 
@@ -56,6 +58,19 @@ def overlay_video(
     safe_opacity = _validate_opacity(opacity)
     output = output_path or _auto_output(background_path, "overlay")
     _validate_output_path(output)
+
+    # --- Guardrail: timing validation ---
+    try:
+        bg_info = probe(background_path)
+        timing_warnings = _validate_timing_against_duration(
+            start_time, duration, bg_info.duration
+        )
+        for w in timing_warnings:
+            import warnings as _warnings
+            _warnings.warn(f"[OVERLAY GUARDRAIL] {w}", stacklevel=2)
+    except Exception:
+        pass  # Best-effort; probe may fail or timing may be None
+    # --- End guardrail ---
 
     scale_filter = _scale_filter(width, height)
     overlay_chain = _overlay_chain(scale_filter, safe_opacity)

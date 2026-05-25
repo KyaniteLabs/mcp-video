@@ -238,3 +238,55 @@ def _validate_chroma_color(color: str) -> None:
             error_type="validation_error",
             code="invalid_parameter",
         )
+
+
+def _validate_normalized_float(
+    value: float | int | str,
+    name: str = "value",
+    lo: float = 0.0,
+    hi: float = 1.0,
+) -> float:
+    """Validate a float is in [lo, hi]. Returns the validated float.
+
+    Used for opacity, similarity, blend, and other normalized parameters.
+    """
+    try:
+        f = float(value)
+    except (TypeError, ValueError) as e:
+        raise MCPVideoError(
+            f"{name} must be a number, got {type(value).__name__}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        ) from e
+    if f < lo or f > hi:
+        raise MCPVideoError(
+            f"{name} must be between {lo} and {hi}, got {f}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
+    return f
+
+
+def _validate_timing_against_duration(
+    start_time: float | None,
+    duration: float | None,
+    video_duration: float,
+) -> list[str]:
+    """Validate timing parameters against video duration.
+
+    Returns list of warnings for non-fatal issues (overlay extends past end, etc.).
+    """
+    warnings: list[str] = []
+    if start_time is not None and start_time > video_duration:
+        warnings.append(
+            f"start_time={start_time}s exceeds video duration "
+            f"({video_duration:.2f}s). Overlay will never appear."
+        )
+    if start_time is not None and duration is not None:
+        end = start_time + duration
+        if end > video_duration:
+            warnings.append(
+                f"Overlay ends at {end:.2f}s, past video duration "
+                f"({video_duration:.2f}s). It will disappear early."
+            )
+    return warnings
