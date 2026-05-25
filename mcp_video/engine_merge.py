@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import shutil
 import tempfile
@@ -22,6 +23,8 @@ from .errors import InputFileError, MCPVideoError
 from .ffmpeg_helpers import _escape_ffmpeg_filter_value, _validate_input_path, _validate_output_path
 from .merge_guardrails import validate_merge_compatibility
 from .models import EditResult
+
+logger = logging.getLogger(__name__)
 
 
 def _normalize_clips(
@@ -132,10 +135,9 @@ def merge(
     except MCPVideoError:
         raise
     except Exception as e:
-        _warnings.warn(
-            f"[MERGE GUARDRAIL] Could not validate merge compatibility: {e}",
-            stacklevel=2,
-        )
+        message = f"[MERGE GUARDRAIL] Could not validate merge compatibility: {e}"
+        logger.warning(message, exc_info=True)
+        _warnings.warn(message, stacklevel=2)
     # --- End guardrails ---
 
     resolutions = {i.display_resolution for i in infos}

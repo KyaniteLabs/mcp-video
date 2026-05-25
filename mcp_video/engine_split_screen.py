@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import warnings as _warnings
 
 from .engine_probe import probe
@@ -19,6 +20,8 @@ from .ffmpeg_helpers import (
 )
 from .ffmpeg_helpers import _validate_input_path, _validate_output_path, _escape_ffmpeg_filter_value
 from .models import EditResult, SplitLayout
+
+logger = logging.getLogger(__name__)
 
 
 def split_screen(
@@ -70,7 +73,9 @@ def split_screen(
                 stacklevel=2,
             )
     except Exception as e:
-        _warnings.warn(f"[SPLIT GUARDRAIL] Could not validate split-screen inputs: {e}", stacklevel=2)
+        message = f"[SPLIT GUARDRAIL] Could not validate split-screen inputs: {e}"
+        logger.warning(message, exc_info=True)
+        _warnings.warn(message, stacklevel=2)
     # --- End guardrails ---
 
     filter_complex = _split_filter(left_info.width, left_info.height, right_info.width, right_info.height, layout)

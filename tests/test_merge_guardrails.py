@@ -65,7 +65,6 @@ class TestValidateMergeCompatibility:
         assert any("different frame rates" in w for w in warnings)
 
     def test_zero_duration_raises(self):
-        infos = [_make_info(duration=0.0)]
         # Single clip returns [] — need 2 clips to trigger validation
         infos = [_make_info(duration=5.0), _make_info(duration=0.0)]
         with pytest.raises(MCPVideoError, match="zero or negative duration"):

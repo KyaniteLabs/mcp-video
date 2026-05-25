@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import warnings as _warnings
 
 from .defaults import DEFAULT_AUDIO_BITRATE
@@ -22,6 +23,8 @@ from .ffmpeg_helpers import _validate_input_path, _validate_output_path, _escape
 from .audio_guardrails import validate_audio_mix
 from .errors import MCPVideoError
 from .models import EditResult
+
+logger = logging.getLogger(__name__)
 
 
 def _build_audio_filters(volume: float, fade_in: float, fade_out: float, duration: float) -> list[str]:
@@ -152,7 +155,9 @@ def add_audio(
         for w in mix_warnings:
             _warnings.warn(f"[AUDIO GUARDRAIL] {w}", stacklevel=2)
     except Exception as e:
-        _warnings.warn(f"[AUDIO GUARDRAIL] Could not validate audio mix: {e}", stacklevel=2)
+        message = f"[AUDIO GUARDRAIL] Could not validate audio mix: {e}"
+        logger.warning(message, exc_info=True)
+        _warnings.warn(message, stacklevel=2)
     # --- End guardrails ---
 
     with _timed_operation() as timing:

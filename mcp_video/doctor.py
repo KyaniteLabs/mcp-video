@@ -16,6 +16,7 @@ from typing import Any
 
 from .errors import HyperframesNotFoundError
 from .hyperframes_engine import HYPERFRAMES_COMMAND_ENV, _hyperframes_command_prefix
+from .defaults import MIN_FFMPEG_VERSION, MIN_FFMPEG_VERSION_HARD
 from .limits import DOCTOR_COMMAND_TIMEOUT
 
 WhichFn = Callable[[str], str | None]
@@ -28,9 +29,6 @@ PYTHON_313_UPSCALE_BACKEND_HINT = (
     'The OpenCV fallback is still installed by: pip install "mcp-video[upscale]". '
     "Use Python 3.11 or 3.12 if you specifically need the Real-ESRGAN backend."
 )
-
-MIN_FFMPEG_VERSION = 6
-MIN_FFMPEG_VERSION_HARD = 5
 
 COMMAND_CHECKS = (
     {

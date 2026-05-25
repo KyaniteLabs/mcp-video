@@ -98,11 +98,12 @@ def add_text(
 
     # Escape FFmpeg drawtext special characters
     escaped_text = _escape_ffmpeg_filter_value(text)
+    escaped_color = _escape_ffmpeg_filter_value(color)
 
     filter_parts = [
         f"drawtext=text='{escaped_text}'",
         f"fontsize={size}",
-        f"fontcolor={color}",
+        f"fontcolor={escaped_color}",
         f"fontfile={escaped_fontfile}",
         coords,
     ]
@@ -244,6 +245,7 @@ def add_texts(
 
         escaped_fontfile = _escape_ffmpeg_filter_value(fontfile)
         escaped_text = _escape_ffmpeg_filter_value(overlay.text)
+        escaped_color = _escape_ffmpeg_filter_value(overlay.color)
 
         # Resolve position
         if isinstance(overlay.position, dict) and "x" in overlay.position:
@@ -257,7 +259,7 @@ def add_texts(
         parts = [
             f"drawtext=text='{escaped_text}'",
             f"fontsize={overlay.size}",
-            f"fontcolor={overlay.color}",
+            f"fontcolor={escaped_color}",
             f"fontfile={escaped_fontfile}",
             coords,
         ]

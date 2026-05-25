@@ -10,6 +10,7 @@ from __future__ import annotations
 import math
 import wave
 
+from mcp_video.errors import MCPVideoError
 from mcp_video.ffmpeg_helpers import _validate_output_path
 
 # ---------------------------------------------------------------------------
@@ -85,10 +86,6 @@ else:
     # =====================================================================
     # NumPy-based Professional DSP
     # =====================================================================
-
-    def _validate_output_path_audio(path: str) -> str:
-        _validate_output_path(path)
-        return path
 
     # -----------------------------------------------------------------------
     # Waveform Generation
@@ -710,7 +707,11 @@ else:
         elif sample_width == 4:
             dtype = np.int32
         else:
-            raise ValueError(f"Unsupported PCM sample width: {sample_width}")
+            raise MCPVideoError(
+                f"Unsupported PCM sample width: {sample_width}",
+                error_type="validation_error",
+                code="invalid_sample_width",
+            )
 
         raw = np.frombuffer(pcm_bytes, dtype=dtype).astype(np.float64)
         if channels > 1:

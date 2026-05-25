@@ -55,6 +55,29 @@ VALID_DEMUCS_MODELS = {"htdemucs", "htdemucs_ft", "mdx", "mdx_extra", "mdx_extra
 VALID_UPSCALE_MODELS = {"realesrgan", "bsrgan"}
 VALID_COLOR_GRADE_STYLES = {"auto", "warm", "cool", "vintage", "cinematic", "noir"}
 VALID_AUDIO_SEQUENCE_TYPES = {"tone", "preset", "whoosh"}
+FILTER_PARAMETER_BOUNDS: dict[str, dict[str, tuple[float, float]]] = {
+    "blur": {"radius": (0.0, 50.0), "strength": (0.0, 5.0)},
+    "sharpen": {"amount": (0.0, 3.0)},
+    "brightness": {"level": (-1.0, 1.0)},
+    "contrast": {"level": (0.0, 3.0)},
+    "saturation": {"level": (0.0, 3.0)},
+    "vignette": {"angle": (0.0, 6.2832)},
+    "denoise": {
+        "luma_spatial": (0.0, 30.0),
+        "chroma_spatial": (0.0, 30.0),
+        "luma_tmp": (0.0, 30.0),
+        "chroma_tmp": (0.0, 30.0),
+    },
+    "ken_burns": {"zoom_speed": (0.0001, 0.01)},
+    "reverb": {
+        "in_gain": (0.0, 1.0),
+        "out_gain": (0.0, 1.0),
+        "decay": (0.0, 0.9),
+    },
+    "compressor": {"ratio": (1.0, 20.0)},
+    "noise_reduction": {"noise_level": (-60.0, 0.0)},
+}
+
 VALID_AUDIO_PRESETS = {
     "ui-blip",
     "ui-click",

@@ -504,7 +504,9 @@ def text_animated(
     except MCPVideoError:
         raise
     except Exception as e:
-        _warnings.warn(f"[TEXT GUARDRAIL] Could not validate text layout: {e}", stacklevel=2)
+        message = f"[TEXT GUARDRAIL] Could not validate text layout: {e}"
+        logger.warning(message, exc_info=True)
+        _warnings.warn(message, stacklevel=2)
     # --- End guardrails ---
 
     filter_complex, cmd_path = strategy(

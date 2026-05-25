@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import warnings as _warnings
 
 from .engine_runtime_utils import (
@@ -25,6 +26,8 @@ from .errors import MCPVideoError
 from .ffmpeg_helpers import _validate_input_path, _validate_output_path, _escape_ffmpeg_filter_value
 from .validation import _validate_timing_against_duration
 from .models import EditResult, NamedPosition, Position
+
+logger = logging.getLogger(__name__)
 
 
 def overlay_video(
@@ -68,7 +71,9 @@ def overlay_video(
         for w in timing_warnings:
             _warnings.warn(f"[OVERLAY GUARDRAIL] {w}", stacklevel=2)
     except Exception as e:
-        _warnings.warn(f"[OVERLAY GUARDRAIL] Could not validate timing: {e}", stacklevel=2)
+        message = f"[OVERLAY GUARDRAIL] Could not validate timing: {e}"
+        logger.warning(message, exc_info=True)
+        _warnings.warn(message, stacklevel=2)
     # --- End guardrail ---
 
     scale_filter = _scale_filter(width, height)

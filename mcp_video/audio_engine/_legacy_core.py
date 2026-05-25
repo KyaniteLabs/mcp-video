@@ -1,6 +1,8 @@
-"""Audio synthesis and sound design engine.
+"""Legacy pure-Python audio synthesis fallback.
 
-Pure NumPy-based audio generation with no external dependencies.
+This compatibility-focused engine intentionally avoids NumPy and external
+dependencies. It trades performance for availability when the professional DSP
+backend cannot be imported.
 """
 
 from __future__ import annotations
@@ -9,21 +11,8 @@ import math
 import struct
 import wave
 
+from mcp_video.errors import MCPVideoError
 from mcp_video.ffmpeg_helpers import _validate_output_path
-
-
-# ---------------------------------------------------------------------------
-# Audio Constants
-# ---------------------------------------------------------------------------
-
-DEFAULT_SAMPLE_RATE = 44100
-DEFAULT_CHANNELS = 1
-DEFAULT_SAMPLE_WIDTH = 2  # 16-bit
-
-"""Audio synthesis and sound design engine.
-
-Pure NumPy-based audio generation with no external dependencies.
-"""
 
 
 # ---------------------------------------------------------------------------
@@ -285,7 +274,11 @@ def _pcm_to_float(
 ) -> list[float]:
     """Convert PCM bytes to mono float samples."""
     if sample_width not in {1, 2, 3, 4}:
-        raise ValueError(f"Unsupported PCM sample width: {sample_width}")
+        raise MCPVideoError(
+            f"Unsupported PCM sample width: {sample_width}",
+            error_type="validation_error",
+            code="invalid_sample_width",
+        )
     frame_width = sample_width * channels
     samples = []
     for frame_start in range(0, len(pcm_bytes), frame_width):
