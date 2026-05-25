@@ -934,6 +934,92 @@ class TestImageSequences:
         assert os.path.isfile(result.output_path)
         assert result.operation == "create_from_images"
 
+    def test_create_from_images_sets_requested_output_fps(self, sample_video, tmp_path):
+        from mcp_video.engine import create_from_images
+        from mcp_video.engine import export_frames
+
+        frames_dir = str(tmp_path / "fps_frames")
+        frames_result = export_frames(sample_video, output_dir=frames_dir, fps=4.0)
+        assert len(frames_result.frame_paths) > 0
+
+        out = str(tmp_path / "from_images_12fps.mp4")
+        result = create_from_images(frames_result.frame_paths, output_path=out, fps=12.0)
+
+        probe_result = subprocess.run(
+            [
+                "ffprobe",
+                "-v",
+                "error",
+                "-select_streams",
+                "v:0",
+                "-show_entries",
+                "stream=r_frame_rate",
+                "-of",
+                "default=nw=1:nk=1",
+                result.output_path,
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=10,
+        )
+        assert probe_result.stdout.strip() == "12/1"
+
+    def test_create_from_images_preserves_precise_non_integer_fps(self):
+        from mcp_video.engine_images import _format_fps_for_ffmpeg
+
+        assert _format_fps_for_ffmpeg(30.0) == "30"
+        assert _format_fps_for_ffmpeg(24.0) == "24"
+        assert _format_fps_for_ffmpeg(30) == "30"
+        assert _format_fps_for_ffmpeg(29.97002997) == "29.97002997"
+        assert _format_fps_for_ffmpeg(12.00001) == "12.00001"
+
+    def test_create_from_images_extreme_fps_raises_validation_error(self):
+        from mcp_video.engine import create_from_images
+        from mcp_video.engine_images import _format_fps_for_ffmpeg
+
+        with pytest.raises(MCPVideoError, match="fps must be a positive finite number") as helper_exc:
+            _format_fps_for_ffmpeg(10**400)
+        assert helper_exc.value.error_type == "validation_error"
+        assert helper_exc.value.code == "invalid_parameter"
+
+        with pytest.raises(MCPVideoError, match="fps must be a positive finite number") as create_exc:
+            create_from_images(["/nonexistent/image.jpg"], fps=10**400)
+        assert create_exc.value.error_type == "validation_error"
+        assert create_exc.value.code == "invalid_parameter"
+
+    def test_create_from_images_passes_precise_non_integer_fps_to_ffmpeg(self, tmp_path, monkeypatch):
+        from mcp_video import engine_images
+        from mcp_video.models import EditResult
+
+        frame = tmp_path / "frame.png"
+        frame.write_bytes(b"fake-png")
+        output = str(tmp_path / "out.mp4")
+        calls = []
+
+        monkeypatch.setattr(engine_images, "_normalize_images", lambda images, tmpdir: images)
+        monkeypatch.setattr(
+            engine_images,
+            "_write_concat_file",
+            lambda normalized, tmpdir, fps: str(tmp_path / "concat.txt"),
+        )
+        monkeypatch.setattr(engine_images, "_run_ffmpeg", lambda cmd: calls.append(cmd))
+        monkeypatch.setattr(
+            engine_images,
+            "_build_edit_result",
+            lambda output_path, operation, timing: EditResult(
+                output_path=output_path,
+                operation=operation,
+            ),
+        )
+
+        result = engine_images.create_from_images([str(frame)], output_path=output, fps=29.97002997)
+
+        final_cmd = calls[-1]
+        fps_idx = final_cmd.index("-r")
+        assert final_cmd[fps_idx + 1] == "29.97002997"
+        assert result.operation == "create_from_images"
+
     def test_create_from_images_empty_raises(self):
         from mcp_video.engine import create_from_images
 

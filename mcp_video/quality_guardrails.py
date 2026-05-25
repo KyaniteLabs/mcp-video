@@ -12,10 +12,10 @@ from dataclasses import dataclass, field
 from typing import Any
 import contextlib
 
-from .ffmpeg_helpers import _validate_input_path
-from .errors import MCPVideoError
+from .ffmpeg_helpers import _run_ffprobe_json, _validate_input_path
+from .errors import MCPVideoError, ProcessingError
 from .defaults import DEFAULT_QUALITY_GATE_SCORE
-from .limits import FFPROBE_TIMEOUT, QUALITY_GUARDRAILS_TIMEOUT
+from .limits import QUALITY_GUARDRAILS_TIMEOUT
 
 logger = logging.getLogger(__name__)
 
@@ -248,6 +248,15 @@ class VisualQualityGuardrails:
             logger.warning("ffmpeg loudnorm failed for %s: %s: %s", video, type(exc).__name__, exc)
             return {"_error": diagnostic}
 
+    def _has_audio_stream(self, video: str) -> bool | None:
+        """Return whether ffprobe can see an audio stream, or None if probing fails."""
+        try:
+            probe = _run_ffprobe_json(video)
+        except ProcessingError as exc:
+            logger.warning("ffprobe audio stream check failed for %s: %s: %s", video, type(exc).__name__, exc)
+            return None
+        return any(stream.get("codec_type") == "audio" for stream in probe.get("streams", []))
+
     def _get_rgb_means(self, video: str) -> dict[str, Any] | None:
         """Get approximate mean RGB values for color balance analysis.
 
@@ -462,41 +471,28 @@ class VisualQualityGuardrails:
 
     def check_audio_levels(self, video: str) -> QualityReport:
         """Check audio isn't clipping or too quiet."""
+        has_audio = self._has_audio_stream(video)
+        if has_audio is False:
+            return QualityReport(
+                check_name="audio_levels",
+                passed=True,
+                score=100.0,
+                message="No audio stream detected in video",
+                details={"has_audio": False},
+            )
+
         loudness_data = self._analyze_loudnorm(video)
 
-        if not loudness_data:
-            # Check if video has audio
-            cmd = [
-                "ffprobe",
-                "-v",
-                "error",
-                "-select_streams",
-                "a:0",
-                "-show_entries",
-                "stream=codec_type",
-                "-of",
-                "csv=p=0",
-                video,
-            ]
-            try:
-                result = subprocess.run(cmd, capture_output=True, text=True, timeout=FFPROBE_TIMEOUT)
-                if "audio" not in result.stdout.lower():
-                    return QualityReport(
-                        check_name="audio_levels",
-                        passed=True,
-                        score=100.0,
-                        message="No audio stream detected in video",
-                        details={"has_audio": False},
-                    )
-            except Exception as exc:
-                logger.warning("ffprobe audio stream check failed for %s: %s: %s", video, type(exc).__name__, exc)
-
+        if not loudness_data or loudness_data.get("_error"):
+            details: dict[str, Any] = {"has_audio": has_audio}
+            if loudness_data and loudness_data.get("_error"):
+                details["diagnostic"] = loudness_data["_error"]
             return QualityReport(
                 check_name="audio_levels",
                 passed=False,
                 score=0.0,
                 message="Could not analyze audio levels (analysis failed)",
-                details={"diagnostic": loudness_data.get("_error")} if loudness_data else {},
+                details=details,
             )
 
         # Parse loudnorm output

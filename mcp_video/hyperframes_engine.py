@@ -1,4 +1,4 @@
-"""Hyperframes engine — subprocess wrappers calling npx hyperframes CLI.
+"""Hyperframes engine — subprocess wrappers calling the Hyperframes CLI.
 
 No pip packages needed — Hyperframes is external (Node.js).
 
@@ -11,20 +11,26 @@ from __future__ import annotations
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import time
-from collections.abc import Callable
+import contextlib
+import html
+import logging
+import math
+from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Any
 
+from .defaults import DEFAULT_COMPOSITION_FPS, DEFAULT_COMPOSITION_HEIGHT, DEFAULT_COMPOSITION_WIDTH
 from .errors import (
     HyperframesNotFoundError,
     HyperframesProjectError,
     HyperframesRenderError,
     MCPVideoError,
 )
-from .ffmpeg_helpers import _validate_output_path
+from .ffmpeg_helpers import _validate_input_path, _validate_output_path
 from .hyperframes_models import (
     CompositionInfo,
     CompositionsResult,
@@ -38,6 +44,20 @@ from .hyperframes_models import (
     HyperframesStillResult,
     HyperframesValidationResult,
 )
+
+HYPERFRAMES_COMMAND_ENV = "MCP_VIDEO_HYPERFRAMES_COMMAND"
+HYPERFRAMES_COMMAND_PREFIX = ["hyperframes"]
+_HYPERFRAMES_BINARY_NAMES = ("hyperframes", "hyperframes.cmd")
+_WINDOWS_COMMAND_PATH_RE = re.compile(r"^([A-Za-z]:\\.*?\.(?:bat|cmd|exe|ps1))(?=\s|$)", re.IGNORECASE)
+_COMPOSITION_TAG_RE = re.compile(
+    r"<[^>]*\bdata-composition-id\s*=\s*(['\"])(?P<id>.*?)\1[^>]*>",
+    re.IGNORECASE | re.DOTALL,
+)
+_DATA_ATTR_RE = re.compile(
+    r"\b(?P<name>data-[\w-]+)\s*=\s*(['\"])(?P<value>.*?)\2",
+    re.IGNORECASE | re.DOTALL,
+)
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -55,12 +75,82 @@ def _validate_project_name(name: str) -> str:
     return name
 
 
-def _require_hyperframes_deps() -> None:
-    """Raise a helpful error if Node.js/npx are not available."""
+def _find_local_hyperframes_binary(cwd: str | Path | None) -> Path | None:
+    start = Path(cwd) if cwd is not None else Path.cwd()
+    try:
+        start = start.resolve()
+    except OSError:
+        start = start.absolute()
+    if start.is_file():
+        start = start.parent
+
+    for base in (start, *start.parents):
+        for name in _HYPERFRAMES_BINARY_NAMES:
+            candidate = base / "node_modules" / ".bin" / name
+            if candidate.is_file() and (name.endswith(".cmd") or os.access(candidate, os.X_OK)):
+                return candidate
+    return None
+
+
+def _split_configured_hyperframes_command(value: str) -> list[str]:
+    configured = value.strip()
+    if not configured:
+        return []
+
+    candidate = Path(configured).expanduser()
+    if candidate.is_file():
+        return [str(candidate)]
+
+    windows_match = _WINDOWS_COMMAND_PATH_RE.match(configured)
+    if windows_match:
+        command = windows_match.group(1)
+        rest = configured[windows_match.end() :].strip()
+        if not rest:
+            return [command]
+        return [command, *[part.strip('"') for part in shlex.split(rest, posix=False)]]
+
+    return [part.strip('"') for part in shlex.split(configured, posix=os.name != "nt")]
+
+
+def _hyperframes_command_prefix(
+    cwd: str | Path | None = None,
+    *,
+    env: Mapping[str, str] | None = None,
+    which: Callable[[str], str | None] | None = None,
+) -> list[str]:
+    env_map = os.environ if env is None else env
+    which_fn = shutil.which if which is None else which
+    configured = env_map.get(HYPERFRAMES_COMMAND_ENV)
+    if configured is not None:
+        command = _split_configured_hyperframes_command(configured)
+        if command:
+            return command
+        raise HyperframesNotFoundError(f"{HYPERFRAMES_COMMAND_ENV} is set but empty")
+
+    local_binary = _find_local_hyperframes_binary(cwd)
+    if local_binary is not None:
+        return [str(local_binary)]
+
+    path_binary = which_fn("hyperframes")
+    if path_binary:
+        return [path_binary]
+
+    raise HyperframesNotFoundError(
+        "Hyperframes CLI not found. Install a pinned Hyperframes package with "
+        "node_modules/.bin/hyperframes, add hyperframes to PATH, or set "
+        f"{HYPERFRAMES_COMMAND_ENV}."
+    )
+
+
+def _require_node() -> None:
     if shutil.which("node") is None:
         raise HyperframesNotFoundError("node not found on PATH")
-    if shutil.which("npx") is None:
-        raise HyperframesNotFoundError("npx not found on PATH")
+
+
+def _require_hyperframes_deps(cwd: str | Path | None = None) -> None:
+    """Raise a helpful error if Node.js/Hyperframes are not available."""
+    _require_node()
+    _hyperframes_command_prefix(cwd=cwd)
 
 
 def _find_entry_point(project: Path) -> Path:
@@ -92,8 +182,8 @@ def _run_hyperframes(
     cwd: str | Path,
     timeout: int = 600,
 ) -> subprocess.CompletedProcess[str]:
-    """Run an npx hyperframes command and return the CompletedProcess."""
-    cmd = ["npx", "--yes", "--no-install", "hyperframes", *args]
+    """Run a Hyperframes command and return the CompletedProcess."""
+    cmd = [*_hyperframes_command_prefix(cwd=cwd), *args]
     try:
         return subprocess.run(
             cmd,
@@ -105,7 +195,7 @@ def _run_hyperframes(
     except subprocess.TimeoutExpired:
         raise HyperframesRenderError(" ".join(cmd), -1, "Render timed out") from None
     except FileNotFoundError:
-        raise HyperframesNotFoundError("npx command not found") from None
+        raise HyperframesNotFoundError(f"{cmd[0]} command not found") from None
 
 
 # ---------------------------------------------------------------------------
@@ -157,6 +247,8 @@ _SCHEMA: dict[str, dict[str, Any]] = {
             "frames": "frames",
             "at": "at_csv",
             "timeout": "timeout_ms",
+            "variables": "variables",
+            "variables-file": "variables_file",
         },
         "timeout": 120,
     },
@@ -327,7 +419,7 @@ def _hyperframes_op(
             code="invalid_parameter",
         )
 
-    _require_hyperframes_deps()
+    _require_node()
 
     cwd_key = spec.get("cwd_key", "project_path")
     if cwd_key is None:
@@ -345,6 +437,8 @@ def _hyperframes_op(
             cwd, _entry_point = _validate_project(cwd_val)
         else:
             cwd = Path(cwd_val).resolve()
+
+    _require_hyperframes_deps(cwd=cwd)
 
     args: list[str] = [spec["subcommand"]]
 
@@ -366,7 +460,7 @@ def _hyperframes_op(
     for flag, kw_key in spec.get("flags", {}).items():
         val = kwargs.get(kw_key)
         if val is not None:
-            args.extend([f"--{flag}", str(val)])
+            args.extend([f"--{flag}", _format_cli_value(val)])
 
     for flag, kw_key in spec.get("switches", {}).items():
         if kwargs.get(kw_key):
@@ -376,13 +470,29 @@ def _hyperframes_op(
         args.append(item)
 
     for flag, compute in spec.get("computed", {}).items():
-        args.extend([f"--{flag}", str(compute(kwargs))])
+        args.extend([f"--{flag}", _format_cli_value(compute(kwargs))])
 
     result = _run_hyperframes(args, cwd=cwd, timeout=spec.get("timeout", 600))
     if result.returncode != 0:
         raise HyperframesRenderError(" ".join(args), result.returncode, result.stderr)
 
     return result, cwd
+
+
+def _format_cli_value(value: Any) -> str:
+    """Format Hyperframes CLI flag values without introducing false precision."""
+    if isinstance(value, (dict, list)):
+        return json.dumps(value, sort_keys=True, separators=(",", ":"))
+    if isinstance(value, float) and value.is_integer():
+        return str(int(value))
+    return str(value)
+
+
+def _validate_variables_file(path: str | os.PathLike[str] | None) -> str | None:
+    """Validate optional runtime-data files before forwarding them to Hyperframes."""
+    if path is None:
+        return None
+    return _validate_input_path(str(path))
 
 
 def _post_process_ops() -> dict[str, Callable]:
@@ -529,7 +639,7 @@ def render(
     workers: str | int | None = None,
     crf: int | None = None,
     video_bitrate: str | None = None,
-    variables: str | None = None,
+    variables: Any | None = None,
     variables_file: str | None = None,
     docker: bool = False,
     hdr: bool = False,
@@ -548,6 +658,7 @@ def render(
         output_path = _default_render_output(project_path, format)
 
     effective_resolution = _resolve_render_resolution(width, height, resolution)
+    variables_file = _validate_variables_file(variables_file)
 
     start_time = time.time()
     _result, _project = _hyperframes_op(
@@ -639,6 +750,93 @@ def _parse_compositions_output(stdout: str) -> list[dict[str, Any]]:
     return comps
 
 
+def _composition_html_metadata(project: Path) -> dict[str, dict[str, Any]]:
+    metadata: dict[str, dict[str, Any]] = {}
+    for html_path in project.rglob("*.html"):
+        if "node_modules" in html_path.parts:
+            continue
+        try:
+            content = html_path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError) as e:
+            logger.warning("Skipping Hyperframes composition metadata file %s: %s", html_path, e)
+            continue
+        for tag_match in _COMPOSITION_TAG_RE.finditer(content):
+            attrs = {
+                attr.group("name").lower(): html.unescape(attr.group("value").strip())
+                for attr in _DATA_ATTR_RE.finditer(tag_match.group(0))
+            }
+            comp_id = attrs.get("data-composition-id") or html.unescape(tag_match.group("id").strip())
+            if not comp_id:
+                continue
+
+            item: dict[str, Any] = {}
+            if duration := attrs.get("data-duration") or attrs.get("data-duration-seconds"):
+                item["_html_duration"] = duration
+            if fps := attrs.get("data-fps"):
+                item["_html_fps"] = fps
+            if width := _coerce_positive_int(attrs.get("data-width")):
+                item["_html_width"] = width
+            if height := _coerce_positive_int(attrs.get("data-height")):
+                item["_html_height"] = height
+            if item:
+                metadata[comp_id] = {**metadata.get(comp_id, {}), **item}
+    return metadata
+
+
+def _coerce_float(value: Any) -> float | None:
+    with contextlib.suppress(TypeError, ValueError):
+        return float(value)
+    return None
+
+
+def _coerce_positive_float(value: Any) -> float | None:
+    number = _coerce_float(value)
+    if number and number > 0:
+        return number
+    return None
+
+
+def _coerce_positive_int(value: Any) -> int | None:
+    if isinstance(value, str):
+        value = value.strip()
+        if value.lower().endswith("px"):
+            value = value[:-2].strip()
+    number = _coerce_float(value)
+    if number is None or not math.isfinite(number):
+        return None
+    try:
+        integer = int(number)
+    except (OverflowError, ValueError):
+        return None
+    if integer > 0 and float(integer) == float(number):
+        return integer
+    return None
+
+
+def _effective_composition_fps(data: dict[str, Any]) -> float:
+    return (
+        _coerce_positive_float(data.get("fps"))
+        or _coerce_positive_float(data.get("_html_fps"))
+        or DEFAULT_COMPOSITION_FPS
+    )
+
+
+def _composition_duration_frames(data: dict[str, Any]) -> int:
+    fps = _effective_composition_fps(data)
+    frame_value = data.get("durationInFrames", data.get("duration_in_frames"))
+    frames = _coerce_float(frame_value)
+    if frames and frames > 0:
+        return round(frames)
+
+    seconds = _coerce_float(data.get("durationInSeconds", data.get("duration")))
+    if not seconds:
+        seconds = _coerce_float(data.get("_html_duration"))
+    if seconds and seconds > 0:
+        return round(seconds * fps)
+
+    return 0
+
+
 def compositions(
     project_path: str,
 ) -> CompositionsResult:
@@ -646,17 +844,20 @@ def compositions(
     result, project = _hyperframes_op("compositions", project_path=project_path)
 
     raw = _parse_compositions_output(result.stdout)
+    html_metadata = _composition_html_metadata(project)
 
     comp_list = []
     for c in raw:
+        comp_id = str(c.get("id", c.get("compositionId", "")))
+        merged = {**html_metadata.get(comp_id, {}), **c}
         comp_list.append(
             CompositionInfo(
-                id=c.get("id", c.get("compositionId", "")),
-                width=c.get("width", 1920),
-                height=c.get("height", 1080),
-                fps=c.get("fps", 30),
-                duration_in_frames=c.get("durationInFrames", c.get("duration", 0)),
-                default_props=c.get("defaultProps", {}),
+                id=comp_id,
+                width=merged.get("width", merged.get("_html_width", DEFAULT_COMPOSITION_WIDTH)),
+                height=merged.get("height", merged.get("_html_height", DEFAULT_COMPOSITION_HEIGHT)),
+                fps=_effective_composition_fps(merged),
+                duration_in_frames=_composition_duration_frames(merged),
+                default_props=merged.get("defaultProps", {}),
             )
         )
 
@@ -674,10 +875,11 @@ def preview(
     """Launch Hyperframes preview studio (non-blocking)."""
     if port < 1024 or port > 65535:
         raise HyperframesProjectError(str(project_path), "Preview port must be between 1024 and 65535")
-    _require_hyperframes_deps()
+    _require_node()
     project, _entry_point = _validate_project(project_path)
+    _require_hyperframes_deps(cwd=project)
 
-    cmd = ["npx", "--yes", "--no-install", "hyperframes", "preview", str(project), "--port", str(port)]
+    cmd = [*_hyperframes_command_prefix(cwd=project), "preview", str(project), "--port", str(port)]
     proc = subprocess.Popen(
         cmd,
         cwd=str(project),
@@ -703,6 +905,8 @@ def still(
     project_path: str,
     output_path: str | None = None,
     frame: int = 0,
+    variables: Any | None = None,
+    variables_file: str | None = None,
 ) -> HyperframesStillResult:
     """Render a single frame from a Hyperframes composition.
 
@@ -711,7 +915,7 @@ def still(
     generated frame path instead of echoing a requested-but-unwritten path.
     """
     seconds = frame / 30.0
-    snap = snapshot(project_path, at=[seconds], frames=1)
+    snap = snapshot(project_path, at=[seconds], frames=1, variables=variables, variables_file=variables_file)
     actual_output = snap.frame_paths[0] if snap.frame_paths else output_path or ""
 
     return HyperframesStillResult(
@@ -725,19 +929,24 @@ def snapshot(
     frames: int = 5,
     at: list[float] | None = None,
     timeout_ms: int | None = None,
+    variables: Any | None = None,
+    variables_file: str | None = None,
 ) -> HyperframesSnapshotResult:
     """Capture key frames as PNG screenshots for visual verification."""
-    _require_hyperframes_deps()
+    _require_node()
     project, _entry_point = _validate_project(project_path)
     snapshot_dir = project / "snapshots"
     before = set(snapshot_dir.glob("*.png")) if snapshot_dir.is_dir() else set()
     at_csv = _csv(at)
+    variables_file = _validate_variables_file(variables_file)
     _hyperframes_op(
         "snapshot",
         project_path=project_path,
         frames=frames if at_csv is None else None,
         at_csv=at_csv,
         timeout_ms=timeout_ms,
+        variables=variables,
+        variables_file=variables_file,
     )
     frame_paths = _snapshot_pngs(project, before)
     return HyperframesSnapshotResult(
@@ -914,7 +1123,7 @@ def create_project(
     project_dir = Path(output_dir) / name
     _validate_output_path(str(project_dir))
 
-    _require_hyperframes_deps()
+    _require_hyperframes_deps(cwd=output_dir)
 
     if project_dir.exists() and any(project_dir.iterdir()):
         print(f"Warning: Project directory already exists and is not empty — files will be overwritten: {project_dir}")
@@ -972,14 +1181,16 @@ def validate(
     except HyperframesProjectError:
         issues.append("No HTML entry point found (expected index.html)")
 
-    # Check Node.js/npx
+    # Check Node.js/Hyperframes
     if shutil.which("node") is None:
         issues.append("Node.js not found on PATH")
-    if shutil.which("npx") is None:
-        issues.append("npx not found on PATH")
+    try:
+        _hyperframes_command_prefix(cwd=p)
+    except HyperframesNotFoundError as e:
+        issues.append(f"Hyperframes CLI not found: {e}")
 
     # Run hyperframes lint if deps are available
-    if shutil.which("npx") is not None:
+    if shutil.which("node") is not None and not any("Hyperframes CLI not found" in issue for issue in issues):
         try:
             result = _run_hyperframes(["lint", str(p), "--json"], cwd=p, timeout=60)
             if result.returncode != 0:

@@ -14,6 +14,8 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from .errors import HyperframesNotFoundError
+from .hyperframes_engine import HYPERFRAMES_COMMAND_ENV, _hyperframes_command_prefix
 from .limits import DOCTOR_COMMAND_TIMEOUT
 
 WhichFn = Callable[[str], str | None]
@@ -57,7 +59,14 @@ COMMAND_CHECKS = (
         "category": "hyperframes",
         "required": False,
         "command": ["npx", "--version"],
-        "install_hint": "Install npx/npm for Hyperframes CLI execution.",
+        "install_hint": "Install npx/npm only if your chosen Hyperframes package layout uses it.",
+    },
+    {
+        "name": "npm",
+        "category": "hyperframes",
+        "required": False,
+        "command": ["npm", "--version"],
+        "install_hint": "Install npm for Hyperframes package diagnostics.",
     },
     {
         "name": "python",
@@ -171,6 +180,7 @@ def _check_command(definition: dict[str, Any], which: WhichFn, version_runner: V
         "ok": ok,
         "path": path,
         "version": version,
+        "command": definition["command"],
         "install_hint": extra.get("install_hint", definition["install_hint"]) if not ok else None,
         **extra,
     }
@@ -279,9 +289,7 @@ def _check_audio_engine() -> dict[str, Any]:
         "ok": has_numpy,
         "path": None,
         "version": status,
-        "install_hint": (
-            None if has_numpy else 'pip install "mcp-video[audio]" for professional audio synthesis'
-        ),
+        "install_hint": None if has_numpy else 'pip install "mcp-video[audio]" for professional audio synthesis',
         "details": {
             "numpy": has_numpy,
             "scipy": has_scipy,
@@ -300,9 +308,66 @@ def _check_minimax() -> dict[str, Any]:
         "ok": has_key,
         "path": None,
         "version": None,
-        "install_hint": (
-            None if has_key else "Set MINIMAX_API_KEY environment variable for AI music generation."
-        ),
+        "install_hint": None if has_key else "Set MINIMAX_API_KEY environment variable for AI music generation.",
+    }
+
+
+def _check_mcp_video(find_spec: FindSpecFn, package_version: PackageVersionFn) -> dict[str, Any]:
+    spec = find_spec("mcp_video")
+    path = getattr(spec, "origin", None) if spec is not None else None
+    found = spec is not None
+    return {
+        "name": "mcp-video",
+        "category": "core",
+        "required": True,
+        "ok": found,
+        "path": path,
+        "version": package_version("mcp-video") if found else None,
+        "install_hint": None if found else "Install the local package: pip install mcp-video",
+    }
+
+
+def _check_hyperframes_cli(which: WhichFn, version_runner: VersionRunner) -> dict[str, Any]:
+    try:
+        prefix = _hyperframes_command_prefix(which=which)
+    except HyperframesNotFoundError:
+        prefix = ["hyperframes"]
+    command = [*prefix, "--version"]
+    path = prefix[0] if prefix != ["hyperframes"] else which("hyperframes")
+    version = version_runner(command) if path else None
+    ok = path is not None and version is not None
+    return {
+        "name": "hyperframes",
+        "category": "hyperframes",
+        "required": False,
+        "ok": ok,
+        "path": path,
+        "version": version,
+        "command": command,
+        "install_hint": None
+        if ok
+        else (f"Install a pinned Hyperframes package, add hyperframes to PATH, or set {HYPERFRAMES_COMMAND_ENV}."),
+    }
+
+
+def _check_hyperframes_core(which: WhichFn, version_runner: VersionRunner) -> dict[str, Any]:
+    command = [
+        "node",
+        "-e",
+        "try { console.log(require('@hyperframes/core/package.json').version) } catch (err) { process.exit(1) }",
+    ]
+    path = which("node")
+    version = version_runner(command) if path else None
+    ok = path is not None and version is not None
+    return {
+        "name": "@hyperframes/core",
+        "category": "hyperframes",
+        "required": False,
+        "ok": ok,
+        "path": path,
+        "version": version,
+        "command": command,
+        "install_hint": None if ok else "Install @hyperframes/core in the active Node package layout.",
     }
 
 
@@ -329,7 +394,14 @@ def run_diagnostics(
     package_version: PackageVersionFn = _package_version,
 ) -> dict[str, Any]:
     """Return a structured report for core and optional integration dependencies."""
-    checks = [_check_command(definition, which, version_runner) for definition in COMMAND_CHECKS]
+    checks = [_check_mcp_video(find_spec, package_version)]
+    checks.extend(_check_command(definition, which, version_runner) for definition in COMMAND_CHECKS)
+    checks.extend(
+        [
+            _check_hyperframes_cli(which, version_runner),
+            _check_hyperframes_core(which, version_runner),
+        ]
+    )
     checks.extend(
         _check_package(*definition, find_spec=find_spec, package_version=package_version)
         for definition in PACKAGE_CHECKS

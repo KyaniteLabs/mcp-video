@@ -3,7 +3,7 @@
   "name": "io.github.KyaniteLabs/mcp-video",
   "title": "mcp-video",
   "description": "Guardrailed video editing MCP server with FFmpeg, PUSHING CREATION planning, Hyperframes, and repurposing tools.",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "websiteUrl": "https://kyanitelabs.github.io/mcp-video/",
   "repository": {
     "url": "https://github.com/KyaniteLabs/mcp-video",
@@ -13,7 +13,7 @@
     {
       "registryType": "pypi",
       "identifier": "mcp-video",
-      "version": "1.4.0",
+      "version": "1.4.1",
       "runtimeHint": "uvx",
       "transport": {
         "type": "stdio"

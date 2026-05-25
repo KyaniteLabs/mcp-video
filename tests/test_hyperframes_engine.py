@@ -1,13 +1,24 @@
 """Tests for the Hyperframes engine."""
 
 import json
+import os
 import subprocess
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
+from mcp_video.defaults import DEFAULT_COMPOSITION_HEIGHT, DEFAULT_COMPOSITION_WIDTH
+from mcp_video.errors import (
+    HyperframesNotFoundError,
+    HyperframesProjectError,
+    HyperframesRenderError,
+    InputFileError,
+    MCPVideoError,
+)
 from mcp_video.hyperframes_engine import (
+    HYPERFRAMES_COMMAND_ENV,
+    _hyperframes_command_prefix,
     _require_hyperframes_deps,
     _validate_project,
     add_block,
@@ -29,12 +40,6 @@ from mcp_video.hyperframes_engine import (
     tts,
     validate,
 )
-from mcp_video.errors import (
-    HyperframesNotFoundError,
-    HyperframesProjectError,
-    HyperframesRenderError,
-    MCPVideoError,
-)
 
 
 # ---------------------------------------------------------------------------
@@ -49,7 +54,7 @@ def _make_completed_process(
 ) -> subprocess.CompletedProcess[str]:
     """Create a fake subprocess.CompletedProcess for mocking."""
     return subprocess.CompletedProcess(
-        args=["npx", "hyperframes"],
+        args=["hyperframes"],
         returncode=returncode,
         stdout=stdout,
         stderr=stderr,
@@ -57,14 +62,17 @@ def _make_completed_process(
 
 
 def _hyperframes_subcommand(cmd: list[str]) -> str:
-    return cmd[cmd.index("hyperframes") + 1]
+    for index, value in enumerate(cmd):
+        if Path(value).name in {"hyperframes", "hyperframes.cmd"}:
+            return cmd[index + 1]
+    raise AssertionError(f"hyperframes command not found in {cmd!r}")
 
 
 def _mock_deps_ok():
-    """Return a patcher that makes shutil.which find node and npx."""
+    """Return a patcher that makes shutil.which find Node and Hyperframes."""
 
     def _which(name: str):
-        if name in ("node", "npx"):
+        if name in ("node", "npm", "npx", "hyperframes"):
             return f"/usr/bin/{name}"
         return None
 
@@ -72,17 +80,28 @@ def _mock_deps_ok():
 
 
 def _has_real_hyperframes_cli() -> bool:
-    """Return True only when the no-install Hyperframes CLI path works."""
+    """Return True only when explicit integration runs should probe Hyperframes."""
+    if os.environ.get("MCP_VIDEO_RUN_HYPERFRAMES_INTEGRATION") != "1":
+        return False
     try:
+        command = [*_hyperframes_command_prefix(), "--version"]
         result = subprocess.run(
-            ["npx", "--yes", "--no-install", "hyperframes", "--version"],
+            command,
             capture_output=True,
             text=True,
             timeout=15,
         )
-    except (FileNotFoundError, subprocess.TimeoutExpired):
+    except (FileNotFoundError, HyperframesNotFoundError, subprocess.TimeoutExpired):
         return False
     return result.returncode == 0
+
+
+def _write_local_hyperframes_bin(project: Path) -> Path:
+    bin_path = project / "node_modules" / ".bin" / "hyperframes"
+    bin_path.parent.mkdir(parents=True)
+    bin_path.write_text("#!/bin/sh\n", encoding="utf-8")
+    bin_path.chmod(0o755)
+    return bin_path
 
 
 # ---------------------------------------------------------------------------
@@ -101,22 +120,24 @@ class TestRequireHyperframesDeps:
         mock_which.assert_called_with("node")
 
     @patch("mcp_video.hyperframes_engine.shutil.which")
-    def test_raises_when_npx_missing(self, mock_which):
-        """Should raise HyperframesNotFoundError when npx is not on PATH."""
+    def test_raises_when_hyperframes_missing(self, mock_which):
+        """Should raise HyperframesNotFoundError when the Hyperframes CLI is unavailable."""
 
         def _which(name: str):
             if name == "node":
                 return "/usr/bin/node"
+            if name == "npx":
+                return "/usr/bin/npx"
             return None
 
         mock_which.side_effect = _which
 
-        with pytest.raises(HyperframesNotFoundError, match="npx not found"):
+        with pytest.raises(HyperframesNotFoundError, match="Hyperframes CLI not found"):
             _require_hyperframes_deps()
 
     @patch("mcp_video.hyperframes_engine.shutil.which")
     def test_passes_when_both_found(self, mock_which):
-        """Should not raise when both node and npx are available."""
+        """Should not raise when Node and Hyperframes are available."""
 
         def _which(name: str):
             return f"/usr/bin/{name}"
@@ -124,6 +145,47 @@ class TestRequireHyperframesDeps:
         mock_which.side_effect = _which
 
         _require_hyperframes_deps()  # should not raise
+
+    def test_prefers_configured_hyperframes_command(self, monkeypatch):
+        monkeypatch.setenv(HYPERFRAMES_COMMAND_ENV, "/opt/hyperframes/bin/hyperframes --project-root /srv/app")
+
+        assert _hyperframes_command_prefix() == ["/opt/hyperframes/bin/hyperframes", "--project-root", "/srv/app"]
+
+    def test_preserves_unquoted_windows_hyperframes_command_path(self, monkeypatch):
+        monkeypatch.setenv(HYPERFRAMES_COMMAND_ENV, r"C:\Program Files\Hyperframes\hyperframes.cmd")
+
+        assert _hyperframes_command_prefix() == [r"C:\Program Files\Hyperframes\hyperframes.cmd"]
+
+    def test_preserves_unquoted_windows_hyperframes_command_path_with_args(self, monkeypatch):
+        monkeypatch.setenv(HYPERFRAMES_COMMAND_ENV, r"C:\Program Files\Hyperframes\hyperframes.cmd --profile prod")
+
+        assert _hyperframes_command_prefix() == [
+            r"C:\Program Files\Hyperframes\hyperframes.cmd",
+            "--profile",
+            "prod",
+        ]
+
+    def test_prefers_local_node_modules_binary(self, tmp_path, monkeypatch):
+        monkeypatch.delenv(HYPERFRAMES_COMMAND_ENV, raising=False)
+        expected = _write_local_hyperframes_bin(tmp_path)
+        monkeypatch.setattr(
+            "mcp_video.hyperframes_engine.shutil.which", lambda name: "/usr/bin/node" if name == "node" else None
+        )
+
+        assert _hyperframes_command_prefix(cwd=tmp_path) == [str(expected)]
+
+    def test_does_not_fall_back_to_package_resolving_npx(self, monkeypatch):
+        monkeypatch.delenv(HYPERFRAMES_COMMAND_ENV, raising=False)
+
+        def _which(name: str):
+            if name in {"node", "npx"}:
+                return f"/usr/bin/{name}"
+            return None
+
+        monkeypatch.setattr("mcp_video.hyperframes_engine.shutil.which", _which)
+
+        with pytest.raises(HyperframesNotFoundError, match="set MCP_VIDEO_HYPERFRAMES_COMMAND"):
+            _hyperframes_command_prefix()
 
     def test_raises_with_correct_error_type(self):
         """HyperframesNotFoundError should have error_type='dependency_error'."""
@@ -179,7 +241,7 @@ class TestRender:
     """Tests for render()."""
 
     def test_builds_correct_cli_args(self, sample_hyperframes_project):
-        """render() should invoke npx hyperframes with the right arguments."""
+        """render() should invoke Hyperframes with the right arguments."""
         project = str(sample_hyperframes_project)
         fake_cp = _make_completed_process(stdout="Rendered.")
 
@@ -199,8 +261,9 @@ class TestRender:
 
             call_args = mock_run.call_args
             cmd = call_args[0][0]
-            assert cmd[0] == "npx"
-            assert cmd[1:4] == ["--yes", "--no-install", "hyperframes"]
+            assert Path(cmd[0]).name in {"hyperframes", "hyperframes.cmd"}
+            assert "npx" not in cmd[:3]
+            assert "--no-install" not in cmd
             assert "render" in cmd
             assert "/tmp/out.mp4" in cmd
             assert "--fps" in cmd
@@ -209,6 +272,40 @@ class TestRender:
             assert "--quality" in cmd
             idx = cmd.index("--quality")
             assert cmd[idx + 1] == "standard"
+
+    def test_formats_integral_float_fps_without_decimal(self, sample_hyperframes_project):
+        """render() should not pass 30.0 because Hyperframes rejects decimal fps."""
+        project = str(sample_hyperframes_project)
+        fake_cp = _make_completed_process(stdout="Rendered.")
+
+        with (
+            _mock_deps_ok(),
+            patch("mcp_video.hyperframes_engine.subprocess.run", return_value=fake_cp) as mock_run,
+            patch("os.path.isfile", return_value=True),
+            patch("os.path.getsize", return_value=1024 * 1024),
+        ):
+            render(project, output_path="/tmp/out.mp4", fps=30.0, format="mp4")
+
+            cmd = mock_run.call_args[0][0]
+            idx = cmd.index("--fps")
+            assert cmd[idx + 1] == "30"
+
+    def test_preserves_non_integral_float_fps(self, sample_hyperframes_project):
+        """render() should pass non-integral FPS values through unchanged."""
+        project = str(sample_hyperframes_project)
+        fake_cp = _make_completed_process(stdout="Rendered.")
+
+        with (
+            _mock_deps_ok(),
+            patch("mcp_video.hyperframes_engine.subprocess.run", return_value=fake_cp) as mock_run,
+            patch("os.path.isfile", return_value=True),
+            patch("os.path.getsize", return_value=1024 * 1024),
+        ):
+            render(project, output_path="/tmp/out.mp4", fps=29.97, format="mp4")
+
+            cmd = mock_run.call_args[0][0]
+            idx = cmd.index("--fps")
+            assert cmd[idx + 1] == "29.97"
 
     def test_passes_all_optional_args(self, sample_hyperframes_project):
         """render() should forward render options supported by Hyperframes CLI."""
@@ -243,6 +340,53 @@ class TestRender:
             assert cmd[cmd.index("--resolution") + 1] == "portrait"
             assert "--width" not in cmd
             assert "--height" not in cmd
+
+    def test_render_serializes_inline_variables(self, sample_hyperframes_project):
+        """render() should pass inline runtime data as JSON to Hyperframes."""
+        project = str(sample_hyperframes_project)
+        fake_cp = _make_completed_process(stdout="done")
+
+        with (
+            _mock_deps_ok(),
+            patch("mcp_video.hyperframes_engine.subprocess.run", return_value=fake_cp) as mock_run,
+            patch("os.path.isfile", return_value=True),
+            patch("os.path.getsize", return_value=2 * 1024 * 1024),
+        ):
+            render(project, output_path="/tmp/out.mp4", variables={"title": "Launch", "count": 3})
+
+        cmd = mock_run.call_args[0][0]
+        assert cmd[cmd.index("--variables") + 1] == '{"count":3,"title":"Launch"}'
+
+    def test_render_accepts_variables_file(self, sample_hyperframes_project, tmp_path):
+        """render() should pass variables_file to Hyperframes."""
+        project = str(sample_hyperframes_project)
+        variables_file = tmp_path / "variables.json"
+        variables_file.write_text('{"title":"Launch"}')
+        fake_cp = _make_completed_process(stdout="done")
+
+        with (
+            _mock_deps_ok(),
+            patch("mcp_video.hyperframes_engine.subprocess.run", return_value=fake_cp) as mock_run,
+            patch("os.path.isfile", return_value=True),
+            patch("os.path.getsize", return_value=2 * 1024 * 1024),
+        ):
+            render(project, output_path="/tmp/out.mp4", variables_file=str(variables_file))
+
+        cmd = mock_run.call_args[0][0]
+        assert cmd[cmd.index("--variables-file") + 1] == str(variables_file)
+
+    def test_render_validates_variables_file(self, sample_hyperframes_project):
+        """render() should reject missing variables_file before subprocess execution."""
+        project = str(sample_hyperframes_project)
+
+        with (
+            _mock_deps_ok(),
+            patch("mcp_video.hyperframes_engine.subprocess.run") as mock_run,
+            pytest.raises(InputFileError),
+        ):
+            render(project, output_path="/tmp/out.mp4", variables_file="/tmp/missing-variables.json")
+
+        mock_run.assert_not_called()
 
     def test_raises_on_nonzero_exit(self, sample_hyperframes_project):
         """render() should raise HyperframesRenderError on non-zero exit."""
@@ -478,6 +622,146 @@ class TestCompositions:
             assert len(result.compositions) == 1
             assert result.compositions[0].id == "A"
 
+    def test_computes_frames_from_duration_seconds(self, sample_hyperframes_project):
+        """Seconds-based Hyperframes output should report frames, not raw seconds."""
+        project = str(sample_hyperframes_project)
+        comp_json = json.dumps(
+            {
+                "id": "main",
+                "width": 1080,
+                "height": 1920,
+                "fps": 30,
+                "duration": 5,
+            }
+        )
+        fake_cp = _make_completed_process(stdout=comp_json)
+
+        with _mock_deps_ok(), patch("mcp_video.hyperframes_engine.subprocess.run", return_value=fake_cp):
+            result = compositions(project)
+
+        assert result.compositions[0].duration_in_frames == 150
+
+    def test_computes_frames_from_duration_in_seconds_alias(self, sample_hyperframes_project):
+        """Alternate upstream duration key should still produce frame counts."""
+        project = str(sample_hyperframes_project)
+        comp_json = json.dumps(
+            {
+                "id": "main",
+                "width": 1080,
+                "height": 1920,
+                "fps": 29.97,
+                "durationInSeconds": 4,
+            }
+        )
+        fake_cp = _make_completed_process(stdout=comp_json)
+
+        with _mock_deps_ok(), patch("mcp_video.hyperframes_engine.subprocess.run", return_value=fake_cp):
+            result = compositions(project)
+
+        assert result.compositions[0].duration_in_frames == 120
+
+    def test_uses_html_data_duration_when_cli_reports_zero_frames(self, sample_hyperframes_project):
+        """data-duration should repair false zero-frame composition preflight output."""
+        project_path = Path(sample_hyperframes_project)
+        (project_path / "index.html").write_text(
+            '<!DOCTYPE html><div data-composition-id="main" data-duration="5" data-width="1080" '
+            'data-height="1920" data-fps="30"></div>',
+            encoding="utf-8",
+        )
+        comp_json = json.dumps(
+            {
+                "id": "main",
+                "width": 1080,
+                "height": 1920,
+                "fps": 30,
+                "durationInFrames": 0,
+            }
+        )
+        fake_cp = _make_completed_process(stdout=comp_json)
+
+        with _mock_deps_ok(), patch("mcp_video.hyperframes_engine.subprocess.run", return_value=fake_cp):
+            result = compositions(str(project_path))
+
+        comp = result.compositions[0]
+        assert comp.width == 1080
+        assert comp.height == 1920
+        assert comp.fps == 30
+        assert comp.duration_in_frames == 150
+
+    def test_uses_html_data_duration_for_text_table_zero_frames(self, sample_hyperframes_project):
+        """Text/table fallback should also repair zero frames from HTML metadata."""
+        project_path = Path(sample_hyperframes_project)
+        (project_path / "index.html").write_text(
+            '<div data-composition-id="main" data-duration="10" data-width="1080" data-height="1920"></div>',
+            encoding="utf-8",
+        )
+        fake_cp = _make_completed_process(stdout="main 30 1080x1920 0 (10s)\n")
+
+        with _mock_deps_ok(), patch("mcp_video.hyperframes_engine.subprocess.run", return_value=fake_cp):
+            result = compositions(str(project_path))
+
+        assert result.compositions[0].duration_in_frames == 300
+
+    def test_uses_html_fps_when_cli_reports_zero_fps(self, sample_hyperframes_project):
+        """HTML fps should be used when CLI fps is present but not usable."""
+        project_path = Path(sample_hyperframes_project)
+        (project_path / "index.html").write_text(
+            '<div data-composition-id="main" data-duration="5" data-fps="24"></div>',
+            encoding="utf-8",
+        )
+        comp_json = json.dumps({"id": "main", "fps": 0, "durationInFrames": 0})
+        fake_cp = _make_completed_process(stdout=comp_json)
+
+        with _mock_deps_ok(), patch("mcp_video.hyperframes_engine.subprocess.run", return_value=fake_cp):
+            result = compositions(str(project_path))
+
+        assert result.compositions[0].fps == 24
+        assert result.compositions[0].duration_in_frames == 120
+
+    def test_merges_repeated_html_composition_metadata(self, sample_hyperframes_project):
+        """Repeated composition tags should combine fallback metadata instead of overwriting it."""
+        project_path = Path(sample_hyperframes_project)
+        (project_path / "index.html").write_text(
+            '<div data-composition-id="main" data-duration="5"></div>'
+            '<div data-composition-id="main" data-width="1080" data-height="1920"></div>',
+            encoding="utf-8",
+        )
+        comp_json = json.dumps({"id": "main", "fps": 0, "durationInFrames": 0})
+        fake_cp = _make_completed_process(stdout=comp_json)
+
+        with _mock_deps_ok(), patch("mcp_video.hyperframes_engine.subprocess.run", return_value=fake_cp):
+            result = compositions(str(project_path))
+
+        comp = result.compositions[0]
+        assert comp.width == 1080
+        assert comp.height == 1920
+        assert comp.duration_in_frames == 150
+
+    def test_sanitizes_html_width_height_metadata(self, sample_hyperframes_project):
+        """HTML dimensions should accept pixel-like integers and ignore invalid values."""
+        project_path = Path(sample_hyperframes_project)
+        (project_path / "index.html").write_text(
+            '<div data-composition-id="main" data-width="1080px" data-height="1920.0"></div>'
+            '<div data-composition-id="bad" data-width="inf" data-height="nan"></div>',
+            encoding="utf-8",
+        )
+        comp_json = json.dumps(
+            [
+                {"id": "main", "durationInFrames": 1},
+                {"id": "bad", "durationInFrames": 1},
+            ]
+        )
+        fake_cp = _make_completed_process(stdout=comp_json)
+
+        with _mock_deps_ok(), patch("mcp_video.hyperframes_engine.subprocess.run", return_value=fake_cp):
+            result = compositions(str(project_path))
+
+        main, bad = result.compositions
+        assert main.width == 1080
+        assert main.height == 1920
+        assert bad.width == DEFAULT_COMPOSITION_WIDTH
+        assert bad.height == DEFAULT_COMPOSITION_HEIGHT
+
     def test_handles_invalid_json(self, sample_hyperframes_project):
         """compositions() should return empty list when JSON is invalid."""
         project = str(sample_hyperframes_project)
@@ -545,7 +829,7 @@ class TestPreview:
             assert result.port == 8080
 
     def test_launches_popen_with_correct_command(self, sample_hyperframes_project):
-        """preview() should launch npx hyperframes preview with --port."""
+        """preview() should launch Hyperframes preview with --port."""
         project = str(sample_hyperframes_project)
         mock_proc = MagicMock()
         mock_proc.poll.return_value = None
@@ -558,8 +842,9 @@ class TestPreview:
 
             call_args = mock_popen.call_args
             cmd = call_args[0][0]
-            assert cmd[0] == "npx"
-            assert cmd[1:4] == ["--yes", "--no-install", "hyperframes"]
+            assert Path(cmd[0]).name in {"hyperframes", "hyperframes.cmd"}
+            assert "npx" not in cmd[:3]
+            assert "--no-install" not in cmd
             assert "preview" in cmd
             assert "--port" in cmd
             idx = cmd.index("--port")
@@ -617,6 +902,20 @@ class TestStill:
             idx = cmd.index("--at")
             assert cmd[idx + 1] == "1.4"
 
+    def test_forwards_runtime_variables_to_snapshot(self, sample_hyperframes_project, tmp_path):
+        """still() should pass runtime data through to the snapshot CLI."""
+        project = Path(sample_hyperframes_project)
+        variables_file = tmp_path / "runtime.json"
+        variables_file.write_text('{"headline":"Runtime"}')
+        fake_cp = _make_completed_process(stdout="Rendered frame.")
+
+        with _mock_deps_ok(), patch("mcp_video.hyperframes_engine.subprocess.run", return_value=fake_cp) as mock_run:
+            still(str(project), frame=42, variables={"headline": "Runtime"}, variables_file=str(variables_file))
+
+        cmd = mock_run.call_args[0][0]
+        assert cmd[cmd.index("--variables") + 1] == '{"headline":"Runtime"}'
+        assert cmd[cmd.index("--variables-file") + 1] == str(variables_file)
+
 
 class TestSnapshot:
     """Tests for Hyperframes 0.5 snapshot path handling."""
@@ -651,6 +950,32 @@ class TestSnapshot:
         assert "--at" in cmd
         assert cmd[cmd.index("--at") + 1] == "0.5,1.25"
 
+    def test_builds_runtime_data_args(self, sample_hyperframes_project, tmp_path):
+        project = str(sample_hyperframes_project)
+        variables_file = tmp_path / "vars.json"
+        variables_file.write_text('{"quote":"Hello"}')
+        fake_cp = _make_completed_process(stdout="captured")
+
+        with _mock_deps_ok(), patch("mcp_video.hyperframes_engine.subprocess.run", return_value=fake_cp) as mock_run:
+            snapshot(project, frames=1, variables={"quote": "Hello"}, variables_file=str(variables_file))
+
+        cmd = mock_run.call_args[0][0]
+        assert "snapshot" in cmd
+        assert cmd[cmd.index("--variables") + 1] == '{"quote":"Hello"}'
+        assert cmd[cmd.index("--variables-file") + 1] == str(variables_file)
+
+    def test_validates_variables_file(self, sample_hyperframes_project):
+        project = str(sample_hyperframes_project)
+
+        with (
+            _mock_deps_ok(),
+            patch("mcp_video.hyperframes_engine.subprocess.run") as mock_run,
+            pytest.raises(InputFileError),
+        ):
+            snapshot(project, frames=1, variables_file="/tmp/missing-snapshot-vars.json")
+
+        mock_run.assert_not_called()
+
     def test_still_returns_actual_snapshot_path_not_requested_path(self, sample_hyperframes_project):
         project = Path(sample_hyperframes_project)
         snapshot_dir = project / "snapshots"
@@ -682,7 +1007,7 @@ class TestHyperframes05Tools:
 
         assert result.items[0]["name"] == "tiktok-follow"
         cmd = mock_run.call_args[0][0]
-        assert cmd[0] == "npx"
+        assert cmd[0] == "/usr/bin/hyperframes"
         assert _hyperframes_subcommand(cmd) == "catalog"
         assert "--json" in cmd
         assert "--tag" in cmd
@@ -713,7 +1038,7 @@ class TestHyperframes05Tools:
 
         assert result.data["projectPath"].endswith("captured")
         cmd = mock_run.call_args[0][0]
-        assert cmd[0] == "npx"
+        assert cmd[0] == "/usr/bin/hyperframes"
         assert _hyperframes_subcommand(cmd) == "capture"
         assert "https://example.com" in cmd
         assert "--json" in cmd
@@ -826,7 +1151,7 @@ class TestCreateProject:
             create_project("safe-name", output_dir="bad\x00dir")
 
     def test_runs_hyperframes_init(self, tmp_path):
-        """create_project() should run npx hyperframes init with correct args."""
+        """create_project() should run Hyperframes init with correct args."""
         with _mock_deps_ok(), patch("mcp_video.hyperframes_engine.subprocess.run") as mock_run:
             mock_run.return_value = _make_completed_process(stdout="initialized")
 
@@ -845,8 +1170,9 @@ class TestCreateProject:
 
             call_args = mock_run.call_args
             cmd = call_args[0][0]
-            assert cmd[0] == "npx"
-            assert cmd[1:4] == ["--yes", "--no-install", "hyperframes"]
+            assert Path(cmd[0]).name in {"hyperframes", "hyperframes.cmd"}
+            assert "npx" not in cmd[:3]
+            assert "--no-install" not in cmd
             assert "init" in cmd
             assert "test-project" in cmd
             assert "--example" in cmd
@@ -903,7 +1229,7 @@ class TestValidate:
 
         assert result.valid is False
         assert any("Node.js" in i for i in result.issues)
-        assert any("npx" in i for i in result.issues)
+        assert any("Hyperframes CLI" in i for i in result.issues)
 
     def test_valid_project(self, tmp_path):
         """validate() should return valid=True for a well-formed project."""
@@ -949,7 +1275,7 @@ class TestAddBlock:
     """Tests for add_block()."""
 
     def test_adds_block_with_correct_args(self, sample_hyperframes_project):
-        """add_block() should invoke npx hyperframes add with the block name."""
+        """add_block() should invoke Hyperframes add with the block name."""
         project = str(sample_hyperframes_project)
         fake_cp = _make_completed_process(stdout='{"files": ["blocks/test.tsx"]}')
 
@@ -991,7 +1317,7 @@ class TestRenderAndPost:
         """render_and_post() should render then apply resize."""
 
         def _which(name: str):
-            if name in ("node", "npx"):
+            if name in ("node", "npx", "hyperframes"):
                 return f"/usr/bin/{name}"
             if name in ("ffmpeg", "ffprobe"):
                 return f"/usr/bin/{name}"
@@ -1028,7 +1354,7 @@ class TestRenderAndPost:
         """render_and_post() should chain multiple post-processing ops."""
 
         def _which(name: str):
-            if name in ("node", "npx", "ffmpeg", "ffprobe"):
+            if name in ("node", "npx", "hyperframes", "ffmpeg", "ffprobe"):
                 return f"/usr/bin/{name}"
             return None
 
@@ -1062,7 +1388,7 @@ class TestRenderAndPost:
         """render_and_post() should not report success when Hyperframes produced no artifact."""
 
         def _which(name: str):
-            if name in ("node", "npx"):
+            if name in ("node", "npx", "hyperframes"):
                 return f"/usr/bin/{name}"
             return None
 
@@ -1083,7 +1409,7 @@ class TestRenderAndPost:
         """render_and_post() should raise MCPVideoError for unknown operations."""
 
         def _which(name: str):
-            if name in ("node", "npx"):
+            if name in ("node", "npx", "hyperframes"):
                 return f"/usr/bin/{name}"
             return None
 
@@ -1110,7 +1436,7 @@ class TestRenderAndPost:
         """render_and_post() should accept 'type' key as alias for 'op'."""
 
         def _which(name: str):
-            if name in ("node", "npx", "ffmpeg", "ffprobe"):
+            if name in ("node", "npx", "hyperframes", "ffmpeg", "ffprobe"):
                 return f"/usr/bin/{name}"
             return None
 
@@ -1151,19 +1477,19 @@ class TestErrorHandling:
         project = str(sample_hyperframes_project)
 
         with _mock_deps_ok(), patch("mcp_video.hyperframes_engine.subprocess.run") as mock_run:
-            mock_run.side_effect = subprocess.TimeoutExpired(cmd="npx", timeout=600)
+            mock_run.side_effect = subprocess.TimeoutExpired(cmd="hyperframes", timeout=600)
 
             with pytest.raises(HyperframesRenderError, match="timed out"):
                 render(project, output_path="/tmp/out.mp4")
 
-    def test_render_npx_not_found(self, sample_hyperframes_project):
-        """render() should raise HyperframesNotFoundError when npx binary is missing."""
+    def test_render_hyperframes_not_found(self, sample_hyperframes_project):
+        """render() should raise HyperframesNotFoundError when the CLI binary is missing."""
         project = str(sample_hyperframes_project)
 
         with _mock_deps_ok(), patch("mcp_video.hyperframes_engine.subprocess.run") as mock_run:
-            mock_run.side_effect = FileNotFoundError("npx not found")
+            mock_run.side_effect = FileNotFoundError("hyperframes not found")
 
-            with pytest.raises(HyperframesNotFoundError, match="npx command not found"):
+            with pytest.raises(HyperframesNotFoundError, match="hyperframes command not found"):
                 render(project, output_path="/tmp/out.mp4")
 
     def test_render_error_has_command_and_returncode(self, sample_hyperframes_project):
@@ -1233,7 +1559,7 @@ class TestErrorHandling:
 @pytest.mark.hyperframes
 @pytest.mark.skipif(
     not _has_real_hyperframes_cli(),
-    reason="requires a locally installed Hyperframes CLI available via npx --no-install",
+    reason="requires a local Hyperframes CLI",
 )
 class TestHyperframesIntegration:
     """Integration tests that require a real Node.js/Hyperframes installation."""

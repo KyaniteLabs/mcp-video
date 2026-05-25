@@ -38,7 +38,7 @@ python -m pytest tests/test_real_all_features.py -v -m "not slow"
 
 ## Hyperframes Tests
 
-Run Hyperframes-specific tests (requires Node.js 22+ and `npx hyperframes`):
+Run Hyperframes-specific tests (requires Node.js 22+ and a resolvable local Hyperframes CLI):
 
 ```bash
 python -m pytest tests/test_hyperframes_engine.py -v

@@ -11,6 +11,8 @@ This project follows a simple release-note style:
 
 ## Unreleased
 
+## 1.4.1 - 2026-05-25
+
 ### Added
 
 - Added preflight guardrails for high-risk video/audio edit paths:

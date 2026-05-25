@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mcp-video"
-version = "1.4.0"
+version = "1.4.1"
 description = "Guardrailed video editing MCP server for AI agents. FFmpeg, PUSHING CREATION planning, Hyperframes, repurposing tools, Python client, and CLI. Local, fast, free."
 readme = "README.md"
 license = "Apache-2.0"
@@ -44,7 +44,7 @@ audio-enhanced = ["numpy>=1.24", "scipy>=1.10", "soundfile>=0.12"]
 audio-ai = ["numpy>=1.24", "basic-pitch>=0.4"]
 audio-midi = ["numpy>=1.24", "meltysynth>=1.0"]
 audio-analysis = ["numpy>=1.24", "librosa>=0.10", "soundfile>=0.12"]
-hyperframes = []  # External: Node.js + Hyperframes CLI (npx hyperframes)
+hyperframes = []  # External: Node.js + resolvable Hyperframes CLI
 transcribe = ["openai-whisper>=20231117"]
 ai-scene = ["imagehash>=4.3", "Pillow>=10.0"]
 stems = ["demucs>=4.0", "torch>=2.0", "torchaudio>=2.0", "torchcodec>=0.8"]
