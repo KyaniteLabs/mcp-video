@@ -1,6 +1,5 @@
 """Tests for filter_guardrails module."""
 
-
 from mcp_video.filter_guardrails import validate_filter_params, clamp_filter_params
 
 

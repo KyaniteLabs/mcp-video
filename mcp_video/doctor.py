@@ -101,9 +101,27 @@ PACKAGE_CHECKS = (
     ("torchaudio", "torchaudio", "ai", False, 'Install stem-separation extras: pip install "mcp-video[stems]"'),
     ("torchcodec", "torchcodec", "ai", False, 'Install stem-separation extras: pip install "mcp-video[stems]"'),
     ("imagehash", "imagehash", "ai", False, 'Install AI scene extras: pip install "mcp-video[ai-scene]"'),
-    ("scipy", "scipy", "audio-enhanced", False, 'Install enhanced audio extras: pip install "mcp-video[audio-enhanced]"'),
-    ("soundfile", "soundfile", "audio-enhanced", False, 'Install enhanced audio extras: pip install "mcp-video[audio-enhanced]"'),
-    ("librosa", "librosa", "audio-enhanced", False, 'Install enhanced audio extras: pip install "mcp-video[audio-enhanced]"'),
+    (
+        "scipy",
+        "scipy",
+        "audio-enhanced",
+        False,
+        'Install enhanced audio extras: pip install "mcp-video[audio-enhanced]"',
+    ),
+    (
+        "soundfile",
+        "soundfile",
+        "audio-enhanced",
+        False,
+        'Install enhanced audio extras: pip install "mcp-video[audio-enhanced]"',
+    ),
+    (
+        "librosa",
+        "librosa",
+        "audio-enhanced",
+        False,
+        'Install enhanced audio extras: pip install "mcp-video[audio-enhanced]"',
+    ),
     ("basic-pitch", "basic_pitch", "audio-ai", False, 'Install audio AI extras: pip install "mcp-video[audio-ai]"'),
     ("meltysynth", "meltysynth", "audio-midi", False, 'Install MIDI audio extras: pip install "mcp-video[audio-midi]"'),
 )
@@ -255,26 +273,9 @@ def _check_crush() -> dict[str, Any]:
 
 def _check_audio_engine() -> dict[str, Any]:
     """Check audio engine capabilities."""
-    try:
-        import numpy as np
-
-        has_numpy = True
-    except ImportError:
-        has_numpy = False
-
-    try:
-        import scipy
-
-        has_scipy = True
-    except ImportError:
-        has_scipy = False
-
-    try:
-        import pedalboard
-
-        has_pedalboard = True
-    except ImportError:
-        has_pedalboard = False
+    has_numpy = importlib.util.find_spec("numpy") is not None
+    has_scipy = importlib.util.find_spec("scipy") is not None
+    has_pedalboard = importlib.util.find_spec("pedalboard") is not None
 
     status = "legacy"
     if has_numpy and has_scipy:

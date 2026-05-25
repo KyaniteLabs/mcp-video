@@ -27,7 +27,6 @@ from .core import (
     apply_reverb,
     apply_tremolo,
     apply_vibrato,
-    generate_colored_noise,
     generate_fm,
     generate_noise,
     generate_pluck,
@@ -97,9 +96,7 @@ def _mix_into_buffer(mix_buffer: Any, samples: Any, start_sample: int, volume: f
             slice_len = end - start_sample
             if slice_len <= 0:
                 return mix_buffer
-            if mix_buffer.ndim == 2 and samples.ndim == 2:
-                mix_buffer[start_sample:end] += samples[:slice_len] * volume
-            elif mix_buffer.ndim == 1 and samples.ndim == 1:
+            if (mix_buffer.ndim == 2 and samples.ndim == 2) or (mix_buffer.ndim == 1 and samples.ndim == 1):
                 mix_buffer[start_sample:end] += samples[:slice_len] * volume
             elif mix_buffer.ndim == 2 and samples.ndim == 1:
                 # Broadcast mono into stereo

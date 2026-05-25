@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import Any
 
 from .design_guardrails import (
-    calculate_stacked_positions,
     extract_verification_frame,
     validate_text_layout,
     TextOverlaySpec,

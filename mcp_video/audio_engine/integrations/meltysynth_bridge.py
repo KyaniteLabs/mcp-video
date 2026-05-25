@@ -50,9 +50,7 @@ def synthesize_midi(
     if not midi_path_obj.exists():
         raise MCPVideoError(f"MIDI file not found: {midi_path}", error_type="input_error", code="invalid_input")
     if not sf_path_obj.exists():
-        raise MCPVideoError(
-            f"SoundFont not found: {soundfont_path}", error_type="input_error", code="invalid_input"
-        )
+        raise MCPVideoError(f"SoundFont not found: {soundfont_path}", error_type="input_error", code="invalid_input")
 
     sound_font = ms.SoundFont.from_file(str(sf_path_obj))
     settings = ms.SynthesizerSettings(sample_rate)
@@ -101,9 +99,7 @@ def render_notes(
 
     sf_path_obj = Path(soundfont_path)
     if not sf_path_obj.exists():
-        raise MCPVideoError(
-            f"SoundFont not found: {soundfont_path}", error_type="input_error", code="invalid_input"
-        )
+        raise MCPVideoError(f"SoundFont not found: {soundfont_path}", error_type="input_error", code="invalid_input")
 
     if duration is None:
         duration = max(n.get("start", 0) + n.get("duration", 0) for n in notes) + 1.0

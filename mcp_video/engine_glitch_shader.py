@@ -54,6 +54,7 @@ def _resolve_crush_path() -> str:
     # Fallback: the render script itself resolves relative to its own location
     return str(_CRUSH_JS_DIR)
 
+
 _VIDEO_ENCODE_FLAGS = [
     "-c:a",
     "copy",

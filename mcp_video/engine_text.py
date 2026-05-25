@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from typing import Any
 
 from .engine_probe import probe
 from .errors import MCPVideoError
@@ -31,7 +32,6 @@ from .design_guardrails import (
     validate_text_layout,
     calculate_stacked_positions,
     TextOverlaySpec,
-    extract_verification_frame,
 )
 
 import warnings as _warnings
@@ -236,7 +236,7 @@ def add_texts(
 
     # Build chained drawtext filters
     filter_parts: list[str] = []
-    for t, overlay in zip(texts, overlays):
+    for t, overlay in zip(texts, overlays, strict=False):
         font = t.get("font")
         fontfile = font or _default_font()
         if font is not None:
@@ -263,24 +263,22 @@ def add_texts(
         ]
 
         if overlay.shadow:
-            parts.extend([
-                "shadowcolor=black@0.5",
-                "shadowx=2",
-                "shadowy=2",
-            ])
+            parts.extend(
+                [
+                    "shadowcolor=black@0.5",
+                    "shadowx=2",
+                    "shadowy=2",
+                ]
+            )
 
         if overlay.start_time is not None and overlay.duration is not None:
-            safe_start = _escape_ffmpeg_filter_value(
-                str(_sanitize_ffmpeg_number(overlay.start_time, "start_time"))
-            )
+            safe_start = _escape_ffmpeg_filter_value(str(_sanitize_ffmpeg_number(overlay.start_time, "start_time")))
             safe_end = _escape_ffmpeg_filter_value(
                 str(_sanitize_ffmpeg_number(overlay.start_time + overlay.duration, "start_time + duration"))
             )
             parts.append(f"enable='between(t\\,{safe_start}\\,{safe_end})'")
         elif overlay.start_time is not None:
-            safe_start = _escape_ffmpeg_filter_value(
-                str(_sanitize_ffmpeg_number(overlay.start_time, "start_time"))
-            )
+            safe_start = _escape_ffmpeg_filter_value(str(_sanitize_ffmpeg_number(overlay.start_time, "start_time")))
             parts.append(f"enable='gte(t\\,{safe_start})'")
 
         filter_parts.append(":".join(parts))
@@ -342,7 +340,7 @@ def _apply_auto_layout(
         )
 
         # Apply new positions
-        for (idx, _), pos in zip(items, new_positions):
+        for (idx, _), pos in zip(items, new_positions, strict=False):
             overlays[idx] = TextOverlaySpec(
                 text=overlays[idx].text,
                 position=pos,

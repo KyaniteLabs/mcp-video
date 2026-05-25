@@ -104,10 +104,7 @@ class TestValidateTextLayout:
         assert not any(w.code == "text_overlap" for w in warnings)
 
     def test_excessive_overlays_warning(self):
-        overlays = [
-            TextOverlaySpec(text=f"Text {i}", position="top-left", size=24, color="white")
-            for i in range(6)
-        ]
+        overlays = [TextOverlaySpec(text=f"Text {i}", position="top-left", size=24, color="white") for i in range(6)]
         warnings = validate_text_layout(overlays, background_color="black")
         assert any(w.code == "excessive_overlays" for w in warnings)
 

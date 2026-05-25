@@ -10,13 +10,9 @@ Prevents common failure modes that produce unreadable or unprofessional output:
 
 from __future__ import annotations
 
-import colorsys
-import re
 from dataclasses import dataclass
-from typing import Any
 
 from .errors import MCPVideoError
-from .engine_probe import probe
 
 # ---------------------------------------------------------------------------
 # Safe area constants (title-safe and action-safe per SMPTE standards)
@@ -58,6 +54,7 @@ class LayoutWarning:
 # ---------------------------------------------------------------------------
 # Color helpers
 # ---------------------------------------------------------------------------
+
 
 def _hex_to_rgb(color: str) -> tuple[int, int, int]:
     """Convert hex or CSS named color to RGB tuple."""
@@ -115,6 +112,7 @@ def contrast_ratio(color1: str, color2: str) -> float:
 # Layout analysis
 # ---------------------------------------------------------------------------
 
+
 def _position_y_pct(position: str | dict[str, float]) -> float:
     """Estimate the vertical position as a percentage of screen height (0-1).
 
@@ -165,9 +163,7 @@ def _position_x_pct(position: str | dict[str, float]) -> float:
     return mapping.get(position, 0.5)
 
 
-def _overlaps(
-    y1: float, y2: float, size1: int, size2: int, video_height: int = 1080
-) -> bool:
+def _overlaps(y1: float, y2: float, size1: int, size2: int, video_height: int = 1080) -> bool:
     """Check if two text elements overlap vertically.
 
     Approximates text height as size * 1.2 (line height).
@@ -178,9 +174,7 @@ def _overlaps(
     return abs(y1 - y2) < (h1 / 2 + h2 / 2 + 0.02)
 
 
-def _same_horizontal_band(
-    x1: float, x2: float, text1: str, text2: str, size1: int, size2: int
-) -> bool:
+def _same_horizontal_band(x1: float, x2: float, text1: str, text2: str, size1: int, size2: int) -> bool:
     """Check if two text elements are in the same horizontal band.
 
     Approximates text width as len(text) * size * 0.6 (avg char width).
@@ -193,6 +187,7 @@ def _same_horizontal_band(
 # ---------------------------------------------------------------------------
 # Main validation entrypoint
 # ---------------------------------------------------------------------------
+
 
 def validate_text_layout(
     overlays: list[TextOverlaySpec],
@@ -233,9 +228,12 @@ def validate_text_layout(
             else:
                 o2_end = float("inf")
 
-            if o1.start_time is not None and o2.start_time is not None:
-                if o1.start_time >= o2_end or o2.start_time >= o1_end:
-                    time_overlap = False
+            if (
+                o1.start_time is not None
+                and o2.start_time is not None
+                and (o1.start_time >= o2_end or o2.start_time >= o1_end)
+            ):
+                time_overlap = False
 
             if not time_overlap:
                 continue
@@ -245,21 +243,22 @@ def validate_text_layout(
             x1 = _position_x_pct(o1.position)
             x2 = _position_x_pct(o2.position)
 
-            if _overlaps(y1, y2, o1.size, o2.size, video_height):
-                if _same_horizontal_band(x1, x2, o1.text, o2.text, o1.size, o2.size):
-                    warnings.append(
-                        LayoutWarning(
-                            code="text_overlap",
-                            message=(
-                                f"Text '{o1.text[:30]}...' and '{o2.text[:30]}...' "
-                                f"overlap at position ({o1.position}, {o2.position}). "
-                                f"Use pixel positioning {{'x': N, 'y': N}} or "
-                                f"different named positions to separate them."
-                            ),
-                            severity="error",
-                            overlay_indices=(i, j),
-                        )
+            if _overlaps(y1, y2, o1.size, o2.size, video_height) and _same_horizontal_band(
+                x1, x2, o1.text, o2.text, o1.size, o2.size
+            ):
+                warnings.append(
+                    LayoutWarning(
+                        code="text_overlap",
+                        message=(
+                            f"Text '{o1.text[:30]}...' and '{o2.text[:30]}...' "
+                            f"overlap at position ({o1.position}, {o2.position}). "
+                            f"Use pixel positioning {{'x': N, 'y': N}} or "
+                            f"different named positions to separate them."
+                        ),
+                        severity="error",
+                        overlay_indices=(i, j),
                     )
+                )
 
     # 2. Check contrast for each overlay
     for i, overlay in enumerate(overlays):
@@ -288,10 +287,7 @@ def validate_text_layout(
             warnings.append(
                 LayoutWarning(
                     code="text_too_small",
-                    message=(
-                        f"Text size {overlay.size}px is very small. "
-                        f"Minimum recommended is {MIN_TEXT_SIZE_PX}px."
-                    ),
+                    message=(f"Text size {overlay.size}px is very small. Minimum recommended is {MIN_TEXT_SIZE_PX}px."),
                     severity="warning",
                     overlay_indices=(i,),
                 )
@@ -324,7 +320,7 @@ def validate_text_layout(
                             message=(
                                 f"Text '{overlay.text[:30]}...' may be outside "
                                 f"the title-safe area. Keep text within "
-                                f"{TITLE_SAFE_MARGIN_PCT*100:.0f}% margins."
+                                f"{TITLE_SAFE_MARGIN_PCT * 100:.0f}% margins."
                             ),
                             severity="info",
                             overlay_indices=(i,),
@@ -336,10 +332,7 @@ def validate_text_layout(
                     warnings.append(
                         LayoutWarning(
                             code="outside_safe_area",
-                            message=(
-                                f"Text '{overlay.text[:30]}...' may be outside "
-                                f"the title-safe area horizontally."
-                            ),
+                            message=(f"Text '{overlay.text[:30]}...' may be outside the title-safe area horizontally."),
                             severity="info",
                             overlay_indices=(i,),
                         )
@@ -408,6 +401,7 @@ def validate_single_text(
 # Layout helper: auto-calculate Y offsets for multi-line text
 # ---------------------------------------------------------------------------
 
+
 def calculate_stacked_positions(
     texts: list[tuple[str, int]],
     base_position: str = "center",
@@ -472,6 +466,7 @@ def calculate_stacked_positions(
 # Preview helper: extract a verification frame
 # ---------------------------------------------------------------------------
 
+
 def extract_verification_frame(
     video_path: str,
     timestamp: float = 0.0,
@@ -500,10 +495,14 @@ def extract_verification_frame(
     cmd = [
         "ffmpeg",
         "-y",
-        "-ss", str(timestamp),
-        "-i", video_path,
-        "-vframes", "1",
-        "-q:v", "2",
+        "-ss",
+        str(timestamp),
+        "-i",
+        video_path,
+        "-vframes",
+        "1",
+        "-q:v",
+        "2",
         output_path,
     ]
 

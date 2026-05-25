@@ -8,9 +8,7 @@ is not available.
 from __future__ import annotations
 
 import math
-import struct
 import wave
-from typing import Any
 
 from mcp_video.ffmpeg_helpers import _validate_output_path
 
@@ -54,34 +52,34 @@ if not _HAS_NUMPY:
     )
 
     __all__ = [
-        "generate_sine",
-        "generate_square",
-        "generate_sawtooth",
-        "generate_triangle",
-        "generate_noise",
-        "generate_pulse",
-        "generate_supersaw",
-        "generate_pluck",
-        "generate_fm",
-        "generate_colored_noise",
-        "apply_envelope",
-        "apply_fade",
-        "apply_lowpass",
-        "apply_highpass",
-        "apply_reverb",
-        "apply_delay",
-        "apply_chorus",
-        "apply_flanger",
-        "apply_distortion",
-        "apply_compressor",
-        "apply_eq",
-        "apply_pan",
-        "apply_width",
-        "apply_tremolo",
-        "apply_vibrato",
-        "write_wav",
         "_float_to_pcm",
         "_pcm_to_float",
+        "apply_chorus",
+        "apply_compressor",
+        "apply_delay",
+        "apply_distortion",
+        "apply_envelope",
+        "apply_eq",
+        "apply_fade",
+        "apply_flanger",
+        "apply_highpass",
+        "apply_lowpass",
+        "apply_pan",
+        "apply_reverb",
+        "apply_tremolo",
+        "apply_vibrato",
+        "apply_width",
+        "generate_colored_noise",
+        "generate_fm",
+        "generate_noise",
+        "generate_pluck",
+        "generate_pulse",
+        "generate_sawtooth",
+        "generate_sine",
+        "generate_square",
+        "generate_supersaw",
+        "generate_triangle",
+        "write_wav",
     ]
 else:
     # =====================================================================
@@ -485,7 +483,9 @@ else:
         for v in range(voices):
             phase_offset = v * (2.0 * math.pi / voices)
             for i in range(n):
-                lfo = depth * sample_rate * 0.5 * (1.0 + math.sin(2.0 * math.pi * rate * i / sample_rate + phase_offset))
+                lfo = (
+                    depth * sample_rate * 0.5 * (1.0 + math.sin(2.0 * math.pi * rate * i / sample_rate + phase_offset))
+                )
                 delay_idx = max_delay + i - int(lfo)
                 frac = lfo - int(lfo)
                 if 0 <= delay_idx < len(buffer) - 1:
@@ -740,32 +740,32 @@ else:
         return output_path
 
     __all__ = [
-        "generate_sine",
-        "generate_square",
-        "generate_sawtooth",
-        "generate_triangle",
-        "generate_noise",
-        "generate_pulse",
-        "generate_supersaw",
-        "generate_pluck",
-        "generate_fm",
-        "generate_colored_noise",
-        "apply_envelope",
-        "apply_fade",
-        "apply_lowpass",
-        "apply_highpass",
-        "apply_reverb",
-        "apply_delay",
-        "apply_chorus",
-        "apply_flanger",
-        "apply_distortion",
-        "apply_compressor",
-        "apply_eq",
-        "apply_pan",
-        "apply_width",
-        "apply_tremolo",
-        "apply_vibrato",
-        "write_wav",
         "_float_to_pcm",
         "_pcm_to_float",
+        "apply_chorus",
+        "apply_compressor",
+        "apply_delay",
+        "apply_distortion",
+        "apply_envelope",
+        "apply_eq",
+        "apply_fade",
+        "apply_flanger",
+        "apply_highpass",
+        "apply_lowpass",
+        "apply_pan",
+        "apply_reverb",
+        "apply_tremolo",
+        "apply_vibrato",
+        "apply_width",
+        "generate_colored_noise",
+        "generate_fm",
+        "generate_noise",
+        "generate_pluck",
+        "generate_pulse",
+        "generate_sawtooth",
+        "generate_sine",
+        "generate_square",
+        "generate_supersaw",
+        "generate_triangle",
+        "write_wav",
     ]

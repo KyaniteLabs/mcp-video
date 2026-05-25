@@ -57,7 +57,7 @@ def detect_pitch(
 
     Path(output_directory).mkdir(parents=True, exist_ok=True)
 
-    model_output, midi_data, note_events = predict(input_path)
+    _model_output, midi_data, note_events = predict(input_path)
 
     result: dict[str, Any] = {
         "input": input_path,

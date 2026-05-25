@@ -23,7 +23,6 @@ from .core import (
     apply_reverb,
     apply_tremolo,
     apply_vibrato,
-    generate_colored_noise,
     generate_fm,
     generate_noise,
     generate_pluck,
@@ -119,19 +118,13 @@ def _apply_synth_effects(
     # Lowpass
     if "lowpass" in effects:
         lp = effects["lowpass"]
-        if isinstance(lp, dict):
-            cutoff = lp.get("frequency", 2000)
-        else:
-            cutoff = lp
+        cutoff = lp.get("frequency", 2000) if isinstance(lp, dict) else lp
         samples = apply_lowpass(samples, cutoff, sample_rate)
 
     # Highpass
     if "highpass" in effects:
         hp = effects["highpass"]
-        if isinstance(hp, dict):
-            cutoff = hp.get("frequency", 200)
-        else:
-            cutoff = hp
+        cutoff = hp.get("frequency", 200) if isinstance(hp, dict) else hp
         samples = apply_highpass(samples, cutoff, sample_rate)
 
     # Delay
@@ -205,9 +198,7 @@ def _apply_synth_effects(
 
 def audio_synthesize(
     output: str,
-    waveform: Literal[
-        "sine", "square", "sawtooth", "triangle", "noise", "pulse", "supersaw", "pluck", "fm"
-    ] = "sine",
+    waveform: Literal["sine", "square", "sawtooth", "triangle", "noise", "pulse", "supersaw", "pluck", "fm"] = "sine",
     frequency: float = 440.0,
     duration: float = 1.0,
     volume: float = 0.5,

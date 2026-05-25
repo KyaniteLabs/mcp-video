@@ -124,9 +124,9 @@ def resample(
 
         write_audio(output_path, resampled, target_sample_rate)
         return output_path
-    except ImportError:
+    except ImportError as e:
         raise MCPVideoError(
             "Resampling requires numpy and scipy",
             error_type="dependency_error",
             code="resample_deps_missing",
-        )
+        ) from e

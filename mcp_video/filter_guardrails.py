@@ -45,9 +45,7 @@ def validate_filter_params(filter_type: str, params: dict[str, Any]) -> list[str
         if value is None:
             continue
         if not isinstance(value, (int, float)):
-            warnings.append(
-                f"Parameter '{key}' must be numeric, got {type(value).__name__}"
-            )
+            warnings.append(f"Parameter '{key}' must be numeric, got {type(value).__name__}")
             continue
         if value < lo or value > hi:
             warnings.append(

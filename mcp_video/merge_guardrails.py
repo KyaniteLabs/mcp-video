@@ -33,17 +33,13 @@ def validate_merge_compatibility(
     resolutions = {(i.width, i.height) for i in infos}
     if len(resolutions) > 1:
         warnings.append(
-            f"Clips have different resolutions: {sorted(resolutions)}. "
-            "Merge will normalize by re-encoding all clips."
+            f"Clips have different resolutions: {sorted(resolutions)}. Merge will normalize by re-encoding all clips."
         )
 
     # 3. Check FPS mismatch
     fps_values = sorted({round(i.fps, 2) for i in infos})
     if len(fps_values) > 1:
-        warnings.append(
-            f"Clips have different frame rates: {fps_values}. "
-            "Output may stutter or drop frames."
-        )
+        warnings.append(f"Clips have different frame rates: {fps_values}. Output may stutter or drop frames.")
 
     # 4. Check duration vs transition
     if transition_duration > 0:
