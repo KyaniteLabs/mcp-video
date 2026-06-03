@@ -39,7 +39,7 @@ Use mcp-video when an agent needs a structured video-editing surface instead of 
 
 ```bash
 mcp-video doctor
-mcp-video info interview.mp4 --format json
+mcp-video --format json info interview.mp4
 mcp-video trim interview.mp4 -s 00:02:15 -d 45
 mcp-video video-ai-transcribe clip.mp4 --output captions.srt
 mcp-video subtitles clip.mp4 captions.srt
