@@ -1,5 +1,10 @@
 # mcp-video — Project Rules
 
+## Public Agent Skill
+- `skills/mcp-video/SKILL.md` is the public skill for this repo.
+- Invoke `$mcp-video` in compatible agent hosts for guarded video inspection, editing, Hyperframes, repurposing, release checkpoints, and human-review workflows.
+- Keep the skill aligned with `docs/CLI_REFERENCE.md`, `docs/TOOLS.md`, the Python client, and public MCP tool names when those surfaces change.
+
 ## Before Writing Any Code
 
 1. **Check if it already exists.** Search `ffmpeg_helpers.py`, `validation.py`, `limits.py`, and `defaults.py` before writing any utility function. Import, don't duplicate.

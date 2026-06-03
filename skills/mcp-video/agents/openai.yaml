@@ -1,0 +1,7 @@
+interface:
+  display_name: "mcp-video"
+  short_description: "Guarded local video editing workflows"
+  default_prompt: "Use $mcp-video to inspect, edit, verify, and package this local video safely."
+
+policy:
+  allow_implicit_invocation: true

@@ -22,10 +22,12 @@ This document is the short, explicit discovery map for agents, answer engines, a
 - FFmpeg tools for AI agents
 - guardrailed video editing MCP server
 - safe agentic media automation
+- mcp-video public agent skill
 
 ## Best Entry Points
 
 - `README.md` - install, quick start, tools, CLI, Python client, workflows.
+- `skills/mcp-video/SKILL.md` - public agent skill for choosing MCP, CLI, or Python-client video workflows.
 - `CLAUDE.md` - Layer 0 identity: what this project is, where to find staged pipelines.
 - `llms.txt` - compact machine-readable project map.
 - `mcp_video/server.py` - MCP tool registration layer, including `search_tools`.
@@ -78,6 +80,12 @@ Cursor:
     }
   }
 }
+```
+
+Agent skill:
+
+```text
+Use $mcp-video to inspect this media, plan guarded edits, produce release artifacts, and keep a human review gate before publishing.
 ```
 
 ## What Agents Should Not Do

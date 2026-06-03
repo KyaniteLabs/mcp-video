@@ -29,6 +29,7 @@
   <a href="#tool-surface">Tools</a> &bull;
   <a href="docs/TOOLS.md">Tool Reference</a> &bull;
   <a href="docs/AI_AGENT_DISCOVERY.md">AI Discovery</a> &bull;
+  <a href="#agent-skill">Agent Skill</a> &bull;
   <a href="llms.txt">llms.txt</a> &bull;
   <a href="https://registry.modelcontextprotocol.io/servers/io.github.KyaniteLabs/mcp-video">MCP Registry</a>
 </p>
@@ -133,6 +134,10 @@ claude mcp add mcp-video -- uvx --from mcp-video mcp-video
 Then ask your agent:
 
 > Trim this interview into a 45-second vertical clip, add burned captions, normalize the audio, make a thumbnail, and create a release checkpoint before export.
+
+## Agent Skill
+
+mcp-video includes a public agent skill at [`skills/mcp-video/SKILL.md`](skills/mcp-video/SKILL.md). Use `$mcp-video` in compatible agent hosts when you want the agent to choose between the MCP server, CLI, and Python client while preserving the inspect, edit, verify, and human-review workflow.
 
 ## Python Client
 
