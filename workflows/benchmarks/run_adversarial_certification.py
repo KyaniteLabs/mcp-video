@@ -10,7 +10,7 @@ from typing import Any
 
 from mcp_video import Client
 from mcp_video.defaults import DEFAULT_FFMPEG_TIMEOUT
-from mcp_video.errors import MCPVideoError, ProcessingError
+from mcp_video.errors import InputFileError, MCPVideoError, ProcessingError
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -25,6 +25,12 @@ def _run(cmd: list[str]) -> None:
         raise ProcessingError(" ".join(cmd), 124, f"FFmpeg timed out after {DEFAULT_FFMPEG_TIMEOUT}s") from exc
     except subprocess.CalledProcessError as exc:
         raise ProcessingError(" ".join(cmd), exc.returncode, exc.stderr or "") from exc
+
+
+def _field(value: Any, key: str, default: Any = None) -> Any:
+    if isinstance(value, dict):
+        return value.get(key, default)
+    return getattr(value, key, default)
 
 
 def _make_video(path: Path, *, volume: float = 1.0, rate: int = 30) -> None:
@@ -75,11 +81,12 @@ def _case_long_filename(client: Client) -> dict[str, Any]:
     path = OUTPUT_DIR / "long filename with spaces for path handling.mp4"
     _make_video(path)
     checkpoint = client.release_checkpoint(str(path), output_dir=str(OUTPUT_DIR / "long filename checkpoint"), min_score=50)
-    storyboard = checkpoint.get("storyboard", {}) if isinstance(checkpoint, dict) else checkpoint.storyboard
-    frames = storyboard.get("frames", []) if isinstance(storyboard, dict) else []
+    storyboard = _field(checkpoint, "storyboard", {})
+    frames = _field(storyboard, "frames", [])
+    thumbnail = _field(checkpoint, "thumbnail")
     return {
         "case": "long_filename_with_spaces",
-        "passed": bool(checkpoint.get("thumbnail") if isinstance(checkpoint, dict) else checkpoint.thumbnail) and len(frames) >= 4,
+        "passed": bool(thumbnail) and len(frames) >= 4,
         "artifact": str(path),
         "expectation": "release checkpoint should handle spaces in media paths",
         "observed": {"frame_count": len(frames)},
@@ -106,12 +113,20 @@ def _case_corrupted_input(client: Client) -> dict[str, Any]:
     path.write_bytes(b"not a real media file")
     try:
         client.info(str(path))
-    except MCPVideoError as exc:
+    except InputFileError as exc:
         return {
             "case": "corrupted_input",
             "passed": True,
             "artifact": str(path),
             "expectation": "corrupted input should fail clearly",
+            "observed": str(exc),
+        }
+    except MCPVideoError as exc:
+        return {
+            "case": "corrupted_input",
+            "passed": False,
+            "artifact": str(path),
+            "expectation": "corrupted input should fail with InputFileError",
             "observed": str(exc),
         }
     return {

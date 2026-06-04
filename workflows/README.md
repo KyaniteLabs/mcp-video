@@ -8,7 +8,7 @@ ICM-style staged pipelines for common video productions.
 |---|---|---|
 | `01-social-media-clip` | Turn landscape video into TikTok / Short / Reel | 5 |
 | `02-podcast-clip` | Extract highlight with chapters and captions | 6 |
-| `03-explainer-video` | Build branded explainer from scratch | 7 |
+| `03-explainer-video` | Build branded explainer from scratch | 10 |
 | `04-hyperframes-video` | Create video with Hyperframes, then post-process | 5 |
 | `05-confidence-baseline` | Generate or accept a tiny source clip, create a checked vertical proof, and write a Video Receipt | 8 |
 | `06-repurpose-package` | Turn one source clip into a local platform package with manifest, variants, review artifacts, checkpoints, and a Video Receipt | 5 |

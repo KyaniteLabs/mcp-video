@@ -73,6 +73,13 @@ class TestProbe:
         with pytest.raises(InputFileError):
             probe("/nonexistent/video.mp4")
 
+    def test_probe_corrupted_file(self, tmp_path):
+        video = tmp_path / "corrupted.mp4"
+        video.write_bytes(b"not a real media file")
+
+        with pytest.raises(InputFileError):
+            probe(str(video))
+
     def test_resolution_property(self, sample_video):
         info = probe(sample_video)
         assert info.resolution == "640x480"

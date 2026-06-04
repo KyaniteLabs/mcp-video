@@ -6,7 +6,7 @@ import contextlib
 import os
 import threading
 
-from .errors import InputFileError, MCPVideoError
+from .errors import InputFileError, MCPVideoError, ProcessingError
 from .ffmpeg_helpers import _run_ffprobe_json, _validate_input_path
 from .models import VideoInfo
 from .engine_runtime_utils import _get_audio_stream, _get_video_stream
@@ -125,7 +125,10 @@ def probe(path: str) -> VideoInfo:
         if cached is not None:
             return cached
 
-    data = _run_ffprobe_json(path)
+    try:
+        data = _run_ffprobe_json(path)
+    except ProcessingError as exc:
+        raise InputFileError(path, "Not a valid video file") from exc
     info = _build_video_info(path, data)
 
     with _probe_cache_lock:

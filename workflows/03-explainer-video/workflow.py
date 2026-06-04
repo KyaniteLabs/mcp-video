@@ -8,7 +8,7 @@ effects, and transitions — using only mcp-video client methods.
 Usage:
     python workflow.py
 
-The script runs 9 stages and outputs the final video plus a Video Receipt.
+The script runs 10 stages and outputs the final video plus a Video Receipt.
 """
 
 import json
@@ -30,10 +30,10 @@ TMP_DIR = os.path.join(OUTPUT_DIR, "tmp")
 os.makedirs(TMP_DIR, exist_ok=True)
 
 SCENES = [
-    {"color": "#1a1a2e", "text": "Meet mcp-video", "duration": 5},
-    {"color": "#16213e", "text": "Edit video with AI agents", "duration": 5},
-    {"color": "#0f3460", "text": "87 MCP tools at your command", "duration": 5},
-    {"color": "#533483", "text": "FFmpeg edits + Hyperframes creation", "duration": 5},
+    {"accent": "#ff0033", "text": "Meet mcp-video", "duration": 5},
+    {"accent": "#00cc66", "text": "Edit video with AI agents", "duration": 5},
+    {"accent": "#0066ff", "text": "87 MCP tools at your command", "duration": 5},
+    {"accent": "#ffcc00", "text": "FFmpeg edits + Hyperframes creation", "duration": 5},
 ]
 
 FPS = 30
@@ -66,10 +66,24 @@ def _load_font(size: int):
     return ImageFont.load_default()
 
 
-def _create_scene_image(color: str, text: str, output: str) -> str:
+def _create_scene_image(accent: str, text: str, output: str) -> str:
     """Create a branded scene image using Pillow."""
-    img = Image.new("RGB", (WIDTH, HEIGHT), color)
+    img = Image.new("RGB", (WIDTH, HEIGHT), "#707070")
     draw = ImageDraw.Draw(img)
+
+    draw.polygon([(0, 0), (WIDTH, 0), (0, HEIGHT)], fill="#d0d0d0")
+    draw.polygon([(WIDTH, 0), (WIDTH, HEIGHT), (0, HEIGHT)], fill="#404040")
+
+    band_height = 180
+    band_y = HEIGHT - band_height
+    band_width = WIDTH // 3
+    for i, band_color in enumerate(("#ff0033", "#00cc66", "#0066ff")):
+        left = i * band_width
+        right = WIDTH if i == 2 else (i + 1) * band_width
+        draw.rectangle([left, band_y, right, HEIGHT], fill=band_color)
+
+    draw.rectangle([0, 0, WIDTH, 24], fill=accent)
+
     font = _load_font(64)
     bbox = draw.textbbox((0, 0), text, font=font)
     text_w = bbox[2] - bbox[0]
@@ -77,8 +91,8 @@ def _create_scene_image(color: str, text: str, output: str) -> str:
     x = (WIDTH - text_w) // 2
     y = (HEIGHT - text_h) // 2
     draw.rectangle(
-        [x - 20, y - 10, x + text_w + 20, y + text_h + 10],
-        fill="black",
+        [x - 48, y - 36, x + text_w + 48, y + text_h + 36],
+        fill="#111111",
     )
     draw.text((x, y), text, fill="white", font=font)
     img.save(output)
@@ -86,7 +100,7 @@ def _create_scene_image(color: str, text: str, output: str) -> str:
 
 
 def _stage_soundtrack() -> str:
-    print("\n[1/9] Generating soundtrack...")
+    print("\n[1/10] Generating soundtrack...")
     drone = client.audio_preset(
         "drone-tech",
         os.path.join(TMP_DIR, "drone.wav"),
@@ -114,11 +128,11 @@ def _stage_soundtrack() -> str:
 
 
 def _stage_scenes() -> list[str]:
-    print("\n[2/9] Creating scene videos...")
+    print("\n[2/10] Creating scene videos...")
     scene_clips = []
     for i, scene in enumerate(SCENES):
         img_path = os.path.join(TMP_DIR, f"scene_{i:02d}.png")
-        _create_scene_image(scene["color"], scene["text"], img_path)
+        _create_scene_image(scene["accent"], scene["text"], img_path)
         frame_count = int(scene["duration"] * FPS)
         images = [img_path] * frame_count
         video_path = os.path.join(TMP_DIR, f"scene_{i:02d}.mp4")
@@ -129,7 +143,7 @@ def _stage_scenes() -> list[str]:
 
 
 def _stage_effects(scene_clips: list[str]) -> list[str]:
-    print("\n[3/9] Applying effects...")
+    print("\n[3/10] Applying effects...")
     fx_clips = []
     for i, clip in enumerate(scene_clips):
         out = os.path.join(TMP_DIR, f"scene_{i:02d}_fx.mp4")
@@ -143,7 +157,7 @@ def _stage_effects(scene_clips: list[str]) -> list[str]:
 
 
 def _stage_transitions(fx_clips: list[str]) -> list[str]:
-    print("\n[4/9] Creating transitions...")
+    print("\n[4/10] Creating transitions...")
     transition_clips = []
     for i in range(len(fx_clips) - 1):
         out = os.path.join(TMP_DIR, f"transition_{i:02d}.mp4")
@@ -159,7 +173,7 @@ def _stage_transitions(fx_clips: list[str]) -> list[str]:
 
 
 def _stage_assemble(fx_clips: list[str]) -> str:
-    print("\n[5/9] Assembling scenes with transitions...")
+    print("\n[5/10] Assembling scenes with transitions...")
     assembled = client.merge(
         clips=fx_clips,
         output=os.path.join(OUTPUT_DIR, "05_assembled.mp4"),
@@ -171,7 +185,7 @@ def _stage_assemble(fx_clips: list[str]) -> str:
 
 
 def _stage_audio_mix(video: str, soundtrack: str) -> str:
-    print("\n[6/9] Mixing audio...")
+    print("\n[6/10] Mixing audio...")
     mixed = client.add_audio(
         video=video,
         audio=soundtrack,
@@ -183,8 +197,19 @@ def _stage_audio_mix(video: str, soundtrack: str) -> str:
     return mixed.output_path
 
 
+def _stage_audio_normalize(video: str) -> str:
+    print("\n[7/10] Normalizing audio...")
+    normalized = client.normalize_audio(
+        video,
+        target_lufs=-16.0,
+        output=os.path.join(OUTPUT_DIR, "07_normalized.mp4"),
+    )
+    print(f"   -> {normalized.output_path}")
+    return normalized.output_path
+
+
 def _stage_export(video: str) -> str:
-    print("\n[7/9] Exporting final video...")
+    print("\n[8/10] Exporting final video...")
     final = client.convert(
         video,
         format="mp4",
@@ -196,17 +221,17 @@ def _stage_export(video: str) -> str:
 
 
 def _stage_quality_checkpoint(video: str) -> tuple[dict[str, Any], dict[str, Any]]:
-    print("\n[8/9] Running quality and release checkpoint...")
+    print("\n[9/10] Running quality and release checkpoint...")
     quality = client.quality_check(video)
+    quality_json = quality if isinstance(quality, dict) else quality.model_dump()
+    _dump_json(os.path.join(OUTPUT_DIR, "quality.json"), quality_json)
     checkpoint = client.release_checkpoint(
         video,
         output_dir=os.path.join(OUTPUT_DIR, "checkpoint"),
-        min_score=0,
+        min_score=50,
         frame_count=4,
     )
-    quality_json = quality if isinstance(quality, dict) else quality.model_dump()
     checkpoint_json = checkpoint if isinstance(checkpoint, dict) else checkpoint.model_dump()
-    _dump_json(os.path.join(OUTPUT_DIR, "quality.json"), quality_json)
     _dump_json(os.path.join(OUTPUT_DIR, "release_checkpoint.json"), checkpoint_json)
     print(f"   -> {os.path.join(OUTPUT_DIR, 'quality.json')}")
     print(f"   -> {os.path.join(OUTPUT_DIR, 'release_checkpoint.json')}")
@@ -217,13 +242,15 @@ def _write_receipt(
     soundtrack: str,
     scene_clips: list[str],
     fx_clips: list[str],
+    transition_clips: list[str],
     assembled: str,
     mixed: str,
+    normalized: str,
     final_video: str,
     quality: dict[str, Any],
     checkpoint: dict[str, Any],
 ) -> None:
-    print("\n[9/9] Writing Video Receipt...")
+    print("\n[10/10] Writing Video Receipt...")
     info = client.info(final_video)
     receipt = {
         "user_intent": "Build a branded explainer video from generated scenes, procedural audio, effects, and transitions.",
@@ -237,12 +264,18 @@ def _write_receipt(
             {"stage": "01-audio", "tool": "Client.audio_preset + Client.audio_compose", "output": soundtrack},
             {"stage": "02-scenes", "tool": "Client.create_from_images", "output": ", ".join(scene_clips)},
             {"stage": "03-effects", "tool": "Client.effect_vignette / Client.effect_glow", "output": ", ".join(fx_clips)},
+            {
+                "stage": "04-transitions",
+                "tool": "Client.transition_glitch / Client.transition_pixelate / Client.transition_morph",
+                "output": ", ".join(transition_clips),
+            },
             {"stage": "05-assemble", "tool": "Client.merge", "output": assembled},
             {"stage": "06-audio-mix", "tool": "Client.add_audio", "output": mixed},
-            {"stage": "07-export", "tool": "Client.convert", "output": final_video},
-            {"stage": "08-quality", "tool": "Client.quality_check", "output": os.path.join(OUTPUT_DIR, "quality.json")},
+            {"stage": "07-audio-normalize", "tool": "Client.normalize_audio", "output": normalized},
+            {"stage": "08-export", "tool": "Client.convert", "output": final_video},
+            {"stage": "09-quality", "tool": "Client.quality_check", "output": os.path.join(OUTPUT_DIR, "quality.json")},
             {
-                "stage": "08-checkpoint",
+                "stage": "09-checkpoint",
                 "tool": "Client.release_checkpoint",
                 "output": os.path.join(OUTPUT_DIR, "checkpoint"),
             },
@@ -251,8 +284,10 @@ def _write_receipt(
             "generated soundtrack",
             "created title-card scene clips",
             "applied visual effects",
+            "created transition clips",
             "assembled scenes",
             "mixed procedural audio",
+            "normalized audio",
             "exported final MP4",
             "created release checkpoint",
         ],
@@ -296,12 +331,24 @@ def main() -> None:
     soundtrack = _stage_soundtrack()
     scene_clips = _stage_scenes()
     fx_clips = _stage_effects(scene_clips)
-    _stage_transitions(fx_clips)
+    transition_clips = _stage_transitions(fx_clips)
     assembled = _stage_assemble(fx_clips)
     mixed = _stage_audio_mix(assembled, soundtrack)
-    final_video = _stage_export(mixed)
+    normalized = _stage_audio_normalize(mixed)
+    final_video = _stage_export(normalized)
     quality, checkpoint = _stage_quality_checkpoint(final_video)
-    _write_receipt(soundtrack, scene_clips, fx_clips, assembled, mixed, final_video, quality, checkpoint)
+    _write_receipt(
+        soundtrack,
+        scene_clips,
+        fx_clips,
+        transition_clips,
+        assembled,
+        mixed,
+        normalized,
+        final_video,
+        quality,
+        checkpoint,
+    )
 
     print("\n" + "=" * 60)
     print("Workflow complete! Review output/final_video.mp4 and output/video_receipt.json")
