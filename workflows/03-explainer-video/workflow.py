@@ -224,6 +224,7 @@ def _stage_quality_checkpoint(video: str) -> tuple[dict[str, Any], dict[str, Any
     print("\n[9/10] Running quality and release checkpoint...")
     quality = client.quality_check(video)
     quality_json = quality if isinstance(quality, dict) else quality.model_dump()
+    quality_json["all_passed"] = bool(quality_json.get("all_passed"))
     _dump_json(os.path.join(OUTPUT_DIR, "quality.json"), quality_json)
     checkpoint = client.release_checkpoint(
         video,
