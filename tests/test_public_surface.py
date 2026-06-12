@@ -290,6 +290,56 @@ def test_stdio_server_launches_and_lists_tools_like_registry_clients():
     asyncio.run(check_server())
 
 
+def _call_tool_over_stdio(tool_name: str, arguments: dict):
+    """Round-trip a tool call the way real MCP clients do: stdio + serialization."""
+
+    async def run():
+        params = StdioServerParameters(command=sys.executable, args=["-m", "mcp_video"])
+        async with stdio_client(params) as (read, write), ClientSession(read, write) as session:
+            await session.initialize()
+            return await session.call_tool(tool_name, arguments)
+
+    return asyncio.run(run())
+
+
+def _structured_payload(result) -> dict:
+    if result.structuredContent:
+        return result.structuredContent
+    return json.loads(result.content[0].text)
+
+
+def test_call_tool_round_trip_video_info(sample_video):
+    """list_tools alone cannot catch a schema/serialization regression —
+    only an actual call_tool round trip exercises the wire format."""
+    result = _call_tool_over_stdio("video_info", {"input_path": sample_video})
+
+    assert result.isError is False
+    payload = _structured_payload(result)
+    assert payload["success"] is True
+    assert payload["info"]["duration"] > 0
+
+
+def test_call_tool_round_trip_video_trim(sample_video, tmp_path):
+    out = str(tmp_path / "rt_trim.mp4")
+    result = _call_tool_over_stdio(
+        "video_trim",
+        {"input_path": sample_video, "start": "0", "duration": "1", "output_path": out},
+    )
+
+    assert result.isError is False
+    payload = _structured_payload(result)
+    assert payload["success"] is True
+    assert Path(out).is_file()
+
+
+def test_call_tool_round_trip_returns_structured_error_for_bad_input():
+    result = _call_tool_over_stdio("video_info", {"input_path": "/nonexistent/clip.mp4"})
+
+    payload = _structured_payload(result)
+    assert payload["success"] is False
+    assert "error" in payload
+
+
 def test_public_discovery_files_do_not_point_at_old_personal_namespace():
     checked_paths = [
         ROOT / "README.md",
