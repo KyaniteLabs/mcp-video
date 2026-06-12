@@ -362,12 +362,24 @@ def _check_hyperframes_cli(which: WhichFn, version_runner: VersionRunner) -> dic
     }
 
 
+# Probe for @hyperframes/core in the active Node package layout. The package is
+# ESM-only with a restrictive "exports" map (no "./package.json" subpath and no
+# "require" condition), so require()/require.resolve() throw
+# ERR_PACKAGE_PATH_NOT_EXPORTED. Walk the node_modules resolution chain and read
+# its package.json from disk instead.
+HYPERFRAMES_CORE_PROBE = (
+    "const fs=require('fs');const path=require('path');"
+    "const dirs=require.resolve.paths('@hyperframes/core')||[];"
+    "for(const dir of dirs){"
+    "const file=path.join(dir,'@hyperframes/core','package.json');"
+    "if(fs.existsSync(file)){"
+    "console.log(JSON.parse(fs.readFileSync(file,'utf8')).version);process.exit(0);}}"
+    "process.exit(1);"
+)
+
+
 def _check_hyperframes_core(which: WhichFn, version_runner: VersionRunner) -> dict[str, Any]:
-    command = [
-        "node",
-        "-e",
-        "try { console.log(require('@hyperframes/core/package.json').version) } catch (err) { process.exit(1) }",
-    ]
+    command = ["node", "-e", HYPERFRAMES_CORE_PROBE]
     path = which("node")
     version = version_runner(command) if path else None
     ok = path is not None and version is not None

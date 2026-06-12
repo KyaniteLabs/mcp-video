@@ -1,10 +1,13 @@
 """Tests for environment diagnostics."""
 
 import json
+import shutil
 import subprocess
 import sys
 from importlib.machinery import ModuleSpec
 from pathlib import Path
+
+import pytest
 
 
 def test_run_diagnostics_marks_required_tools_ok_when_present():
@@ -54,6 +57,53 @@ def test_run_diagnostics_marks_required_tools_ok_when_present():
     assert checks["hyperframes"]["ok"] is True
     assert checks["hyperframes"]["command"] == ["/usr/bin/hyperframes", "--version"]
     assert checks["@hyperframes/core"]["ok"] is True
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="requires Node.js")
+def test_hyperframes_core_probe_handles_esm_only_exports(tmp_path):
+    """Regression: @hyperframes/core is ESM-only with a restrictive exports map,
+    so probing via require('@hyperframes/core/package.json') throws
+    ERR_PACKAGE_PATH_NOT_EXPORTED. The probe must read the layout from disk."""
+    from mcp_video.doctor import HYPERFRAMES_CORE_PROBE
+
+    pkg_dir = tmp_path / "node_modules" / "@hyperframes" / "core"
+    pkg_dir.mkdir(parents=True)
+    (pkg_dir / "package.json").write_text(
+        json.dumps(
+            {
+                "name": "@hyperframes/core",
+                "version": "9.9.9",
+                "type": "module",
+                "exports": {".": {"import": "./dist/index.js"}},
+            }
+        )
+    )
+
+    result = subprocess.run(
+        ["node", "-e", HYPERFRAMES_CORE_PROBE],
+        capture_output=True,
+        text=True,
+        cwd=tmp_path,
+        timeout=30,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == "9.9.9"
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="requires Node.js")
+def test_hyperframes_core_probe_fails_when_package_absent(tmp_path):
+    from mcp_video.doctor import HYPERFRAMES_CORE_PROBE
+
+    result = subprocess.run(
+        ["node", "-e", HYPERFRAMES_CORE_PROBE],
+        capture_output=True,
+        text=True,
+        cwd=tmp_path,
+        timeout=30,
+    )
+
+    assert result.returncode == 1
 
 
 def test_run_diagnostics_marks_required_tools_missing():
