@@ -59,6 +59,38 @@ def test_run_diagnostics_marks_required_tools_ok_when_present():
     assert checks["@hyperframes/core"]["ok"] is True
 
 
+def _node_only_which(name: str) -> str | None:
+    return f"/usr/bin/{name}" if name in {"node", "npm", "npx"} else None
+
+
+def test_node_check_reports_hyperframes_version_via_injectable_runner():
+    """The npx hyperframes probe must go through version_runner — a raw
+    subprocess call here is untestable (the @hyperframes/core probe defect class)."""
+    from mcp_video.doctor import run_diagnostics
+
+    def fake_version(command: list[str]) -> str | None:
+        if command[:2] == ["npx", "--yes"]:
+            return "0.6.93"
+        return "v22.0.0"
+
+    report = run_diagnostics(which=_node_only_which, version_runner=fake_version, find_spec=lambda name: None)
+    checks = {check["name"]: check for check in report["checks"]}
+    assert checks["node"]["hyperframes_version"] == "0.6.93"
+
+
+def test_node_check_omits_hyperframes_version_when_probe_fails():
+    from mcp_video.doctor import run_diagnostics
+
+    def fake_version(command: list[str]) -> str | None:
+        if command[:2] == ["npx", "--yes"]:
+            return None
+        return "v22.0.0"
+
+    report = run_diagnostics(which=_node_only_which, version_runner=fake_version, find_spec=lambda name: None)
+    checks = {check["name"]: check for check in report["checks"]}
+    assert "hyperframes_version" not in checks["node"]
+
+
 @pytest.mark.skipif(shutil.which("node") is None, reason="requires Node.js")
 def test_hyperframes_core_probe_handles_esm_only_exports(tmp_path):
     """Regression: @hyperframes/core is ESM-only with a restrictive exports map,

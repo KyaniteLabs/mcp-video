@@ -186,19 +186,13 @@ def _check_command(definition: dict[str, Any], which: WhichFn, version_runner: V
                     f"FFmpeg {major}.x works but {MIN_FFMPEG_VERSION}+ is recommended for full feature support."
                 )
 
-    # Hyperframes version check
+    # Hyperframes version check — routed through the injectable version_runner
+    # so tests can exercise both outcomes (a raw subprocess call here would be
+    # untestable, the same defect class as the @hyperframes/core probe).
     if definition["name"] == "node" and ok:
-        try:
-            hf_result = subprocess.run(
-                ["npx", "--yes", "hyperframes", "--version"],
-                capture_output=True,
-                text=True,
-                timeout=DOCTOR_COMMAND_TIMEOUT,
-            )
-            if hf_result.returncode == 0:
-                extra["hyperframes_version"] = hf_result.stdout.strip().splitlines()[0]
-        except (OSError, subprocess.TimeoutExpired):
-            pass
+        hf_version = version_runner(["npx", "--yes", "hyperframes", "--version"])
+        if hf_version:
+            extra["hyperframes_version"] = hf_version
 
     return {
         "name": definition["name"],
