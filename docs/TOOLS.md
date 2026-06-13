@@ -1,6 +1,6 @@
 # MCP Tools Reference
 
-mcp-video exposes 119 registered MCP tools across video editing, PUSHING CREATION-style planning, Hyperframes 0.5 video authoring, repurposing packages, audio, effects, analysis, and image workflows. All return structured JSON with `success`, `output_path`, and operation metadata. On failure, they return `{"success": false, "error": {...}}` with auto-fix suggestions. High-risk video/audio operations also run preflight guardrails that warn or fail early before FFmpeg can silently produce unusable output.
+mcp-video exposes 120 registered MCP tools across video editing, PUSHING CREATION-style planning, Hyperframes 0.5 video authoring, repurposing packages, audio, effects, analysis, and image workflows. All return structured JSON with `success`, `output_path`, and operation metadata. On failure, they return `{"success": false, "error": {...}}` with auto-fix suggestions. High-risk video/audio operations also run preflight guardrails that warn or fail early before FFmpeg can silently produce unusable output.
 
 ---
 
@@ -33,7 +33,7 @@ Plan video generation like a director of photography before rendering. These too
 
 ---
 
-## Core Editing (32 tools)
+## Core Editing (35 tools)
 
 | Tool | Description |
 |------|-------------|
@@ -42,6 +42,7 @@ Plan video generation like a director of photography before rendering. These too
 | `video_trim` | Trim by start time + duration or end time |
 | `video_merge` | Concatenate clips with optional per-pair transitions; warns on resolution/FPS/audio mismatches and rejects transitions longer than the shortest clip |
 | `video_add_text` | Overlay text with positioning, font, color, shadow |
+| `video_add_texts` | Overlay multiple text elements in a single FFmpeg pass; auto-detects overlaps and distributes stacked texts at the same named position |
 | `video_add_audio` | Add, replace, or mix audio tracks with fade effects; validates volume and warns on timing/sample-rate risks |
 | `video_resize` | Change resolution or apply preset aspect ratios (16:9, 9:16, 1:1, etc.) |
 | `video_convert` | Convert between mp4, webm, gif, mov, hevc, av1, prores (two-pass encoding) |
@@ -62,6 +63,7 @@ Plan video generation like a director of photography before rendering. These too
 | `video_edit` | Full timeline-based edit from JSON DSL |
 | `video_create_from_images` | Create video from image sequence |
 | `video_export_frames` | Export video as individual image frames |
+| `video_extract_frame` | Extract a single frame at a given timestamp for visual verification |
 | `video_extract_audio` | Extract audio as mp3, wav, aac, ogg, or flac |
 | `video_export` | Render with quality and format settings |
 | `video_normalize_audio` | Normalize audio loudness to a target LUFS level |
@@ -69,6 +71,7 @@ Plan video generation like a director of photography before rendering. These too
 | `video_cleanup` | Remove mcp-video-managed intermediate files |
 | `video_hls_segment` | Segment video into HLS format with multi-quality variants |
 | `video_template_preview` | Preview social/video template operations before rendering |
+| `video_validate_text_layout` | Validate text overlays for overlap, low contrast, unsafe positioning, and missing shadows before rendering |
 
 ---
 
@@ -138,7 +141,7 @@ Create local YouTube/social media packages from one source video. Publishing and
 
 ---
 
-## Audio Synthesis (7 tools)
+## Audio Synthesis (8 tools)
 
 Generate audio from code — no external audio files needed. Pure NumPy, no extra dependencies.
 
@@ -151,6 +154,15 @@ Generate audio from code — no external audio files needed. Pure NumPy, no extr
 | `audio_effects` | Apply effects chain: lowpass, reverb, normalize, fade |
 | `video_add_generated_audio` | Generate audio and add it to a video in one call |
 | `video_audio_spatial` | 3D spatial audio positioning (azimuth + elevation) |
+| `video_duck_audio` | Mix background music under a video's voice with automatic sidechain ducking; music dips while speech plays and recovers in pauses |
+
+---
+
+## Music Generation (1 tool)
+
+| Tool | Description | Dependencies |
+|------|-------------|--------------|
+| `video_generate_music` | Generate music from a text prompt (instrumental or with lyrics) using the MiniMax API; supports `music-2.6-free` and `music-2.6` models | `MINIMAX_API_KEY` environment variable |
 
 ---
 
@@ -176,6 +188,27 @@ Generate audio from code — no external audio files needed. Pure NumPy, no extr
 | `transition_glitch` | RGB shift + noise for digital distortion |
 | `transition_pixelate` | Block dissolve with configurable pixel size |
 | `transition_morph` | Mesh warp transition |
+
+---
+
+## Glitch Effects (12 tools)
+
+CPU-based glitch effects run entirely through FFmpeg. GPU-accelerated effects (marked below) require Node.js and the `MCP_VIDEO_CRUSH_PATH` environment variable pointing to the CRUSH shader sources.
+
+| Tool | Description |
+|------|-------------|
+| `glitch_rgb_shift` | Shift red and blue channels in opposite directions for a chromatic split look; optional per-frame noise for jitter |
+| `glitch_scanline_jitter` | Displace random horizontal rows of pixels for a CRT malfunction look |
+| `glitch_screen_tearing` | Create horizontal tear bands at varying Y positions that shift left/right over time |
+| `glitch_vhs_tracking` | Simulate VHS tape tracking errors with color bleed, rolling bands, and analog noise |
+| `glitch_macroblocking` | Simulate codec artifacting with downscale/upscale pixelation and color posterization |
+| `glitch_datamoshing` | Simulate P-frame corruption where displacement drifts across frames then periodically resets |
+| `glitch_cmyk_split` | Shift RGB channels at 90-degree intervals to simulate four-plate offset print registration errors |
+| `glitch_turbulent_displacement` | Layered sin/cos noise approximating fractal Brownian motion for organic-looking displacement |
+| `glitch_digital_feedback` | Iterative frame feedback with scale/rotation transform, creating ghostly trails and recursive patterns (requires Node.js + GPU) |
+| `glitch_slit_scan` | Sample each row/column from a different past frame for a time-smeared slit-scan effect (requires Node.js + GPU) |
+| `glitch_depth_splatting` | Extract pseudo-depth from luminance and render the image as scattered points in 3D (requires Node.js + GPU) |
+| `glitch_point_cloud` | Sample the image as scattered points in a 3D-rotated grid with depth-based displacement (requires Node.js + GPU) |
 
 ---
 

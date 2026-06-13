@@ -41,12 +41,14 @@ class FFmpegNotFoundError(MCPVideoError):
     def __init__(self) -> None:
         super().__init__(
             "FFmpeg not found. Install it with: brew install ffmpeg (macOS), "
-            "apt install ffmpeg (Ubuntu), or download from https://ffmpeg.org",
+            "apt install ffmpeg (Ubuntu), or download from https://ffmpeg.org — "
+            "FFmpeg no está instalado: instálalo con brew install ffmpeg (macOS), "
+            "apt install ffmpeg (Ubuntu) o descárgalo de https://ffmpeg.org",
             error_type="dependency_error",
             code="ffmpeg_not_found",
             suggested_action={
                 "auto_fix": False,
-                "description": "Install FFmpeg before using mcp-video",
+                "description": "Install FFmpeg before using mcp-video / Instala FFmpeg antes de usar mcp-video",
             },
         )
 
@@ -80,7 +82,7 @@ class ValidationError(MCPVideoError, ValueError):
 class InputFileError(MCPVideoError):
     """Input file doesn't exist or is not a valid video."""
 
-    def __init__(self, path: str, reason: str = "File not found") -> None:
+    def __init__(self, path: str, reason: str = "File not found (archivo no encontrado)") -> None:
         super().__init__(
             f"Input file error: {path} — {reason}",
             error_type="input_error",
