@@ -98,6 +98,7 @@ dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.23",
     "pytest-cov>=6.0",
+    "pytest-xdist>=3.6",
     "pillow>=10.0",
     "rich>=15.0.0",
     "scikit-learn>=1.3",
