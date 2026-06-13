@@ -1,6 +1,6 @@
 # MCP Tools Reference
 
-mcp-video exposes 120 registered MCP tools across video editing, PUSHING CREATION-style planning, Hyperframes 0.5 video authoring, repurposing packages, audio, effects, analysis, and image workflows. All return structured JSON with `success`, `output_path`, and operation metadata. On failure, they return `{"success": false, "error": {...}}` with auto-fix suggestions. High-risk video/audio operations also run preflight guardrails that warn or fail early before FFmpeg can silently produce unusable output.
+mcp-video exposes 120 registered MCP tools across video editing, PUSHING CREATION-style planning, Hyperframes video authoring, repurposing packages, audio, effects, analysis, and image workflows. All return structured JSON with `success`, `output_path`, and operation metadata. On failure, they return `{"success": false, "error": {...}}` with auto-fix suggestions. High-risk video/audio operations also run preflight guardrails that warn or fail early before FFmpeg can silently produce unusable output.
 
 ---
 
@@ -99,6 +99,7 @@ pip install "mcp-video[ai-scene]"    # perceptual scene hashing
 pip install "mcp-video[stems]"       # Demucs stem separation
 pip install "mcp-video[upscale]"     # OpenCV upscaling; Real-ESRGAN/BasicSR where supported
 pip install "mcp-video[ai]"          # all AI extras, kept for compatibility
+pip install yt-dlp                   # only for downloading platform URLs (YouTube/Vimeo/...)
 ```
 
 ---
@@ -193,7 +194,7 @@ Generate audio from code — no external audio files needed. Pure NumPy, no extr
 
 ## Glitch Effects (12 tools)
 
-CPU-based glitch effects run entirely through FFmpeg. GPU-accelerated effects (marked below) require Node.js and the `MCP_VIDEO_CRUSH_PATH` environment variable pointing to the CRUSH shader sources.
+CPU-based glitch effects run entirely through FFmpeg. GPU-accelerated effects (marked below) require Node.js, the `MCP_VIDEO_CRUSH_PATH` environment variable pointing to the [CRUSH](https://github.com/pushingsquares/crush) shader sources, and the `canvas` npm package — install it once with `npm install` inside `mcp_video/_crush_shader/`. The tools report exactly which piece is missing.
 
 | Tool | Description |
 |------|-------------|

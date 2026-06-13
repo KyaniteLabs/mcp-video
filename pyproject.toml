@@ -163,6 +163,7 @@ exclude = [
     "*.wav",
     "*.webm",
     "*.egg-info/",
+    "node_modules/",
 ]
 
 [tool.hatch.build.targets.wheel]

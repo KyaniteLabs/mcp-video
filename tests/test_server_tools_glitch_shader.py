@@ -36,6 +36,19 @@ _no_crush = pytest.mark.skipif(not _crush_available(), reason="Node.js + CRUSH s
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="requires Node.js")
+def test_missing_canvas_returns_structured_error(monkeypatch, sample_video, tmp_path):
+    """The wheel ships only the render script; without the canvas npm package
+    the tool must name the install step, not dump a node require traceback."""
+    import mcp_video.engine_glitch_shader as shader_engine
+
+    monkeypatch.setattr(shader_engine, "_crush_sources_available", lambda: True)
+    monkeypatch.setattr(shader_engine, "_crush_canvas_available", lambda: False)
+    result = glitch_digital_feedback(sample_video, output_path=str(tmp_path / "x.mp4"))
+    assert result["success"] is False
+    assert "missing_canvas" in str(result["error"])
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="requires Node.js")
 def test_missing_crush_sources_returns_structured_error(monkeypatch, sample_video, tmp_path):
     """Without the external GLSL sources the tool must return a dependency
     error with an install hint — not a raw node ENOENT traceback."""

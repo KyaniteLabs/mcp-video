@@ -61,6 +61,25 @@ def _crush_sources_available() -> bool:
     return (Path(_resolve_crush_path()) / "common.glsl").is_file()
 
 
+def _crush_canvas_available() -> bool:
+    """True when the `canvas` npm package resolves next to the render script.
+
+    The wheel ships only render_frames.mjs; canvas is a native npm dependency
+    users install once via ``npm install`` in the script directory.
+    """
+    node = shutil.which("node")
+    if not node:
+        return False
+    probe = subprocess.run(  # noqa: S603
+        [node, "-e", "require.resolve('canvas')"],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        cwd=str(_CRUSH_JS_DIR),
+    )
+    return probe.returncode == 0
+
+
 _VIDEO_ENCODE_FLAGS = [
     "-c:a",
     "copy",
@@ -232,6 +251,14 @@ def _run_shader_effect(
                 "The FFmpeg-based glitch_* tools work without them.",
                 error_type="dependency_error",
                 code="missing_crush_shaders",
+            )
+        if not _crush_canvas_available():
+            raise MCPVideoError(
+                "The `canvas` npm package needed for GPU shader rendering is not installed. "
+                f"Run: npm install (in {_CRUSH_JS_DIR}). "
+                "The FFmpeg-based glitch_* tools work without it.",
+                error_type="dependency_error",
+                code="missing_canvas",
             )
         env = os.environ.copy()
         env["MCP_VIDEO_CRUSH_PATH"] = _resolve_crush_path()

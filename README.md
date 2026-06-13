@@ -38,7 +38,7 @@
 
 ## Public Discovery
 
-**mcp-video** is a free, open-source **Model Context Protocol (MCP) server**, Python library, and CLI that gives AI agents a real video-editing surface. It wraps FFmpeg, PUSHING CREATION-style planning, media analysis, quality checks, subtitles, audio generation, effects, Hyperframes 0.5 rendering, local repurposing packages, and guardrails for risky edit parameters behind structured tool schemas.
+**mcp-video** is a free, open-source **Model Context Protocol (MCP) server**, Python library, and CLI that gives AI agents a real video-editing surface. It wraps FFmpeg, PUSHING CREATION-style planning, media analysis, quality checks, subtitles, audio generation, effects, Hyperframes rendering, local repurposing packages, and guardrails for risky edit parameters behind structured tool schemas.
 
 Best-fit searches:
 

@@ -918,7 +918,7 @@ class TestStill:
 
 
 class TestSnapshot:
-    """Tests for Hyperframes 0.5 snapshot path handling."""
+    """Tests for Hyperframes snapshot path handling."""
 
     def test_returns_actual_snapshot_files(self, sample_hyperframes_project):
         project = Path(sample_hyperframes_project)
@@ -996,7 +996,7 @@ class TestSnapshot:
 
 
 class TestHyperframes05Tools:
-    """Tests for high-value Hyperframes 0.5 CLI wrappers."""
+    """Tests for high-value Hyperframes CLI wrappers."""
 
     def test_catalog_parses_json(self):
         payload = json.dumps([{"name": "tiktok-follow", "type": "block", "tags": ["social"]}])

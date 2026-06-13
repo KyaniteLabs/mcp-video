@@ -910,7 +910,7 @@ def still(
 ) -> HyperframesStillResult:
     """Render a single frame from a Hyperframes composition.
 
-    Hyperframes 0.5 writes snapshot PNGs into the project ``snapshots/``
+    Hyperframes writes snapshot PNGs into the project ``snapshots/``
     directory and does not accept an output file flag. Return the actual
     generated frame path instead of echoing a requested-but-unwritten path.
     """
