@@ -370,11 +370,15 @@ def _build_slide_up_filter(
         "bottom-right": "w-text_w-20:h-text_h-20",
     }
     pos = pos_map.get(position, pos_map["center"])
+    x_expr, y_expr = pos.split(":")
+    # Animate the slide-up by offsetting the RESOLVED y for every position (start
+    # 50px lower, ease to target over 0.3s). The old code string-replaced the
+    # center-only "(h-text_h)/2" literal, so the other 6 positions rendered static.
     y_offset = f"+50*(1-min(1\\,(t-{start})/0.3))"
-    pos = pos.replace("(h-text_h)/2", f"(h-text_h)/2{y_offset}")
+    y_expr = f"({y_expr}){y_offset}"
     filter_complex = (
         f"drawtext=text='{safe_text}':{font_option}:fontsize={size}:fontcolor={safe_color}:"
-        f"x={pos.split(':')[0]}:y={pos.split(':')[1]}:"
+        f"x={x_expr}:y={y_expr}:"
         f"enable='between(t\\,{start}\\,{start + duration})':"
         f"alpha='1'"
     )

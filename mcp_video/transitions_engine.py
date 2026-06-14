@@ -45,15 +45,20 @@ def transition_glitch(
     noise_amount = int(intensity * 10)
 
     # Use rgbashift filter for RGB channel shifting
-    # More reliable than geq which has complex escaping requirements
+    # More reliable than geq which has complex escaping requirements.
+    # Both stages are timeline-gated with enable=between(t,offset,end) so the
+    # glitch only appears during the transition window — without this the
+    # RGB-shift/noise bleed across the entire merged clip.
     safe_duration = _escape_ffmpeg_filter_value(str(duration))
     safe_offset = _escape_ffmpeg_filter_value(str(offset))
     safe_rgb_shift = _escape_ffmpeg_filter_value(str(rgb_shift))
     safe_noise_amount = _escape_ffmpeg_filter_value(str(noise_amount))
+    end = offset + duration
+    gate = f"enable='between(t,{offset:.4f},{end:.4f})'"
     filter_complex = (
         f"[0:v][1:v]xfade=transition=fade:duration={safe_duration}:offset={safe_offset}[faded];"
-        f"[faded]rgbashift=rh={safe_rgb_shift}:gh=0:bh=-{safe_rgb_shift}:ah=0[rgbshift];"
-        f"[rgbshift]noise=alls={safe_noise_amount}:allf=t+u[glitched]"
+        f"[faded]rgbashift=rh={safe_rgb_shift}:gh=0:bh=-{safe_rgb_shift}:ah=0:{gate}[rgbshift];"
+        f"[rgbshift]noise=alls={safe_noise_amount}:allf=t+u:{gate}[glitched]"
     )
 
     cmd = [
