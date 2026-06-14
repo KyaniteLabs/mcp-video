@@ -109,6 +109,68 @@ class TestEditTimeline:
         assert os.path.isfile(result.output_path)
         assert result.success is True
 
+    def test_clip_duration_trims_with_zero_trim_start(self, sample_video, tmp_path):
+        """Regression for #6: a clip with duration but trim_start=0 and no
+        trim_end must be trimmed to that duration, not appended untrimmed.
+
+        sample_video is 3s; trimming to 1.5s must yield a ~1.5s output.
+        """
+        target = 1.5
+        out = str(tmp_path / "duration_only.mp4")
+        tl = Timeline(
+            width=640,
+            height=480,
+            tracks=[
+                TimelineTrack(
+                    type="video",
+                    clips=[TimelineClip(source=sample_video, duration=target)],
+                ),
+            ],
+        )
+        result = edit_timeline(tl, output_path=out)
+        info = probe(result.output_path)
+        assert abs(info.duration - target) < 0.5, (
+            f"expected ~{target}s, got {info.duration}s (clip appended untrimmed?)"
+        )
+
+    def test_clip_duration_with_trim_start_offset(self, sample_video, tmp_path):
+        """Regression for #6 adjacent case: trim_start>0 + duration trims to
+        the requested window length (start .. start+duration)."""
+        target = 1.0
+        out = str(tmp_path / "trim_start_plus_duration.mp4")
+        tl = Timeline(
+            width=640,
+            height=480,
+            tracks=[
+                TimelineTrack(
+                    type="video",
+                    clips=[TimelineClip(source=sample_video, trim_start=0.5, duration=target)],
+                ),
+            ],
+        )
+        result = edit_timeline(tl, output_path=out)
+        info = probe(result.output_path)
+        assert abs(info.duration - target) < 0.5, f"expected ~{target}s, got {info.duration}s"
+
+    def test_clip_duration_matching_trim_end_agrees(self, sample_video, tmp_path):
+        """Regression for #6 precedence: when trim_start=0 and duration equals
+        the trim_end value, the output length equals that agreed value."""
+        target = 1.0
+        out = str(tmp_path / "duration_and_trim_end.mp4")
+        tl = Timeline(
+            width=640,
+            height=480,
+            tracks=[
+                TimelineTrack(
+                    type="video",
+                    clips=[TimelineClip(source=sample_video, trim_end=target, duration=target)],
+                ),
+            ],
+        )
+        result = edit_timeline(tl, output_path=out)
+        info = probe(result.output_path)
+        assert abs(info.duration - target) < 0.5, f"expected ~{target}s, got {info.duration}s"
+
     @requires_filter("drawtext", "Text overlay")
     def test_multiple_clips_with_text(self, sample_video):
         tl = Timeline(

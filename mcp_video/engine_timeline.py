@@ -89,13 +89,19 @@ def _collect_tracks(timeline: Timeline, tmpdir: str):
         if track.type == "video":
             for clip in track.clips:
                 _validate_input_path(clip.source)
-                if clip.trim_start > 0 or clip.trim_end:
+                # Trim whenever any window is requested: a start offset, an
+                # explicit end, OR a duration. ``duration`` is an independent
+                # trigger so a clip with ``trim_start=0`` and ``duration`` set
+                # (no ``trim_end``) is still trimmed instead of appended whole
+                # (see #6). Precedence when both are present: ``trim_end`` wins,
+                # because it pins an absolute end on the source timeline.
+                if clip.trim_start > 0 or clip.trim_end is not None or clip.duration is not None:
                     trimmed = os.path.join(tmpdir, f"v_{len(video_clips):04d}.mp4")
                     trim_kwargs = {"start": clip.trim_start}
-                    if clip.duration:
-                        trim_kwargs["duration"] = clip.duration
-                    elif clip.trim_end:
+                    if clip.trim_end is not None:
                         trim_kwargs["end"] = clip.trim_end
+                    elif clip.duration is not None:
+                        trim_kwargs["duration"] = clip.duration
                     result = trim(clip.source, output_path=trimmed, **trim_kwargs)
                     video_clips.append(result.output_path)
                 else:
