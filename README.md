@@ -23,6 +23,7 @@
 </p>
 
 <p align="center">
+  <a href="#see-it-work">Demo</a> &bull;
   <a href="#install">Install</a> &bull;
   <a href="#quick-start">Quick Start</a> &bull;
   <a href="#what-agents-can-do">Agent Workflows</a> &bull;
@@ -35,6 +36,31 @@
 </p>
 
 ---
+
+## See It Work
+
+Tell the agent what you want in plain language:
+
+> "Trim this interview to the strongest 45 seconds, add burned captions, make it vertical, and quality-check it before export."
+
+mcp-video turns that into typed, guardrailed tool calls — no FFmpeg flags to guess, no silently broken exports:
+
+```python
+from mcp_video import Client
+video = Client()
+
+clip = video.trim("interview.mp4", start="00:02:15", duration="00:00:45")
+video.ai_transcribe(clip.output_path, output_srt="captions.srt")
+captioned = video.subtitles(clip.output_path, subtitle_file="captions.srt")
+short = video.resize(captioned.output_path, aspect_ratio="9:16")
+video.release_checkpoint(short.output_path)  # thumbnail + quality gate before you publish
+```
+
+**Three things people use it for**
+
+- **Repurposing** — one recording into captioned Shorts, Reels, and TikTok packages with manifests and review artifacts.
+- **Podcast & interview cuts** — find the strongest segment, normalize audio, add chapters, and export.
+- **Agent-driven media in CI** — repeatable, reviewable edits from Claude Code, Cursor, Codex-style clients, or scripts.
 
 ## Public Discovery
 
@@ -351,3 +377,9 @@ More from [KyaniteLabs](https://kyanitelabs.tech). Related projects:
 - **[checkyourself](https://github.com/KyaniteLabs/checkyourself)** — local-first production-readiness checks for AI-built code
 
 → More at **[kyanitelabs.tech](https://kyanitelabs.tech)**
+
+---
+
+If mcp-video is useful to you, **[star it](https://github.com/KyaniteLabs/mcp-video)** — it helps other agent builders find it.
+
+Built by **[Simon Gonzalez De Cruz](https://github.com/simongonzalezdc)** — available for Forward-Deployed / Applied-AI engineering and contract work: **[simon@puenteworks.com](mailto:simon@puenteworks.com)**.
