@@ -606,7 +606,6 @@ class ClientMediaMixin:
         """Read metadata tags from a video/audio file."""
         return _read_metadata(video)
 
-
     def composite_layers(
         self,
         spec: str,

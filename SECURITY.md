@@ -8,9 +8,9 @@ Security fixes target the repository's default branch and the latest published p
 
 ## Reporting a Vulnerability
 
-Please do not open a public GitHub issue for vulnerabilities.
+Please do not open a public issue for vulnerabilities.
 
-Use GitHub Security Advisories for this repository. If that is unavailable, follow the private support path in `SUPPORT.md` and include only the minimum detail needed to establish contact.
+Follow the private support path in `SUPPORT.md` and include only the minimum detail needed to establish contact.
 
 Helpful reports include:
 

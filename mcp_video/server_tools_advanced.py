@@ -625,6 +625,7 @@ def video_cleanup(
         "results": results,
     }
 
+
 @mcp.tool()
 @_safe_tool
 def video_composite_layers(

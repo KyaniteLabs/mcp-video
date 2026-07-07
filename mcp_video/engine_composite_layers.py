@@ -328,7 +328,9 @@ def _resolve_layer_plan_path(save_layer_plan: str | None, output_path: str) -> s
     return path
 
 
-def _build_ffmpeg_args(canvas: _Canvas, layers: list[_ResolvedLayer], filter_complex: str, output_path: str) -> list[str]:
+def _build_ffmpeg_args(
+    canvas: _Canvas, layers: list[_ResolvedLayer], filter_complex: str, output_path: str
+) -> list[str]:
     args: list[str] = [
         "-f",
         "lavfi",
@@ -355,7 +357,9 @@ def _build_ffmpeg_args(canvas: _Canvas, layers: list[_ResolvedLayer], filter_com
     if image_output:
         args.extend(["-frames:v", "1", "-update", "1"])
     else:
-        args.extend(["-t", _num(canvas.duration), "-c:v", "libx264", "-preset", "medium", "-crf", "23", "-pix_fmt", "yuv420p"])
+        args.extend(
+            ["-t", _num(canvas.duration), "-c:v", "libx264", "-preset", "medium", "-crf", "23", "-pix_fmt", "yuv420p"]
+        )
     args.append(output_path)
     return args
 
@@ -482,7 +486,9 @@ def _validate_opacity(value: float, layer_id: str) -> float:
 
 def _positive_int(value: int, name: str) -> None:
     if not isinstance(value, int) or value <= 0:
-        raise MCPVideoError(f"{name} must be a positive integer", error_type="validation_error", code="invalid_parameter")
+        raise MCPVideoError(
+            f"{name} must be a positive integer", error_type="validation_error", code="invalid_parameter"
+        )
 
 
 def _positive_number(value: float, name: str) -> None:

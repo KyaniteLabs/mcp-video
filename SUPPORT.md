@@ -2,10 +2,10 @@
 
 ## Where to ask for help
 
-- **Usage questions and workflow help**: GitHub Discussions.
-- **Reproducible bugs**: GitHub Issues using the bug report template.
-- **Scoped feature requests**: GitHub Issues using the feature request template.
-- **Early ideas and proposals**: GitHub Discussions.
+- **Usage questions and workflow help**: Forgejo issues with the `question` label.
+- **Reproducible bugs**: Forgejo issues using the bug report template.
+- **Scoped feature requests**: Forgejo issues using the feature request template.
+- **Early ideas and proposals**: Forgejo issues with the `idea` label.
 - **Security reports**: Follow the private reporting path in `SECURITY.md`.
 
 ## What to include in support requests

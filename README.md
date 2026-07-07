@@ -15,7 +15,7 @@
 
 <p align="center">
   <a href="https://pypi.org/project/mcp-video/"><img src="https://img.shields.io/pypi/v/mcp-video.svg" alt="PyPI"></a>
-  <a href="https://git.kyanitelabs.tech/KyaniteLabs/mcp-video/actions"><img src="https://img.shields.io/badge/Forgejo%20CI-passing-brightgreen" alt="CI"></a>
+  <a href="https://git.kyanitelabs.tech/KyaniteLabs/mcp-video/actions"><img src="https://img.shields.io/badge/Forgejo%20CI-actions-blue" alt="CI"></a>
   <img src="https://img.shields.io/badge/MCP-119%20tools-orange.svg" alt="119 MCP tools">
   <img src="https://img.shields.io/badge/python-3.11%2B-blue.svg" alt="Python 3.11+">
   <img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="Apache 2.0">

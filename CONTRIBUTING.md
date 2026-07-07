@@ -6,7 +6,7 @@ Thanks for your interest in improving mcp-video. This is a focused project — e
 
 ```bash
 # Clone and install dev dependencies
-git clone https://github.com/KyaniteLabs/mcp-video.git
+git clone https://git.kyanitelabs.tech/KyaniteLabs/mcp-video.git
 cd mcp-video
 python3 -m venv .venv
 source .venv/bin/activate
@@ -130,7 +130,7 @@ tests/
 - Do **not** commit generated logs, browser captures, temporary research extracts, or render outputs unless they are explicitly curated release assets.
 - Generated media belongs outside source control by default.
 - Research/reference material derived from third-party sites must be provenance-reviewed before it is tracked or published.
-- If an artifact should never reach GitHub Pages or release archives, it should not remain in the tracked product surface.
+- If an artifact should never reach the public site or release archives, it should not remain in the tracked product surface.
 
 ## Commit Messages
 
@@ -165,7 +165,7 @@ For workspace cleanup (stale worktrees/branches), run:
 ./scripts/git-workspace-cleanup.sh
 ```
 
-To monitor GitHub CI and review comments on open PRs, run:
+To monitor the GitHub mirror CI and review comments on mirrored PRs, run:
 
 ```bash
 ./scripts/github-pr-monitor.py --owner KyaniteLabs --repo mcp-video
@@ -191,7 +191,7 @@ When reporting a bug, include:
 
 ## Questions?
 
-Open a GitHub issue with the `question` label.
+Open a Forgejo issue with the `question` label.
 
 <!-- EMPOWER_ORCHESTRATOR:START -->
 ## Agent-law contribution rule

@@ -379,6 +379,7 @@ def test_server_json_and_readme_match_registry_identity():
     assert server["name"] == "io.github.KyaniteLabs/mcp-video"
     assert server["websiteUrl"] == "https://kyanitelabs.github.io/mcp-video/"
     assert server["repository"]["url"] == "https://git.kyanitelabs.tech/KyaniteLabs/mcp-video"
+    assert server["repository"]["source"] == "forgejo"
     assert server["packages"][0]["identifier"] == "mcp-video"
     assert server["packages"][0]["runtimeHint"] == "uvx"
     assert server["packages"][0]["transport"]["type"] == "stdio"
@@ -396,7 +397,12 @@ def test_public_guidance_does_not_expose_local_runtime_details():
         ROOT / ".cursorrules",
         ROOT / ".windsurfrules",
         ROOT / ".github" / "copilot-instructions.md",
+        ROOT / ".github" / "ISSUE_TEMPLATE" / "config.yml",
         ROOT / "README.md",
+        ROOT / "CONTRIBUTING.md",
+        ROOT / "SUPPORT.md",
+        ROOT / "SECURITY.md",
+        ROOT / "index.html",
         ROOT / "pyproject.toml",
         ROOT / "server.json",
     ]
@@ -415,6 +421,44 @@ def test_public_guidance_does_not_expose_local_runtime_details():
     }
 
     assert offenders == {}
+
+
+def test_canonical_public_surfaces_point_to_forgejo_not_stale_github_repo():
+    checked_paths = [
+        ROOT / "README.md",
+        ROOT / "CONTRIBUTING.md",
+        ROOT / "SUPPORT.md",
+        ROOT / "SECURITY.md",
+        ROOT / "index.html",
+        ROOT / ".github" / "ISSUE_TEMPLATE" / "config.yml",
+        ROOT / "server.json",
+        ROOT / "pyproject.toml",
+    ]
+    forbidden = [
+        "github.com/KyaniteLabs/mcp-video",
+        "GitHub Security Advisories",
+        "View on GitHub",
+        "See GitHub for full list",
+        "v1.4.0",
+    ]
+
+    offenders = {
+        str(path.relative_to(ROOT)): fragment
+        for path in checked_paths
+        for fragment in forbidden
+        if path.exists() and fragment in path.read_text(encoding="utf-8")
+    }
+
+    assert offenders == {}
+
+
+def test_public_site_matches_release_identity():
+    site = (ROOT / "index.html").read_text(encoding="utf-8")
+
+    assert '"version": "1.5.2"' in site
+    assert "v1.5.2" in site
+    assert "https://git.kyanitelabs.tech/KyaniteLabs/mcp-video" in site
+    assert "https://github.com/KyaniteLabs/mcp-video" not in site
 
 
 def test_heavy_ai_extras_keep_python313_installable():

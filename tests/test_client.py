@@ -362,11 +362,13 @@ class TestClientValidators:
         captured = {}
 
         def fake_composite_layers(spec_path, output_path=None, save_layer_plan=None):
-            captured.update({
-                "spec_path": spec_path,
-                "output_path": output_path,
-                "save_layer_plan": save_layer_plan,
-            })
+            captured.update(
+                {
+                    "spec_path": spec_path,
+                    "output_path": output_path,
+                    "save_layer_plan": save_layer_plan,
+                }
+            )
             return EditResult(output_path="out.mp4", operation="composite_layers")
 
         monkeypatch.setattr("mcp_video.client.media._composite_layers", fake_composite_layers)
