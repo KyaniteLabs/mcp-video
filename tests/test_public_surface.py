@@ -386,10 +386,11 @@ def test_server_json_and_readme_match_registry_identity():
     assert f"mcp-name: {server['name']}" in readme
 
 
-def test_public_tree_does_not_track_local_cache_artifacts():
+def test_public_tree_does_not_track_local_agent_state_artifacts():
     tracked = subprocess.check_output(["git", "ls-files"], cwd=ROOT, text=True).splitlines()
+    local_state_prefixes = (".pi-lens/", ".pi/")
 
-    assert [path for path in tracked if path.startswith(".pi-lens/")] == []
+    assert [path for path in tracked if path.startswith(local_state_prefixes)] == []
 
 
 def test_public_guidance_does_not_expose_local_runtime_details():
@@ -461,6 +462,10 @@ def test_public_site_matches_release_identity():
 
     assert '"version": "1.5.2"' in site
     assert "v1.5.2" in site
+    assert "1600 passing tests" in site
+    assert '<div class="num">1600</div>' in site
+    assert "1215 passing tests" not in site
+    assert '<div class="num">1612</div>' not in site
     assert "https://git.kyanitelabs.tech/KyaniteLabs/mcp-video" in site
     assert "https://github.com/KyaniteLabs/mcp-video" not in site
 

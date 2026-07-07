@@ -6,3 +6,4 @@ scripts/        export-ignore
 docs/internal/  export-ignore
 docs/plans/     export-ignore
 .pi-lens/** -diff
+.pi/** -diff
