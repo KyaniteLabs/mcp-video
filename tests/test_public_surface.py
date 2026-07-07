@@ -15,6 +15,36 @@ from mcp.client.stdio import stdio_client
 ROOT = Path(__file__).resolve().parents[1]
 
 
+PUBLIC_SURFACE_STATIC_PATHS = (
+    ROOT / ".cursorrules",
+    ROOT / ".windsurfrules",
+    ROOT / ".github" / "copilot-instructions.md",
+    ROOT / ".github" / "ISSUE_TEMPLATE" / "config.yml",
+    ROOT / "README.md",
+    ROOT / "CONTRIBUTING.md",
+    ROOT / "SUPPORT.md",
+    ROOT / "SECURITY.md",
+    ROOT / "ROADMAP.md",
+    ROOT / "index.html",
+    ROOT / "llms.txt",
+    ROOT / "robots.txt",
+    ROOT / "sitemap.xml",
+    ROOT / "pyproject.toml",
+    ROOT / "server.json",
+    ROOT / "skills" / "mcp-video" / "SKILL.md",
+)
+
+
+def _public_surface_paths() -> list[Path]:
+    """Return every maintained public/discovery surface covered by drift guards."""
+    docs_paths = sorted((ROOT / "docs").rglob("*.md"))
+    return [path for path in (*PUBLIC_SURFACE_STATIC_PATHS, *docs_paths) if path.exists()]
+
+
+def _read_public_surfaces() -> dict[str, str]:
+    return {str(path.relative_to(ROOT)): path.read_text(encoding="utf-8") for path in _public_surface_paths()}
+
+
 EXPECTED_CLI_COMMANDS = {
     "doctor",
     "info",
@@ -344,13 +374,7 @@ def test_call_tool_round_trip_returns_structured_error_for_bad_input():
 
 def test_public_discovery_files_do_not_point_at_old_personal_namespace():
     checked_paths = [
-        ROOT / "README.md",
-        ROOT / "server.json",
-        ROOT / "pyproject.toml",
-        ROOT / "index.html",
-        ROOT / "robots.txt",
-        ROOT / "sitemap.xml",
-        ROOT / "docs" / "AI_AGENT_DISCOVERY.md",
+        *_public_surface_paths(),
         ROOT / "scripts" / "github-pr-monitor.py",
         ROOT / "mcp_video" / "ai_engine" / "download.py",
         ROOT / "mcp_video" / "errors.py",
@@ -366,7 +390,7 @@ def test_public_discovery_files_do_not_point_at_old_personal_namespace():
         str(path.relative_to(ROOT)): fragment
         for path in checked_paths
         for fragment in stale_fragments
-        if fragment in path.read_text(encoding="utf-8")
+        if path.exists() and fragment in path.read_text(encoding="utf-8")
     }
 
     assert offenders == {}
@@ -394,20 +418,6 @@ def test_public_tree_does_not_track_local_agent_state_artifacts():
 
 
 def test_public_guidance_does_not_expose_local_runtime_details():
-    checked_paths = [
-        ROOT / ".cursorrules",
-        ROOT / ".windsurfrules",
-        ROOT / ".github" / "copilot-instructions.md",
-        ROOT / ".github" / "ISSUE_TEMPLATE" / "config.yml",
-        ROOT / "README.md",
-        ROOT / "CONTRIBUTING.md",
-        ROOT / "SUPPORT.md",
-        ROOT / "SECURITY.md",
-        ROOT / "index.html",
-        ROOT / "ROADMAP.md",
-        ROOT / "pyproject.toml",
-        ROOT / "server.json",
-    ]
     forbidden = [
         "/" + "Users/",
         "100." + "66.225.85",
@@ -416,29 +426,13 @@ def test_public_guidance_does_not_expose_local_runtime_details():
     ]
 
     offenders = {
-        str(path.relative_to(ROOT)): fragment
-        for path in checked_paths
-        for fragment in forbidden
-        if path.exists() and fragment in path.read_text(encoding="utf-8")
+        path: fragment for path, text in _read_public_surfaces().items() for fragment in forbidden if fragment in text
     }
 
     assert offenders == {}
 
 
 def test_canonical_public_surfaces_point_to_forgejo_not_stale_github_repo():
-    docs_paths = sorted((ROOT / "docs").rglob("*.md"))
-    checked_paths = [
-        ROOT / "README.md",
-        ROOT / "CONTRIBUTING.md",
-        ROOT / "SUPPORT.md",
-        ROOT / "SECURITY.md",
-        ROOT / "index.html",
-        ROOT / "ROADMAP.md",
-        ROOT / ".github" / "ISSUE_TEMPLATE" / "config.yml",
-        ROOT / "server.json",
-        ROOT / "pyproject.toml",
-        *docs_paths,
-    ]
     forbidden = [
         "github.com/KyaniteLabs/mcp-video",
         "GitHub Security Advisories",
@@ -448,13 +442,19 @@ def test_canonical_public_surfaces_point_to_forgejo_not_stale_github_repo():
     ]
 
     offenders = {
-        str(path.relative_to(ROOT)): fragment
-        for path in checked_paths
-        for fragment in forbidden
-        if path.exists() and fragment in path.read_text(encoding="utf-8")
+        path: fragment for path, text in _read_public_surfaces().items() for fragment in forbidden if fragment in text
     }
 
     assert offenders == {}
+
+
+def test_public_surface_manifest_covers_agent_discovery_files():
+    public_paths = {str(path.relative_to(ROOT)) for path in _public_surface_paths()}
+
+    assert "llms.txt" in public_paths
+    assert "docs/AI_AGENT_DISCOVERY.md" in public_paths
+    assert "skills/mcp-video/SKILL.md" in public_paths
+    assert "ROADMAP.md" in public_paths
 
 
 def test_public_site_matches_release_identity():
