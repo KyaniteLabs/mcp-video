@@ -468,3 +468,330 @@ def test_composite_layers_renders_transformed_masked_timed_layer(tmp_path):
     assert result.layer_plan["features"]["masks"] is True
     assert result.layer_plan["features"]["timing_windows"] is True
     assert result.layer_plan["output_hash"].startswith("sha256:")
+
+
+# --- Story 7: rotation + pivot ---------------------------------------------
+
+_PIVOTS = ["center", "top_left", "top_right", "bottom_left", "bottom_right"]
+
+
+def _rotation_spec(rotation=45, pivot=None, **layer_extra):
+    """Base video + an image plate carrying rotation (position {20, 16})."""
+    plate = {"id": "plate", "type": "image", "src": "plate.png", "position": {"x": 20, "y": 16}, "rotation": rotation}
+    if pivot is not None:
+        plate["pivot"] = pivot
+    plate.update(layer_extra)
+    return {
+        "canvas": {"width": 320, "height": 180, "background": "#000000", "fps": 12, "duration": 1.0},
+        "layers": [
+            {"id": "background", "type": "video", "src": "bg.mp4", "position": {"x": 0, "y": 0}},
+            plate,
+        ],
+        "output": {"format": "mp4"},
+    }
+
+
+@pytest.mark.parametrize("rotation", [45, -30, 0, 360, -360, 12.5])
+def test_composite_layers_accepts_valid_rotation(tmp_path, monkeypatch, rotation):
+    _write_minimal_assets(tmp_path)
+    result, graph = _render_graph(tmp_path, _rotation_spec(rotation=rotation), monkeypatch)
+
+    assert "rotate=" in graph
+    assert result.layer_plan["layers"][1]["transform"]["rotation"] == float(rotation)
+    assert result.layer_plan["features"]["rotation"] is True
+
+
+@pytest.mark.parametrize("rotation", [361, -361, 500, -720])
+def test_composite_layers_rejects_out_of_range_rotation(tmp_path, rotation):
+    _write_minimal_assets(tmp_path)
+    spec_path = _write_spec(tmp_path, _rotation_spec(rotation=rotation))
+
+    with pytest.raises(MCPVideoError) as excinfo:
+        composite_layers(str(spec_path), output_path=str(tmp_path / "out.mp4"))
+
+    assert excinfo.value.code == "invalid_transform"
+
+
+@pytest.mark.parametrize("rotation", ["spin", [1, 2], {"deg": 3}])
+def test_composite_layers_rejects_non_numeric_rotation(tmp_path, rotation):
+    _write_minimal_assets(tmp_path)
+    spec_path = _write_spec(tmp_path, _rotation_spec(rotation=rotation))
+
+    with pytest.raises(MCPVideoError) as excinfo:
+        composite_layers(str(spec_path), output_path=str(tmp_path / "out.mp4"))
+
+    assert excinfo.value.code == "unsupported_compositor_feature"
+
+
+def test_validate_rotation_rejects_non_finite():
+    from mcp_video.engine_composite_layers_rotate import validate_rotation
+
+    layer = SimpleNamespace(id="plate", rotation=float("inf"), pivot=None, mask=None, matte=None)
+    with pytest.raises(MCPVideoError) as excinfo:
+        validate_rotation(layer)
+
+    assert excinfo.value.code == "invalid_transform"
+
+
+@pytest.mark.parametrize("pivot", _PIVOTS)
+def test_composite_layers_accepts_each_pivot(tmp_path, monkeypatch, pivot):
+    _write_minimal_assets(tmp_path)
+    result, graph = _render_graph(tmp_path, _rotation_spec(rotation=45, pivot=pivot), monkeypatch)
+
+    assert result.layer_plan["layers"][1]["transform"]["pivot"] == pivot
+    assert "rotate=" in graph
+
+
+def test_composite_layers_rejects_unknown_pivot(tmp_path):
+    _write_minimal_assets(tmp_path)
+    spec_path = _write_spec(tmp_path, _rotation_spec(rotation=45, pivot="middle"))
+
+    with pytest.raises(MCPVideoError) as excinfo:
+        composite_layers(str(spec_path), output_path=str(tmp_path / "out.mp4"))
+
+    assert excinfo.value.code == "unsupported_compositor_feature"
+
+
+def test_composite_layers_rejects_pivot_without_rotation(tmp_path):
+    _write_minimal_assets(tmp_path)
+    spec = _rotation_spec(rotation=45, pivot="center")
+    del spec["layers"][1]["rotation"]  # pivot present, rotation absent
+    spec_path = _write_spec(tmp_path, spec)
+
+    with pytest.raises(MCPVideoError) as excinfo:
+        composite_layers(str(spec_path), output_path=str(tmp_path / "out.mp4"))
+
+    assert excinfo.value.code == "invalid_transform"
+
+
+def test_composite_layers_rejects_rotation_with_blend(tmp_path):
+    """Rotation composes with the overlay path only; blend stays full-canvas-only."""
+    spec = _full_canvas_blend_spec("multiply")
+    spec["layers"][1]["rotation"] = 45
+    spec_path = _write_spec(tmp_path, spec)
+
+    with pytest.raises(MCPVideoError) as excinfo:
+        composite_layers(str(spec_path), output_path=str(tmp_path / "out.mp4"))
+
+    assert excinfo.value.code == "unsupported_blend_geometry"
+
+
+@pytest.mark.parametrize("mask_key", ["mask", "matte"])
+def test_composite_layers_rejects_rotation_with_mask(tmp_path, mask_key):
+    """Rotation + mask/matte is deferred this release and fails closed."""
+    _write_minimal_assets(tmp_path)
+    spec = _rotation_spec(rotation=45, **{mask_key: "mask.png"})
+    spec_path = _write_spec(tmp_path, spec)
+
+    with pytest.raises(MCPVideoError) as excinfo:
+        composite_layers(str(spec_path), output_path=str(tmp_path / "out.mp4"))
+
+    assert excinfo.value.code == "unsupported_compositor_feature"
+
+
+def _anchor_alias_spec(position_key):
+    """A no-rotation spec whose plate is placed via ``position_key`` (anchor|position)."""
+    return {
+        "canvas": {"width": 320, "height": 180, "background": "#000000", "fps": 12, "duration": 1.0},
+        "layers": [
+            {"id": "background", "type": "video", "src": "bg.mp4", "position": {"x": 0, "y": 0}},
+            {"id": "plate", "type": "image", "src": "plate.png", "opacity": 0.75, position_key: {"x": 24, "y": 12}},
+        ],
+        "output": {"format": "mp4"},
+    }
+
+
+def test_composite_layers_anchor_still_behaves_as_position_alias(tmp_path, monkeypatch):
+    """Regression: `anchor` remains a position alias, identical to before Story 7 —
+    it must NOT gain any rotation/pivot behavior."""
+    _write_minimal_assets(tmp_path)
+    _anchor_result, anchor_graph = _render_graph(tmp_path, _anchor_alias_spec("anchor"), monkeypatch)
+    _pos_result, position_graph = _render_graph(tmp_path, _anchor_alias_spec("position"), monkeypatch)
+
+    assert anchor_graph == position_graph
+    assert "overlay=24:12" in anchor_graph  # anchor coords placed directly, no pivot offset
+    assert "rotate=" not in anchor_graph
+    assert _anchor_result.layer_plan["layers"][1]["transform"]["rotation"] is None
+    assert _anchor_result.layer_plan["layers"][1]["transform"]["pivot"] is None
+    assert _anchor_result.layer_plan["features"]["rotation"] is False
+
+
+def test_composite_layers_rotation_filtergraph_order_and_transparent_fill(tmp_path, monkeypatch):
+    _write_minimal_assets(tmp_path)
+    _result, graph = _render_graph(tmp_path, _rotation_spec(rotation=30, scale=1.5), monkeypatch)
+
+    # transparent-fill rotate with expanded bounding box
+    assert "rotate=" in graph
+    assert "fillcolor=none" in graph
+    assert "rotw(" in graph and "roth(" in graph
+    # order within the plate pipeline: scale -> rotate -> opacity -> position(overlay)
+    scale_pos = graph.index("scale=iw*1.5")  # unique to the plate layer
+    rotate_pos = graph.index("rotate=")  # only the plate rotates
+    opacity_pos = graph.index("colorchannelmixer", rotate_pos)  # the plate's opacity, after rotate
+    overlay_pos = graph.rindex("overlay=")  # the plate's overlay, last in the chain
+    assert scale_pos < rotate_pos < opacity_pos < overlay_pos
+    # rotation is never interpolated raw: the graph carries a formatted radian literal, not "30"
+    assert "rotate=30:" not in graph
+
+
+@pytest.mark.parametrize(
+    ("pivot", "expected"),
+    [
+        ("center", "overlay=20-w/2:16-h/2"),
+        ("top_left", "overlay=20:16"),
+        ("top_right", "overlay=20-w:16"),
+        ("bottom_left", "overlay=20:16-h"),
+        ("bottom_right", "overlay=20-w:16-h"),
+    ],
+)
+def test_composite_layers_pivot_sets_overlay_reference_point(tmp_path, monkeypatch, pivot, expected):
+    _write_minimal_assets(tmp_path)
+    _result, graph = _render_graph(tmp_path, _rotation_spec(rotation=45, pivot=pivot), monkeypatch)
+
+    assert expected in graph
+
+
+def test_composite_layers_receipt_is_layer_plan_v2(tmp_path, monkeypatch):
+    _write_minimal_assets(tmp_path)
+    result, _graph = _render_graph(tmp_path, _minimal_spec(), monkeypatch)
+
+    assert result.layer_plan["schema_version"] == 2
+    assert result.layer_plan["receipt_kind"] == "layer_plan"
+    assert result.layer_plan["audio_policy"] == "dropped_video_only"
+    assert result.layer_plan["features"]["audio"] == "dropped"
+    # no rotation in this spec
+    assert result.layer_plan["features"]["rotation"] is False
+    assert result.layer_plan["layers"][1]["transform"]["rotation"] is None
+    assert result.layer_plan["layers"][1]["transform"]["pivot"] is None
+    # unchanged transform receipt keys still present
+    assert set(result.layer_plan["layers"][1]["transform"]) == {"width", "height", "scale", "rotation", "pivot"}
+
+
+def test_composite_layers_receipt_records_rotation_and_pivot(tmp_path, monkeypatch):
+    _write_minimal_assets(tmp_path)
+    result, _graph = _render_graph(tmp_path, _rotation_spec(rotation=-30, pivot="top_right"), monkeypatch)
+
+    transform = result.layer_plan["layers"][1]["transform"]
+    assert transform["rotation"] == -30.0
+    assert transform["pivot"] == "top_right"
+    assert result.layer_plan["features"]["rotation"] is True
+    assert any("rotated layers" in line for line in result.layer_plan["filtergraph_summary"])
+
+
+def test_composite_layers_rotation_default_pivot_is_center(tmp_path, monkeypatch):
+    _write_minimal_assets(tmp_path)
+    result, graph = _render_graph(tmp_path, _rotation_spec(rotation=45), monkeypatch)
+
+    assert result.layer_plan["layers"][1]["transform"]["pivot"] == "center"
+    assert "overlay=20-w/2:16-h/2" in graph
+
+
+def test_composite_layers_dry_run_rotation_receipt_is_consistent(tmp_path, monkeypatch):
+    _write_minimal_assets(tmp_path)
+    spec_path = _write_spec(tmp_path, _rotation_spec(rotation=90, pivot="bottom_left"))
+    output = tmp_path / "out.mp4"
+    plan = tmp_path / "plan.json"
+    calls = []
+
+    monkeypatch.setattr("mcp_video.engine_composite_layers._run_ffmpeg", lambda args: calls.append(args.copy()))
+
+    result = composite_layers(str(spec_path), output_path=str(output), save_layer_plan=str(plan), dry_run=True)
+
+    assert calls == []
+    assert not output.exists()
+    assert result.layer_plan["schema_version"] == 2
+    assert result.layer_plan["receipt_kind"] == "layer_plan"
+    assert result.layer_plan["features"]["rotation"] is True
+    assert result.layer_plan["layers"][1]["transform"]["rotation"] == 90.0
+    assert result.layer_plan["layers"][1]["transform"]["pivot"] == "bottom_left"
+    saved = json.loads(plan.read_text())
+    assert saved["output_hash"] is None
+    assert saved["schema_version"] == 2
+
+
+def test_composite_layers_unknown_transform_key_still_rejected(tmp_path):
+    """A `rotate` key nested under `transform` is still an unknown transform key
+    (rotation is a top-level `layer.rotation` field, not a transform key)."""
+    _write_minimal_assets(tmp_path)
+    spec = _minimal_spec()
+    spec["layers"][1].update({"transform": {"rotate": 12}})
+    spec_path = _write_spec(tmp_path, spec)
+
+    with pytest.raises(MCPVideoError) as excinfo:
+        composite_layers(str(spec_path), output_path=str(tmp_path / "out.mp4"))
+
+    assert excinfo.value.code == "unsupported_compositor_feature"
+
+
+@pytest.mark.slow
+@pytest.mark.skipif(shutil.which("ffmpeg") is None or shutil.which("ffprobe") is None, reason="requires ffmpeg")
+def test_composite_layers_renders_rotated_image_over_solid_canvas(tmp_path):
+    plate = tmp_path / "plate.png"
+    output = tmp_path / "rotated.mp4"
+    plan = tmp_path / "plan.json"
+    subprocess.run(
+        [
+            "ffmpeg", "-y", "-f", "lavfi", "-i", "color=c=red:s=24x16:d=0.1",
+            "-frames:v", "1", "-pix_fmt", "rgba", str(plate),
+        ],
+        check=True,
+        capture_output=True,
+        timeout=20,
+    )
+    spec = {
+        "canvas": {"width": 64, "height": 64, "background": "#101010", "fps": 5, "duration": 0.5},
+        "layers": [
+            {"id": "base", "type": "solid", "color": "#204060"},
+            {"id": "plate", "type": "image", "src": "plate.png", "position": {"x": 32, "y": 32}, "rotation": 45},
+        ],
+        "output": {"format": "mp4"},
+    }
+    spec_path = _write_spec(tmp_path, spec)
+
+    result = composite_layers(str(spec_path), output_path=str(output), save_layer_plan=str(plan))
+
+    assert output.is_file()
+    assert output.stat().st_size > 0
+    assert result.success is True
+    assert result.resolution == "64x64"
+    assert result.layer_plan["features"]["rotation"] is True
+    assert result.layer_plan["layers"][1]["transform"]["rotation"] == 45.0
+    assert result.layer_plan["layers"][1]["transform"]["pivot"] == "center"
+    assert result.layer_plan["output_hash"].startswith("sha256:")
+
+
+@pytest.mark.slow
+@pytest.mark.skipif(shutil.which("ffmpeg") is None or shutil.which("ffprobe") is None, reason="requires ffmpeg")
+def test_composite_layers_rotation_is_ssim_stable_across_renders(tmp_path):
+    """Two independent renders of the same rotated spec must be near-identical by
+    SSIM (mirrors the Story 6 blend self-consistency check)."""
+    from mcp_video.engine_compare_quality import compare_quality
+
+    plate = tmp_path / "plate.png"
+    subprocess.run(
+        [
+            "ffmpeg", "-y", "-f", "lavfi", "-i", "color=c=red:s=24x16:d=0.1",
+            "-frames:v", "1", "-pix_fmt", "rgba", str(plate),
+        ],
+        check=True,
+        capture_output=True,
+        timeout=20,
+    )
+    spec = {
+        "canvas": {"width": 64, "height": 64, "background": "#101010", "fps": 5, "duration": 0.5},
+        "layers": [
+            {"id": "base", "type": "solid", "color": "#204060"},
+            {"id": "plate", "type": "image", "src": "plate.png", "position": {"x": 32, "y": 32}, "rotation": 30},
+        ],
+        "output": {"format": "mp4"},
+    }
+    spec_path = _write_spec(tmp_path, spec)
+    out_a = tmp_path / "run_a.mp4"
+    out_b = tmp_path / "run_b.mp4"
+
+    composite_layers(str(spec_path), output_path=str(out_a))
+    composite_layers(str(spec_path), output_path=str(out_b))
+
+    quality = compare_quality(str(out_a), str(out_b), metrics=["ssim"])
+
+    assert quality.metrics["ssim"] >= 0.98

@@ -13,6 +13,9 @@ from pydantic import BaseModel, Field
 
 from .defaults import DEFAULT_CRF, DEFAULT_PRESET
 from .engine_composite_layers_blend import BLEND_ALL_MODES, SUPPORTED_BLEND_MODES, validate_blend_geometry
+from .engine_composite_layers_rotate import (
+    has_transform, overlay_position, receipt_transform, rotate_filter, validate_rotation,
+)
 from .engine_runtime_utils import _timed_operation
 from .errors import MCPVideoError
 from .ffmpeg_helpers import (
@@ -38,7 +41,9 @@ _SUPPORTED_LAYER_FIELDS = {
     "mask",
     "matte",
     "opacity",
+    "pivot",
     "position",
+    "rotation",
     "scale",
     "src",
     "start",
@@ -76,6 +81,8 @@ class _Layer(BaseModel):
     width: int | None = None
     height: int | None = None
     scale: float | None = None
+    rotation: Any = None
+    pivot: str | None = None
     start: float | None = None
     duration: float | None = None
     src: str | None = None
@@ -93,6 +100,8 @@ class _ResolvedLayer(BaseModel):
     width: int | None = None
     height: int | None = None
     scale: float | None = None
+    rotation: float | None = None
+    pivot: str | None = None
     start: float | None = None
     duration: float | None = None
     src: str | None = None
@@ -116,10 +125,11 @@ def composite_layers(
     The compositor supports normal alpha compositing, per-layer opacity,
     x/y positioning, scale/width/height transforms, timeline enable windows,
     image/video/solid layers, optional mask/matte alpha sources, full-canvas
-    non-normal blend modes (see ``_validate_blend_geometry``), and a
-    deterministic layer-plan receipt. Rotation and per-layer effect routing
-    remain deferred until they can be represented with equally safe
-    preflight and receipt behavior.
+    non-normal blend modes (see ``validate_blend_geometry``), transparent-fill
+    rotation with a ``pivot`` reference point (see
+    ``engine_composite_layers_rotate``), and a deterministic layer-plan receipt.
+    Per-layer effect routing, positioned/masked blend, and rotation combined
+    with a mask remain deferred and fail closed.
     """
     spec_resolved = _validate_spec_path(spec_path)
     spec_data, spec_bytes = _load_spec(spec_resolved)
@@ -242,6 +252,8 @@ def _parse_layers(spec_data: dict[str, Any], spec_dir: Path) -> list[_ResolvedLa
                 width=layer.width,
                 height=layer.height,
                 scale=layer.scale,
+                rotation=layer.rotation,
+                pivot=layer.pivot,
                 start=layer.start,
                 duration=layer.duration,
                 src=src,
@@ -302,6 +314,7 @@ def _parse_layer(raw: dict[str, Any]) -> _Layer:
     _non_negative_number(layer.position["y"], f"{layer.id}.position.y")
     _validate_layer_transform(layer)
     _validate_layer_timing(layer)
+    layer.rotation = validate_rotation(layer)
     if layer.blend != "normal":
         validate_blend_geometry(layer)
     if layer.type == "solid":
@@ -530,8 +543,7 @@ def _build_filter_complex(canvas: _Canvas, layers: list[_ResolvedLayer]) -> str:
         else:
             chains.append(f"[{layer_label}raw]null[{layer_label}]")
         if layer.blend == "normal":
-            x = _escape_ffmpeg_filter_value(_num(layer.position["x"]))
-            y = _escape_ffmpeg_filter_value(_num(layer.position["y"]))
+            x, y = overlay_position(layer)
             step = f"[{previous}][{layer_label}]overlay={x}:{y}:format=auto:eof_action=pass"
             step = f"{step}{_enable_expression(layer)}"
         else:
@@ -549,6 +561,8 @@ def _layer_filter_chain(layer: _ResolvedLayer) -> str:
     scale_filter = _scale_filter(layer)
     if scale_filter is not None:
         parts.append(scale_filter)
+    if layer.rotation is not None:
+        parts.append(rotate_filter(layer.rotation))
     opacity = _escape_ffmpeg_filter_value(f"{_validate_opacity(layer.opacity, layer.id):.2f}")
     parts.append(f"colorchannelmixer=aa={opacity}")
     return ",".join(parts)
@@ -591,8 +605,11 @@ def _build_layer_plan(
     ]
     if any(layer.blend != "normal" for layer in layers):
         summary.append("full-canvas non-normal blend layers use blend=all_mode against the running base")
+    if any(layer.rotation is not None for layer in layers):
+        summary.append("rotated layers use transparent-fill rotate (scale -> rotate -> opacity -> position); pivot sets the reference point")
     return {
-        "schema_version": 1,
+        "schema_version": 2,
+        "receipt_kind": "layer_plan",
         "tool": "video_composite_layers",
         "spec_hash": "sha256:" + hashlib.sha256(spec_bytes).hexdigest(),
         "canvas": canvas.model_dump(),
@@ -604,7 +621,7 @@ def _build_layer_plan(
                 "source_hash": _file_hash(layer.src),
                 "opacity": layer.opacity,
                 "position": layer.position,
-                "transform": _receipt_transform(layer),
+                "transform": receipt_transform(layer),
                 "timing": _receipt_timing(layer),
                 "mask": layer.resolved_mask_src,
                 "mask_hash": _file_hash(layer.mask_src),
@@ -619,12 +636,15 @@ def _build_layer_plan(
         "filtergraph_hash": "sha256:" + hashlib.sha256(filter_complex.encode("utf-8")).hexdigest(),
         "output_path": output_path,
         "output_hash": None,
+        "audio_policy": "dropped_video_only",
         "features": {
             "layer_types": sorted({layer.type for layer in layers}),
-            "transforms": any(_has_transform(layer) for layer in layers),
+            "transforms": any(has_transform(layer) for layer in layers),
+            "rotation": any(layer.rotation is not None for layer in layers),
             "timing_windows": any(layer.start is not None for layer in layers),
             "masks": any(layer.mask_src is not None for layer in layers),
             "blend_modes": sorted({layer.blend for layer in layers}),
+            "audio": "dropped",
         },
         "render_determinism_scope": (
             "input/spec/filtergraph/output hashes are deterministic; rendered bytes may still vary across FFmpeg builds"
@@ -677,16 +697,8 @@ def _build_composite_result(
     )
 
 
-def _receipt_transform(layer: _ResolvedLayer) -> dict[str, int | float | None]:
-    return {"width": layer.width, "height": layer.height, "scale": layer.scale}
-
-
 def _receipt_timing(layer: _ResolvedLayer) -> dict[str, float | None]:
     return {"start": layer.start, "duration": layer.duration}
-
-
-def _has_transform(layer: _ResolvedLayer) -> bool:
-    return layer.width is not None or layer.height is not None or layer.scale is not None
 
 
 def _canvas_filter(canvas: _Canvas) -> str:

@@ -20,12 +20,15 @@ SUPPORTED_BLEND_MODES = frozenset({"normal", *BLEND_ALL_MODES})
 
 def validate_blend_geometry(layer: Any) -> None:
     """Fail closed unless a non-normal blend layer is full-canvas: position
-    {0,0}, full opacity, no scale/width/height/mask/matte/start/duration."""
+    {0,0}, full opacity, no scale/width/height/rotation/pivot/mask/matte/
+    start/duration. Rotation composes with the overlay path only."""
     reasons: list[str] = []
     if layer.position["x"] != 0 or layer.position["y"] != 0:
         reasons.append("a non-zero position")
     if layer.scale is not None or layer.width is not None or layer.height is not None:
         reasons.append("a scale/width/height transform")
+    if getattr(layer, "rotation", None) is not None or getattr(layer, "pivot", None) is not None:
+        reasons.append("a rotation/pivot transform")
     if layer.mask is not None or layer.matte is not None:
         reasons.append("a mask/matte")
     if layer.start is not None or layer.duration is not None:
