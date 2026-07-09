@@ -19,7 +19,7 @@ import math
 from typing import Any
 
 from .errors import MCPVideoError
-from .ffmpeg_helpers import _escape_ffmpeg_filter_value, _sanitize_ffmpeg_number
+from .ffmpeg_helpers import _escape_ffmpeg_filter_value, _format_ffmpeg_number, _sanitize_ffmpeg_number
 
 # Rotation is accepted in degrees within this inclusive range; anything outside
 # fails closed. The plan (§6) leaves the numeric range open, so we bound it to a
@@ -147,8 +147,5 @@ def has_transform(layer: Any) -> bool:
     return layer.width is not None or layer.height is not None or layer.scale is not None
 
 
-def _fmt_num(value: Any) -> str:
-    number = _sanitize_ffmpeg_number(value, "ffmpeg number")
-    if number.is_integer():
-        return str(int(number))
-    return f"{number:.6f}".rstrip("0").rstrip(".")
+# Shared FFmpeg number formatter (single source of truth in ffmpeg_helpers).
+_fmt_num = _format_ffmpeg_number

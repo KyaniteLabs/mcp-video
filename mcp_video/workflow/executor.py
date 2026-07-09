@@ -42,7 +42,7 @@ from ._errors import (
     WORKFLOW_STEP_FAILED,
     workflow_error,
 )
-from ._versions import versions
+from ._versions import RENDER_DETERMINISM_SCOPE, versions
 from .inspector import read_receipt
 from .ops import OP_ADAPTERS, OpAdapter
 from .planner import _hash_if_exists, _iter_step_refs, _probe_source
@@ -54,9 +54,6 @@ _SOURCE_PREFIX = "@sources."
 _WORK_PREFIX = "@work/"
 _OUTPUT_PREFIX = "@outputs."
 _WORK_STEM_PREFIX = "mcp_video_"
-_RENDER_DETERMINISM_SCOPE = (
-    "spec/input/output hashes are deterministic; rendered bytes may vary across FFmpeg builds"
-)
 _CLEANUP_POLICY_CLEAN = "clean-on-success"
 _CLEANUP_POLICY_KEEP = "keep-intermediates"
 
@@ -240,7 +237,7 @@ def _render_one(
         },
         "warnings": [],
         "status": "failed" if failure is not None else "completed",
-        "render_determinism_scope": _RENDER_DETERMINISM_SCOPE,
+        "render_determinism_scope": RENDER_DETERMINISM_SCOPE,
     }
 
     if save_receipt is not None:

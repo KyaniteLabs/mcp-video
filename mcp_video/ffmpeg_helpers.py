@@ -435,6 +435,19 @@ def _sanitize_ffmpeg_number(value: Any, name: str) -> float:
     return result
 
 
+def _format_ffmpeg_number(value: Any) -> str:
+    """Format a finite number for FFmpeg interpolation (integers stay bare).
+
+    Single source of truth for the byte-identical formatter previously copied
+    into the compositor modules (``_num`` / ``_fmt_num``). Fails closed on a
+    non-finite / non-numeric value via ``_sanitize_ffmpeg_number``.
+    """
+    number = _sanitize_ffmpeg_number(value, "ffmpeg number")
+    if number.is_integer():
+        return str(int(number))
+    return f"{number:.6f}".rstrip("0").rstrip(".")
+
+
 def _escape_ffmpeg_filter_value(value: str) -> str:
     """Escape special characters for FFmpeg filter expressions (subtitles, drawtext, etc.)."""
     return (

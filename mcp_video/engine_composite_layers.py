@@ -20,6 +20,7 @@ from .engine_runtime_utils import _timed_operation
 from .errors import MCPVideoError
 from .ffmpeg_helpers import (
     _escape_ffmpeg_filter_value,
+    _format_ffmpeg_number,
     _run_ffmpeg,
     _sanitize_ffmpeg_number,
     _validate_input_path,
@@ -756,11 +757,8 @@ def _non_negative_number(value: float, name: str) -> None:
         raise MCPVideoError(f"{name} must be non-negative", error_type="validation_error", code="invalid_parameter")
 
 
-def _num(value: float) -> str:
-    number = _sanitize_ffmpeg_number(value, "ffmpeg number")
-    if number.is_integer():
-        return str(int(number))
-    return f"{number:.6f}".rstrip("0").rstrip(".")
+# Shared FFmpeg number formatter (single source of truth in ffmpeg_helpers).
+_num = _format_ffmpeg_number
 
 
 def _is_image_path(path: str) -> bool:

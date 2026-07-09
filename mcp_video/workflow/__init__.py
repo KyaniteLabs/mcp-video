@@ -31,7 +31,6 @@ from .inspector import (
 )
 from .ops import (
     OP_ADAPTERS as OP_ADAPTERS,
-    OP_ALLOWLIST as OP_ALLOWLIST,
     OpAdapter as OpAdapter,
 )
 from .planner import plan_workflow as plan_workflow

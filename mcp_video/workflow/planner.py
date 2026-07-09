@@ -26,15 +26,12 @@ from typing import Any
 from ..errors import MCPVideoError
 from ..ffmpeg_helpers import _validate_artifact_path
 from ._errors import INVALID_WORKFLOW_SPEC, workflow_error
-from ._versions import versions
+from ._versions import RENDER_DETERMINISM_SCOPE, versions
 from .spec import validate_spec_path
 from .validator import validate_workflow_spec
 
 _SOURCE_PREFIX = "@sources."
 _WORK_PREFIX = "@work/"
-_RENDER_DETERMINISM_SCOPE = (
-    "spec/input/output hashes are deterministic; rendered bytes may vary across FFmpeg builds"
-)
 
 
 def plan_workflow(spec_path: str, save_plan: str | None = None, variant: str | None = None) -> dict[str, Any]:
@@ -74,7 +71,7 @@ def plan_workflow(spec_path: str, save_plan: str | None = None, variant: str | N
         "outputs": outputs,
         "variants": [{"id": variant_id} for variant_id in verdict["variants"]],
         "warnings": warnings,
-        "render_determinism_scope": _RENDER_DETERMINISM_SCOPE,
+        "render_determinism_scope": RENDER_DETERMINISM_SCOPE,
     }
 
     if save_plan is not None:

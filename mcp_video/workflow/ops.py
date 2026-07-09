@@ -184,5 +184,3 @@ OP_ADAPTERS: dict[str, OpAdapter] = {
     ),
     "merge": OpAdapter("merge", merge, input_key="srcs", engine_input_param="clips", multi_input=True),
 }
-
-OP_ALLOWLIST: frozenset[str] = frozenset(OP_ADAPTERS)
