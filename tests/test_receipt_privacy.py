@@ -125,3 +125,29 @@ def test_workflow_render_receipt_stays_workspace_relative(tmp_path, sample_video
     assert receipt["status"] == "completed"
     assert _leaks(json.dumps(receipt), ws) == []
     assert _leaks((ws / "receipt.json").read_text(encoding="utf-8"), ws) == []
+
+
+def test_composite_layer_plan_stays_workspace_relative(tmp_path, sample_video):
+    """A composite-layers dry-run layer_plan records workspace-relative paths only.
+
+    The receipt's ``output_path`` (and ``resolved_src``) must be emitted relative to the
+    spec directory when the file lives inside it, never as an absolute home path.
+    """
+    from mcp_video.engine_composite_layers import composite_layers
+
+    ws = tmp_path / "composite-ws"
+    (ws / "input").mkdir(parents=True)
+    shutil.copy(sample_video, ws / "input" / "hero.mp4")
+    spec = {
+        "canvas": {"width": 320, "height": 240, "fps": 12, "duration": 1},
+        "layers": [{"id": "base", "type": "video", "src": "input/hero.mp4"}],
+        "output": {"path": "output/composite.mp4"},
+    }
+    (ws / "job.json").write_text(json.dumps(spec), encoding="utf-8")
+
+    result = composite_layers(str(ws / "job.json"), save_layer_plan=str(ws / "plan.json"), dry_run=True)
+
+    assert result.layer_plan["output_path"] == "output/composite.mp4"
+    assert result.layer_plan["layers"][0]["resolved_src"] == "input/hero.mp4"
+    assert _leaks(json.dumps(result.layer_plan), ws) == []
+    assert _leaks((ws / "plan.json").read_text(encoding="utf-8"), ws) == []

@@ -140,7 +140,7 @@ def composite_layers(
 
     filter_complex = _build_filter_complex(canvas, layers)
     args = _build_ffmpeg_args(canvas, layers, filter_complex, output)
-    receipt = _build_layer_plan(spec_bytes, canvas, layers, filter_complex, output)
+    receipt = _build_layer_plan(spec_bytes, canvas, layers, filter_complex, output, spec_resolved.parent)
 
     if dry_run:
         timing: dict[str, float | None] = {"elapsed_ms": None}
@@ -595,6 +595,7 @@ def _build_layer_plan(
     layers: list[_ResolvedLayer],
     filter_complex: str,
     output_path: str,
+    spec_dir: Path,
 ) -> dict[str, Any]:
     summary = [
         "canvas normalized to rgba",
@@ -634,7 +635,7 @@ def _build_layer_plan(
         ],
         "filtergraph_summary": summary,
         "filtergraph_hash": "sha256:" + hashlib.sha256(filter_complex.encode("utf-8")).hexdigest(),
-        "output_path": output_path,
+        "output_path": _receipt_source(Path(output_path), spec_dir),
         "output_hash": None,
         "audio_policy": "dropped_video_only",
         "features": {
