@@ -34,6 +34,14 @@ This project follows a simple release-note style:
 - The `composite-layers` layer-plan receipt now records `output_path` (and `resolved_src`/`mask`) relative to the spec directory whenever the file lives inside it, instead of emitting the resolved absolute path — a shared or committed receipt no longer leaks the user's home directory. Internal rendering still uses the resolved absolute location; only the receipt is relativized.
 - Removed BasicPitch from declared optional extras and documented it as a manual integration so Dependabot can patch vulnerable TensorFlow/Keras/protobuf transitive dependencies instead of resolving an unsafe pinned stack.
 
+### Security
+
+- **Workflow param VALUE validation** — a step's `params` values are now type-checked against the backing engine's parameter types (not just names), so a string for an integer parameter (e.g. `width="20000"`, `size="24,drawtext=textfile=/etc/hosts"`) fails closed with `invalid_workflow_params` before any FFmpeg invocation. Engine sinks are independently hardened: `resize` rejects non-integer/oversize dimensions and `add_text` coerces `fontsize` through a numeric guard before filtergraph interpolation.
+- **Workflow artifact write-path validation** — `--save-plan`, `--save-receipt`, and `--save-receipt-dir` now route through the same traversal/symlink/system-directory/sensitive-dotfile guard as media outputs and additionally refuse to overwrite any file that is not a `.json` artifact, closing an arbitrary out-of-workspace overwrite that previously only rejected null bytes.
+- **Workflow resource caps** — a spec may declare at most 64 steps and 32 variants, and `resize` dimensions are bounded to 7680px; exceeding a cap fails closed.
+- **`add_text` `font` excluded from workflow specs** — the path-typed `font` parameter (a filesystem existence oracle) is no longer tunable through a workflow op and fails closed as an unaccepted param; set fonts by calling `add_text` directly.
+- Workflow steps now fail closed on ANY engine exception (not only `MCPVideoError`): an unexpected runtime fault is wrapped as `workflow_step_failed`, recorded on the receipt with a workspace-sanitized message, and left resumable; the Python client rejects a dict spec for render; batch variants that resolve to a colliding output path fail closed; and raw-relative input refs are re-confined to the workspace at execution time (closing a validate→execute symlink TOCTOU).
+
 ### Removed
 
 - The opt-in anonymous analytics ping (`MCP_VIDEO_ANALYTICS=1`). The endpoint it posted to was never deployed or owned by the project, making the domain claimable by a third party — removed entirely rather than left as a silent no-op.

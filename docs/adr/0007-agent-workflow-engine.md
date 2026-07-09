@@ -75,6 +75,17 @@ receipts make trust a first-class, inspectable product feature.
 - Resume re-hashes persisted intermediates (an integrity check, not a determinism claim),
   paying a real I/O cost on large intermediates — accepted for correctness, documented.
 
+## Signature evolution (honest note)
+
+The consensus plan's §4 signatures were illustrative and the shipped surface diverged from
+them as the stories converged. The authoritative signatures now live in the tool/CLI/client
+docs; two deltas are worth calling out so no reader trusts the sketch: (1) there is **no
+`dry_run` parameter** — `video_workflow_validate` and `video_workflow_plan` ARE the dry-run
+path (plan never renders media), so a separate flag would be redundant; (2)
+`video_workflow_render` gained `variant`, `all_variants`, and `save_receipt_dir` (batch
+variants, Story 5) alongside `resume_receipt`/`save_receipt`/`keep_intermediates`. These are
+additive and fully covered by the drift manifest and parity tests.
+
 ## Follow-ups (next release)
 
 Positioned/scaled/masked blend; per-layer effect routing (`layer.effects[]`);

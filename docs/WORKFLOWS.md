@@ -93,11 +93,21 @@ engine accepts.
 | `trim` | `trim` | `src` | required | `start`, `duration`, `end` |
 | `resize` | `resize` | `src` | required | `width`, `height`, `aspect_ratio`, `quality` |
 | `convert` | `convert` | `src` | required | `format`, `quality` |
-| `add_text` | `add_text` | `src` | required | `text`, `position`, `font`, `size`, `color`, … |
+| `add_text` | `add_text` | `src` | required | `text`, `position`, `size`, `color`, … |
 | `merge` | `merge` | `srcs` (list) | required | `transitions`, `transition_duration` |
 
 `composite_layers` is **not** a workflow op this release (call `video_composite_layers`
 directly). See [Deferrals](#deferrals).
+
+**Param values are type-checked.** Each `params` value is validated against the backing
+engine's parameter type (e.g. `width` must be an integer, not `"20000"`); a type mismatch
+fails closed with `invalid_workflow_params` before any render. `add_text`'s `font` is a
+path-typed parameter and is **not** tunable via a workflow this release (it fails closed
+as an unaccepted param); set fonts by calling `add_text` directly.
+
+**Resource caps (fail closed).** A spec may declare at most **64 steps** and **32
+variants**; `resize` dimensions are capped at 7680px. Exceeding a cap fails closed
+(`invalid_workflow_spec`).
 
 ### Symbolic references (`@refs`)
 
@@ -256,14 +266,18 @@ For the exact receipt shapes (`workflow`, `workflow_plan`, `workflow_batch`, and
 | `invalid_workflow_spec` | Malformed spec: wrong `schema_version`, missing steps, unknown key, duplicate id, bad output target. |
 | `unknown_workflow_ref` | A `@ref` that is undeclared, forward, or the wrong namespace for its position. |
 | `unsupported_workflow_op` | A step `op` outside the six-op allowlist. |
-| `unsafe_workflow_source` | An absolute path, `../` escape, symlink escape, or null byte in a path. |
-| `invalid_workflow_params` | A step param the backing engine does not accept. |
-| `invalid_workflow_variant` | An unknown variant id or a malformed override key/value. |
+| `unsafe_workflow_source` | An absolute path, `../` escape, symlink escape, or null byte in a path (also re-checked at execution time). |
+| `invalid_workflow_params` | A step param the backing engine does not accept, or a param VALUE whose type cannot satisfy the engine (e.g. a string for an int). |
+| `invalid_workflow_variant` | An unknown variant id, a malformed override key/value, or two variants writing the same output path. |
 | `invalid_workflow_receipt` | `workflow-inspect`/`--resume` pointed at an unreadable/malformed receipt. |
 | `resume_spec_mismatch` | `--resume` against a receipt whose `spec_hash` differs from the current spec. |
 | `resume_variant_mismatch` | `--resume` against a receipt for a different variant. |
+| `workflow_step_failed` | A step's engine raised an unexpected runtime error; the receipt records the failed step and intermediates are kept for `--resume`. |
 
-Every payload also carries a `suggested_action` describing the fix.
+Every payload also carries a `suggested_action` describing the fix. Artifact writers
+(`--save-plan`, `--save-receipt`, `--save-receipt-dir`) reject unsafe targets with the
+media guard's `unsafe_path` / `invalid_output_path` codes (system dirs, `../`, symlinks,
+sensitive dotfiles, or overwriting a non-`.json` file).
 
 ---
 
