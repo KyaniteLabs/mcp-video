@@ -12,6 +12,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 from .defaults import DEFAULT_CRF, DEFAULT_PRESET
+from .engine_composite_layers_blend import BLEND_ALL_MODES, SUPPORTED_BLEND_MODES, validate_blend_geometry
 from .engine_runtime_utils import _timed_operation
 from .errors import MCPVideoError
 from .ffmpeg_helpers import (
@@ -114,10 +115,11 @@ def composite_layers(
 
     The compositor supports normal alpha compositing, per-layer opacity,
     x/y positioning, scale/width/height transforms, timeline enable windows,
-    image/video/solid layers, optional mask/matte alpha sources, and a
-    deterministic layer-plan receipt. Non-normal blend modes, rotation, and
-    per-layer effect routing remain deferred until they can be represented
-    with equally safe preflight and receipt behavior.
+    image/video/solid layers, optional mask/matte alpha sources, full-canvas
+    non-normal blend modes (see ``_validate_blend_geometry``), and a
+    deterministic layer-plan receipt. Rotation and per-layer effect routing
+    remain deferred until they can be represented with equally safe
+    preflight and receipt behavior.
     """
     spec_resolved = _validate_spec_path(spec_path)
     spec_data, spec_bytes = _load_spec(spec_resolved)
@@ -289,9 +291,9 @@ def _parse_layer(raw: dict[str, Any]) -> _Layer:
             error_type="validation_error",
             code="invalid_layer_type",
         )
-    if layer.blend != "normal":
+    if layer.blend != "normal" and layer.blend not in BLEND_ALL_MODES:
         raise MCPVideoError(
-            f"blend mode {layer.blend!r} is deferred beyond this compositor phase; use 'normal'",
+            f"blend mode {layer.blend!r} is not supported; use one of {sorted(SUPPORTED_BLEND_MODES)}",
             error_type="validation_error",
             code="unsupported_blend_mode",
         )
@@ -300,6 +302,8 @@ def _parse_layer(raw: dict[str, Any]) -> _Layer:
     _non_negative_number(layer.position["y"], f"{layer.id}.position.y")
     _validate_layer_transform(layer)
     _validate_layer_timing(layer)
+    if layer.blend != "normal":
+        validate_blend_geometry(layer)
     if layer.type == "solid":
         layer.color = _validate_color(layer.color or "#000000", f"{layer.id}.color")
     elif not layer.src:
@@ -507,9 +511,13 @@ def _build_filter_complex(canvas: _Canvas, layers: list[_ResolvedLayer]) -> str:
     for idx, layer in enumerate(layers, start=1):
         layer_label = f"layer{idx}"
         out_label = "vout" if idx == len(layers) else f"base{idx}"
-        x = _escape_ffmpeg_filter_value(_num(layer.position["x"]))
-        y = _escape_ffmpeg_filter_value(_num(layer.position["y"]))
         chain = _layer_filter_chain(layer)
+        if layer.blend != "normal":
+            # Full-canvas only (validated in _validate_blend_geometry). blend=
+            # requires matching-size inputs, so force the source to canvas size.
+            width = _escape_ffmpeg_filter_value(str(canvas.width))
+            height = _escape_ffmpeg_filter_value(str(canvas.height))
+            chain = f"{chain},scale={width}:{height}"
         chains.append(f"[{layer.input_index}:v]{chain}[{layer_label}raw]")
         if layer.mask_input_index is not None:
             mask_label = f"{layer_label}mask"
@@ -521,10 +529,17 @@ def _build_filter_complex(canvas: _Canvas, layers: list[_ResolvedLayer]) -> str:
             chains.append(f"[{layer_ref_label}][{mask_label}]alphamerge[{layer_label}]")
         else:
             chains.append(f"[{layer_label}raw]null[{layer_label}]")
-        overlay = f"[{previous}][{layer_label}]overlay={x}:{y}:format=auto:eof_action=pass"
-        overlay = f"{overlay}{_enable_expression(layer)}"
-        overlay = f"{overlay},format=yuv420p[{out_label}]" if idx == len(layers) else f"{overlay}[{out_label}]"
-        chains.append(overlay)
+        if layer.blend == "normal":
+            x = _escape_ffmpeg_filter_value(_num(layer.position["x"]))
+            y = _escape_ffmpeg_filter_value(_num(layer.position["y"]))
+            step = f"[{previous}][{layer_label}]overlay={x}:{y}:format=auto:eof_action=pass"
+            step = f"{step}{_enable_expression(layer)}"
+        else:
+            # Mode is resolved through the allowlist dict, never interpolated from
+            # the raw spec value.
+            step = f"[{previous}][{layer_label}]blend=all_mode={BLEND_ALL_MODES[layer.blend]}"
+        step = f"{step},format=yuv420p[{out_label}]" if idx == len(layers) else f"{step}[{out_label}]"
+        chains.append(step)
         previous = out_label
     return ";".join(chains)
 
@@ -567,6 +582,15 @@ def _build_layer_plan(
     filter_complex: str,
     output_path: str,
 ) -> dict[str, Any]:
+    summary = [
+        "canvas normalized to rgba",
+        "layers transformed and overlaid bottom-to-top with normal alpha compositing",
+        "per-layer opacity applied via colorchannelmixer alpha",
+        "mask/matte inputs are scaled to the transformed layer and applied as alpha with alphamerge",
+        "start/duration windows are enforced with overlay enable expressions",
+    ]
+    if any(layer.blend != "normal" for layer in layers):
+        summary.append("full-canvas non-normal blend layers use blend=all_mode against the running base")
     return {
         "schema_version": 1,
         "tool": "video_composite_layers",
@@ -591,13 +615,7 @@ def _build_layer_plan(
             }
             for layer in layers
         ],
-        "filtergraph_summary": [
-            "canvas normalized to rgba",
-            "layers transformed and overlaid bottom-to-top with normal alpha compositing",
-            "per-layer opacity applied via colorchannelmixer alpha",
-            "mask/matte inputs are scaled to the transformed layer and applied as alpha with alphamerge",
-            "start/duration windows are enforced with overlay enable expressions",
-        ],
+        "filtergraph_summary": summary,
         "filtergraph_hash": "sha256:" + hashlib.sha256(filter_complex.encode("utf-8")).hexdigest(),
         "output_path": output_path,
         "output_hash": None,
