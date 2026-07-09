@@ -36,16 +36,20 @@ _RENDER_DETERMINISM_SCOPE = (
 )
 
 
-def plan_workflow(spec_path: str, save_plan: str | None = None) -> dict[str, Any]:
+def plan_workflow(spec_path: str, save_plan: str | None = None, variant: str | None = None) -> dict[str, Any]:
     """Produce a no-render plan artifact for a validated workflow job-spec.
 
     Validates ``spec_path`` first (fail-closed via the structural validator);
     on success builds the plan artifact by probing/hashing declared sources
     where they exist. Optionally writes the artifact to ``save_plan``.
 
-    Raises ``MCPVideoError`` (fail-closed) if the spec is structurally invalid.
+    When ``variant`` is given, the plan reflects that variant's EFFECTIVE
+    (post-override) steps and output paths and records ``workflow.variant``; the
+    ``spec_hash`` stays the base spec-file hash (variant selection is not part of
+    it — see §5a). Raises ``MCPVideoError`` (fail-closed) on a structurally
+    invalid spec or unknown/malformed variant.
     """
-    verdict = validate_workflow_spec(spec_path)
+    verdict = validate_workflow_spec(spec_path, variant=variant)
     resolved = validate_spec_path(spec_path)
     workspace_root = Path(os.path.realpath(resolved.parent))
     spec_bytes = resolved.read_bytes()
@@ -63,7 +67,7 @@ def plan_workflow(spec_path: str, save_plan: str | None = None) -> dict[str, Any
         "tool": "video_workflow_plan",
         "versions": versions(),
         "spec_hash": "sha256:" + hashlib.sha256(spec_bytes).hexdigest(),
-        "workflow": {"name": verdict["name"], "variant": None},
+        "workflow": {"name": verdict["name"], "variant": variant},
         "sources": sources,
         "steps": steps,
         "outputs": outputs,

@@ -35,6 +35,7 @@ from ._errors import (
     INVALID_WORKFLOW_RECEIPT,
     INVALID_WORKFLOW_SPEC,
     RESUME_SPEC_MISMATCH,
+    RESUME_VARIANT_MISMATCH,
     UNSAFE_WORKFLOW_SOURCE,
     workflow_error,
 )
@@ -44,6 +45,7 @@ from .ops import OP_ADAPTERS, OpAdapter
 from .planner import _hash_if_exists, _iter_step_refs, _probe_source
 from .spec import WorkflowStep, load_spec, parse_spec, validate_spec_path
 from .validator import validate_workflow_spec
+from .variants import apply_variant_overrides, variant_ids
 
 _SOURCE_PREFIX = "@sources."
 _WORK_PREFIX = "@work/"
@@ -52,40 +54,85 @@ _WORK_STEM_PREFIX = "mcp_video_"
 _RENDER_DETERMINISM_SCOPE = (
     "spec/input/output hashes are deterministic; rendered bytes may vary across FFmpeg builds"
 )
-_CLEANUP_POLICY = "clean-on-success"
+_CLEANUP_POLICY_CLEAN = "clean-on-success"
+_CLEANUP_POLICY_KEEP = "keep-intermediates"
+
+
+def _cleanup_policy(keep_intermediates: bool) -> str:
+    """Effective cleanup policy string recorded on the receipt (§5a)."""
+    return _CLEANUP_POLICY_KEEP if keep_intermediates else _CLEANUP_POLICY_CLEAN
 
 
 def render_workflow(
-    spec_path: str, resume_receipt: str | None = None, save_receipt: str | None = None
+    spec_path: str,
+    resume_receipt: str | None = None,
+    save_receipt: str | None = None,
+    keep_intermediates: bool = False,
+    variant: str | None = None,
+    all_variants: bool = False,
+    save_receipt_dir: str | None = None,
 ) -> dict[str, Any]:
-    """Execute a validated workflow job-spec sequentially and return the receipt.
+    """Execute a workflow job-spec (optionally a variant, or every variant).
 
-    Validates ``spec_path`` first (fail-closed via the structural validator),
-    then runs each allowlisted op in spec order via its engine binding, hashing
-    every consumed input and each produced output. Intermediates are written to
-    a per-invocation ``@work`` directory and cleaned on success (kept on
-    failure). Optionally writes the receipt JSON to ``save_receipt``.
+    With ``variant=<name>`` the named variant's overrides are merged before render
+    and the receipt records ``workflow.variant``; with ``all_variants=True`` every
+    declared variant is rendered in turn and a batch summary is returned (see
+    ``_render_all_variants``). ``keep_intermediates=True`` retains the ``@work``
+    intermediates even on success and records the ``keep-intermediates`` cleanup
+    policy. ``variant``/``all_variants``/``resume_receipt`` are mutually exclusive
+    where they cannot compose (fail-closed).
+
+    For a single render: validates first (fail-closed), runs each allowlisted op
+    in spec order via its engine binding, hashing every consumed input and each
+    produced output. Intermediates live in a per-invocation ``@work`` directory
+    (cleaned on success unless ``keep_intermediates``; kept on failure). Optionally
+    writes the receipt JSON to ``save_receipt``.
 
     ``resume_receipt`` is a prior render receipt (from a job that failed with its
     intermediates kept). Resume is fail-closed per §5a: the current ``spec_hash``
-    MUST equal the receipt's or it is a different job (``resume_spec_mismatch``).
-    A step is SKIPPED (reused) iff its prior status is ``completed`` AND its
-    recorded input hashes still match the current inputs AND (for output-producing
-    ops) its recorded output file still exists and re-hashes to the recorded
-    ``output_hash``. These are INTEGRITY checks on persisted intermediates, never
-    determinism claims. The FIRST step failing any check is the resume point; it
-    and every step after it re-run. The prior run's ``@work`` directory is reused
-    so kept intermediates are found (a missing dir/file simply fails the checks
-    and re-runs — that IS the mechanism).
+    MUST equal the receipt's (``resume_spec_mismatch``) AND the receipt's
+    ``workflow.variant`` must equal the requested ``variant`` (``resume_variant_mismatch``)
+    — since ``spec_hash`` is the whole-file hash it does not distinguish variants,
+    so the variant name is checked explicitly. A step is SKIPPED (reused) iff its
+    prior status is ``completed`` AND its recorded input hashes still match AND
+    (for output-producing ops) its recorded output file still exists and re-hashes
+    to the recorded ``output_hash``. The FIRST step failing any check is the resume
+    point; it and every step after it re-run.
 
     Fail-closed: the first step whose engine raises ``MCPVideoError`` aborts the
-    job; the failure is recorded on the receipt (which is still written to
-    ``save_receipt`` when provided) and then re-raised.
+    job; the failure is recorded on the receipt (still written to ``save_receipt``
+    when provided) and then re-raised.
     """
-    verdict = validate_workflow_spec(spec_path)
+    if all_variants:
+        if variant is not None:
+            raise workflow_error(
+                "pass either variant=<name> or all_variants=True, not both", INVALID_WORKFLOW_SPEC
+            )
+        if resume_receipt is not None:
+            raise workflow_error(
+                "all_variants cannot be combined with resume; resume a single variant's receipt",
+                INVALID_WORKFLOW_SPEC,
+            )
+        return _render_all_variants(spec_path, save_receipt_dir, keep_intermediates)
+    return _render_one(spec_path, resume_receipt, save_receipt, variant, keep_intermediates)
+
+
+def _render_one(
+    spec_path: str,
+    resume_receipt: str | None,
+    save_receipt: str | None,
+    variant: str | None,
+    keep_intermediates: bool,
+) -> dict[str, Any]:
+    """Render exactly one spec (base or a single variant) and return its receipt."""
+    verdict = validate_workflow_spec(spec_path, variant=variant)
     resolved = validate_spec_path(spec_path)
-    spec = parse_spec(load_spec(resolved))  # real param/input VALUES (verdict carries only names)
+    data = load_spec(resolved)
+    if variant is not None:
+        data = apply_variant_overrides(data, variant)
+    spec = parse_spec(data)  # real param/input VALUES (verdict carries only names)
     workspace_root = Path(os.path.realpath(resolved.parent))
+    # spec_hash is the base spec-FILE hash (variant selection is not part of it — §5a).
     spec_hash = "sha256:" + hashlib.sha256(resolved.read_bytes()).hexdigest()
 
     source_paths: dict[str, str] = verdict["source_paths"]
@@ -93,7 +140,9 @@ def render_workflow(
 
     resuming = resume_receipt is not None
     if resuming:
-        prior_by_id, run_dir_rel, run_dir_abs = _load_resume(resume_receipt, spec_hash, workspace_root)
+        prior_by_id, run_dir_rel, run_dir_abs = _load_resume(
+            resume_receipt, spec_hash, workspace_root, variant
+        )
     else:
         prior_by_id = {}
         run_dir_rel, run_dir_abs = _make_run_dir(workspace_root, spec_hash)
@@ -157,7 +206,9 @@ def render_workflow(
         for step in spec.steps[failed_index + 1 :]:
             steps_receipt.append(_step_entry(step, "pending", {}, step.output, None, None, None))
 
-    cleaned = _apply_cleanup(run_dir_abs, intermediates, workspace_root, success=failure is None)
+    cleaned = _apply_cleanup(
+        run_dir_abs, intermediates, workspace_root, success=failure is None, keep_intermediates=keep_intermediates
+    )
     outputs = _build_outputs(verdict, workspace_root, hash_cache)
 
     receipt = {
@@ -166,7 +217,7 @@ def render_workflow(
         "tool": "video_workflow_render",
         "versions": versions(),
         "spec_hash": spec_hash,
-        "workflow": {"name": verdict["name"], "variant": None},
+        "workflow": {"name": verdict["name"], "variant": variant},
         "sources": sources,
         "steps": steps_receipt,
         "outputs": outputs,
@@ -174,7 +225,7 @@ def render_workflow(
         "cleanup_manifest": {
             "intermediates": intermediates,
             "cleaned": cleaned,
-            "policy": _CLEANUP_POLICY,
+            "policy": _cleanup_policy(keep_intermediates),
         },
         "resume_cursor": _resume_cursor(steps_receipt),
         "feature_flags": {
@@ -197,17 +248,79 @@ def render_workflow(
     return receipt
 
 
+# --- Batch variants ----------------------------------------------------------
+
+
+def _render_all_variants(
+    spec_path: str, save_receipt_dir: str | None, keep_intermediates: bool
+) -> dict[str, Any]:
+    """Render EVERY declared variant in turn; return a ``workflow_batch`` summary.
+
+    Each variant renders into its OWN unique ``@work`` run dir (no cross-variant
+    leakage) and its own receipt (``workflow.variant`` set, distinct auto-named
+    outputs). When ``save_receipt_dir`` is given, each variant's receipt is also
+    written to ``<dir>/<variant>.json``. Fail-closed: the first variant whose
+    render raises aborts the batch (its failed receipt is still written) and the
+    error propagates.
+    """
+    resolved = validate_spec_path(spec_path)
+    data = load_spec(resolved)
+    ids = variant_ids(data)
+    if not ids:
+        raise workflow_error(
+            "all_variants requested but the spec declares no variants", INVALID_WORKFLOW_SPEC
+        )
+    spec_hash = "sha256:" + hashlib.sha256(resolved.read_bytes()).hexdigest()
+    if save_receipt_dir is not None:
+        _ensure_receipt_dir(save_receipt_dir)
+
+    receipts: list[dict[str, Any]] = []
+    for variant_id in ids:
+        save_path = _variant_receipt_path(save_receipt_dir, variant_id)
+        receipts.append(_render_one(spec_path, None, save_path, variant_id, keep_intermediates))
+
+    return {
+        "schema_version": 1,
+        "receipt_kind": "workflow_batch",
+        "tool": "video_workflow_render",
+        "versions": versions(),
+        "spec_hash": spec_hash,
+        "workflow": {"name": data.get("name"), "variant": None},
+        "count": len(receipts),
+        "variants": receipts,
+        "status": "completed",
+    }
+
+
+def _ensure_receipt_dir(save_receipt_dir: str) -> None:
+    if not isinstance(save_receipt_dir, str) or not save_receipt_dir:
+        raise workflow_error("save_receipt_dir must be a non-empty directory path", INVALID_WORKFLOW_SPEC)
+    if "\x00" in save_receipt_dir:
+        raise workflow_error("save_receipt_dir path contains null bytes", INVALID_WORKFLOW_SPEC)
+    Path(save_receipt_dir).mkdir(parents=True, exist_ok=True)
+
+
+def _variant_receipt_path(save_receipt_dir: str | None, variant_id: str) -> str | None:
+    """Per-variant receipt path ``<dir>/<safe-variant>.json`` (None when no dir given)."""
+    if save_receipt_dir is None:
+        return None
+    safe = variant_id.replace("/", "_").replace("\\", "_")
+    return str(Path(save_receipt_dir) / f"{safe}.json")
+
+
 # --- Resume ------------------------------------------------------------------
 
 
 def _load_resume(
-    resume_receipt: str, spec_hash: str, workspace_root: Path
+    resume_receipt: str, spec_hash: str, workspace_root: Path, variant: str | None
 ) -> tuple[dict[str, dict[str, Any]], str, Path]:
     """Load + gate a prior receipt for resume (fail-closed per §5a).
 
-    Enforces the spec_hash gate (a changed spec is a different job) and reuses the
-    prior run's ``@work`` directory so kept intermediates are found. Returns
-    ``(prior_steps_by_id, work_dir_rel, work_dir_abs)``.
+    Enforces the spec_hash gate (a changed spec is a different job) AND the variant
+    gate (``spec_hash`` is the whole-file hash, so the receipt's ``workflow.variant``
+    must equal the requested ``variant`` — otherwise it is a sibling variant's run),
+    then reuses the prior run's ``@work`` directory so kept intermediates are found.
+    Returns ``(prior_steps_by_id, work_dir_rel, work_dir_abs)``.
     """
     prior = read_receipt(resume_receipt)  # raises invalid_workflow_receipt on unreadable/malformed JSON
     prior_hash = prior.get("spec_hash")
@@ -216,6 +329,13 @@ def _load_resume(
             f"resume receipt spec_hash {prior_hash!r} does not match the current spec_hash {spec_hash!r}; "
             "this is a different job",
             RESUME_SPEC_MISMATCH,
+        )
+    prior_variant = (prior.get("workflow") or {}).get("variant") if isinstance(prior.get("workflow"), dict) else None
+    if prior_variant != variant:
+        raise workflow_error(
+            f"resume receipt is for variant {prior_variant!r} but variant {variant!r} was requested; "
+            "resume each variant against its own receipt",
+            RESUME_VARIANT_MISMATCH,
         )
     prior_steps = prior.get("steps")
     if not isinstance(prior_steps, list):
@@ -382,13 +502,20 @@ def _ensure_parent(path: Path) -> None:
 
 
 def _apply_cleanup(
-    run_dir_abs: Path, intermediates: list[str], workspace_root: Path, *, success: bool
+    run_dir_abs: Path,
+    intermediates: list[str],
+    workspace_root: Path,
+    *,
+    success: bool,
+    keep_intermediates: bool = False,
 ) -> bool:
     """Remove manifest-tracked intermediates on success; keep on failure.
 
-    Only ever deletes files that resolve inside THIS run's @work directory.
+    ``keep_intermediates`` overrides clean-on-success and retains every
+    intermediate (§5a policy line). Only ever deletes files that resolve inside
+    THIS run's @work directory.
     """
-    if not success:
+    if keep_intermediates or not success:
         return False
     run_real = Path(os.path.realpath(run_dir_abs))
     for rel in intermediates:

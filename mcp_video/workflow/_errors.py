@@ -18,6 +18,8 @@ UNSAFE_WORKFLOW_SOURCE = "unsafe_workflow_source"
 INVALID_WORKFLOW_PARAMS = "invalid_workflow_params"
 INVALID_WORKFLOW_RECEIPT = "invalid_workflow_receipt"
 RESUME_SPEC_MISMATCH = "resume_spec_mismatch"
+INVALID_WORKFLOW_VARIANT = "invalid_workflow_variant"
+RESUME_VARIANT_MISMATCH = "resume_variant_mismatch"
 
 _DEFAULT_ACTIONS = {
     INVALID_WORKFLOW_SPEC: "Fix the workflow spec structure to match the documented job-spec schema and retry.",
@@ -35,6 +37,14 @@ _DEFAULT_ACTIONS = {
     RESUME_SPEC_MISMATCH: (
         "Resume only against a receipt whose spec_hash matches the current spec; a changed spec is a different job "
         "(re-run without --resume to start fresh)."
+    ),
+    INVALID_WORKFLOW_VARIANT: (
+        "Reference a declared variant id and use a supported override key "
+        "(steps.<id>.params[.<name>], steps.<id>.output, outputs.<id>.path)."
+    ),
+    RESUME_VARIANT_MISMATCH: (
+        "Resume only against a receipt for the SAME variant; render each variant into its own receipt "
+        "and resume that variant's receipt."
     ),
 }
 

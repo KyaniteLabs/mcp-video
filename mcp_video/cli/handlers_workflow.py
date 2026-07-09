@@ -28,7 +28,7 @@ def handle_workflow_commands(args: Any, *, use_json: bool) -> bool:
     def _workflow_plan(a, j):
         from ..workflow import plan_workflow
 
-        result = plan_workflow(a.spec, a.save_plan)
+        result = plan_workflow(a.spec, a.save_plan, a.variant)
         _out(result, j, _format_workflow_plan)
 
     runner.register("workflow-plan", _workflow_plan)
@@ -36,7 +36,15 @@ def handle_workflow_commands(args: Any, *, use_json: bool) -> bool:
     def _workflow_render(a, j):
         from ..workflow import render_workflow
 
-        result = render_workflow(a.spec, a.resume, a.save_receipt)
+        result = render_workflow(
+            a.spec,
+            a.resume,
+            a.save_receipt,
+            keep_intermediates=a.keep_intermediates,
+            variant=a.variant,
+            all_variants=a.all_variants,
+            save_receipt_dir=a.save_receipt_dir,
+        )
         _out(result, j, _format_workflow_render)
 
     runner.register("workflow-render", _workflow_render)

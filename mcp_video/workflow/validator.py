@@ -29,33 +29,43 @@ from ._errors import (
 )
 from .ops import OP_ADAPTERS, OpAdapter
 from .spec import WorkflowSpec, load_spec, parse_spec, validate_spec_path
+from .variants import apply_variant_overrides
 
 _SOURCE_PREFIX = "@sources."
 _WORK_PREFIX = "@work/"
 _OUTPUT_PREFIX = "@outputs."
 
 
-def validate_workflow_spec(spec_path: str) -> dict[str, Any]:
+def validate_workflow_spec(spec_path: str, variant: str | None = None) -> dict[str, Any]:
     """Validate a workflow job-spec, returning a structured verdict.
+
+    When ``variant`` is given, the selected variant's overrides are merged into
+    the spec first and the EFFECTIVE (post-override) spec is validated (an unknown
+    variant id or a malformed override fails closed ``invalid_workflow_variant``).
+    When ``variant`` is ``None``, the base spec is validated AND every declared
+    variant is test-merged and structurally validated, so ``workflow-validate``
+    proves each variant is renderable (malformed overrides / bad post-merge params
+    fail closed here, not at render time).
 
     Raises ``MCPVideoError`` (fail-closed) on any structural violation.
     """
     resolved = validate_spec_path(spec_path)
     data = load_spec(resolved)
-    spec = parse_spec(data)
     workspace_root = Path(os.path.realpath(resolved.parent))
+    if variant is not None:
+        data = apply_variant_overrides(data, variant)
+    spec = parse_spec(data)
 
-    _check_schema_version(spec)
-    _require_steps(spec)
-    source_paths = _resolve_declared_paths(spec.sources, workspace_root, "sources")
-    output_paths = _resolve_declared_paths(spec.outputs, workspace_root, "outputs")
-    verdict_steps = _validate_steps(spec, workspace_root, set(spec.sources), set(spec.outputs))
+    verdict_steps, source_paths, output_paths = _validate_structure(spec, workspace_root)
     _validate_variants(spec)
+    if variant is None:
+        _validate_declared_variants(data, spec, workspace_root)
 
     return {
         "valid": True,
         "schema_version": spec.schema_version,
         "name": spec.name,
+        "variant": variant,
         "sources": sorted(spec.sources),
         "source_paths": source_paths,
         "outputs": sorted(spec.outputs),
@@ -64,6 +74,30 @@ def validate_workflow_spec(spec_path: str) -> dict[str, Any]:
         "ops": sorted({step.op for step in spec.steps}),
         "variants": [variant.id for variant in spec.variants],
     }
+
+
+def _validate_structure(
+    spec: WorkflowSpec, workspace_root: Path
+) -> tuple[list[dict[str, Any]], dict[str, str], dict[str, str]]:
+    """Run the shared structural checks (schema, steps, path safety) for one spec.
+
+    Returns ``(verdict_steps, source_paths, output_paths)``. Variant declarations
+    are validated separately so this can be reused to validate a merged variant
+    spec without recursing into its (identical) variant list.
+    """
+    _check_schema_version(spec)
+    _require_steps(spec)
+    source_paths = _resolve_declared_paths(spec.sources, workspace_root, "sources")
+    output_paths = _resolve_declared_paths(spec.outputs, workspace_root, "outputs")
+    verdict_steps = _validate_steps(spec, workspace_root, set(spec.sources), set(spec.outputs))
+    return verdict_steps, source_paths, output_paths
+
+
+def _validate_declared_variants(data: dict[str, Any], spec: WorkflowSpec, workspace_root: Path) -> None:
+    """Test-merge + structurally validate every declared variant (fail closed)."""
+    for variant in spec.variants:
+        merged = apply_variant_overrides(data, variant.id)
+        _validate_structure(parse_spec(merged), workspace_root)
 
 
 def _check_schema_version(spec: WorkflowSpec) -> None:

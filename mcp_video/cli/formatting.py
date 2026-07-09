@@ -95,8 +95,11 @@ def _format_workflow_plan(result: Any) -> None:
 
 
 def _format_workflow_render(result: Any) -> None:
-    """Display a workflow render receipt as a success panel."""
+    """Display a workflow render receipt (or an all-variants batch) as a panel."""
     data = result if isinstance(result, dict) else _model_dump(result)
+    if data.get("receipt_kind") == "workflow_batch":
+        _format_workflow_batch(data)
+        return
     workflow = data.get("workflow") or {}
     steps = data.get("steps", [])
     completed = sum(1 for step in steps if step.get("status") == "completed")
@@ -104,12 +107,34 @@ def _format_workflow_render(result: Any) -> None:
     cleanup = data.get("cleanup_manifest") or {}
     lines = [
         f"[bold green]Workflow:[/bold green] {escape(str(workflow.get('name') or '(unnamed)'))}",
-        f"[bold green]Status:[/bold green] {escape(str(data.get('status')))}",
-        f"[bold green]Steps:[/bold green] {completed}/{len(steps)} completed",
-        f"[bold green]Outputs:[/bold green] {escape(', '.join(o.get('path', '') for o in outputs)) or '(none)'}",
-        f"[bold green]Intermediates cleaned:[/bold green] {cleanup.get('cleaned')}",
     ]
+    if workflow.get("variant"):
+        lines.append(f"[bold green]Variant:[/bold green] {escape(str(workflow['variant']))}")
+    lines.extend(
+        [
+            f"[bold green]Status:[/bold green] {escape(str(data.get('status')))}",
+            f"[bold green]Steps:[/bold green] {completed}/{len(steps)} completed",
+            f"[bold green]Outputs:[/bold green] {escape(', '.join(o.get('path', '') for o in outputs)) or '(none)'}",
+            f"[bold green]Intermediates cleaned:[/bold green] {cleanup.get('cleaned')}",
+        ]
+    )
     _format_success_panel(lines, title="Workflow Render", border_style="green")
+
+
+def _format_workflow_batch(data: dict) -> None:
+    """Display an all-variants batch render summary as a success panel."""
+    workflow = data.get("workflow") or {}
+    variants = data.get("variants", [])
+    lines = [
+        f"[bold green]Workflow:[/bold green] {escape(str(workflow.get('name') or '(unnamed)'))}",
+        f"[bold green]Status:[/bold green] {escape(str(data.get('status')))}",
+        f"[bold green]Variants:[/bold green] {data.get('count', len(variants))} rendered",
+    ]
+    for receipt in variants:
+        variant_name = (receipt.get("workflow") or {}).get("variant")
+        paths = ", ".join(o.get("path", "") for o in receipt.get("outputs", []))
+        lines.append(f"  - [cyan]{escape(str(variant_name))}[/cyan]: {escape(paths) or '(no outputs)'}")
+    _format_success_panel(lines, title="Workflow Render (all variants)", border_style="green")
 
 
 def _format_workflow_inspect(result: Any) -> None:
