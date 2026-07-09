@@ -31,6 +31,7 @@ from pathlib import Path
 from typing import Any
 
 from ..errors import MCPVideoError
+from ..ffmpeg_helpers import _validate_artifact_path
 from ._errors import (
     INVALID_WORKFLOW_RECEIPT,
     INVALID_WORKFLOW_SPEC,
@@ -295,8 +296,7 @@ def _render_all_variants(
 def _ensure_receipt_dir(save_receipt_dir: str) -> None:
     if not isinstance(save_receipt_dir, str) or not save_receipt_dir:
         raise workflow_error("save_receipt_dir must be a non-empty directory path", INVALID_WORKFLOW_SPEC)
-    if "\x00" in save_receipt_dir:
-        raise workflow_error("save_receipt_dir path contains null bytes", INVALID_WORKFLOW_SPEC)
+    _validate_artifact_path(save_receipt_dir)  # block traversal / symlink / system-dir / dotfile targets
     Path(save_receipt_dir).mkdir(parents=True, exist_ok=True)
 
 
@@ -395,6 +395,7 @@ def _run_step(
     output_abs: Path | None,
 ) -> None:
     """Invoke the backing engine function for one step (fail-closed)."""
+    adapter.validate_param_values(step.params, step.id)  # defense in depth: re-check values at the engine boundary
     resolved_input = _resolve_engine_input(adapter, step.inputs, workspace_root, source_paths, work_paths)
     kwargs: dict[str, Any] = dict(step.params)
     kwargs[adapter.engine_input_param] = resolved_input
@@ -642,6 +643,5 @@ def _write_receipt(receipt: dict[str, Any], save_receipt: str) -> None:
     """Write the receipt as pretty, stable JSON (matches the plan writer)."""
     if not isinstance(save_receipt, str) or not save_receipt:
         raise workflow_error("save_receipt must be a non-empty file path", INVALID_WORKFLOW_SPEC)
-    if "\x00" in save_receipt:
-        raise workflow_error("save_receipt path contains null bytes", INVALID_WORKFLOW_SPEC)
+    _validate_artifact_path(save_receipt)  # traversal / symlink / system-dir / dotfile / overwrite-non-json guard
     Path(save_receipt).write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8")

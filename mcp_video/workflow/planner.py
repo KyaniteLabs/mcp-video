@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import Any
 
 from ..errors import MCPVideoError
+from ..ffmpeg_helpers import _validate_artifact_path
 from ._errors import INVALID_WORKFLOW_SPEC, workflow_error
 from ._versions import versions
 from .spec import validate_spec_path
@@ -217,6 +218,5 @@ def _write_plan(plan: dict[str, Any], save_plan: str) -> None:
     """Write the plan artifact as pretty, stable JSON (matches receipt writer)."""
     if not isinstance(save_plan, str) or not save_plan:
         raise workflow_error("save_plan must be a non-empty file path", INVALID_WORKFLOW_SPEC)
-    if "\x00" in save_plan:
-        raise workflow_error("save_plan path contains null bytes", INVALID_WORKFLOW_SPEC)
+    _validate_artifact_path(save_plan)  # traversal / symlink / system-dir / dotfile / overwrite-non-json guard
     Path(save_plan).write_text(json.dumps(plan, indent=2, sort_keys=True) + "\n", encoding="utf-8")

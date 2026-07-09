@@ -19,6 +19,7 @@ import os
 from pathlib import Path
 from typing import Any
 
+from ..limits import MAX_WORKFLOW_STEPS, MAX_WORKFLOW_VARIANTS
 from ._errors import (
     INVALID_WORKFLOW_PARAMS,
     INVALID_WORKFLOW_SPEC,
@@ -110,6 +111,11 @@ def _check_schema_version(spec: WorkflowSpec) -> None:
 def _require_steps(spec: WorkflowSpec) -> None:
     if not spec.steps:
         raise workflow_error("workflow spec must declare at least one step", INVALID_WORKFLOW_SPEC)
+    if len(spec.steps) > MAX_WORKFLOW_STEPS:
+        raise workflow_error(
+            f"workflow spec declares {len(spec.steps)} steps; the maximum is {MAX_WORKFLOW_STEPS}",
+            INVALID_WORKFLOW_SPEC,
+        )
 
 
 def _resolve_declared_paths(declared: dict[str, Any], workspace_root: Path, label: str) -> dict[str, str]:
@@ -258,6 +264,7 @@ def _validate_params(step: Any, adapter: OpAdapter) -> None:
             f"accepted: {sorted(accepted)}",
             INVALID_WORKFLOW_PARAMS,
         )
+    adapter.validate_param_values(step.params, step.id)
 
 
 def _validate_output(step: Any, adapter: OpAdapter, output_ids: set[str], work_produced: set[str]) -> None:
@@ -295,6 +302,11 @@ def _validate_output(step: Any, adapter: OpAdapter, output_ids: set[str], work_p
 
 
 def _validate_variants(spec: WorkflowSpec) -> None:
+    if len(spec.variants) > MAX_WORKFLOW_VARIANTS:
+        raise workflow_error(
+            f"workflow spec declares {len(spec.variants)} variants; the maximum is {MAX_WORKFLOW_VARIANTS}",
+            INVALID_WORKFLOW_SPEC,
+        )
     seen: set[str] = set()
     for variant in spec.variants:
         if not variant.id:
