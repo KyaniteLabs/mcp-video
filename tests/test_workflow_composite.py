@@ -126,6 +126,53 @@ def test_unknown_layer_field_fails_closed(tmp_path):
     assert exc.value.code == "invalid_workflow_spec"
 
 
+@pytest.mark.parametrize("field", ["matte", "transform", "anchor"])
+def test_engine_honored_but_unlisted_path_field_fails_closed(tmp_path, field):
+    # matte/transform/anchor are honored by the engine but deliberately omitted from the
+    # workflow layer allowlist; declaring one fails closed at validate time.
+    spec = _composite_spec(
+        layers=[{"id": "base", "type": "video", "src": "@sources.bg", field: "@sources.bg"}],
+        sources={"bg": {"path": "input/bg.mp4"}},
+    )
+    with pytest.raises(MCPVideoError) as exc:
+        validate_workflow_spec(_write_spec(tmp_path, spec))
+    assert exc.value.code == "invalid_workflow_spec"
+
+
+def test_toctou_injected_matte_fails_closed_at_render(tmp_path, monkeypatch):
+    # The validator reads the clean on-disk spec (no matte); the executor's independent
+    # re-read is monkeypatched to inject an out-of-workspace `matte` (a validate/render
+    # divergence). The render-time re-validation must fail closed before the matte path is
+    # ever resolved or hashed — nothing out-of-workspace is read and no output is produced.
+    (tmp_path / "input").mkdir()
+    (tmp_path / "input" / "bg.mp4").write_bytes(b"bg")
+    spec = _composite_spec(
+        layers=[{"id": "base", "type": "video", "src": "@sources.bg"}],
+        sources={"bg": {"path": "input/bg.mp4"}},
+    )
+    spec_path = _write_spec(tmp_path, spec)
+
+    import mcp_video.workflow.executor as ex
+
+    real_parse = ex.parse_spec
+
+    def dirty_parse(data):
+        parsed = real_parse(data)
+        for step in parsed.steps:
+            if step.op == "composite_layers":
+                step.inputs["layers"][0]["matte"] = "/etc/passwd"
+        return parsed
+
+    monkeypatch.setattr(ex, "parse_spec", dirty_parse)
+
+    with pytest.raises(MCPVideoError) as exc:
+        render_workflow(spec_path)
+    assert exc.value.code == "invalid_workflow_spec"
+    assert not (tmp_path / "output" / "final.mp4").exists()
+    # the synthesized spec is never written (re-validation aborts first).
+    assert list(tmp_path.rglob("mcp_video_composite_*.json")) == []
+
+
 def test_duplicate_layer_id_fails_closed(tmp_path):
     spec = _composite_spec(
         layers=[

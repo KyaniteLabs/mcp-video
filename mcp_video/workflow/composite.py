@@ -15,9 +15,12 @@ This module closes that hole by making the workflow layer OWN the layer-spec:
   * every layer ``@ref`` is resolved + confined + hashed through the SAME executor
     machinery as every other op's inputs (``iter_composite_refs`` for the per-layer
     ``input_hashes``; ``_resolve_confined_input`` for the confined absolute path);
-  * ``render_composite_step`` synthesizes a nested spec whose layer sources are the
-    resolved, workspace-confined absolute paths and writes it INSIDE the run's
-    ``@work`` directory, then hands that synthesized path to the engine.
+  * ``render_composite_step`` re-validates the layers against the bytes it renders
+    (closing a validate/render TOCTOU), builds each synth layer from an EXPLICIT field
+    allowlist (never a blind ``dict`` copy), and synthesizes a nested spec whose layer
+    sources are the resolved, workspace-confined absolute paths. The spec is written at
+    the WORKSPACE ROOT (so the engine's spec-dir confinement == workspace confinement),
+    handed to the engine, and removed after the render.
 
 The only tunable ``params`` key is ``canvas`` (written into the synthesized spec,
 never passed to the engine signature); its VALUE correctness stays the engine's
@@ -222,29 +225,44 @@ def render_composite_step(
     run_dir_abs: Path,
     output_abs: Path | None,
     resolve_confined_input: Callable[[str, Path, dict[str, str], dict[str, Path]], Path],
+    source_ids: set[str],
+    work_ids: set[str],
 ) -> None:
     """Synthesize a workspace-confined layer spec and render it via the engine.
 
-    Each layer ``@ref`` is resolved to its confined absolute path with the injected
-    ``resolve_confined_input`` (the executor's resolve + realpath-confine helper — the
-    same one every other op uses), substituted into a synthesized nested spec written
-    inside the run's ``@work`` dir, and consumed by the vetted ``composite_layers``
-    engine. The synthesized spec is deterministic and removed after the render.
+    The executor re-reads the spec independently of the validator, so the layers are
+    RE-VALIDATED here against the exact bytes being rendered (``validate_composite_inputs``,
+    the same @ref-only + ``_ALLOWED_LAYER_FIELDS`` allowlist the validator ran). This
+    closes a validate/render (TOCTOU) divergence: an engine-honored but workflow-unlisted
+    path field (``matte``/``transform``/``anchor``) can never ride a re-read into the engine.
+
+    Each synth layer is then built from an EXPLICIT field allowlist (never ``dict(layer)``),
+    every ``@ref`` resolved to its confined absolute path with the injected
+    ``resolve_confined_input``. The synthesized spec is written at the WORKSPACE ROOT so the
+    engine's own spec-dir confinement (absolute layer paths outside the spec dir fail closed)
+    coincides exactly with workspace confinement; it is guarded by ``_confine_artifact_path``
+    and removed after the render.
     """
     if output_abs is None:  # defensive: validator requires an output for composite
         raise workflow_error(
             f"step {step.id!r} ({COMPOSITE_OP}) requires an output target", INVALID_WORKFLOW_SPEC
         )
+    # Re-validate the layers against the executor's own read (not the validator's), so a
+    # matte/unlisted path field injected between the two reads fails closed before it can
+    # reach the engine (and before anything is resolved or hashed from it).
+    validate_composite_inputs(step, source_ids, work_ids)
     canvas = step.params.get("canvas")
     if not isinstance(canvas, dict):
         raise workflow_error(
             f"step {step.id!r} ({COMPOSITE_OP}) requires a 'canvas' object in params", INVALID_WORKFLOW_PARAMS
         )
     synth_layers: list[dict[str, Any]] = []
-    for layer in step.inputs["layers"]:
-        synth_layer = dict(layer)
+    for raw in step.inputs["layers"]:
+        # Explicit allowlist copy — never a blind dict(raw) — so no engine-honored path
+        # field outside _ALLOWED_LAYER_FIELDS (matte/transform/anchor) can survive.
+        synth_layer = {key: raw[key] for key in _ALLOWED_LAYER_FIELDS if key in raw}
         for field in _REF_LAYER_FIELDS:
-            ref = layer.get(field)
+            ref = raw.get(field)
             if ref is None:
                 continue
             confined = resolve_confined_input(ref, workspace_root, source_paths, work_paths)
@@ -252,7 +270,7 @@ def render_composite_step(
         synth_layers.append(synth_layer)
     synth_spec = {"canvas": canvas, "layers": synth_layers}
     safe_id = step.id.replace("/", "_").replace("\\", "_")
-    synth_path = run_dir_abs / f"mcp_video_composite_{safe_id}.json"
+    synth_path = workspace_root / f"mcp_video_composite_{run_dir_abs.name}_{safe_id}.json"
     synth_path.write_text(json.dumps(synth_spec), encoding="utf-8")
     try:
         adapter.engine_fn(spec_path=str(synth_path), output_path=str(output_abs))

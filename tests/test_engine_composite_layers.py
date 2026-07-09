@@ -124,6 +124,35 @@ def test_composite_layers_rejects_relative_source_escape(tmp_path):
     assert excinfo.value.code == "unsafe_layer_source"
 
 
+@pytest.mark.parametrize("field", ["src", "mask", "matte"])
+def test_composite_layers_rejects_absolute_source_escape(tmp_path, field):
+    # An ABSOLUTE src/mask/matte pointing outside the spec directory fails closed (it must
+    # resolve UNDER spec_dir, matching the relative branch) — no read-any-absolute-file hole.
+    outside = tmp_path / "outside.png"
+    outside.write_bytes(b"outside")
+    spec_dir = tmp_path / "spec"
+    spec_dir.mkdir()
+    (spec_dir / "bg.mp4").write_bytes(b"bg")
+    (spec_dir / "plate.png").write_bytes(b"plate")
+    if field == "src":
+        layers = [{"id": "background", "type": "video", "src": str(outside)}]
+    else:
+        layers = [
+            {"id": "background", "type": "video", "src": "bg.mp4"},
+            {"id": "plate", "type": "image", "src": "plate.png", field: str(outside)},
+        ]
+    spec = {
+        "canvas": {"width": 64, "height": 64, "background": "#000000", "fps": 12, "duration": 1.0},
+        "layers": layers,
+    }
+    spec_path = _write_spec(spec_dir, spec)
+
+    with pytest.raises(MCPVideoError) as excinfo:
+        composite_layers(str(spec_path), output_path=str(spec_dir / "out.mp4"))
+
+    assert excinfo.value.code == "unsafe_layer_source"
+
+
 def test_composite_layers_dry_run_supports_transform_mask_and_timing(tmp_path, monkeypatch):
     _write_minimal_assets(tmp_path)
     spec = _minimal_spec()

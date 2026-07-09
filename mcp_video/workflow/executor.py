@@ -427,8 +427,10 @@ def _run_step(
     adapter.validate_param_values(step.params, step.id)  # defense in depth: re-check values at the engine boundary
     if isinstance(adapter, CompositeOpAdapter):
         # composite synthesizes a workspace-confined nested layer spec from its @refs.
+        # source_ids/work_ids drive the render-time re-validation (validate/render TOCTOU guard).
         render_composite_step(
-            adapter, step, workspace_root, source_paths, work_paths, run_dir_abs, output_abs, _resolve_confined_input
+            adapter, step, workspace_root, source_paths, work_paths, run_dir_abs, output_abs,
+            _resolve_confined_input, set(source_paths), set(work_paths),
         )
         return
     resolved_input = _resolve_engine_input(adapter, step.inputs, workspace_root, source_paths, work_paths)
