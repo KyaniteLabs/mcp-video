@@ -1,0 +1,31 @@
+"""Agent-native workflow engine (validate / plan / render / inspect).
+
+Story 1 ships the ordered-list job-spec model and the fail-closed structural
+validator (op allowlist, @ref resolution, backward-reference-only ordering,
+per-op param introspection, workspace-confined path safety). Planner, render,
+resume, and inspect land in later stories on top of this spine.
+"""
+
+from __future__ import annotations
+
+from ._errors import (
+    INVALID_WORKFLOW_PARAMS as INVALID_WORKFLOW_PARAMS,
+    INVALID_WORKFLOW_SPEC as INVALID_WORKFLOW_SPEC,
+    UNKNOWN_WORKFLOW_REF as UNKNOWN_WORKFLOW_REF,
+    UNSAFE_WORKFLOW_SOURCE as UNSAFE_WORKFLOW_SOURCE,
+    UNSUPPORTED_WORKFLOW_OP as UNSUPPORTED_WORKFLOW_OP,
+    workflow_error as workflow_error,
+)
+from .ops import (
+    OP_ADAPTERS as OP_ADAPTERS,
+    OP_ALLOWLIST as OP_ALLOWLIST,
+    OpAdapter as OpAdapter,
+)
+from .spec import (
+    WorkflowOutput as WorkflowOutput,
+    WorkflowSource as WorkflowSource,
+    WorkflowSpec as WorkflowSpec,
+    WorkflowStep as WorkflowStep,
+    WorkflowVariant as WorkflowVariant,
+)
+from .validator import validate_workflow_spec as validate_workflow_spec
