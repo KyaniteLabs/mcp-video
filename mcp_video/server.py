@@ -156,3 +156,6 @@ from .server_tools_guardrails import (
     video_validate_text_layout as video_validate_text_layout,
     video_extract_frame as video_extract_frame,
 )
+from .server_tools_workflow import (
+    video_workflow_validate as video_workflow_validate,
+)

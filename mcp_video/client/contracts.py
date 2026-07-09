@@ -326,4 +326,6 @@ CLIENT_METHOD_CONTRACTS: dict[str, dict[str, Any]] = {
         "return_type": MEDIA_RETURN,
         "aliases": {"video": "input_path", "output": "output_path"},
     },
+    # Workflow engine
+    "workflow_validate": {"category": "workflow", "return_type": "dict", "aliases": {}},
 }

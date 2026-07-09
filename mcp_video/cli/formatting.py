@@ -59,6 +59,19 @@ def _format_composite_layers_text(result: Any) -> None:
     _format_path_panel("Composite layers", result)
 
 
+def _format_workflow_validation(result: Any) -> None:
+    """Display a workflow-validation verdict as a success panel."""
+    data = result if isinstance(result, dict) else _model_dump(result)
+    ops = data.get("ops", [])
+    lines = [
+        f"[bold green]Workflow:[/bold green] {escape(str(data.get('name') or '(unnamed)'))}",
+        f"[bold green]Valid:[/bold green] {data.get('valid')}",
+        f"[bold green]Steps:[/bold green] {len(data.get('steps', []))}",
+        f"[bold green]Ops:[/bold green] {escape(', '.join(ops)) if ops else '(none)'}",
+    ]
+    _format_success_panel(lines, title="Workflow Validation", border_style="green")
+
+
 def _format_info_text(info: Any) -> None:
     """Display video info as a rich table."""
     table = Table(title="Video Info", show_header=False, border_style="blue")
