@@ -182,7 +182,10 @@ def test_composite_layers_scales_mask_to_transformed_layer(tmp_path, monkeypatch
 
     graph = calls[0][calls[0].index("-filter_complex") + 1]
     assert "scale=80:-1" in graph
-    assert "scale2ref=w=rw:h=rh" in graph
+    # Bare scale2ref (no rw/rh expr) for FFmpeg 6 compatibility; the default
+    # scales the mask to the layer/reference size on all supported versions.
+    assert "scale2ref" in graph
+    assert "scale2ref=w=rw:h=rh" not in graph
     assert "alphamerge" in graph
 
 

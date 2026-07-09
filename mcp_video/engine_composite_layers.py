@@ -537,8 +537,10 @@ def _build_filter_complex(canvas: _Canvas, layers: list[_ResolvedLayer]) -> str:
             mask_label = f"{layer_label}mask"
             layer_ref_label = f"{layer_label}ref"
             chains.append(f"[{layer.mask_input_index}:v]format=gray[{mask_label}raw]")
+            # Bare scale2ref scales the mask to the layer size on all FFmpeg
+            # versions; the rw/rh form only parses on FFmpeg 7+ (breaks FFmpeg 6).
             chains.append(
-                f"[{mask_label}raw][{layer_label}raw]scale2ref=w=rw:h=rh[{mask_label}][{layer_ref_label}]"
+                f"[{mask_label}raw][{layer_label}raw]scale2ref[{mask_label}][{layer_ref_label}]"
             )
             chains.append(f"[{layer_ref_label}][{mask_label}]alphamerge[{layer_label}]")
         else:
