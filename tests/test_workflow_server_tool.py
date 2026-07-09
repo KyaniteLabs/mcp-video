@@ -65,7 +65,9 @@ def test_mcp_tool_returns_structured_error_for_missing_spec():
     result = video_workflow_validate("/definitely/missing/workflow.json")
 
     assert result["success"] is False
-    assert "error" in result
+    error = result["error"]
+    assert error["code"] == "invalid_input"
+    assert error["suggested_action"]["description"]
 
 
 def _cli_verdict(spec_path: str) -> dict:
