@@ -23,6 +23,7 @@ from .models import (
     canonical_payload,
 )
 from .planner import plan_rescue, read_plan
+from .inspector import inspect_rescue
 from .renderer import render_rescue
 
 __all__ = [
@@ -46,6 +47,7 @@ __all__ = [
     "SourceIdentity",
     "VerificationCheck",
     "canonical_payload",
+    "inspect_rescue",
     "plan_rescue",
     "read_plan",
     "render_rescue",

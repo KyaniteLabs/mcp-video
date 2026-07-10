@@ -331,4 +331,7 @@ CLIENT_METHOD_CONTRACTS: dict[str, dict[str, Any]] = {
     "workflow_plan": {"category": "workflow", "return_type": "dict", "aliases": {}},
     "workflow_render": {"category": "workflow", "return_type": "dict", "aliases": {}},
     "workflow_inspect": {"category": "workflow", "return_type": "dict", "aliases": {}},
+    "rescue_plan": {"category": "rescue", "return_type": "dict", "aliases": {}},
+    "rescue_render": {"category": "rescue", "return_type": "dict", "aliases": {}},
+    "rescue_inspect": {"category": "rescue", "return_type": "dict", "aliases": {}},
 }

@@ -162,3 +162,8 @@ from .server_tools_workflow import (
     video_workflow_render as video_workflow_render,
     video_workflow_validate as video_workflow_validate,
 )
+from .server_tools_rescue import (
+    video_rescue_inspect as video_rescue_inspect,
+    video_rescue_plan as video_rescue_plan,
+    video_rescue_render as video_rescue_render,
+)

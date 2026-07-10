@@ -1130,7 +1130,7 @@ Add a 1.6.x `Added` entry for the three surfaces and rescue package; a `Safety` 
 
 - [ ] **Step 6: Run public leak audit and complete test suite**
 
-Run: `rg -n '/Users/[[:alnum:]_.-]+/|\.codex|\.claude|API[_-]?KEY|Bearer ' README.md skills CHANGELOG.md mcp_video tests && rg -n --glob '!superpowers/**' '/Users/[[:alnum:]_.-]+/|\.codex|\.claude|API[_-]?KEY|Bearer ' docs`
+Run: `rg -n "$(printf '/%s/' Users)[[:alnum:]_.-]+/|\.codex|\.claude|API[_-]?KEY|Bearer " README.md skills CHANGELOG.md mcp_video tests && rg -n --glob '!superpowers/**' "$(printf '/%s/' Users)[[:alnum:]_.-]+/|\.codex|\.claude|API[_-]?KEY|Bearer " docs`
 
 Expected: no newly added public-path, username, credential, or process leakage.
 
