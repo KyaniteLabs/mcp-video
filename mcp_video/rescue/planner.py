@@ -47,6 +47,8 @@ def _is_confined(path: Path, root: Path) -> bool:
 def _normalize_entry_paths(source_path: str, output_dir: str) -> tuple[Path, Path, Path]:
     if not source_path or not output_dir:
         raise rescue_error("source_path and output_dir are required", UNSAFE_RESCUE_OUTPUT)
+    source_entry = Path(os.path.abspath(os.fspath(source_path)))
+    output_entry = Path(os.path.abspath(os.fspath(output_dir)))
     source = _realpath(source_path)
     output = _realpath(output_dir)
     if not source.is_file():
@@ -54,7 +56,8 @@ def _normalize_entry_paths(source_path: str, output_dir: str) -> tuple[Path, Pat
     if output == source or (output.exists() and not output.is_dir()):
         raise rescue_error("output_dir must be a directory that does not overwrite the source", UNSAFE_RESCUE_OUTPUT)
 
-    workspace = Path(os.path.commonpath((source, output)))
+    lexical_workspace = Path(os.path.commonpath((source_entry, output_entry)))
+    workspace = _realpath(lexical_workspace)
     if workspace == Path(workspace.anchor) or not workspace.is_dir():
         raise rescue_error(
             "source_path and output_dir must share a bounded workspace directory",

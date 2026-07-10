@@ -96,6 +96,19 @@ def test_save_plan_must_stay_inside_output_dir(tmp_path, sample_video):
     assert not (tmp_path / "out").exists()
 
 
+def test_plan_rejects_symlinked_source_entry(tmp_path, sample_video):
+    outside = tmp_path.parent / f"outside-{tmp_path.name}.mp4"
+    shutil.copy2(sample_video, outside)
+    source = tmp_path / "linked-source.mp4"
+    source.symlink_to(outside)
+
+    with pytest.raises(MCPVideoError) as caught:
+        plan_rescue(str(source), str(tmp_path / "out"))
+
+    assert caught.value.code == "unsafe_rescue_output"
+    assert not (tmp_path / "out").exists()
+
+
 def test_unsupported_policy_fails_before_artifacts_are_created(tmp_path, sample_video):
     source = tmp_path / "clip.mp4"
     shutil.copy2(sample_video, source)

@@ -6,6 +6,8 @@ import subprocess
 
 import pytest
 
+from tests.rescue_fixtures import make_rescue_fixture
+
 
 def has_ffmpeg() -> bool:
     return shutil.which("ffmpeg") is not None
@@ -23,6 +25,14 @@ def has_node() -> bool:
 def has_npx() -> bool:
     """Check if npx is available on PATH."""
     return shutil.which("npx") is not None
+
+
+@pytest.fixture
+def rescue_fixture(tmp_path) -> str:
+    """Create the canonical deterministic rescue E2E source."""
+    if not has_ffmpeg():
+        pytest.skip("FFmpeg not installed")
+    return str(make_rescue_fixture(tmp_path))
 
 
 @pytest.fixture(scope="session")
