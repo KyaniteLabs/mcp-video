@@ -14,6 +14,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from ..errors import MCPVideoError
 from ..workflow._versions import versions
 from ..ai_engine.transcribe import ai_transcribe
 from ._errors import (
@@ -34,6 +35,7 @@ from .models import (
     RescuePlan,
     RescueReceipt,
     ResumeState,
+    VerificationCheck,
     canonical_payload,
 )
 from .capabilities import snapshot_capabilities, whisper_model_path
@@ -117,16 +119,27 @@ def _policy_hash(plan: RescuePlan) -> str:
     return "sha256:" + hashlib.sha256(canonical_payload(plan.policy, excluded=frozenset())).hexdigest()
 
 
-def _run_local_transcript(master: Path, package_dir: Path, workspace: Path) -> tuple[Path, Path, OperationEntry]:
+def _run_local_transcript(
+    master: Path,
+    package_dir: Path,
+    workspace: Path,
+    capabilities: dict[str, Any],
+) -> tuple[Path, Path, OperationEntry]:
     try:
         import whisper
     except ImportError as exc:
-        raise rescue_error("planned Whisper executor is no longer installed", RESCUE_DEPENDENCY_MISMATCH) from exc
+        raise MCPVideoError(
+            "planned Whisper executor is no longer installed",
+            error_type="dependency_error",
+            code="missing_whisper",
+        ) from exc
     model_path = whisper_model_path("base")
     model_url = getattr(whisper, "_MODELS", {}).get("base")
     expected = model_url.rstrip("/").split("/")[-2] if isinstance(model_url, str) else None
-    actual = _sha(model_path).removeprefix("sha256:") if model_path.is_file() else None
-    if not expected or actual != expected:
+    model_sha256 = _sha(model_path) if model_path.is_file() else None
+    actual = model_sha256.removeprefix("sha256:") if model_sha256 else None
+    planned_model = capabilities.get("whisper_models", {}).get("base", {}).get("sha256")
+    if not expected or actual != expected or model_sha256 != planned_model:
         raise rescue_error("cached Whisper base model failed integrity validation", RESCUE_DEPENDENCY_MISMATCH)
 
     captions = package_dir / "captions.srt"
@@ -134,6 +147,13 @@ def _run_local_transcript(master: Path, package_dir: Path, workspace: Path) -> t
     started = time.monotonic()
     result = ai_transcribe(str(master), output_srt=str(captions), model="base")
     transcript.write_text(str(result.get("transcript", "")).strip() + "\n", encoding="utf-8")
+    parameters: dict[str, int | float | str | bool] = {
+        "transcript_path": _relative(transcript, workspace),
+        "model": "base",
+        "model_sha256": model_sha256,
+    }
+    if isinstance(result.get("language"), str):
+        parameters["language"] = result["language"]
     entry = OperationEntry(
         id="captions_transcript:package",
         status="completed",
@@ -141,9 +161,9 @@ def _run_local_transcript(master: Path, package_dir: Path, workspace: Path) -> t
         input_sha256=_sha(master),
         output_path=_relative(captions, workspace),
         output_sha256=_sha(captions),
-        parameters={"transcript_path": _relative(transcript, workspace), "model": "base"},
+        parameters=parameters,
         executor="openai-whisper",
-        executor_version=actual,
+        executor_version=capabilities.get("whisper", {}).get("version"),
         elapsed_ms=round((time.monotonic() - started) * 1000),
     )
     return captions, transcript, entry
@@ -373,12 +393,36 @@ def render_rescue(
 
         captions: Path | None = None
         transcript: Path | None = None
+        captions_unavailable_reason: str | None = None
+        caption_failure: VerificationCheck | None = None
         captions_intent = next((intent for intent in plan.package_intents if intent.kind == "captions"), None)
         if captions_intent is not None and captions_intent.status == "available":
-            captions, transcript, transcript_entry = _run_local_transcript(master, package_dir, workspace)
-            operations.append(transcript_entry)
-            persist()
-            _check_cancel(cancel)
+            try:
+                captions, transcript, transcript_entry = _run_local_transcript(
+                    master, package_dir, workspace, current_capabilities
+                )
+                operations.append(transcript_entry)
+                persist()
+                _check_cancel(cancel)
+            except MCPVideoError as exc:
+                if exc.code == "missing_whisper":
+                    captions_unavailable_reason = "missing_whisper"
+                else:
+                    caption_failure = VerificationCheck(
+                        id="caption_generation",
+                        passed=False,
+                        message="Local caption generation failed.",
+                        details={"error_code": exc.code},
+                    )
+            except Exception:
+                caption_failure = VerificationCheck(
+                    id="caption_generation",
+                    passed=False,
+                    message="Local caption generation failed.",
+                    details={"error_code": "caption_generation_failed"},
+                )
+        elif captions_intent is not None:
+            captions_unavailable_reason = captions_intent.reason
 
         checks = verify_package(
             str(source),
@@ -387,6 +431,8 @@ def render_rescue(
             str(captions) if captions else None,
             str(transcript) if transcript else None,
         )
+        if caption_failure is not None:
+            checks.append(caption_failure)
         failed = [check for check in checks if check.gating and not check.passed]
         artifacts = [
             PackageArtifact(kind="master", status="available", path=master.name, sha256=_sha(master), size_bytes=master.stat().st_size),
@@ -397,6 +443,14 @@ def render_rescue(
                 [
                     PackageArtifact(kind="captions", status="available", path=captions.name, sha256=_sha(captions), size_bytes=captions.stat().st_size),
                     PackageArtifact(kind="transcript", status="available", path=transcript.name, sha256=_sha(transcript), size_bytes=transcript.stat().st_size),
+                ]
+            )
+        else:
+            reason = captions_unavailable_reason or "caption_sidecars_unavailable"
+            artifacts.extend(
+                [
+                    PackageArtifact(kind="captions", status="unavailable", reason=reason),
+                    PackageArtifact(kind="transcript", status="unavailable", reason=reason),
                 ]
             )
         if failed:

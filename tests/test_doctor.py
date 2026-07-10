@@ -151,6 +151,34 @@ def test_run_diagnostics_marks_required_tools_missing():
     assert "Install FFmpeg" in checks["ffmpeg"]["install_hint"]
 
 
+def test_doctor_reports_rescue_readiness_from_existing_checks():
+    from mcp_video.doctor import run_diagnostics
+
+    def ffmpeg_only(name: str) -> str | None:
+        return f"/usr/bin/{name}" if name in {"ffmpeg", "ffprobe"} else None
+
+    report = run_diagnostics(
+        which=ffmpeg_only,
+        version_runner=lambda command: f"{command[0]} version 8.0",
+        find_spec=lambda name: None,
+        package_version=lambda name: None,
+    )
+
+    assert report["rescue"] == {
+        "core_ready": True,
+        "local_only": True,
+        "captions_available": False,
+        "automatic_repair_types": [
+            "audio_loudness",
+            "container_timestamps",
+            "exposure",
+            "metadata",
+            "rotation",
+            "universal_mp4",
+        ],
+    }
+
+
 def test_run_diagnostics_marks_command_probe_failures_missing():
     from mcp_video.doctor import run_diagnostics
 

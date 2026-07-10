@@ -390,6 +390,27 @@ def _summary(checks: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def _rescue_summary(checks: list[dict[str, Any]]) -> dict[str, Any]:
+    by_name = {check["name"]: check for check in checks}
+    captions_available = bool(by_name.get("openai-whisper", {}).get("ok"))
+    automatic = [
+        "audio_loudness",
+        "container_timestamps",
+        "exposure",
+        "metadata",
+        "rotation",
+        "universal_mp4",
+    ]
+    if captions_available:
+        automatic.append("captions")
+    return {
+        "core_ready": all(by_name.get(name, {}).get("ok") for name in ("ffmpeg", "ffprobe")),
+        "local_only": True,
+        "captions_available": captions_available,
+        "automatic_repair_types": automatic,
+    }
+
+
 def run_diagnostics(
     *,
     which: WhichFn = shutil.which,
@@ -421,4 +442,5 @@ def run_diagnostics(
         },
         "summary": _summary(checks),
         "checks": checks,
+        "rescue": _rescue_summary(checks),
     }

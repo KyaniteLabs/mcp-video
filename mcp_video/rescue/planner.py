@@ -103,7 +103,7 @@ def _build_package_intents(analysis: AnalysisResult, capabilities: dict[str, Any
             ]
         )
     else:
-        reason = "Source has no audio stream." if not has_audio else "A verified local Whisper base model is unavailable."
+        reason = "no_audio_stream" if not has_audio else "missing_local_whisper"
         intents.extend(
             [
                 PackageIntent(kind="captions", required=False, status="unavailable", reason=reason),

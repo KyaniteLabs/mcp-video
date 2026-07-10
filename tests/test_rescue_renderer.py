@@ -2,13 +2,19 @@
 
 from __future__ import annotations
 
+import builtins
+import hashlib
 import json
 import shutil
-import hashlib
+import subprocess
+import sys
+from copy import deepcopy
+from types import SimpleNamespace
 
 import pytest
 
 from mcp_video.errors import MCPVideoError
+from mcp_video.rescue.capabilities import snapshot_capabilities
 from mcp_video.rescue.planner import plan_rescue
 from mcp_video.rescue.renderer import render_rescue
 from mcp_video.rescue.models import Disposition, Metric, Repair, RescuePlan, VerificationCheck, canonical_payload
@@ -23,6 +29,57 @@ def _planned_fixture(tmp_path, sample_video):
     plan_path = output / "plan.json"
     plan = plan_rescue(str(source), str(output), save_plan=str(plan_path))
     return source, plan_path, plan
+
+
+def _caption_capabilities(*, available: bool, model_sha256: str | None = None):
+    capabilities = deepcopy(snapshot_capabilities(find_spec=lambda name: None))
+    capabilities["whisper"] = {
+        "available": available,
+        "version": "20250625" if available else None,
+        "executor": "openai-whisper",
+    }
+    capabilities["whisper_models"] = {
+        "base": {"available": available, "sha256": model_sha256 if available else None}
+    }
+    return capabilities
+
+
+def _plan_with_capabilities(tmp_path, sample_video, monkeypatch, capabilities):
+    monkeypatch.setattr("mcp_video.rescue.planner.snapshot_capabilities", lambda: capabilities)
+    monkeypatch.setattr("mcp_video.rescue.renderer.snapshot_capabilities", lambda: capabilities)
+    return _planned_fixture(tmp_path, sample_video)
+
+
+def _subtitle_stream_count(path) -> int:
+    result = subprocess.run(
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-select_streams",
+            "s",
+            "-show_entries",
+            "stream=index",
+            "-of",
+            "json",
+            str(path),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return len(json.loads(result.stdout).get("streams", []))
+
+
+def _install_fake_local_whisper(tmp_path, monkeypatch):
+    model_path = tmp_path / "cache" / "base.pt"
+    model_path.parent.mkdir(parents=True)
+    model_path.write_bytes(b"verified local whisper model")
+    digest = hashlib.sha256(model_path.read_bytes()).hexdigest()
+    fake_whisper = SimpleNamespace(_MODELS={"base": f"https://models.invalid/{digest}/base.pt"})
+    monkeypatch.setitem(sys.modules, "whisper", fake_whisper)
+    monkeypatch.setattr("mcp_video.rescue.renderer.whisper_model_path", lambda model="base": model_path)
+    return model_path, digest
 
 
 def _add_safe_metadata_repair(plan_path):
@@ -80,6 +137,131 @@ def test_renderer_rejects_unknown_approval(tmp_path, sample_video):
         render_rescue(str(plan_path), approved_repair_ids=["stabilization:crop"])
 
     assert caught.value.code == "rescue_approval_invalid"
+
+
+def test_missing_whisper_records_unavailable_sidecars_without_transcribing(
+    tmp_path, sample_video, monkeypatch
+):
+    capabilities = _caption_capabilities(available=False)
+    _, plan_path, plan = _plan_with_capabilities(
+        tmp_path, sample_video, monkeypatch, capabilities
+    )
+    monkeypatch.setattr(
+        "mcp_video.rescue.renderer.ai_transcribe",
+        lambda *args, **kwargs: pytest.fail("unavailable Whisper must not be invoked"),
+    )
+
+    receipt = render_rescue(str(plan_path))
+
+    intents = {item["kind"]: item for item in plan["package_intents"]}
+    artifacts = {item["kind"]: item for item in receipt["package"]["artifacts"]}
+    assert intents["captions"]["reason"] == "missing_local_whisper"
+    assert artifacts["captions"] == {
+        "kind": "captions",
+        "status": "unavailable",
+        "path": None,
+        "sha256": None,
+        "size_bytes": None,
+        "reason": "missing_local_whisper",
+    }
+    assert artifacts["transcript"]["reason"] == "missing_local_whisper"
+    assert receipt["status"] == "completed"
+
+
+def test_local_whisper_writes_verified_sidecars_without_burning_them(
+    tmp_path, sample_video, monkeypatch
+):
+    model_path, digest = _install_fake_local_whisper(tmp_path, monkeypatch)
+    capabilities = _caption_capabilities(
+        available=True,
+        model_sha256="sha256:" + digest,
+    )
+    _, plan_path, _ = _plan_with_capabilities(tmp_path, sample_video, monkeypatch, capabilities)
+
+    def fake_transcribe(video, output_srt, model="base", language=None):
+        assert model == "base"
+        assert language is None
+        with open(output_srt, "w", encoding="utf-8") as handle:
+            handle.write("1\n00:00:00,000 --> 00:00:01,000\nhello\n")
+        return {"transcript": "hello", "segments": [], "language": "en"}
+
+    monkeypatch.setattr("mcp_video.rescue.renderer.ai_transcribe", fake_transcribe)
+
+    receipt = render_rescue(str(plan_path))
+
+    artifacts = {item["kind"]: item for item in receipt["package"]["artifacts"]}
+    package = plan_path.parent / receipt["package"]["path"]
+    operation = next(item for item in receipt["operations"] if item["id"] == "captions_transcript:package")
+    assert artifacts["captions"]["path"] == "captions.srt"
+    assert artifacts["transcript"]["path"] == "transcript.txt"
+    assert operation["executor_version"] == "20250625"
+    assert operation["parameters"]["model_sha256"] == "sha256:" + digest
+    assert model_path.is_file()
+    master = package / artifacts["master"]["path"]
+    assert _subtitle_stream_count(master) == 0
+
+
+def test_runtime_missing_whisper_is_nonfatal_and_explicit(tmp_path, sample_video, monkeypatch):
+    _, digest = _install_fake_local_whisper(tmp_path, monkeypatch)
+    capabilities = _caption_capabilities(available=True, model_sha256="sha256:" + digest)
+    _, plan_path, _ = _plan_with_capabilities(tmp_path, sample_video, monkeypatch, capabilities)
+
+    def missing(*args, **kwargs):
+        raise MCPVideoError("missing", error_type="dependency_error", code="missing_whisper")
+
+    monkeypatch.setattr("mcp_video.rescue.renderer.ai_transcribe", missing)
+
+    receipt = render_rescue(str(plan_path))
+
+    artifacts = {item["kind"]: item for item in receipt["package"]["artifacts"]}
+    assert receipt["status"] == "completed"
+    assert artifacts["captions"]["reason"] == "missing_whisper"
+    assert artifacts["transcript"]["reason"] == "missing_whisper"
+
+
+def test_whisper_import_disappearing_after_plan_is_nonfatal(tmp_path, sample_video, monkeypatch):
+    model_path = tmp_path / "cache" / "base.pt"
+    model_path.parent.mkdir(parents=True)
+    model_path.write_bytes(b"planned local model")
+    digest = hashlib.sha256(model_path.read_bytes()).hexdigest()
+    capabilities = _caption_capabilities(available=True, model_sha256="sha256:" + digest)
+    _, plan_path, _ = _plan_with_capabilities(tmp_path, sample_video, monkeypatch, capabilities)
+    monkeypatch.setattr("mcp_video.rescue.renderer.whisper_model_path", lambda model="base": model_path)
+    original_import = builtins.__import__
+
+    def import_without_whisper(name, *args, **kwargs):
+        if name == "whisper":
+            raise ImportError("Whisper removed after planning")
+        return original_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", import_without_whisper)
+
+    receipt = render_rescue(str(plan_path))
+
+    artifacts = {item["kind"]: item for item in receipt["package"]["artifacts"]}
+    assert receipt["status"] == "completed"
+    assert artifacts["captions"]["reason"] == "missing_whisper"
+
+
+def test_transcription_execution_failure_quarantines_package(tmp_path, sample_video, monkeypatch):
+    _, digest = _install_fake_local_whisper(tmp_path, monkeypatch)
+    capabilities = _caption_capabilities(available=True, model_sha256="sha256:" + digest)
+    _, plan_path, _ = _plan_with_capabilities(tmp_path, sample_video, monkeypatch, capabilities)
+    receipt_path = plan_path.parent / "transcription-failed.json"
+
+    def fail(*args, **kwargs):
+        raise MCPVideoError("decode failed", error_type="processing_error", code="transcription_failed")
+
+    monkeypatch.setattr("mcp_video.rescue.renderer.ai_transcribe", fail)
+
+    with pytest.raises(MCPVideoError) as caught:
+        render_rescue(str(plan_path), save_receipt=str(receipt_path))
+
+    receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    assert caught.value.code == "rescue_verification_failed"
+    assert receipt["status"] == "quarantined"
+    assert receipt["package"]["promoted"] is False
+    assert any(check["id"] == "caption_generation" and not check["passed"] for check in receipt["verification"])
 
 
 def test_cancel_marker_prevents_promotion_and_records_receipt(tmp_path, sample_video):

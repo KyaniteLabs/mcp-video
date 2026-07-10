@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -49,6 +50,20 @@ def test_plan_is_read_only_except_declared_artifacts(tmp_path, sample_video):
     assert {path.name for path in (tmp_path / "out").iterdir()} == {"plan.json", "previews"}
     assert plan["status"] == "planned"
     assert read_plan(tmp_path / "out" / "plan.json").plan_sha256 == plan["plan_sha256"]
+
+
+def test_plan_uses_stable_no_audio_reason_for_optional_sidecars(tmp_path, sample_video):
+    source = tmp_path / "video-only.mp4"
+    subprocess.run(
+        ["ffmpeg", "-y", "-v", "error", "-i", sample_video, "-an", "-c:v", "copy", str(source)],
+        check=True,
+    )
+
+    plan = plan_rescue(str(source), str(tmp_path / "out"))
+
+    intents = {item["kind"]: item for item in plan["package_intents"]}
+    assert intents["captions"]["reason"] == "no_audio_stream"
+    assert intents["transcript"]["reason"] == "no_audio_stream"
 
 
 def test_read_plan_rejects_tampered_action_fields(tmp_path, sample_video):
