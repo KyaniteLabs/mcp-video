@@ -160,6 +160,8 @@ def _convert_mp4(
             str(preset["crf"]),
             "-preset",
             preset["preset"],
+            "-pix_fmt",
+            "yuv420p",
             "-c:a",
             "aac",
             "-b:a",
