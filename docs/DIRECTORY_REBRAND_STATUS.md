@@ -24,7 +24,7 @@ Kinocut 1.7.0 cutover.
 | Surface | State at 2026-07-10 | Required action |
 | --- | --- | --- |
 | Official MCP Registry | Current and active | Verify after every release |
-| Glama | Stale former name, repository slug, install commands, and feature copy | Owner-authenticated canonical submission and old-record redirect still required |
+| Glama | Canonical URL and score badge resolve, but the page displays stale former metadata | Refresh and redirect request sent to Glama support on 2026-07-10; await recrawl |
 | Awesome MCP Servers | [Correction PR #9817](https://github.com/punkpeye/awesome-mcp-servers/pull/9817) open; checks pass | Complete Glama prerequisite, restore its score badge, and merge the replacement entry |
 | Smithery | No canonical listing; local stdio submission currently requires an MCPB bundle | Add MCPB packaging before submitting; do not publish an incompatible listing |
 | MCP.so | [Submission issue #3098](https://github.com/chatmcp/mcpso/issues/3098) open | Await directory review and verify the published record |
@@ -59,7 +59,8 @@ Kinocut 1.7.0 cutover.
 
 Glama's public flow requires owner authentication and human verification. The
 canonical repository already contains `glama.json` with the maintainer identity and
-a Dockerfile, so no source change is needed before completing that flow.
+a Dockerfile, and a support request was sent on 2026-07-10, so no source change is
+needed while the recrawl is pending.
 
 ## Reconciliation Rules
 
