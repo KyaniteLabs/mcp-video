@@ -33,10 +33,10 @@ Kinocut 1.7.0 cutover.
 | Enterprise DNA | Stale downstream record derived from Awesome MCP Servers | Allow upstream correction to propagate, then request recrawl |
 | Agent-CoreX | [Refresh issue #2](https://github.com/ankitpro/agent-corex/issues/2) open for the stale former name and 26-tool description | Await owner refresh and verify the public page |
 | Freshcrate | Stale former owner, package, and release; correction form is currently unconfigured | Retry when its contact inbox is operational or an owner channel is published |
-| Remote OpenClaw | Stale former slug and 91-tool copy | Request repository re-index |
+| Remote OpenClaw | Stale former slug and 91-tool copy | Refresh request sent to the publisher on 2026-07-10; await re-index |
 | Protodex | [Refresh issue #26](https://github.com/LuciferForge/mcp-directory/issues/26) open for the stale former name, 83-tool copy, and obsolete install commands | Await weekly re-index and verify the redirect |
-| Vibehackers | Stale registry ID, package, and release | Request owner refresh |
-| Neura Market | Stale personal namespace and 82-tool copy | Request owner refresh |
+| Vibehackers | Stale registry ID, package, and release | Refresh request sent to the publisher on 2026-07-10; await re-index |
+| Neura Market | Stale personal namespace and 82-tool copy | Refresh request sent to the publisher on 2026-07-10; await re-index |
 | a-gnt | Stale personal namespace, old version, and 82-tool copy | Allow Awesome correction to propagate, then request recrawl |
 | Docker MCP Catalog | [Catalog PR #4387](https://github.com/docker/mcp-registry/pull/4387) open | Await registry build, security review, and maintainer approval |
 | Claude Connectors Directory | No verified canonical listing found | Pursue verified listing when local stdio servers are eligible |
@@ -51,6 +51,8 @@ Kinocut 1.7.0 cutover.
 - MCP.Directory: canonical repository and PyPI package submitted for review on
   2026-07-10; the form confirmed publication review within 24 hours.
 - Vidocu: editorial inclusion request sent to the article publisher on 2026-07-10.
+- Remote OpenClaw, Vibehackers, and Neura Market: canonical refresh requests sent
+  to their published contact channels on 2026-07-10.
 - Docker MCP Registry: [catalog PR #4387](https://github.com/docker/mcp-registry/pull/4387)
 - Agent-CoreX: [refresh issue #2](https://github.com/ankitpro/agent-corex/issues/2)
 - Protodex: [refresh issue #26](https://github.com/LuciferForge/mcp-directory/issues/26)
