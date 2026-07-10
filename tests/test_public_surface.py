@@ -557,17 +557,21 @@ def test_current_documentation_uses_canonical_kinocut_identity():
     assert "docs/MCP-VIDEO-FEATURES-ROADMAP.md" not in tracked
 
 
-def test_registry_status_is_not_claimed_live_before_publication():
-    checked_paths = (ROOT / "README.md", ROOT / "llms.txt", ROOT / "docs" / "AI_AGENT_DISCOVERY.md")
-    forbidden = ("is listed on the", "MCP-Registry-blue.svg")
-    offenders = {
-        str(path.relative_to(ROOT)): fragment
-        for path in checked_paths
-        for fragment in forbidden
-        if fragment in path.read_text(encoding="utf-8")
-    }
+def test_current_docs_link_to_the_live_mcp_registry_version():
+    registry_url = (
+        "https://registry.modelcontextprotocol.io/v0/servers/"
+        "io.github.KyaniteLabs%2Fkinocut/versions/latest"
+    )
+    checked_paths = (
+        ROOT / "docs" / "AI_AGENT_DISCOVERY.md",
+        ROOT / "docs" / "faq.md",
+        ROOT / "docs" / "launch-checklist.md",
+    )
 
-    assert offenders == {}
+    for path in checked_paths:
+        text = path.read_text(encoding="utf-8")
+        assert registry_url in text, path
+        assert "pending" not in text.lower(), path
 
 
 def test_runnable_examples_use_canonical_kinocut_imports():
