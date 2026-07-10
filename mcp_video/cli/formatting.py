@@ -457,8 +457,8 @@ def _format_fix_design_issues(result: str) -> None:
 
 
 def _format_ai_transcribe(result: Any, output: str | None) -> None:
-    data = result if isinstance(result, dict) else {"success": True}
-    text = data.get("text", "")
+    data: dict[str, Any] = result if isinstance(result, dict) else {"success": True}
+    text = str(data.get("text", ""))
     srt = data.get("srt_path", output or "N/A")
     lines = [f"[bold green]SRT:[/bold green] {srt}"]
     if text:

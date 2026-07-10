@@ -3,8 +3,18 @@
 import os
 import shutil
 import subprocess
+import hashlib
+from datetime import UTC, datetime
 
 import pytest
+
+from tests.rescue_fixtures import make_rescue_fixture
+from mcp_video.rescue.models import (
+    RescueEstimate,
+    RescuePlan,
+    SourceIdentity,
+    canonical_payload,
+)
 
 
 def has_ffmpeg() -> bool:
@@ -23,6 +33,35 @@ def has_node() -> bool:
 def has_npx() -> bool:
     """Check if npx is available on PATH."""
     return shutil.which("npx") is not None
+
+
+@pytest.fixture
+def rescue_fixture(tmp_path) -> str:
+    """Create the canonical deterministic rescue E2E source."""
+    if not has_ffmpeg():
+        pytest.skip("FFmpeg not installed")
+    return str(make_rescue_fixture(tmp_path))
+
+
+@pytest.fixture
+def rescue_plan() -> RescuePlan:
+    """Return a minimal, hashed rescue v1 plan for additive contract tests."""
+    plan = RescuePlan(
+        workspace_root=".",
+        output_root="rescue-output",
+        source=SourceIdentity(
+            path="source.mp4",
+            sha256="sha256:" + "1" * 64,
+            size_bytes=1,
+            streams=[],
+        ),
+        estimate=RescueEstimate(seconds=0.0, hardware={}, confidence="high"),
+        capabilities={"local_only": True},
+        created_at=datetime.now(UTC),
+        observed_planning_seconds=0.0,
+    )
+    digest = "sha256:" + hashlib.sha256(canonical_payload(plan)).hexdigest()
+    return plan.model_copy(update={"plan_sha256": digest})
 
 
 @pytest.fixture(scope="session")

@@ -13,6 +13,8 @@ from . import image
 from . import layout
 from . import media
 from . import quality
+from . import rescue
+from . import postrescue
 from . import hyperframes
 from . import workflow
 
@@ -58,5 +60,7 @@ def build_parser() -> argparse.ArgumentParser:
     image.add_parsers(subparsers)
     quality.add_parsers(subparsers)
     workflow.add_parsers(subparsers)
+    rescue.add_parsers(subparsers)
+    postrescue.add_parsers(subparsers)
 
     return parser

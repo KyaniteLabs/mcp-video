@@ -1,6 +1,6 @@
 ---
 name: mcp-video
-description: Use mcp-video for guarded video editing, FFmpeg operations, media analysis, subtitles, audio workflows, Hyperframes rendering, repurposing packages, and release checkpoints through an MCP server, Python client, or CLI. Trigger when an agent needs to inspect, edit, render, validate, or package local media safely.
+description: Use mcp-video for guarded video editing, source-backed planning, FFmpeg operations, media analysis, subtitles, audio workflows, Hyperframes rendering, repurposing packages, and release checkpoints through an MCP server, Python client, or CLI. Trigger when an agent needs to inspect, plan, edit, render, validate, or package local media safely.
 ---
 
 # mcp-video
@@ -14,6 +14,8 @@ Use mcp-video when an agent needs a structured video-editing surface instead of 
 - Read `../../docs/TOOLS.md` for MCP tool coverage.
 - Read `../../docs/PYTHON_CLIENT.md` when scripting multi-step workflows.
 - Read `../../docs/WORKFLOWS.md` for the agent workflow engine (job-spec, `@refs`, variants, resume, receipts).
+- Read `../../docs/RESCUE.md` for local diagnosis and content-preserving "fix this clip" work.
+- Read `../../docs/POST_RESCUE_FEATURES.md` for semantic, visual, restorative, composition, autopilot, and egress planning.
 - Run `mcp-video doctor` before media work that depends on FFmpeg, Hyperframes, image tools, or AI dependencies.
 
 ## Choose A Surface
@@ -21,6 +23,38 @@ Use mcp-video when an agent needs a structured video-editing surface instead of 
 - MCP: best for Claude Code, Cursor, Codex-style clients, and other agent hosts. Configure `uvx --from mcp-video mcp-video`.
 - CLI: best for direct local edits, quick diagnostics, `composite-layers --dry-run`, batch jobs, and CI-friendly JSON output.
 - Python client: best for repeatable pipelines that need structured results, output paths, and saved layer-plan receipts.
+
+## Dedicated Video Rescue
+
+Use `video_rescue_*`, `rescue-*`, or `Client.rescue_*` when the request is to fix one local
+clip while preserving its source, story, and timeline.
+
+Required sequence:
+
+1. Call plan and save the plan artifact.
+2. Present `safe_repairs`, `recommendations`, `unavailable_repairs`, `blocked_repairs`,
+   previews, package intents, capabilities, and estimate to the user.
+3. Inspect the plan before render. Obtain or infer explicit approval only for IDs in
+   `safe_repairs`; omitting the ID list means all safe IDs in the reviewed plan.
+4. Call render with exactly those approved safe IDs.
+5. Inspect the render receipt, then report package paths, unavailable sidecars, integrity,
+   gating verification, privacy, resume, and cleanup state.
+
+Never render directly from an unreviewed plan. Never add recommendation IDs, unavailable
+IDs, or blocked IDs to approval. Never use cloud tools, burn rescue captions, rewrite the
+source, or treat `unavailable` as automatic failure. A cancellation or verification failure
+must remain unpromoted or quarantined.
+
+## Post-Rescue Planning
+
+Use the matching `video_*` MCP tool, flat CLI command, or `Client` method when the request
+needs semantic retrieval, ordinary cleanup edits, subject-aware transforms, restoration,
+composition, creative coordination, or remote egress. Pass JSON-compatible evidence and
+intent; present the returned plan and diff before any separate render step.
+
+Never invent source descriptions, hide uncertainty, infer approval from a plan, or treat a
+missing local executor as permission to use a cloud provider. Remote work requires a separate
+egress manifest and approval. A planner that lacks evidence or capability must abstain.
 
 ## Layered Compositing
 
