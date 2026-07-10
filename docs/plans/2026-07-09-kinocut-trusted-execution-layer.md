@@ -271,3 +271,45 @@ Own the last mile and the edges, once the review loop is live. (C2PA provenance 
 2. **Second adversarial fixture (Phase 2, MUST):** add a motion/multi-speaker fixture alongside the golden talking-head; evaluate SSIM per-FFmpeg-build (known CI gap 6.1.1 vs 8.1) so thresholds measure generalization, not single-clip overfit.
 
 **Cosmetic sweep (opportunistic, non-gating):** ADR-body Driver 1 still carries the old "sync-only, state-deleted" wording corrected in the Summary; "Tool #120" (Out-of-Scope) vs "tool #125" (Principle 1) inconsistency.
+
+## Appendix A — Per-primitive Epoch sizing (required before P1.x issues open; done 2026-07-10)
+
+AI-native hours (agent-fleet execution), from Epoch reference-class forecasting
+(404-sample feature baseline, 0.65 correction). Bands are corrected→raw; the agent
+opening each issue re-runs Epoch against its own profile and records the actual.
+
+| Item | Class | Sized |
+|---|---|---|
+| P1.1 durable edit-project repository | feature/medium/3 | **1.3–2h** |
+| P1.2 job store + detached render runner + startup reconcile | feature/large/4 | **3.9–6h** (largest single risk; the reconcile test is the acceptance keystone) |
+| P1.3 content-addressed store (cache keys + reachability GC) | feature/large/4 | **3.9–6h** (correctness-critical: a wrong cache key silently serves stale renders) |
+| P1.4 receipt lineage (extends workflow receipt) | feature/medium/2 | **~1–1.5h** |
+| P1.5 minimal event poll | feature/small/2 | **0.3–0.4h** |
+| P1.6 compat bridge (repurposing slice) | feature/medium/3 | **1.3–2h** |
+| **Phase 1 total** | | **~12–18h AI-native** |
+
+Phase-level coarse bands (same method, for the calendar): Phase 2 ≈ 15–25h
+(10 medium items, P2.6 semantic index is the large one); Phase 3 ≈ 15–22h
+(P3.0 is large/5 — the IR + revision DAG dominates); Phase 4 ≈ 8–14h.
+These are execution hours, not wall-clock: review loops, CI, and human gates
+dominate the calendar.
+
+## Appendix B — Open questions: proposed defaults (decide/ratify at P1.0)
+
+Recorded so no implementer stalls; each is a PROPOSAL pending the P1.0 ADR unless
+Simon overrides earlier.
+
+1. **`edit_project` API noun vs user-facing alias** → propose: API noun stays
+   `edit_project_*`; no user-facing alias in v1 (verbs hide it anyway).
+2. **Artifact-retention budget** → propose: default CAS budget 20 GB per managed
+   project dir, reachability-GC to 80% on breach, `kino gc` manual override;
+   budget configurable via env. Rationale: bounded by default, local-first, no
+   silent unbounded disk growth (the class of complaint that kills local tools).
+3. **Allowed VLM providers (Phase 3 vision QC)** → propose: provider-agnostic
+   adapter with local-first default (Qwen-VL-class via ollama/llama.cpp when
+   present), cloud keys opt-in per invocation, never required — metric floor
+   already guaranteed offline. No provider allowlist baked into code; policy
+   lives in config.
+4. **Remote render-runner trust boundary** → propose: out of scope until a
+   product path needs it (matches "local-first, no daemon"); revisit when/if a
+   distributed-render issue is opened. Do not design for it in P1.2.
