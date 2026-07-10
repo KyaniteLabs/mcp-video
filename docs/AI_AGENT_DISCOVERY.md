@@ -68,7 +68,7 @@ Claude Desktop:
   "mcpServers": {
     "kinocut": {
       "command": "uvx",
-      "args": ["--from", "kinocut", "kinocut"]
+      "args": ["--from", "kinocut", "kino"]
     }
   }
 }
@@ -81,7 +81,7 @@ Cursor:
   "mcpServers": {
     "kinocut": {
       "command": "uvx",
-      "args": ["--from", "kinocut", "kinocut"]
+      "args": ["--from", "kinocut", "kino"]
     }
   }
 }
@@ -108,7 +108,7 @@ Use $kinocut to inspect this media, plan guarded edits, produce release artifact
 
 High-leverage listing targets:
 
-- [Official MCP Registry](https://registry.modelcontextprotocol.io/servers/io.github.KyaniteLabs/kinocut) — metadata in `server.json` at the repo root, published from the release workflow via `mcp-publisher` after PyPI publication. Identifier: `io.github.KyaniteLabs/kinocut`.
+- Official MCP Registry - pending release publication from `server.json` via `mcp-publisher` after PyPI succeeds. Target identifier: `io.github.KyaniteLabs/kinocut`. Add the live listing link only after it resolves publicly.
 - [Glama MCP Registry](https://glama.ai/mcp/servers) — Submit via GitHub repo URL.
 - [Smithery](https://smithery.ai) — Submit via GitHub repo URL once the official registry and Glama listings are fresh.
 - [MCP.so](https://mcp.so) — Submit via GitHub repo URL.
