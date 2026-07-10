@@ -1,10 +1,10 @@
 # MCP Video Post-Rescue Critical Path
 
-**Status:** Roadmap trace from the approved rescue implementation plan
+**Status:** Required program scope approved for staged implementation
 
 **Starts after:** `2026-07-09-dedicated-rescue-pipeline.md` Task 10 and its required final review
 
-**Purpose:** Show exactly which rescue contracts unlock each postponed capability, which new trust boundary is required, and which work can proceed in parallel.
+**Purpose:** Define the required post-rescue build program: which rescue contracts unlock each capability, which new trust boundary is required, and which work can proceed in parallel.
 
 ## BLUF
 
