@@ -20,6 +20,10 @@ This project follows a simple release-note style:
 
 ### Added
 
+- **Rescue R1 extension contracts** - immutable, versioned policy profiles; separately
+  hashed feature-intent envelopes; additive verifier and capability registries; and
+  deterministic preview/approval bindings now let new editing features reuse the rescue
+  safety kernel without changing rescue v1 plans, receipts, hashes, or behavior.
 - **Dedicated video rescue pipeline** - three additive MCP tools
   (`video_rescue_plan`, `video_rescue_render`, `video_rescue_inspect`), CLI commands
   (`rescue-plan`, `rescue-render`, `rescue-inspect`), and Python client methods now diagnose
