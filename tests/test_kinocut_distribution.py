@@ -7,6 +7,7 @@ import re
 import subprocess
 import sys
 import tomllib
+import zipfile
 from pathlib import Path
 
 import mcp_video
@@ -132,6 +133,64 @@ def test_registry_metadata_uses_the_new_immutable_identity() -> None:
             "transport": {"type": "stdio"},
         }
     ]
+
+
+def test_mcpb_distribution_is_truthful_and_buildable(tmp_path) -> None:
+    project = _toml(ROOT / "pyproject.toml")
+    manifest = json.loads((ROOT / "mcpb" / "manifest.json").read_text(encoding="utf-8"))
+    launcher = (ROOT / "mcpb" / "server" / "launcher.js").read_text(encoding="utf-8")
+    docs = (ROOT / "docs" / "MCPB.md").read_text(encoding="utf-8")
+
+    assert manifest["$schema"].endswith("mcpb-manifest-v0.4.schema.json")
+    assert manifest["manifest_version"] == "0.4"
+    assert manifest["name"] == "kinocut"
+    assert manifest["version"] == KINOCUT_VERSION
+    assert manifest["repository"] == {"type": "git", "url": "https://github.com/KyaniteLabs/kinocut"}
+    assert manifest["server"] == {
+        "type": "node",
+        "entry_point": "server/launcher.js",
+        "mcp_config": {
+            "command": "node",
+            "args": ["${__dirname}/server/launcher.js"],
+            "env": {
+                "KINOCUT_MCPB_ALLOWED_ROOT": "${user_config.workspaceRoot}",
+                "KINOCUT_MCPB_OUTPUT_ROOT": "${user_config.outputRoot}",
+                "KINOCUT_MCPB_PYTHON": "${user_config.pythonExecutable}",
+                "KINOCUT_MCPB_FFMPEG": "${user_config.ffmpegPath}",
+                "MCP_VIDEO_HYPERFRAMES_COMMAND": "${user_config.hyperframesCommand}",
+                "KINOCUT_MCPB_ENABLE_OPTIONAL_AI": "${user_config.enableOptionalAi}",
+            },
+        },
+    }
+    assert manifest["compatibility"]["runtimes"] == {"node": ">=18"}
+    assert manifest["tools_generated"] is True
+    assert manifest["user_config"]["workspaceRoot"]["type"] == "directory"
+    assert manifest["user_config"]["outputRoot"]["type"] == "directory"
+    assert manifest["user_config"]["pythonExecutable"]["required"] is False
+    assert manifest["user_config"]["enableOptionalAi"]["default"] is False
+    sdist_includes = set(project["tool"]["hatch"]["build"]["targets"]["sdist"]["only-include"])
+    assert {"/mcpb", "/docs/MCPB.md", "/scripts/build-mcpb.py"} <= sdist_includes
+    assert "[\"-m\", \"kinocut\", \"--mcp\"]" in launcher
+    assert "shell: false" in launcher
+    assert "MCPB does not bundle Python, Kinocut, FFmpeg, Node, Hyperframes, or AI model weights" in docs
+    assert "Release Gate Before External Publication" in docs
+
+    out_dir = tmp_path / "dist"
+    result = subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "build-mcpb.py"), "--output-dir", str(out_dir)],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    bundle = out_dir / f"kinocut-{KINOCUT_VERSION}.mcpb"
+    assert bundle.is_file()
+    with zipfile.ZipFile(bundle) as archive:
+        assert sorted(archive.namelist()) == ["README.md", "manifest.json", "server/launcher.js"]
+        packed_manifest = json.loads(archive.read("manifest.json"))
+    assert packed_manifest == manifest
 
 
 def test_release_workflow_builds_and_publishes_canonical_shim_and_npm_packages() -> None:
