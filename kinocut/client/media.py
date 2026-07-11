@@ -349,6 +349,9 @@ class ClientMediaMixin:
         output: str | None = None,
         quality: str = "high",
         format: str = "mp4",
+        c2pa_manifest_path: str | None = None,
+        c2pa_tool_path: str | None = None,
+        c2pa_signer_path: str | None = None,
     ) -> EditResult:
         """Render final video with quality settings.
 
@@ -357,13 +360,24 @@ class ClientMediaMixin:
             output: Output file path
             quality: Quality preset (low, medium, high, ultra). CLI: -q/--quality
             format: Output format (mp4, webm, gif, mov)
+            c2pa_manifest_path: Optional C2PA manifest definition JSON for final mp4 signing
+            c2pa_tool_path: Optional c2patool executable path
+            c2pa_signer_path: Optional c2patool subprocess signer command
 
         Raises:
             ValueError: If quality is invalid
         """
         self._validate_choice("quality", quality, self._VALID_QUALITIES)
         self._validate_choice("format", format, self._VALID_FORMATS)
-        return _export_video(video, output_path=output, quality=quality, format=format)
+        return _export_video(
+            video,
+            output_path=output,
+            quality=quality,
+            format=format,
+            c2pa_manifest_path=c2pa_manifest_path,
+            c2pa_tool_path=c2pa_tool_path,
+            c2pa_signer_path=c2pa_signer_path,
+        )
 
     def edit(self, timeline: dict[str, Any], output: str | None = None) -> EditResult:
         """Execute a full timeline-based edit from JSON."""

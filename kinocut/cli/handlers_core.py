@@ -272,6 +272,9 @@ def handle_initial_command(args: Any, *, use_json: bool) -> bool:
             quality="quality",
             format="fmt",
             output_path="output",
+            c2pa_manifest_path="c2pa_manifest",
+            c2pa_tool_path="c2pa_tool",
+            c2pa_signer_path="c2pa_signer_path",
         ),
     )
     runner.register(

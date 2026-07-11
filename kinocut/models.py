@@ -108,6 +108,10 @@ class EditResult(BaseModel):
     elapsed_ms: float | None = Field(default=None, description="Wall-clock processing time in milliseconds")
     warnings: list[str] = Field(default_factory=list, description="Non-fatal guardrail warnings for agent workflows")
     intermediates: list[str] = Field(default_factory=list, description="Intermediate files that were cleaned up")
+    c2pa: dict[str, Any] | None = Field(
+        default=None,
+        description="C2PA signing result when optional provenance signing was requested for a final export.",
+    )
 
 
 class ErrorResult(BaseModel):

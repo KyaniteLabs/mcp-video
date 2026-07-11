@@ -110,6 +110,9 @@ def add_parsers(subparsers: argparse._SubParsersAction) -> None:
         help="Output format",
     )
     export_p.add_argument("-o", "--output", help="Output file path")
+    export_p.add_argument("--c2pa-manifest", help="Optional C2PA manifest definition JSON for final mp4 signing")
+    export_p.add_argument("--c2pa-tool", help="Optional path to the c2patool executable")
+    export_p.add_argument("--c2pa-signer-path", help="Optional c2patool subprocess signer command")
 
     # extract_audio
     extract_p = subparsers.add_parser("extract-audio", help="Extract audio from video")
