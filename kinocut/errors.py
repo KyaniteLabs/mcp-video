@@ -79,6 +79,51 @@ class ValidationError(MCPVideoError, ValueError):
         )
 
 
+class C2PAToolNotFoundError(MCPVideoError):
+    """c2patool is required for requested C2PA signing but is unavailable."""
+
+    def __init__(self, tool: str) -> None:
+        super().__init__(
+            f"C2PA signing requested, but c2patool is not executable: {tool}",
+            error_type="dependency_error",
+            code="c2patool_not_found",
+            suggested_action={
+                "auto_fix": False,
+                "description": "Install c2patool or pass an executable path with --c2pa-tool.",
+            },
+        )
+
+
+class C2PASigningError(MCPVideoError):
+    """c2patool failed while adding a manifest to an exported asset."""
+
+    def __init__(self, detail: str, *, code: str = "c2pa_signing_failed") -> None:
+        super().__init__(
+            f"C2PA signing failed: {detail}",
+            error_type="provenance_error",
+            code=code,
+            suggested_action={
+                "auto_fix": False,
+                "description": "Check the c2patool installation, manifest JSON, certificate, signer, and output path.",
+            },
+        )
+
+
+class C2PAVerificationError(MCPVideoError):
+    """A signed asset could not be verified after C2PA signing."""
+
+    def __init__(self, detail: str) -> None:
+        super().__init__(
+            f"C2PA verification failed: {detail}",
+            error_type="provenance_error",
+            code="c2pa_verification_failed",
+            suggested_action={
+                "auto_fix": False,
+                "description": "Inspect the c2patool verification output before treating the export as signed.",
+            },
+        )
+
+
 class InputFileError(MCPVideoError):
     """Input file doesn't exist or is not a valid video."""
 

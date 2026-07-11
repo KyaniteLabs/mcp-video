@@ -1,0 +1,334 @@
+"""Tests for optional C2PA provenance signing on final exports."""
+
+from __future__ import annotations
+
+import json
+import os
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+import pytest
+
+from mcp_video.errors import MCPVideoError
+from mcp_video.models import EditResult
+
+
+def _fake_c2patool(path: Path, *, verify_failure: bool = False) -> Path:
+    script = path / "fake-c2patool"
+    script.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env python3",
+                "import json",
+                "import shutil",
+                "import sys",
+                "from pathlib import Path",
+                "log = Path(__file__).with_suffix('.log')",
+                "args = sys.argv[1:]",
+                "log.write_text(log.read_text() + json.dumps(args) + '\\n' if log.exists() else json.dumps(args) + '\\n')",
+                "if '--manifest' in args or '-m' in args:",
+                "    src = Path(args[0])",
+                "    try:",
+                "        out = Path(args[args.index('--output') + 1])",
+                "    except ValueError:",
+                "        out = Path(args[args.index('-o') + 1])",
+                "    shutil.copyfile(src, out)",
+                "    print(json.dumps({'signed': True, 'active_manifest': {'label': 'kinocut:test'}}))",
+                "    raise SystemExit(0)",
+                "if " + repr(verify_failure) + ":",
+                "    print(json.dumps({'validation_status': [{'code': 'claimSignature.mismatch'}]}))",
+                "    raise SystemExit(0)",
+                "print(json.dumps({'active_manifest': {'label': 'kinocut:test'}, 'validation_status': []}))",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    script.chmod(0o755)
+    return script
+
+
+def _fake_c2patool_nonzero_verify(path: Path) -> Path:
+    script = _fake_c2patool(path)
+    text = script.read_text(encoding="utf-8")
+    text = text.replace(
+        "print(json.dumps({'active_manifest': {'label': 'kinocut:test'}, 'validation_status': []}))",
+        "print('verification crashed')\nraise SystemExit(9)",
+    )
+    script.write_text(text, encoding="utf-8")
+    return script
+
+
+def _manifest(path: Path) -> Path:
+    manifest = path / "manifest.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "claim_generator": "Kinocut test",
+                "assertions": [{"label": "org.kinocut.test", "data": {"ok": True}}],
+            }
+        ),
+        encoding="utf-8",
+    )
+    return manifest
+
+
+def test_c2pa_provider_signs_then_verifies_with_fake_executable(tmp_path):
+    from mcp_video.c2pa import sign_export_with_c2pa
+
+    tool = _fake_c2patool(tmp_path)
+    manifest = _manifest(tmp_path)
+    asset = tmp_path / "final.mp4"
+    asset.write_bytes(b"mp4 bytes")
+
+    result = sign_export_with_c2pa(
+        str(asset),
+        manifest_path=str(manifest),
+        tool_path=str(tool),
+        signer_path="/opt/kinocut/signer",
+    )
+
+    assert result["status"] == "signed"
+    assert result["verified"] is True
+    assert result["tool"] == str(tool)
+    assert result["manifest_path"] == str(manifest)
+    calls = [json.loads(line) for line in tool.with_suffix(".log").read_text(encoding="utf-8").splitlines()]
+    assert calls[0] == [
+        str(asset),
+        "--manifest",
+        str(manifest),
+        "--output",
+        str(asset.with_name("final.c2pa-signing.mp4")),
+        "--force",
+        "--signer-path",
+        "/opt/kinocut/signer",
+    ]
+    assert calls[1] == [str(asset)]
+
+
+def test_c2pa_provider_fails_closed_when_verification_reports_errors(tmp_path):
+    from mcp_video.c2pa import sign_export_with_c2pa
+
+    tool = _fake_c2patool(tmp_path, verify_failure=True)
+    manifest = _manifest(tmp_path)
+    asset = tmp_path / "final.mp4"
+    asset.write_bytes(b"mp4 bytes")
+
+    with pytest.raises(MCPVideoError) as exc:
+        sign_export_with_c2pa(str(asset), manifest_path=str(manifest), tool_path=str(tool))
+
+    assert exc.value.code == "c2pa_verification_failed"
+
+
+def test_c2pa_provider_fails_closed_when_verify_command_fails(tmp_path):
+    from mcp_video.c2pa import sign_export_with_c2pa
+
+    tool = _fake_c2patool_nonzero_verify(tmp_path)
+    manifest = _manifest(tmp_path)
+    asset = tmp_path / "final.mp4"
+    asset.write_bytes(b"mp4 bytes")
+
+    with pytest.raises(MCPVideoError) as exc:
+        sign_export_with_c2pa(str(asset), manifest_path=str(manifest), tool_path=str(tool))
+
+    assert exc.value.code == "c2pa_verification_failed"
+
+
+def test_c2pa_provider_requires_available_executable(tmp_path):
+    from mcp_video.c2pa import sign_export_with_c2pa
+
+    manifest = _manifest(tmp_path)
+    asset = tmp_path / "final.mp4"
+    asset.write_bytes(b"mp4 bytes")
+
+    with pytest.raises(MCPVideoError) as exc:
+        sign_export_with_c2pa(str(asset), manifest_path=str(manifest), tool_path=str(tmp_path / "missing"))
+
+    assert exc.value.code == "c2patool_not_found"
+
+
+def test_export_video_defaults_to_unsigned(monkeypatch, tmp_path):
+    from mcp_video import engine_export
+
+    output = tmp_path / "exported.mp4"
+
+    def fake_convert(*args, **kwargs):
+        output.write_bytes(b"mp4")
+        return EditResult(output_path=str(output), operation="convert")
+
+    monkeypatch.setattr("mcp_video.engine_convert.convert", fake_convert)
+    monkeypatch.setattr(engine_export, "_validate_input_path", lambda p: p)
+
+    result = engine_export.export_video("input.mp4", output_path=str(output), format="mp4")
+
+    assert result.c2pa is None
+    assert result.operation == "export"
+
+
+def test_export_video_can_sign_final_mp4(monkeypatch, tmp_path):
+    from mcp_video import engine_export
+
+    manifest = _manifest(tmp_path)
+    tool = _fake_c2patool(tmp_path)
+    output = tmp_path / "exported.mp4"
+
+    def fake_convert(*args, **kwargs):
+        output.write_bytes(b"mp4")
+        return EditResult(output_path=str(output), operation="convert")
+
+    monkeypatch.setattr("mcp_video.engine_convert.convert", fake_convert)
+    monkeypatch.setattr(engine_export, "_validate_input_path", lambda p: p)
+
+    result = engine_export.export_video(
+        "input.mp4",
+        output_path=str(output),
+        format="mp4",
+        c2pa_manifest_path=str(manifest),
+        c2pa_tool_path=str(tool),
+    )
+
+    assert result.c2pa is not None
+    assert result.c2pa["status"] == "signed"
+    assert result.c2pa["verified"] is True
+    assert result.operation == "export"
+
+
+def test_video_export_threads_c2pa_options(monkeypatch, tmp_path):
+    from mcp_video import server_tools_media
+
+    manifest = _manifest(tmp_path)
+    tool = _fake_c2patool(tmp_path)
+    seen = {}
+
+    def fake_export_video(input_path, **kwargs):
+        seen.update(kwargs)
+        return EditResult(output_path=str(tmp_path / "out.mp4"), operation="export", c2pa={"status": "signed"})
+
+    monkeypatch.setattr(server_tools_media, "_validate_input_path", lambda p: p)
+    monkeypatch.setattr(server_tools_media, "export_video", fake_export_video)
+
+    result = server_tools_media.video_export(
+        "input.mp4",
+        format="mp4",
+        c2pa_manifest_path=str(manifest),
+        c2pa_tool_path=str(tool),
+        c2pa_signer_path="/opt/kinocut/signer",
+    )
+
+    assert result["success"] is True
+    assert result["c2pa"]["status"] == "signed"
+    assert seen["c2pa_manifest_path"] == str(manifest)
+    assert seen["c2pa_tool_path"] == str(tool)
+    assert seen["c2pa_signer_path"] == "/opt/kinocut/signer"
+
+
+def test_client_export_threads_c2pa_options(monkeypatch, tmp_path):
+    from mcp_video import Client
+
+    manifest = _manifest(tmp_path)
+    tool = _fake_c2patool(tmp_path)
+    seen = {}
+
+    def fake_export_video(video, **kwargs):
+        seen.update(kwargs)
+        return EditResult(output_path=str(tmp_path / "out.mp4"), operation="export", c2pa={"status": "signed"})
+
+    monkeypatch.setattr("mcp_video.client.media._export_video", fake_export_video)
+
+    result = Client().export(
+        "input.mp4",
+        c2pa_manifest_path=str(manifest),
+        c2pa_tool_path=str(tool),
+        c2pa_signer_path="/opt/kinocut/signer",
+    )
+
+    assert result.c2pa == {"status": "signed"}
+    assert seen["c2pa_manifest_path"] == str(manifest)
+    assert seen["c2pa_tool_path"] == str(tool)
+    assert seen["c2pa_signer_path"] == "/opt/kinocut/signer"
+
+
+def test_cli_export_parser_accepts_c2pa_options():
+    from mcp_video.cli.parser import build_parser
+
+    parser = build_parser()
+    args = parser.parse_args(
+        [
+            "export",
+            "input.mp4",
+            "--c2pa-manifest",
+            "manifest.json",
+            "--c2pa-tool",
+            "fake-c2patool",
+            "--c2pa-signer-path",
+            "signer",
+        ]
+    )
+
+    assert args.c2pa_manifest == "manifest.json"
+    assert args.c2pa_tool == "fake-c2patool"
+    assert args.c2pa_signer_path == "signer"
+
+
+@pytest.mark.slow
+def test_cli_export_json_can_sign_with_fake_c2patool(sample_video, tmp_path):
+    tool = _fake_c2patool(tmp_path)
+    manifest = _manifest(tmp_path)
+    output = tmp_path / "cli-signed.mp4"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "mcp_video",
+            "--format",
+            "json",
+            "export",
+            sample_video,
+            "--output",
+            str(output),
+            "--c2pa-manifest",
+            str(manifest),
+            "--c2pa-tool",
+            str(tool),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["success"] is True
+    assert payload["operation"] == "export"
+    assert payload["c2pa"]["status"] == "signed"
+    assert payload["c2pa"]["verified"] is True
+    assert output.is_file()
+
+
+@pytest.mark.slow
+def test_real_c2patool_signs_when_tool_and_manifest_are_available(sample_video, tmp_path):
+    from mcp_video.engine_export import export_video
+
+    c2patool = shutil.which("c2patool")
+    manifest = os.environ.get("KINOCUT_C2PA_TEST_MANIFEST")
+    signer = os.environ.get("KINOCUT_C2PA_TEST_SIGNER")
+    if c2patool is None or not manifest:
+        pytest.skip("requires c2patool and KINOCUT_C2PA_TEST_MANIFEST")
+
+    output = tmp_path / "signed.mp4"
+    result = export_video(
+        sample_video,
+        output_path=str(output),
+        format="mp4",
+        c2pa_manifest_path=manifest,
+        c2pa_tool_path=c2patool,
+        c2pa_signer_path=signer,
+    )
+
+    assert output.is_file()
+    assert result.c2pa is not None
+    assert result.c2pa["status"] == "signed"
+    assert result.c2pa["verified"] is True

@@ -16,6 +16,9 @@ def export_video(
     on_progress: Callable[[float], None] | None = None,
     two_pass: bool = False,
     target_bitrate: int | None = None,
+    c2pa_manifest_path: str | None = None,
+    c2pa_tool_path: str | None = None,
+    c2pa_signer_path: str | None = None,
 ) -> EditResult:
     """Export a video for final delivery with quality tuning.
 
@@ -36,4 +39,21 @@ def export_video(
         target_bitrate=target_bitrate,
     )
     result.operation = "export"
+    if c2pa_manifest_path is not None:
+        if format != "mp4":
+            from .errors import MCPVideoError
+
+            raise MCPVideoError(
+                "C2PA signing is currently supported only for final mp4 exports",
+                error_type="validation_error",
+                code="c2pa_requires_mp4",
+            )
+        from .c2pa import sign_export_with_c2pa
+
+        result.c2pa = sign_export_with_c2pa(
+            result.output_path,
+            manifest_path=c2pa_manifest_path,
+            tool_path=c2pa_tool_path,
+            signer_path=c2pa_signer_path,
+        )
     return result

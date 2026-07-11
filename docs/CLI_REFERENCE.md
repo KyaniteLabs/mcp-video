@@ -32,7 +32,7 @@ kino [command] [options]
 | `crop` | Crop to rectangular region |
 | `rotate` | Rotate and/or flip video |
 | `fade` | Add video fade in/out |
-| `export` | Export with quality settings |
+| `export` | Export with quality settings; optional C2PA signing via `--c2pa-manifest` for final MP4s |
 | `extract-audio` | Extract audio track |
 | `edit` | Execute timeline-based edit from JSON (file path or inline) |
 | `filter` | Apply visual filter (blur, sharpen, grayscale, ken_burns, etc.) |

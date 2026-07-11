@@ -131,7 +131,7 @@ print(checkpoint["quality_score"])  # Must pass min_score
 | `add_audio(video, audio, volume?, fade_in?, fade_out?, mix?, start_time?, output?)` | `EditResult` | Add or replace audio track |
 | `resize(video, width?, height?, aspect_ratio?, quality?, output?)` | `EditResult` | Resize or change aspect ratio |
 | `convert(video, format?, quality?, output?)` | `EditResult` | Convert format (mp4/webm/gif/mov) |
-| `export(video, output?, quality?, format?)` | `EditResult` | Render with quality settings |
+| `export(video, output?, quality?, format?, c2pa_manifest_path?, c2pa_tool_path?, c2pa_signer_path?)` | `EditResult` | Render with quality settings; optionally C2PA-sign final MP4 output |
 | `speed(video, factor?, output?)` | `EditResult` | Change playback speed |
 | `reverse(video, output?)` | `EditResult` | Reverse video and audio playback |
 | `fade(video, fade_in?, fade_out?, output?)` | `EditResult` | Video fade in/out effect |

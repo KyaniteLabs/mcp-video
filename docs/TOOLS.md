@@ -117,7 +117,7 @@ download models, contact providers, or submit jobs. See
 | `video_export_frames` | Export video as individual image frames |
 | `video_extract_frame` | Extract a single frame at a given timestamp for visual verification |
 | `video_extract_audio` | Extract audio as mp3, wav, aac, ogg, or flac |
-| `video_export` | Render with quality and format settings |
+| `video_export` | Render with quality and format settings; optional C2PA signing for final MP4 exports via `c2pa_manifest_path` |
 | `video_normalize_audio` | Normalize audio loudness to a target LUFS level |
 | `video_batch` | Apply the same operation to multiple video files |
 | `video_cleanup` | Remove Kinocut-managed intermediate files |

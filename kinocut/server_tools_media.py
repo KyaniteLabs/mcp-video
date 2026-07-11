@@ -244,6 +244,18 @@ def video_export(
         str,
         Field(description="Output format for delivery. Supported values are mp4, webm, gif, and mov."),
     ] = "mp4",
+    c2pa_manifest_path: Annotated[
+        str | None,
+        Field(description="Optional C2PA manifest definition JSON to sign the final mp4 export."),
+    ] = None,
+    c2pa_tool_path: Annotated[
+        str | None,
+        Field(description="Optional path to the c2patool executable. Defaults to KINOCUT_C2PATOOL/MCP_VIDEO_C2PATOOL/PATH."),
+    ] = None,
+    c2pa_signer_path: Annotated[
+        str | None,
+        Field(description="Optional c2patool subprocess signer command for external signing credentials."),
+    ] = None,
 ) -> dict[str, Any]:
     """Export a video for final delivery with quality tuning.
 
@@ -267,6 +279,9 @@ def video_export(
             output_path=output_path,
             quality=quality,
             format=format,
+            c2pa_manifest_path=c2pa_manifest_path,
+            c2pa_tool_path=c2pa_tool_path,
+            c2pa_signer_path=c2pa_signer_path,
         )
     )
 
