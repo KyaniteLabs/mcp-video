@@ -6,6 +6,8 @@
 
 **Documentation-complete integration head verified:** `7911d1ed10ebbc047356a525d8980b29a7962fa1`
 
+**G006 remediation checkpoint:** `2815314`
+
 **State:** draft review only; incomplete; not released
 
 ## Executive summary
@@ -31,13 +33,20 @@ registry submission, deployment, release creation, or announcement.
 
 ## Still open before Wave 3 is complete
 
-- Finish the current independent review and close every remaining protection, source-snapshot,
-  audio-preservation, and recipe-specific salvage finding.
+- Close the final independent security findings: prove full freeze-prefix, region-crop, and
+  still-frame origin; prove `trim_audio` is the declared trim of the approved source; and bind the
+  exact mutation fingerprint plus authorization references into persisted salvage lineage.
 - Re-run the complete repository gate on the final integrated source and attach immutable
   receipts; earlier task-local reports are not current-branch proof.
 - Test and quality-guardrail modules were decomposed below the 800-line repository limit; retain
   the architecture/size gate on every downstream integration.
 - Obtain an independent security/architecture review of the frozen Wave 3 tip.
+
+The G006 checkpoint repaired authorization replay across body-swap duration policies, retained a
+verified anonymous source descriptor through salvage authorization/render/proof, and replaced the
+self-referential clean-edge verifier with an independent source-interval selection path. The final
+architecture review is non-blocking WATCH. The final security review remains REQUEST CHANGES for
+the three evidence-integrity items above, so this draft is not merge-ready.
 
 ## Program state after Wave 3
 

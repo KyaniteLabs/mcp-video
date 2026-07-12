@@ -6,6 +6,8 @@
 
 **Documentation-complete integration verified:** `7911d1ed10ebbc047356a525d8980b29a7962fa1`
 
+**Latest G006 remediation checkpoint:** `2815314`
+
 **Release state:** prohibited
 
 This receipt is intentionally narrow. It records checks run for the documentation/public-safety
@@ -51,6 +53,29 @@ change the draft contents. Unrelated branches were not pruned or rewritten durin
 The final publication branch is a sanitized squash with a different commit identity. The
 publication controller must rerun the full gate on that exact commit and report the result in the
 draft PR; this integration receipt must not be represented as proof for a different tree.
+
+## G006 remediation checkpoint
+
+The combined checkpoint repaired three review blockers and passed the following exact-tip gates:
+
+| Gate | Result |
+| --- | --- |
+| G006 focused security/source/body-swap/salvage suite | `112 passed` |
+| Architecture and public surface | `33 passed` |
+| Ruff | pass |
+| Canonical and compatibility imports | pass |
+| Diff hygiene | pass |
+| Final architecture review | WATCH; no merge blocker |
+| Final code/security review | REQUEST CHANGES; two high and one medium evidence-integrity findings |
+
+The exact-tip full repository suite was started, then intentionally stopped after the blocking
+security verdict because a passing result could not make this checkpoint merge-ready. Task-local
+full-suite receipts remain supporting history only: descriptor repair `3066 passed`; body-swap
+authorization-policy repair `3051 passed, 15 skipped`.
+
+Open blockers are independent origin proof for the full freeze prefix, region crop, and still
+frame; exact approved-source proof for `trim_audio`; and persisted mutation/authorization evidence
+in salvage lineage. No merge or release is authorized by this checkpoint.
 
 ## Required final integrated gates
 
