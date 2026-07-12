@@ -283,6 +283,84 @@ def test_body_swap_precheck_uses_exact_audio_fingerprint(tmp_path, clip_a, clip_
     assert not output.exists()
 
 
+def test_pad_video_authorization_cannot_be_replayed_for_trim_audio(tmp_path):
+    from kinocut.aivideo.protection import (
+        MutationIntent,
+        assert_no_protected_collision,
+        mutation_fingerprint,
+        protect,
+    )
+    from kinocut.contracts.protection import ProtectedElement
+    from kinocut.contracts.review import ReviewDecision
+    from kinocut.engine_body_swap import (
+        _audio_fingerprint,
+        _body_swap_parameters_fingerprint,
+        _source_fingerprint,
+        body_swap,
+    )
+    from kinocut.projectstore import append_record, open_project
+    from tests.contracts_fixtures import protection_kwargs, review_decision_kwargs
+
+    video = _clip(tmp_path / "short-video.mp4", duration=0.6)
+    audio = _clip(tmp_path / "protected-audio.mp4", duration=1.0, color="red")
+    project = open_project(tmp_path / "project")
+    audio_fingerprint = _audio_fingerprint(str(audio))
+    original = append_record(
+        project,
+        ReviewDecision(
+            **review_decision_kwargs(
+                project_id=project.project_id,
+                target_ref=audio_fingerprint,
+                dependency_fingerprint=audio_fingerprint,
+            )
+        ),
+    )
+    lock = protect(
+        project,
+        ProtectedElement(
+            **protection_kwargs(
+                project_id=project.project_id,
+                element_type="audio_stream",
+                dependency_fingerprint=audio_fingerprint,
+                human_approval_ref=original.record_id,
+            )
+        ),
+    )
+    pad_video_intent = MutationIntent(
+        operation="body_swap",
+        source_asset=_source_fingerprint(str(video)),
+        audio_stream=audio_fingerprint,
+        operation_parameters=_body_swap_parameters_fingerprint("pad_video"),
+    )
+    approval = append_record(
+        project,
+        ReviewDecision(
+            **review_decision_kwargs(
+                project_id=project.project_id,
+                target_ref=mutation_fingerprint(pad_video_intent),
+                dependency_fingerprint=mutation_fingerprint(pad_video_intent),
+                rationale="authorize pad_video while preserving protected audio",
+                source_record_ids=(lock.record_id, original.record_id),
+            )
+        ),
+    )
+    authorized_pad = pad_video_intent.model_copy(update={"authorization_decision_ids": (approval.record_id,)})
+    assert_no_protected_collision(project, authorized_pad)
+
+    with pytest.raises(MCPVideoError) as excinfo:
+        body_swap(
+            str(video),
+            str(audio),
+            str(tmp_path / "must-not-trim-audio.mp4"),
+            duration_policy="trim_audio",
+            project=project,
+            authorization_decision_ids=(approval.record_id,),
+        )
+
+    assert excinfo.value.code == "protected_element_change"
+    assert not (tmp_path / "must-not-trim-audio.mp4").exists()
+
+
 def test_body_swap_has_no_force_path():
     from kinocut.engine_body_swap import body_swap
 

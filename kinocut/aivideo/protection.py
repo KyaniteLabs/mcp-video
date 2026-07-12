@@ -99,6 +99,7 @@ class MutationIntent(ValueObject):
     timing_map: Sha256 | None = None
     mix: Sha256 | None = None
     render_parameter_set: Sha256 | None = None
+    operation_parameters: Sha256 | None = None
     authorization_decision_ids: tuple[Sha256, ...] = ()
 
     @model_validator(mode="after")
@@ -109,6 +110,8 @@ class MutationIntent(ValueObject):
         populated = {field for field in _DEPENDENCY_FIELDS if getattr(self, field) is not None}
         if populated != required:
             raise ValueError("operation dependency footprint is incomplete or contradictory")
+        if (self.operation is MutationOperation.BODY_SWAP) != (self.operation_parameters is not None):
+            raise ValueError("body swap requires one exact operation-parameters fingerprint")
         return self
 
 
@@ -123,6 +126,7 @@ def _intent_payload(operation: Any) -> dict[str, Any]:
         raise _invalid_intent("mutation intent contains a forbidden bypass field")
     payload = {
         "operation": getattr(operation, "operation", None),
+        "operation_parameters": getattr(operation, "operation_parameters", None),
         "authorization_decision_ids": getattr(operation, "authorization_decision_ids", ()),
     }
     payload.update({field: getattr(operation, field, None) for field in _DEPENDENCY_FIELDS})

@@ -13,6 +13,7 @@ from kinocut.aivideo.protection import (
 )
 from kinocut.contracts.protection import ElementType, ProtectedElement
 from kinocut.contracts.review import ReviewDecision
+from kinocut.engine_body_swap import _body_swap_parameters_fingerprint
 from kinocut.errors import MCPVideoError
 from kinocut.projectstore import append_record, open_project
 from tests.contracts_fixtures import protection_kwargs, review_decision_kwargs
@@ -32,6 +33,7 @@ def _mutation_touching(lock: ProtectedElement, **overrides) -> MutationIntent:
         "operation": "body_swap",
         "source_asset": "sha256:" + "b" * 64,
         "audio_stream": lock.dependency_fingerprint,
+        "operation_parameters": _body_swap_parameters_fingerprint(None),
     }
     values.update(overrides)
     return MutationIntent(**values)
@@ -105,6 +107,7 @@ def test_authorization_for_one_mutation_policy_cannot_be_replayed(project):
         operation="body_swap",
         source_asset="sha256:" + "c" * 64,
         audio_stream=lock.dependency_fingerprint,
+        operation_parameters=_body_swap_parameters_fingerprint(None),
         authorization_decision_ids=(decision.record_id,),
     )
 
@@ -121,7 +124,12 @@ def test_mutation_intent_has_no_force_path():
 def test_touched_dependencies_is_a_deduplicated_set():
     source = "sha256:" + "b" * 64
     audio = "sha256:" + "a" * 64
-    op = MutationIntent(operation="body_swap", source_asset=source, audio_stream=audio)
+    op = MutationIntent(
+        operation="body_swap",
+        source_asset=source,
+        audio_stream=audio,
+        operation_parameters=_body_swap_parameters_fingerprint(None),
+    )
     assert touched_dependencies(op) == {
         (ElementType.SOURCE_ASSET, source),
         (ElementType.AUDIO_STREAM, audio),
@@ -171,6 +179,7 @@ def test_different_exact_target_does_not_collide(project):
         operation="body_swap",
         source_asset="sha256:" + "b" * 64,
         audio_stream="sha256:" + "c" * 64,
+        operation_parameters=_body_swap_parameters_fingerprint(None),
     )
     assert_no_protected_collision(project, operation)
 

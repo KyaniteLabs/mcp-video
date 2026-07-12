@@ -64,6 +64,13 @@ def _source_fingerprint(path: str) -> str:
         raise InputFileError(path, "Cannot read input while fingerprinting") from None
 
 
+def _body_swap_parameters_fingerprint(duration_policy: str | None) -> str:
+    """Bind authorization to the exact declared duration behavior."""
+
+    payload = {"duration_policy": duration_policy or "reject_mismatch"}
+    return _sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode())
+
+
 def _assert_bound_identity(path: str, expected: SourceIdentity) -> None:
     """Fail privately if current bytes no longer equal a verified identity."""
 
@@ -217,6 +224,7 @@ def _precheck(
     video_source: str,
     audio_source: str,
     authorization_decision_ids: tuple[str, ...],
+    duration_policy: str | None,
     *,
     source_identity: SourceIdentity | None = None,
     pass_fds: tuple[int, ...] = (),
@@ -233,6 +241,7 @@ def _precheck(
             audio_stream=(
                 _audio_fingerprint(audio_source, pass_fds=pass_fds) if pass_fds else _audio_fingerprint(audio_source)
             ),
+            operation_parameters=_body_swap_parameters_fingerprint(duration_policy),
             authorization_decision_ids=authorization_decision_ids,
         ),
     )
@@ -338,6 +347,7 @@ def _render_from_descriptors(
         video.path,
         audio.path,
         authorization_decision_ids,
+        duration_policy,
         source_identity=video.identity,
         pass_fds=pass_fds,
     )
@@ -462,7 +472,7 @@ def body_swap(
         mismatch = abs(video_duration - audio_duration) > DEFAULT_BODY_SWAP_DURATION_TOLERANCE_SECONDS
         if mismatch and duration_policy is None:
             raise _validation_error("body-swap durations differ; choose an explicit policy")
-        _precheck(project, video_source, audio_source, authorization_decision_ids)
+        _precheck(project, video_source, audio_source, authorization_decision_ids, duration_policy)
         source_fingerprint = _audio_fingerprint(audio_source)
         render_args = _render_args(
             video_source,
