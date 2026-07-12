@@ -207,6 +207,34 @@ def test_clean_edges_rejects_same_duration_from_wrong_source_interval(source, mo
     assert excinfo.value.code == "salvage_verification_failed"
 
 
+def test_clean_edges_rejects_systematic_trim_interval_defect(source, monkeypatch):
+    import kinocut.aivideo.salvage as salvage
+
+    project, original, _source_path = source
+    real_trim = salvage.trim
+
+    def defective_trim(input_path, *, start, duration, output_path, accurate):
+        real_trim(
+            input_path,
+            start=0.0,
+            duration=duration,
+            output_path=output_path,
+            accurate=accurate,
+        )
+
+    monkeypatch.setattr(salvage, "trim", defective_trim)
+    with pytest.raises(MCPVideoError) as excinfo:
+        create_salvage_derivative(
+            project,
+            source_asset_id=original.asset_id,
+            recipe="clean_edges",
+            policy={"trim_start": 0.5, "trim_end": 0.0},
+            acceptance_spec_id=_ACCEPTANCE_SPEC,
+        )
+
+    assert excinfo.value.code == "salvage_verification_failed"
+
+
 def test_same_operation_is_idempotent_and_tamper_fails_closed(source):
     project, original, _source_path = source
     kwargs = dict(

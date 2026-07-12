@@ -23,6 +23,8 @@ from kinocut.contracts._common import NormalizedRegion, Sha256, ValueObject
 from kinocut.contracts.asset import AssetRecord, GenerationLineage, MediaKind
 from kinocut.contracts.verdict import ClipVerdict, Disposition
 from kinocut.defaults import (
+    DEFAULT_CRF,
+    DEFAULT_PRESET,
     DEFAULT_SALVAGE_DURATION_TOLERANCE_SECONDS,
     DEFAULT_SALVAGE_FREEZE_CODEC,
     DEFAULT_SALVAGE_FREEZE_PIXEL_FORMAT,
@@ -393,17 +395,28 @@ def _freeze_checks(
 
 
 def _clean_edges_origin_check(source: Path, output: Path, policy: dict[str, Any]) -> PreservationCheck:
-    """Compare every decoded output frame with an independently rendered interval."""
+    """Compare output frames with an independently selected source interval."""
 
-    duration = probe(str(source)).duration - policy["trim_start"] - policy["trim_end"]
+    start = _escape_ffmpeg_filter_value(str(policy["trim_start"]))
+    end = _escape_ffmpeg_filter_value(str(probe(str(source)).duration - policy["trim_end"]))
+    select = f"select=gte(t\\,{start})*lt(t\\,{end}),setpts=N/FRAME_RATE/TB"
     with tempfile.TemporaryDirectory(dir=output.parent, prefix=".clean-verify.") as work:
         expected = Path(work) / "expected.mp4"
-        trim(
-            str(source),
-            start=policy["trim_start"],
-            duration=duration,
-            output_path=str(expected),
-            accurate=True,
+        _run_ffmpeg(
+            [
+                "-i",
+                str(source),
+                "-vf",
+                select,
+                "-an",
+                "-c:v",
+                "libx264",
+                "-preset",
+                DEFAULT_PRESET,
+                "-crf",
+                str(DEFAULT_CRF),
+                str(expected),
+            ]
         )
         expected_hashes = _decoded_frame_hashes(expected)
     observed_hashes = _decoded_frame_hashes(output)
