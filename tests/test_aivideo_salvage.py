@@ -434,7 +434,7 @@ def test_black_padding_cannot_pass_as_freeze(source, monkeypatch):
 
     project, original, _source_path = source
 
-    def black_pad(_recipe, _policy, source_path, output_path):
+    def black_pad(_recipe, _policy, source_path, output_path, *, pass_fds=()):
         _run_ffmpeg(
             [
                 "-i",
@@ -445,7 +445,8 @@ def test_black_padding_cannot_pass_as_freeze(source, monkeypatch):
                 "3.4",
                 "-an",
                 str(output_path),
-            ]
+            ],
+            pass_fds=pass_fds,
         )
 
     monkeypatch.setattr("kinocut.aivideo.salvage._render", black_pad)
@@ -462,14 +463,16 @@ def test_black_padding_cannot_pass_as_freeze(source, monkeypatch):
 
 
 def test_freeze_rejects_forgery_that_only_matches_old_sample_indexes(source, monkeypatch):
+    from kinocut.aivideo.salvage_render import _probe_source
     from kinocut.ffmpeg_helpers import _run_ffmpeg
 
     project, original, _source_path = source
 
-    def sample_aware_forgery(_recipe, policy, source_path, output_path):
-        frame_count = len(_decoded_frame_hashes(source_path))
+    def sample_aware_forgery(_recipe, policy, source_path, output_path, *, pass_fds=()):
+        source_info = _probe_source(source_path, pass_fds=pass_fds)
+        frame_count = len(_decoded_frame_hashes(source_path, pass_fds=pass_fds))
         transition = frame_count - 1
-        fps = probe(str(source_path)).fps
+        fps = source_info.fps
         samples = {
             transition + max(1, round(policy["extension_seconds"] * fps * fraction)) for fraction in (0.2, 0.5, 0.8)
         }
@@ -487,14 +490,15 @@ def test_freeze_rejects_forgery_that_only_matches_old_sample_indexes(source, mon
                 "-vf",
                 filters,
                 "-t",
-                str(probe(str(source_path)).duration + policy["extension_seconds"]),
+                str(source_info.duration + policy["extension_seconds"]),
                 "-an",
                 "-c:v",
                 "ffv1",
                 "-pix_fmt",
                 "yuv420p",
                 str(output_path),
-            ]
+            ],
+            pass_fds=pass_fds,
         )
 
     monkeypatch.setattr("kinocut.aivideo.salvage._render", sample_aware_forgery)
@@ -515,7 +519,7 @@ def test_background_rejects_same_dimensions_from_wrong_origin(source, monkeypatc
 
     project, original, _source_path = source
 
-    def wrong_origin(_recipe, _policy, source_path, output_path):
+    def wrong_origin(_recipe, _policy, source_path, output_path, *, pass_fds=()):
         _run_ffmpeg(
             [
                 "-i",
@@ -528,7 +532,8 @@ def test_background_rejects_same_dimensions_from_wrong_origin(source, monkeypatc
                 "-pix_fmt",
                 "yuv420p",
                 str(output_path),
-            ]
+            ],
+            pass_fds=pass_fds,
         )
 
     monkeypatch.setattr("kinocut.aivideo.salvage._render", wrong_origin)
