@@ -18,25 +18,27 @@ from kinocut.aivideo.protection import (
     MutationOperation,
     assert_no_protected_collision,
 )
+from kinocut.aivideo.salvage_checks import (
+    PreservationCheck,
+    _audio_removed_check,
+    _clean_edges_origin_check,
+    _crop_origin_check,
+    _duration_check,
+    _freeze_checks,
+    _region_crop_origin_check,
+    _salvage_error,
+    _source_unchanged_check,
+    _still_frame_origin_check,
+)
+from kinocut.aivideo.salvage_render import _probe_source, _render
 from kinocut.contracts._common import NormalizedRegion, Sha256, ValueObject
 from kinocut.contracts.asset import AssetRecord, GenerationLineage, MediaKind
 from kinocut.contracts.verdict import ClipVerdict, Disposition
-from kinocut.defaults import (
-    DEFAULT_CRF,
-    DEFAULT_PRESET,
-    DEFAULT_SALVAGE_DURATION_TOLERANCE_SECONDS,
-)
 from kinocut.engine_body_swap import _audio_fingerprint
 from kinocut.engine_probe import probe
 from kinocut.errors import MCPVideoError
-from kinocut.ffmpeg_helpers import (
-    _escape_ffmpeg_filter_value,
-    _run_command,
-    _run_ffmpeg,
-)
-from kinocut.aivideo.salvage_render import _crop_filter, _probe_source, _render
-from kinocut.projectstore import Project, append_record, ingest_asset, read_records
-from kinocut.projectstore import layout, store
+from kinocut.ffmpeg_helpers import _run_command
+from kinocut.projectstore import Project, append_record, ingest_asset, layout, read_records, store
 from kinocut.rescue.operations import _sha256
 from kinocut.source_identity import SourceIdentity, VerifiedSource, copy_verified_snapshot
 
@@ -82,13 +84,6 @@ class _BackgroundOnly(_RegionCrop):
     """A caller-declared background region, not semantic subject removal."""
 
 
-class PreservationCheck(ValueObject):
-    claim: str
-    passed: bool
-    expected: str
-    observed: str
-
-
 class SalvageResult(ValueObject):
     recipe: SalvageRecipe
     policy: dict[str, Any]
@@ -116,14 +111,6 @@ _SALVAGE_OPERATIONS = {
     SalvageRecipe.REGION_CROP: MutationOperation.SALVAGE_REGION_CROP,
     SalvageRecipe.BACKGROUND_ONLY: MutationOperation.SALVAGE_BACKGROUND_ONLY,
 }
-
-
-def _salvage_error(message: str, code: str) -> MCPVideoError:
-    error_type = {
-        "salvage_integrity_failed": "integrity_error",
-        "salvage_verification_failed": "processing_error",
-    }.get(code, "validation_error")
-    return MCPVideoError(message, error_type=error_type, code=code)
 
 
 def _canonical(payload: dict[str, Any]) -> bytes:
@@ -214,170 +201,6 @@ def _active_source(project: Project, asset_id: str) -> tuple[AssetRecord, Path]:
     return source, path
 
 
-def _parse_frame_hashes(stdout: str) -> tuple[str, ...]:
-    values = tuple(
-        "md5:" + line.rsplit(",", 1)[1].strip().lower()
-        for line in stdout.splitlines()
-        if line and not line.startswith("#") and "," in line
-    )
-    if not values or any(
-        len(value) != 36 or any(char not in "0123456789abcdef" for char in value[4:]) for value in values
-    ):
-        raise _salvage_error("decoded frame hash is unavailable", "salvage_verification_failed")
-    return values
-
-
-def _decoded_frame_hashes(path: Path, *, pass_fds: tuple[int, ...] = ()) -> tuple[str, ...]:
-    """Return ordered hashes for every decoded video frame."""
-
-    result = _run_command(
-        [
-            "ffmpeg",
-            "-v",
-            "error",
-            "-i",
-            str(path),
-            "-map",
-            "0:v:0",
-            "-an",
-            "-f",
-            "framemd5",
-            "-",
-        ],
-        pass_fds=pass_fds,
-    )
-    return _parse_frame_hashes(result.stdout)
-
-
-def _decoded_frame_hash_at(
-    path: Path,
-    timestamp: float,
-    video_filter: str | None = None,
-    *,
-    pass_fds: tuple[int, ...] = (),
-) -> str:
-    """Decode and hash one deterministic representative video frame."""
-
-    args = ["ffmpeg", "-v", "error", "-i", str(path), "-ss", f"{timestamp:.9f}"]
-    if video_filter is not None:
-        args.extend(["-vf", video_filter])
-    args.extend(["-map", "0:v:0", "-an", "-frames:v", "1", "-f", "framemd5", "-"])
-    values = _parse_frame_hashes(_run_command(args, pass_fds=pass_fds).stdout)
-    if len(values) != 1:
-        raise _salvage_error("representative frame hash is unavailable", "salvage_verification_failed")
-    return values[0]
-
-
-def _background_origin_check(
-    source: Path,
-    output: Path,
-    region: dict[str, float],
-    *,
-    pass_fds: tuple[int, ...] = (),
-) -> PreservationCheck:
-    """Independently crop three source frames and compare their output peers."""
-
-    info = _probe_source(source, pass_fds=pass_fds)
-    width, height = round(info.width * region["width"]), round(info.height * region["height"])
-    x, y = round(info.width * region["x"]), round(info.height * region["y"])
-    crop_filter = _crop_filter(width, height, x, y)
-    final_time = max(0.0, info.duration - (1.0 / info.fps))
-    timestamps = (0.0, info.duration / 2.0, final_time)
-    source_hashes = tuple(
-        _decoded_frame_hash_at(source, timestamp, crop_filter, pass_fds=pass_fds) for timestamp in timestamps
-    )
-    output_hashes = tuple(_decoded_frame_hash_at(output, timestamp) for timestamp in timestamps)
-    mismatches = sum(expected != observed for expected, observed in zip(source_hashes, output_hashes, strict=True))
-    return PreservationCheck(
-        claim="declared_background_region_pixels",
-        passed=mismatches == 0,
-        expected=f"representative_frames:{len(timestamps)};mismatches:0",
-        observed=f"representative_frames:{len(timestamps)};mismatches:{mismatches}",
-    )
-
-
-def _freeze_checks(
-    source: Path,
-    output: Path,
-    *,
-    pass_fds: tuple[int, ...] = (),
-) -> tuple[PreservationCheck, ...]:
-    """Bind the transition and every frame through EOF to source tail."""
-
-    source_hashes = _decoded_frame_hashes(source, pass_fds=pass_fds)
-    output_hashes = _decoded_frame_hashes(output)
-    source_tail = source_hashes[-1]
-    transition_index = len(source_hashes) - 1
-    if transition_index >= len(output_hashes):
-        raise _salvage_error("freeze transition frame is missing", "salvage_verification_failed")
-    output_tail = output_hashes[transition_index]
-    extension_hashes = output_hashes[transition_index:]
-    mismatches = sum(value != source_tail for value in extension_hashes)
-    return (
-        PreservationCheck(
-            claim="freeze_source_tail_match",
-            passed=output_tail == source_tail,
-            expected=source_tail,
-            observed=output_tail,
-        ),
-        PreservationCheck(
-            claim="freeze_extension_frames_identical",
-            passed=mismatches == 0,
-            expected=source_tail,
-            observed=f"frames:{len(extension_hashes)};mismatches:{mismatches}",
-        ),
-    )
-
-
-def _clean_edges_origin_check(
-    source: Path,
-    output: Path,
-    policy: dict[str, Any],
-    *,
-    pass_fds: tuple[int, ...] = (),
-) -> PreservationCheck:
-    """Compare output frames with an independently selected source interval."""
-
-    start = _escape_ffmpeg_filter_value(str(policy["trim_start"]))
-    duration = _probe_source(source, pass_fds=pass_fds).duration
-    end = _escape_ffmpeg_filter_value(str(duration - policy["trim_end"]))
-    select = f"select=gte(t\\,{start})*lt(t\\,{end}),setpts=N/FRAME_RATE/TB"
-    with tempfile.TemporaryDirectory(dir=output.parent, prefix=".clean-verify.") as work:
-        expected = Path(work) / "expected.mp4"
-        _run_ffmpeg(
-            [
-                "-i",
-                str(source),
-                "-vf",
-                select,
-                "-an",
-                "-c:v",
-                "libx264",
-                "-preset",
-                DEFAULT_PRESET,
-                "-crf",
-                str(DEFAULT_CRF),
-                str(expected),
-            ],
-            pass_fds=pass_fds,
-        )
-        expected_hashes = _decoded_frame_hashes(expected)
-    observed_hashes = _decoded_frame_hashes(output)
-    passed = observed_hashes == expected_hashes
-    return PreservationCheck(
-        claim="clean_edges_source_interval",
-        passed=passed,
-        expected=f"frames:{len(expected_hashes)};mismatches:0",
-        observed=f"frames:{len(observed_hashes)};match:{str(passed).lower()}",
-    )
-
-
-def _source_unchanged_check(expected: str, observed: str) -> PreservationCheck:
-    return PreservationCheck(
-        claim="source_unchanged", passed=observed == expected, expected=expected, observed=observed
-    )
-
-
 def _checks(
     recipe: SalvageRecipe,
     policy: dict[str, Any],
@@ -400,14 +223,7 @@ def _checks(
     elif recipe is SalvageRecipe.FREEZE_EXTENSION:
         checks.append(_duration_check(output_info.duration, source_info.duration + policy["extension_seconds"]))
         checks.extend(_freeze_checks(source, output, pass_fds=pass_fds))
-        checks.append(
-            PreservationCheck(
-                claim="audio_removed",
-                passed=output_info.audio_codec is None,
-                expected="absent",
-                observed="absent" if output_info.audio_codec is None else "present",
-            )
-        )
+        checks.append(_audio_removed_check(output_info))
     elif recipe is SalvageRecipe.REGION_CROP:
         region = policy["region"]
         expected = f"{round(source_info.width * region['width'])}x{round(source_info.height * region['height'])}"
@@ -419,6 +235,7 @@ def _checks(
                 observed=output_info.resolution,
             )
         )
+        checks.append(_region_crop_origin_check(source, output, region, pass_fds=pass_fds))
     elif recipe is SalvageRecipe.BACKGROUND_ONLY:
         region = policy["region"]
         expected_dimensions = (
@@ -432,15 +249,12 @@ def _checks(
                 observed=output_info.resolution,
             )
         )
-        checks.append(_background_origin_check(source, output, region, pass_fds=pass_fds))
         checks.append(
-            PreservationCheck(
-                claim="audio_removed",
-                passed=output_info.audio_codec is None,
-                expected="absent",
-                observed="absent" if output_info.audio_codec is None else "present",
+            _crop_origin_check(
+                source, output, region, claim="declared_background_region_pixels", pass_fds=pass_fds
             )
         )
+        checks.append(_audio_removed_check(output_info))
         checks.append(_duration_check(output_info.duration, source_info.duration))
     else:
         checks.append(
@@ -450,6 +264,9 @@ def _checks(
                 expected="decodable_image",
                 observed="decodable_image" if output_info.width > 0 else "invalid",
             )
+        )
+        checks.append(
+            _still_frame_origin_check(source, output, policy["timestamp"], pass_fds=pass_fds)
         )
     if not all(check.passed for check in checks):
         raise _salvage_error("render did not satisfy its preservation claims", "salvage_verification_failed")
@@ -472,13 +289,6 @@ def _checks_from_descriptor(
         source_hash,
         verified_source=source,
         pass_fds=source.pass_fds,
-    )
-
-
-def _duration_check(observed: float, expected: float) -> PreservationCheck:
-    passed = abs(observed - expected) <= DEFAULT_SALVAGE_DURATION_TOLERANCE_SECONDS
-    return PreservationCheck(
-        claim="duration_policy", passed=passed, expected=f"{expected:.6f}", observed=f"{observed:.6f}"
     )
 
 

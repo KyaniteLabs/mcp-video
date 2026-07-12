@@ -10,10 +10,10 @@ import pytest
 from kinocut.aivideo.protection import MutationOperation, protect, touched_dependencies
 from kinocut.aivideo.salvage import (
     SalvageRecipe,
-    _decoded_frame_hashes,
     _mutation_intent,
     create_salvage_derivative,
 )
+from kinocut.aivideo.salvage_checks import _decoded_frame_hashes
 from kinocut.contracts.protection import ProtectedElement
 from kinocut.engine_body_swap import _audio_fingerprint
 from kinocut.engine_probe import probe
@@ -543,6 +543,122 @@ def test_background_rejects_same_dimensions_from_wrong_origin(source, monkeypatc
             source_asset_id=original.asset_id,
             recipe="background_only",
             policy={"region": {"x": 0.0, "y": 0.5, "width": 1.0, "height": 0.5}},
+            acceptance_spec_id=_ACCEPTANCE_SPEC,
+        )
+    assert excinfo.value.code == "salvage_verification_failed"
+    assert excinfo.value.error_type == "processing_error"
+
+
+def test_freeze_rejects_forgery_that_substitutes_prefix_frames(source, monkeypatch):
+    """Reject a freeze render whose pre-transition frames were substituted."""
+    from kinocut.aivideo.salvage_render import _probe_source
+    from kinocut.ffmpeg_helpers import _run_ffmpeg
+
+    project, original, _source_path = source
+
+    def prefix_substitution(_recipe, policy, source_path, output_path, *, pass_fds=()):
+        source_info = _probe_source(source_path, pass_fds=pass_fds)
+        transition = len(_decoded_frame_hashes(source_path, pass_fds=pass_fds)) - 1
+        # Black out frames BEFORE the transition so the tail + extension still
+        # match the source tail, defeating checks that only sample the suffix.
+        filters = (
+            f"drawbox=color=black:t=fill:enable='lt(n\\,{transition})',"
+            f"tpad=stop_mode=clone:stop_duration={policy['extension_seconds']}"
+        )
+        _run_ffmpeg(
+            [
+                "-i",
+                str(source_path),
+                "-vf",
+                filters,
+                "-t",
+                str(source_info.duration + policy["extension_seconds"]),
+                "-an",
+                "-c:v",
+                "ffv1",
+                "-pix_fmt",
+                "yuv420p",
+                str(output_path),
+            ],
+            pass_fds=pass_fds,
+        )
+
+    monkeypatch.setattr("kinocut.aivideo.salvage._render", prefix_substitution)
+    with pytest.raises(MCPVideoError) as excinfo:
+        create_salvage_derivative(
+            project,
+            source_asset_id=original.asset_id,
+            recipe="freeze_extension",
+            policy={"extension_seconds": 0.4},
+            acceptance_spec_id=_ACCEPTANCE_SPEC,
+        )
+    assert excinfo.value.code == "salvage_verification_failed"
+    assert excinfo.value.error_type == "processing_error"
+
+
+def test_region_crop_rejects_same_dimensions_from_wrong_origin(source, monkeypatch):
+    """Reject a region_crop with the requested dimensions but the wrong offset."""
+    from kinocut.ffmpeg_helpers import _run_ffmpeg
+
+    project, original, _source_path = source
+
+    def wrong_offset(_recipe, _policy, source_path, output_path, *, pass_fds=()):
+        # Declared region is x=0.25,y=0.25 -> pixel offset (160,120). Render
+        # from (0,0) instead so dimensions match but content does not.
+        _run_ffmpeg(
+            [
+                "-i",
+                str(source_path),
+                "-vf",
+                "crop=320:240:0:0",
+                "-c:a",
+                "copy",
+                str(output_path),
+            ],
+            pass_fds=pass_fds,
+        )
+
+    monkeypatch.setattr("kinocut.aivideo.salvage._render", wrong_offset)
+    with pytest.raises(MCPVideoError) as excinfo:
+        create_salvage_derivative(
+            project,
+            source_asset_id=original.asset_id,
+            recipe="region_crop",
+            policy={"region": {"x": 0.25, "y": 0.25, "width": 0.5, "height": 0.5}},
+            acceptance_spec_id=_ACCEPTANCE_SPEC,
+        )
+    assert excinfo.value.code == "salvage_verification_failed"
+    assert excinfo.value.error_type == "processing_error"
+
+
+def test_still_frame_rejects_render_unbound_to_declared_timestamp(source, monkeypatch):
+    """Reject a still_frame whose pixels do not match the declared timestamp."""
+    from kinocut.ffmpeg_helpers import _run_ffmpeg
+
+    project, original, _source_path = source
+
+    def synthetic_still(_recipe, _policy, _source_path, output_path, *, pass_fds=()):
+        # Produce a solid red frame that no source timestamp would yield.
+        _run_ffmpeg(
+            [
+                "-f",
+                "lavfi",
+                "-i",
+                "color=c=red:size=640x480:d=0.1",
+                "-frames:v",
+                "1",
+                str(output_path),
+            ],
+            pass_fds=pass_fds,
+        )
+
+    monkeypatch.setattr("kinocut.aivideo.salvage._render", synthetic_still)
+    with pytest.raises(MCPVideoError) as excinfo:
+        create_salvage_derivative(
+            project,
+            source_asset_id=original.asset_id,
+            recipe="still_frame",
+            policy={"timestamp": 1.0},
             acceptance_spec_id=_ACCEPTANCE_SPEC,
         )
     assert excinfo.value.code == "salvage_verification_failed"
