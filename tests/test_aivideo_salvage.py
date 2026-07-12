@@ -15,6 +15,7 @@ from kinocut.aivideo.salvage import (
     create_salvage_derivative,
 )
 from kinocut.contracts.protection import ProtectedElement
+from kinocut.engine_body_swap import _audio_fingerprint
 from kinocut.engine_probe import probe
 from kinocut.errors import MCPVideoError
 from kinocut.projectstore import ingest_asset, open_project, read_records
@@ -136,6 +137,76 @@ def test_real_media_properties_match_recipe_claims(source):
     assert not any(word in background_manifest for word in ("inpaint", "remove_subject", "semantic_removal"))
 
 
+def test_clean_edges_collides_with_protected_audio(source):
+    project, original, source_path = source
+    protect(
+        project,
+        ProtectedElement(
+            **protection_kwargs(
+                project_id=project.project_id,
+                element_type="audio_stream",
+                dependency_fingerprint=_audio_fingerprint(str(source_path)),
+            )
+        ),
+    )
+
+    with pytest.raises(MCPVideoError) as excinfo:
+        create_salvage_derivative(
+            project,
+            source_asset_id=original.asset_id,
+            recipe="clean_edges",
+            policy={"trim_start": 0.2, "trim_end": 0.0},
+            acceptance_spec_id=_ACCEPTANCE_SPEC,
+        )
+
+    assert excinfo.value.code == "protected_element_change"
+
+
+def test_source_replacement_during_snapshot_fails_before_render(source, monkeypatch):
+    import kinocut.aivideo.salvage as salvage
+
+    project, original, _source_path = source
+    original_snapshot = salvage.copy_verified_snapshot
+
+    def replace_then_snapshot(source_path_arg, destination, expected):
+        Path(source_path_arg).write_bytes(b"substituted after authorization")
+        return original_snapshot(source_path_arg, destination, expected)
+
+    monkeypatch.setattr(salvage, "copy_verified_snapshot", replace_then_snapshot)
+    with pytest.raises(MCPVideoError) as excinfo:
+        create_salvage_derivative(
+            project,
+            source_asset_id=original.asset_id,
+            recipe="clean_edges",
+            policy={"trim_start": 0.2, "trim_end": 0.0},
+            acceptance_spec_id=_ACCEPTANCE_SPEC,
+        )
+
+    assert excinfo.value.code == "source_identity_changed"
+
+
+def test_clean_edges_rejects_same_duration_from_wrong_source_interval(source, monkeypatch):
+    import kinocut.aivideo.salvage as salvage
+
+    project, original, _source_path = source
+
+    def wrong_interval(recipe, policy, source_path, output):
+        duration = probe(str(source_path)).duration - policy["trim_start"] - policy["trim_end"]
+        salvage.trim(str(source_path), start=0.0, duration=duration, output_path=str(output), accurate=True)
+
+    monkeypatch.setattr(salvage, "_render", wrong_interval)
+    with pytest.raises(MCPVideoError) as excinfo:
+        create_salvage_derivative(
+            project,
+            source_asset_id=original.asset_id,
+            recipe="clean_edges",
+            policy={"trim_start": 0.5, "trim_end": 0.0},
+            acceptance_spec_id=_ACCEPTANCE_SPEC,
+        )
+
+    assert excinfo.value.code == "salvage_verification_failed"
+
+
 def test_same_operation_is_idempotent_and_tamper_fails_closed(source):
     project, original, _source_path = source
     kwargs = dict(
@@ -199,8 +270,14 @@ _PROTECTION_CASES = [
 
 @pytest.mark.parametrize(("recipe", "policy", "operation"), _PROTECTION_CASES)
 def test_each_recipe_has_closed_footprint_and_protection_gate(source, monkeypatch, recipe, policy, operation):
-    project, original, _source_path = source
-    intent = _mutation_intent(SalvageRecipe(recipe), policy, original.asset_id, ())
+    project, original, source_path = source
+    intent = _mutation_intent(
+        SalvageRecipe(recipe),
+        policy,
+        original.asset_id,
+        _audio_fingerprint(str(source_path)),
+        (),
+    )
     assert intent.operation is MutationOperation(operation)
     assert ("source_asset", original.asset_id) in {
         (kind.value, fingerprint) for kind, fingerprint in touched_dependencies(intent)

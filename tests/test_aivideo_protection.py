@@ -7,6 +7,7 @@ import pytest
 from kinocut.aivideo.protection import (
     MutationIntent,
     assert_no_protected_collision,
+    mutation_fingerprint,
     protect,
     touched_dependencies,
 )
@@ -68,19 +69,49 @@ def test_explicitly_allowed_operation_does_not_collide(project):
 
 def test_new_stored_human_decision_authorizes_collision(project):
     lock, original = _protected_with_original(project)
+    op = _mutation_touching(lock)
+    intent_fingerprint = mutation_fingerprint(op)
     decision = append_record(
         project,
         ReviewDecision(
             **review_decision_kwargs(
                 project_id=project.project_id,
-                target_ref=lock.dependency_fingerprint,
-                dependency_fingerprint=lock.dependency_fingerprint,
+                target_ref=intent_fingerprint,
+                dependency_fingerprint=intent_fingerprint,
                 source_record_ids=(lock.record_id, original.record_id),
             )
         ),
     )
-    op = _mutation_touching(lock, authorization_decision_ids=(decision.record_id,))
+    op = op.model_copy(update={"authorization_decision_ids": (decision.record_id,)})
     assert_no_protected_collision(project, op)
+
+
+def test_authorization_for_one_mutation_policy_cannot_be_replayed(project):
+    lock, original = _protected_with_original(project)
+    authorized = _mutation_touching(lock)
+    intent_fingerprint = mutation_fingerprint(authorized)
+    decision = append_record(
+        project,
+        ReviewDecision(
+            **review_decision_kwargs(
+                project_id=project.project_id,
+                target_ref=intent_fingerprint,
+                dependency_fingerprint=intent_fingerprint,
+                source_record_ids=(lock.record_id, original.record_id),
+            )
+        ),
+    )
+    replay = MutationIntent(
+        operation="body_swap",
+        source_asset="sha256:" + "c" * 64,
+        audio_stream=lock.dependency_fingerprint,
+        authorization_decision_ids=(decision.record_id,),
+    )
+
+    with pytest.raises(MCPVideoError) as excinfo:
+        assert_no_protected_collision(project, replay)
+
+    assert excinfo.value.code == "protected_element_change"
 
 
 def test_mutation_intent_has_no_force_path():

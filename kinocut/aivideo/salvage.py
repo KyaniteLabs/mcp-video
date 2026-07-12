@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import json
-import contextlib
 import os
+import shutil
 import tempfile
 from enum import StrEnum
 from pathlib import Path
@@ -27,6 +28,7 @@ from kinocut.defaults import (
     DEFAULT_SALVAGE_FREEZE_PIXEL_FORMAT,
 )
 from kinocut.engine_crop import crop
+from kinocut.engine_body_swap import _audio_fingerprint
 from kinocut.engine_edit import trim
 from kinocut.engine_probe import probe
 from kinocut.errors import MCPVideoError
@@ -38,6 +40,7 @@ from kinocut.ffmpeg_helpers import (
 from kinocut.projectstore import Project, append_record, ingest_asset, read_records
 from kinocut.projectstore import layout, store
 from kinocut.rescue.operations import _sha256
+from kinocut.source_identity import SourceIdentity, copy_verified_snapshot
 
 
 class SalvageRecipe(StrEnum):
@@ -149,6 +152,7 @@ def _mutation_intent(
     recipe: SalvageRecipe,
     policy: dict[str, Any],
     source_asset_id: str,
+    audio_stream_id: str,
     authorization_decision_ids: tuple[str, ...],
 ) -> MutationIntent:
     """Build the exact engine-owned dependency footprint for one recipe."""
@@ -157,6 +161,7 @@ def _mutation_intent(
     values: dict[str, Any] = {
         "operation": _SALVAGE_OPERATIONS[recipe],
         "source_asset": source_asset_id,
+        "audio_stream": audio_stream_id,
         "authorization_decision_ids": authorization_decision_ids,
     }
     if recipe in {SalvageRecipe.CLEAN_EDGES, SalvageRecipe.STILL_FRAME}:
@@ -166,6 +171,29 @@ def _mutation_intent(
     else:
         values["render_parameter_set"] = policy_hash
     return MutationIntent(**values)
+
+
+def _salvage_audio_fingerprint(source: Path) -> str:
+    """Return exact audio identity, including a stable no-audio sentinel."""
+
+    if probe(str(source)).audio_codec is None:
+        return _digest(b"kinocut.salvage.no-audio.v1")
+    return _audio_fingerprint(str(source))
+
+
+@contextlib.contextmanager
+def _verified_source_snapshot(source: Path, expected: SourceIdentity, workspace: Path):
+    """Yield a private named copy produced from one held, verified descriptor."""
+
+    held = copy_verified_snapshot(str(source), workspace / ".source-copy", expected)
+    snapshot = workspace / f"source{source.suffix}"
+    try:
+        shutil.copyfile(held.path, snapshot)
+        if _checked_hash(snapshot, missing_message="verified source snapshot is missing") != expected.asset_id:
+            raise _salvage_error("verified source snapshot changed", "salvage_integrity_failed")
+        yield snapshot
+    finally:
+        held.close()
 
 
 def _checked_hash(path: Path, *, missing_message: str) -> str:
@@ -364,6 +392,30 @@ def _freeze_checks(
     )
 
 
+def _clean_edges_origin_check(source: Path, output: Path, policy: dict[str, Any]) -> PreservationCheck:
+    """Compare every decoded output frame with an independently rendered interval."""
+
+    duration = probe(str(source)).duration - policy["trim_start"] - policy["trim_end"]
+    with tempfile.TemporaryDirectory(dir=output.parent, prefix=".clean-verify.") as work:
+        expected = Path(work) / "expected.mp4"
+        trim(
+            str(source),
+            start=policy["trim_start"],
+            duration=duration,
+            output_path=str(expected),
+            accurate=True,
+        )
+        expected_hashes = _decoded_frame_hashes(expected)
+    observed_hashes = _decoded_frame_hashes(output)
+    passed = observed_hashes == expected_hashes
+    return PreservationCheck(
+        claim="clean_edges_source_interval",
+        passed=passed,
+        expected=f"frames:{len(expected_hashes)};mismatches:0",
+        observed=f"frames:{len(observed_hashes)};match:{str(passed).lower()}",
+    )
+
+
 def _checks(
     recipe: SalvageRecipe, policy: dict[str, Any], source: Path, output: Path, source_hash: str
 ) -> tuple[PreservationCheck, ...]:
@@ -381,6 +433,7 @@ def _checks(
     if recipe is SalvageRecipe.CLEAN_EDGES:
         expected = source_info.duration - policy["trim_start"] - policy["trim_end"]
         checks.append(_duration_check(output_info.duration, expected))
+        checks.append(_clean_edges_origin_check(source, output, policy))
     elif recipe is SalvageRecipe.FREEZE_EXTENSION:
         checks.append(_duration_check(output_info.duration, source_info.duration + policy["extension_seconds"]))
         checks.extend(_freeze_checks(source, output))
@@ -651,8 +704,6 @@ def create_salvage_derivative(
     except ValidationError as exc:
         raise _salvage_error("acceptance spec id is invalid", "invalid_salvage_policy") from exc
     source, source_path = _active_source(project, source_asset_id)
-    intent = _mutation_intent(selected, validated, source.asset_id, authorization_decision_ids)
-    assert_no_protected_collision(project, intent)
     prior = _read_prior_derivative(project, source.asset_id, validated, policy_hash)
     if prior is not None:
         asset, artifact_id, artifact_location, checks = prior
@@ -669,9 +720,20 @@ def create_salvage_derivative(
         else ".mp4"
     )
     with store._mapped_os_errors(), tempfile.TemporaryDirectory(dir=work_root, prefix=".salvage-render.") as work:
-        rendered = Path(work) / f"derivative{suffix}"
-        _render(selected, validated, source_path, rendered)
-        checks = _checks(selected, validated, source_path, rendered, source.asset_id)
+        workspace = Path(work)
+        expected = SourceIdentity(source.asset_id, source.byte_size)
+        with _verified_source_snapshot(source_path, expected, workspace) as snapshot:
+            intent = _mutation_intent(
+                selected,
+                validated,
+                source.asset_id,
+                _salvage_audio_fingerprint(snapshot),
+                authorization_decision_ids,
+            )
+            assert_no_protected_collision(project, intent)
+            rendered = workspace / f"derivative{suffix}"
+            _render(selected, validated, snapshot, rendered)
+            checks = _checks(selected, validated, snapshot, rendered, source.asset_id)
         output_hash = _checked_hash(rendered, missing_message="salvage render is missing")
         manifest = {
             "schema_version": 1,

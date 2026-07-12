@@ -146,10 +146,11 @@ def copy_verified_snapshot(source_path: str, destination: Path, expected: Source
             after.st_ctime_ns,
         )
         held_fd = os.open(destination, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
-        destination.unlink()
         completed = _stream_fd_identity(held_fd)
         if not stable or copied != expected or completed != expected:
             raise _identity_error("source changed while creating verified snapshot")
+        os.fchmod(held_fd, 0o400)
+        destination.unlink()
         handle = VerifiedSource(fd=held_fd, identity=completed)
         _ = handle.path
         held_fd = -1

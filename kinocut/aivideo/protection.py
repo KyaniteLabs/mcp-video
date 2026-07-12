@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 from collections.abc import Mapping
 from enum import StrEnum
 from typing import Any, cast
@@ -57,22 +59,27 @@ _OPERATION_FOOTPRINTS: dict[
     MutationOperation.CHANGE_RENDER_PARAMETERS: ((ElementType.RENDER_PARAMETER_SET, "render_parameter_set"),),
     MutationOperation.SALVAGE_CLEAN_EDGES: (
         (ElementType.SOURCE_ASSET, "source_asset"),
+        (ElementType.AUDIO_STREAM, "audio_stream"),
         (ElementType.CLIP_RANGE, "clip_range"),
     ),
     MutationOperation.SALVAGE_FREEZE_EXTENSION: (
         (ElementType.SOURCE_ASSET, "source_asset"),
+        (ElementType.AUDIO_STREAM, "audio_stream"),
         (ElementType.TIMING_MAP, "timing_map"),
     ),
     MutationOperation.SALVAGE_STILL_FRAME: (
         (ElementType.SOURCE_ASSET, "source_asset"),
+        (ElementType.AUDIO_STREAM, "audio_stream"),
         (ElementType.CLIP_RANGE, "clip_range"),
     ),
     MutationOperation.SALVAGE_REGION_CROP: (
         (ElementType.SOURCE_ASSET, "source_asset"),
+        (ElementType.AUDIO_STREAM, "audio_stream"),
         (ElementType.RENDER_PARAMETER_SET, "render_parameter_set"),
     ),
     MutationOperation.SALVAGE_BACKGROUND_ONLY: (
         (ElementType.SOURCE_ASSET, "source_asset"),
+        (ElementType.AUDIO_STREAM, "audio_stream"),
         (ElementType.RENDER_PARAMETER_SET, "render_parameter_set"),
     ),
 }
@@ -152,6 +159,15 @@ def touched_dependencies(operation: Any) -> set[tuple[ElementType, str]]:
     }
 
 
+def mutation_fingerprint(operation: Any) -> str:
+    """Bind an authorization to one exact operation and dependency footprint."""
+
+    intent = _coerce_intent(operation)
+    payload = intent.model_dump(mode="json", exclude={"authorization_decision_ids"})
+    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return "sha256:" + hashlib.sha256(canonical).hexdigest()
+
+
 def _active_records(project: Project, kind: str, model: type) -> list[Any]:
     records = [item for item in read_records(project, kind) if type(item) is model]
     superseded = {item.supersedes for item in records if item.supersedes is not None}
@@ -199,15 +215,16 @@ def _authorized(
     if original.target_ref not in {lock.dependency_fingerprint, lock.record_id}:
         return False
 
+    intent_fingerprint = mutation_fingerprint(intent)
     for decision_id in intent.authorization_decision_ids:
         decision = all_decisions.get(decision_id)
         if decision_id not in active_decision_ids:
             continue
-        if not _human_approval(decision, lock.dependency_fingerprint):
+        if not _human_approval(decision, intent_fingerprint):
             continue
         if decision is None:  # narrowed by _human_approval
             continue
-        if decision.target_ref not in {lock.dependency_fingerprint, lock.record_id}:
+        if decision.target_ref != intent_fingerprint:
             continue
         if _authorization_is_fresh(lock, original, decision):
             return True
