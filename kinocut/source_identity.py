@@ -48,6 +48,14 @@ class VerifiedSource:
         except OSError:
             raise _identity_error("verified source descriptor cleanup failed") from None
 
+    def verify(self) -> SourceIdentity:
+        """Re-hash the held descriptor and require its bound identity."""
+
+        observed = _stream_fd_identity(self.fd)
+        if observed != self.identity:
+            raise _identity_error("verified source descriptor changed")
+        return observed
+
 
 def _identity_error(message: str) -> MCPVideoError:
     return MCPVideoError(

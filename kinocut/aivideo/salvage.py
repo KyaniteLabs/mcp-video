@@ -6,7 +6,6 @@ import contextlib
 import hashlib
 import json
 import os
-import shutil
 import tempfile
 from enum import StrEnum
 from pathlib import Path
@@ -26,12 +25,8 @@ from kinocut.defaults import (
     DEFAULT_CRF,
     DEFAULT_PRESET,
     DEFAULT_SALVAGE_DURATION_TOLERANCE_SECONDS,
-    DEFAULT_SALVAGE_FREEZE_CODEC,
-    DEFAULT_SALVAGE_FREEZE_PIXEL_FORMAT,
 )
-from kinocut.engine_crop import crop
 from kinocut.engine_body_swap import _audio_fingerprint
-from kinocut.engine_edit import trim
 from kinocut.engine_probe import probe
 from kinocut.errors import MCPVideoError
 from kinocut.ffmpeg_helpers import (
@@ -39,10 +34,11 @@ from kinocut.ffmpeg_helpers import (
     _run_command,
     _run_ffmpeg,
 )
+from kinocut.aivideo.salvage_render import _crop_filter, _probe_source, _render
 from kinocut.projectstore import Project, append_record, ingest_asset, read_records
 from kinocut.projectstore import layout, store
 from kinocut.rescue.operations import _sha256
-from kinocut.source_identity import SourceIdentity, copy_verified_snapshot
+from kinocut.source_identity import SourceIdentity, VerifiedSource, copy_verified_snapshot
 
 
 class SalvageRecipe(StrEnum):
@@ -175,25 +171,21 @@ def _mutation_intent(
     return MutationIntent(**values)
 
 
-def _salvage_audio_fingerprint(source: Path) -> str:
+def _salvage_audio_fingerprint(source: Path, *, pass_fds: tuple[int, ...] = ()) -> str:
     """Return exact audio identity, including a stable no-audio sentinel."""
 
-    if probe(str(source)).audio_codec is None:
+    if _probe_source(source, pass_fds=pass_fds).audio_codec is None:
         return _digest(b"kinocut.salvage.no-audio.v1")
-    return _audio_fingerprint(str(source))
+    return _audio_fingerprint(str(source), pass_fds=pass_fds)
 
 
 @contextlib.contextmanager
 def _verified_source_snapshot(source: Path, expected: SourceIdentity, workspace: Path):
-    """Yield a private named copy produced from one held, verified descriptor."""
+    """Yield the held anonymous descriptor for one verified source snapshot."""
 
     held = copy_verified_snapshot(str(source), workspace / ".source-copy", expected)
-    snapshot = workspace / f"source{source.suffix}"
     try:
-        shutil.copyfile(held.path, snapshot)
-        if _checked_hash(snapshot, missing_message="verified source snapshot is missing") != expected.asset_id:
-            raise _salvage_error("verified source snapshot changed", "salvage_integrity_failed")
-        yield snapshot
+        yield held
     finally:
         held.close()
 
@@ -222,80 +214,6 @@ def _active_source(project: Project, asset_id: str) -> tuple[AssetRecord, Path]:
     return source, path
 
 
-def _render(recipe: SalvageRecipe, policy: dict[str, Any], source: Path, output: Path) -> None:
-    if recipe is SalvageRecipe.CLEAN_EDGES:
-        duration = probe(str(source)).duration - policy["trim_start"] - policy["trim_end"]
-        if duration <= 0:
-            raise _salvage_error("trim removes the complete source", "invalid_salvage_policy")
-        trim(str(source), start=policy["trim_start"], duration=duration, output_path=str(output), accurate=True)
-    elif recipe is SalvageRecipe.REGION_CROP:
-        info, region = probe(str(source)), policy["region"]
-        width, height = round(info.width * region["width"]), round(info.height * region["height"])
-        x, y = round(info.width * region["x"]), round(info.height * region["y"])
-        crop(str(source), width=width, height=height, x=x, y=y, output_path=str(output))
-    elif recipe is SalvageRecipe.STILL_FRAME:
-        _render_still(source, output, policy["timestamp"])
-    elif recipe is SalvageRecipe.FREEZE_EXTENSION:
-        _render_freeze(source, output, policy["extension_seconds"])
-    else:
-        _render_background_plate(source, output, policy["region"])
-
-
-def _render_still(source: Path, output: Path, timestamp: float) -> None:
-    if timestamp >= probe(str(source)).duration:
-        raise _salvage_error("still timestamp is outside the source", "invalid_salvage_policy")
-    _run_ffmpeg(["-ss", str(timestamp), "-i", str(source), "-frames:v", "1", str(output)])
-
-
-def _render_freeze(source: Path, output: Path, extension: float) -> None:
-    info = probe(str(source))
-    safe_extension = _escape_ffmpeg_filter_value(str(extension))
-    args = [
-        "-i",
-        str(source),
-        "-vf",
-        f"tpad=stop_mode=clone:stop_duration={safe_extension}",
-        "-t",
-        str(info.duration + extension),
-        "-an",
-        "-c:v",
-        DEFAULT_SALVAGE_FREEZE_CODEC,
-        "-pix_fmt",
-        DEFAULT_SALVAGE_FREEZE_PIXEL_FORMAT,
-        str(output),
-    ]
-    _run_ffmpeg(args)
-
-
-def _render_background_plate(source: Path, output: Path, region: dict[str, float]) -> None:
-    """Render a lossless video-only crop of the caller-declared region."""
-
-    info = probe(str(source))
-    width, height = round(info.width * region["width"]), round(info.height * region["height"])
-    x, y = round(info.width * region["x"]), round(info.height * region["y"])
-    crop_filter = _crop_filter(width, height, x, y)
-    _run_ffmpeg(
-        [
-            "-i",
-            str(source),
-            "-vf",
-            crop_filter,
-            "-an",
-            "-c:v",
-            DEFAULT_SALVAGE_FREEZE_CODEC,
-            "-pix_fmt",
-            DEFAULT_SALVAGE_FREEZE_PIXEL_FORMAT,
-            str(output),
-        ]
-    )
-
-
-def _crop_filter(width: int, height: int, x: int, y: int) -> str:
-    values = (_escape_ffmpeg_filter_value(str(value)) for value in (width, height, x, y))
-    safe_width, safe_height, safe_x, safe_y = values
-    return f"crop={safe_width}:{safe_height}:{safe_x}:{safe_y}"
-
-
 def _parse_frame_hashes(stdout: str) -> tuple[str, ...]:
     values = tuple(
         "md5:" + line.rsplit(",", 1)[1].strip().lower()
@@ -309,7 +227,7 @@ def _parse_frame_hashes(stdout: str) -> tuple[str, ...]:
     return values
 
 
-def _decoded_frame_hashes(path: Path) -> tuple[str, ...]:
+def _decoded_frame_hashes(path: Path, *, pass_fds: tuple[int, ...] = ()) -> tuple[str, ...]:
     """Return ordered hashes for every decoded video frame."""
 
     result = _run_command(
@@ -325,34 +243,49 @@ def _decoded_frame_hashes(path: Path) -> tuple[str, ...]:
             "-f",
             "framemd5",
             "-",
-        ]
+        ],
+        pass_fds=pass_fds,
     )
     return _parse_frame_hashes(result.stdout)
 
 
-def _decoded_frame_hash_at(path: Path, timestamp: float, video_filter: str | None = None) -> str:
+def _decoded_frame_hash_at(
+    path: Path,
+    timestamp: float,
+    video_filter: str | None = None,
+    *,
+    pass_fds: tuple[int, ...] = (),
+) -> str:
     """Decode and hash one deterministic representative video frame."""
 
     args = ["ffmpeg", "-v", "error", "-i", str(path), "-ss", f"{timestamp:.9f}"]
     if video_filter is not None:
         args.extend(["-vf", video_filter])
     args.extend(["-map", "0:v:0", "-an", "-frames:v", "1", "-f", "framemd5", "-"])
-    values = _parse_frame_hashes(_run_command(args).stdout)
+    values = _parse_frame_hashes(_run_command(args, pass_fds=pass_fds).stdout)
     if len(values) != 1:
         raise _salvage_error("representative frame hash is unavailable", "salvage_verification_failed")
     return values[0]
 
 
-def _background_origin_check(source: Path, output: Path, region: dict[str, float]) -> PreservationCheck:
+def _background_origin_check(
+    source: Path,
+    output: Path,
+    region: dict[str, float],
+    *,
+    pass_fds: tuple[int, ...] = (),
+) -> PreservationCheck:
     """Independently crop three source frames and compare their output peers."""
 
-    info = probe(str(source))
+    info = _probe_source(source, pass_fds=pass_fds)
     width, height = round(info.width * region["width"]), round(info.height * region["height"])
     x, y = round(info.width * region["x"]), round(info.height * region["y"])
     crop_filter = _crop_filter(width, height, x, y)
     final_time = max(0.0, info.duration - (1.0 / info.fps))
     timestamps = (0.0, info.duration / 2.0, final_time)
-    source_hashes = tuple(_decoded_frame_hash_at(source, timestamp, crop_filter) for timestamp in timestamps)
+    source_hashes = tuple(
+        _decoded_frame_hash_at(source, timestamp, crop_filter, pass_fds=pass_fds) for timestamp in timestamps
+    )
     output_hashes = tuple(_decoded_frame_hash_at(output, timestamp) for timestamp in timestamps)
     mismatches = sum(expected != observed for expected, observed in zip(source_hashes, output_hashes, strict=True))
     return PreservationCheck(
@@ -366,10 +299,12 @@ def _background_origin_check(source: Path, output: Path, region: dict[str, float
 def _freeze_checks(
     source: Path,
     output: Path,
+    *,
+    pass_fds: tuple[int, ...] = (),
 ) -> tuple[PreservationCheck, ...]:
     """Bind the transition and every frame through EOF to source tail."""
 
-    source_hashes = _decoded_frame_hashes(source)
+    source_hashes = _decoded_frame_hashes(source, pass_fds=pass_fds)
     output_hashes = _decoded_frame_hashes(output)
     source_tail = source_hashes[-1]
     transition_index = len(source_hashes) - 1
@@ -394,11 +329,18 @@ def _freeze_checks(
     )
 
 
-def _clean_edges_origin_check(source: Path, output: Path, policy: dict[str, Any]) -> PreservationCheck:
+def _clean_edges_origin_check(
+    source: Path,
+    output: Path,
+    policy: dict[str, Any],
+    *,
+    pass_fds: tuple[int, ...] = (),
+) -> PreservationCheck:
     """Compare output frames with an independently selected source interval."""
 
     start = _escape_ffmpeg_filter_value(str(policy["trim_start"]))
-    end = _escape_ffmpeg_filter_value(str(probe(str(source)).duration - policy["trim_end"]))
+    duration = _probe_source(source, pass_fds=pass_fds).duration
+    end = _escape_ffmpeg_filter_value(str(duration - policy["trim_end"]))
     select = f"select=gte(t\\,{start})*lt(t\\,{end}),setpts=N/FRAME_RATE/TB"
     with tempfile.TemporaryDirectory(dir=output.parent, prefix=".clean-verify.") as work:
         expected = Path(work) / "expected.mp4"
@@ -416,7 +358,8 @@ def _clean_edges_origin_check(source: Path, output: Path, policy: dict[str, Any]
                 "-crf",
                 str(DEFAULT_CRF),
                 str(expected),
-            ]
+            ],
+            pass_fds=pass_fds,
         )
         expected_hashes = _decoded_frame_hashes(expected)
     observed_hashes = _decoded_frame_hashes(output)
@@ -429,27 +372,34 @@ def _clean_edges_origin_check(source: Path, output: Path, policy: dict[str, Any]
     )
 
 
+def _source_unchanged_check(expected: str, observed: str) -> PreservationCheck:
+    return PreservationCheck(
+        claim="source_unchanged", passed=observed == expected, expected=expected, observed=observed
+    )
+
+
 def _checks(
-    recipe: SalvageRecipe, policy: dict[str, Any], source: Path, output: Path, source_hash: str
+    recipe: SalvageRecipe,
+    policy: dict[str, Any],
+    source: Path,
+    output: Path,
+    source_hash: str,
+    *,
+    verified_source: VerifiedSource,
+    pass_fds: tuple[int, ...] = (),
 ) -> tuple[PreservationCheck, ...]:
     _run_command(["ffmpeg", "-v", "error", "-i", str(output), "-f", "null", "-"])
-    source_info, output_info = probe(str(source)), probe(str(output))
-    observed_source = _checked_hash(source, missing_message="source asset is missing")
-    checks = [
-        PreservationCheck(
-            claim="source_unchanged",
-            passed=observed_source == source_hash,
-            expected=source_hash,
-            observed=observed_source,
-        )
-    ]
+    source_info = _probe_source(source, pass_fds=pass_fds)
+    output_info = probe(str(output))
+    observed_source = verified_source.verify().asset_id
+    checks = [_source_unchanged_check(source_hash, observed_source)]
     if recipe is SalvageRecipe.CLEAN_EDGES:
         expected = source_info.duration - policy["trim_start"] - policy["trim_end"]
         checks.append(_duration_check(output_info.duration, expected))
-        checks.append(_clean_edges_origin_check(source, output, policy))
+        checks.append(_clean_edges_origin_check(source, output, policy, pass_fds=pass_fds))
     elif recipe is SalvageRecipe.FREEZE_EXTENSION:
         checks.append(_duration_check(output_info.duration, source_info.duration + policy["extension_seconds"]))
-        checks.extend(_freeze_checks(source, output))
+        checks.extend(_freeze_checks(source, output, pass_fds=pass_fds))
         checks.append(
             PreservationCheck(
                 claim="audio_removed",
@@ -482,7 +432,7 @@ def _checks(
                 observed=output_info.resolution,
             )
         )
-        checks.append(_background_origin_check(source, output, region))
+        checks.append(_background_origin_check(source, output, region, pass_fds=pass_fds))
         checks.append(
             PreservationCheck(
                 claim="audio_removed",
@@ -503,7 +453,26 @@ def _checks(
         )
     if not all(check.passed for check in checks):
         raise _salvage_error("render did not satisfy its preservation claims", "salvage_verification_failed")
+    verified_source.verify()
     return tuple(checks)
+
+
+def _checks_from_descriptor(
+    recipe: SalvageRecipe,
+    policy: dict[str, Any],
+    source: VerifiedSource,
+    output: Path,
+    source_hash: str,
+) -> tuple[PreservationCheck, ...]:
+    return _checks(
+        recipe,
+        policy,
+        Path(source.path),
+        output,
+        source_hash,
+        verified_source=source,
+        pass_fds=source.pass_fds,
+    )
 
 
 def _duration_check(observed: float, expected: float) -> PreservationCheck:
@@ -735,18 +704,19 @@ def create_salvage_derivative(
     with store._mapped_os_errors(), tempfile.TemporaryDirectory(dir=work_root, prefix=".salvage-render.") as work:
         workspace = Path(work)
         expected = SourceIdentity(source.asset_id, source.byte_size)
-        with _verified_source_snapshot(source_path, expected, workspace) as snapshot:
+        with _verified_source_snapshot(source_path, expected, workspace) as held:
+            snapshot = Path(held.path)
             intent = _mutation_intent(
                 selected,
                 validated,
                 source.asset_id,
-                _salvage_audio_fingerprint(snapshot),
+                _salvage_audio_fingerprint(snapshot, pass_fds=held.pass_fds),
                 authorization_decision_ids,
             )
             assert_no_protected_collision(project, intent)
             rendered = workspace / f"derivative{suffix}"
-            _render(selected, validated, snapshot, rendered)
-            checks = _checks(selected, validated, snapshot, rendered, source.asset_id)
+            _render(selected, validated, snapshot, rendered, pass_fds=held.pass_fds)
+            checks = _checks_from_descriptor(selected, validated, held, rendered, source.asset_id)
         output_hash = _checked_hash(rendered, missing_message="salvage render is missing")
         manifest = {
             "schema_version": 1,

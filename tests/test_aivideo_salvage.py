@@ -185,14 +185,55 @@ def test_source_replacement_during_snapshot_fails_before_render(source, monkeypa
     assert excinfo.value.code == "source_identity_changed"
 
 
-def test_clean_edges_rejects_same_duration_from_wrong_source_interval(source, monkeypatch):
+def test_verified_source_cannot_be_substituted_and_restored_during_render(source, sample_video_no_audio, monkeypatch):
     import kinocut.aivideo.salvage as salvage
 
     project, original, _source_path = source
+    original_render = salvage._render
+    substitute = Path(sample_video_no_audio).read_bytes()
 
-    def wrong_interval(recipe, policy, source_path, output):
-        duration = probe(str(source_path)).duration - policy["trim_start"] - policy["trim_end"]
-        salvage.trim(str(source_path), start=0.0, duration=duration, output_path=str(output), accurate=True)
+    def substitute_then_restore(recipe, policy, source_path, output, **kwargs):
+        approved = Path(source_path).read_bytes()
+        Path(source_path).write_bytes(substitute)
+        try:
+            original_render(recipe, policy, source_path, output, **kwargs)
+        finally:
+            Path(source_path).write_bytes(approved)
+
+    monkeypatch.setattr(salvage, "_render", substitute_then_restore)
+
+    with pytest.raises(MCPVideoError) as excinfo:
+        create_salvage_derivative(
+            project,
+            source_asset_id=original.asset_id,
+            recipe="still_frame",
+            policy={"timestamp": 1.0},
+            acceptance_spec_id=_ACCEPTANCE_SPEC,
+        )
+
+    assert excinfo.value.code == "invalid_record"
+    assert len(read_records(project, "asset_record")) == 1
+
+
+def test_clean_edges_rejects_same_duration_from_wrong_source_interval(source, monkeypatch):
+    import kinocut.aivideo.salvage as salvage
+    import kinocut.aivideo.salvage_render as salvage_render
+
+    project, original, _source_path = source
+
+    def wrong_interval(recipe, policy, source_path, output, **kwargs):
+        duration = (
+            salvage._probe_source(source_path, pass_fds=kwargs.get("pass_fds", ())).duration
+            - policy["trim_start"]
+            - policy["trim_end"]
+        )
+        salvage_render._trim_source(
+            source_path,
+            output,
+            start=0.0,
+            duration=duration,
+            pass_fds=kwargs.get("pass_fds", ()),
+        )
 
     monkeypatch.setattr(salvage, "_render", wrong_interval)
     with pytest.raises(MCPVideoError) as excinfo:
@@ -208,21 +249,21 @@ def test_clean_edges_rejects_same_duration_from_wrong_source_interval(source, mo
 
 
 def test_clean_edges_rejects_systematic_trim_interval_defect(source, monkeypatch):
-    import kinocut.aivideo.salvage as salvage
+    import kinocut.aivideo.salvage_render as salvage_render
 
     project, original, _source_path = source
-    real_trim = salvage.trim
+    real_trim = salvage_render._trim_source
 
-    def defective_trim(input_path, *, start, duration, output_path, accurate):
+    def defective_trim(source_path, output, *, start, duration, pass_fds):
         real_trim(
-            input_path,
+            source_path,
+            output,
             start=0.0,
             duration=duration,
-            output_path=output_path,
-            accurate=accurate,
+            pass_fds=pass_fds,
         )
 
-    monkeypatch.setattr(salvage, "trim", defective_trim)
+    monkeypatch.setattr(salvage_render, "_trim_source", defective_trim)
     with pytest.raises(MCPVideoError) as excinfo:
         create_salvage_derivative(
             project,
