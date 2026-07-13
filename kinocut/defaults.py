@@ -93,6 +93,17 @@ DEFAULT_SALVAGE_DURATION_TOLERANCE_SECONDS = 0.12
 DEFAULT_SALVAGE_FREEZE_CODEC = "ffv1"
 DEFAULT_SALVAGE_FREEZE_PIXEL_FORMAT = "yuv420p"
 
+# Subtitle QA defaults — shared source of truth per AGENTS.md Rule 12.
+# Tunable thresholds plus the shipped design-guardrail heuristic factors used
+# to estimate subtitle bounding boxes at full display resolution.
+DEFAULT_SUBTITLE_QA_READING_SPEED_CPS = 25.0
+DEFAULT_SUBTITLE_QA_GAP_SECONDS_THRESHOLD = 3.0
+DEFAULT_SUBTITLE_QA_CHAR_WIDTH_FACTOR = 0.6
+DEFAULT_SUBTITLE_QA_LINE_HEIGHT_FACTOR = 1.2
+# Deterministic detectors produce certain findings — this confidence value is
+# the semantic representation of that certainty, not a tunable threshold.
+DEFAULT_SUBTITLE_QA_DETECTOR_CONFIDENCE = 1.0
+
 # Grid/layout defaults
 DEFAULT_GRID_CELL_WIDTH = 640
 DEFAULT_GRID_CELL_HEIGHT = 480

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from typing import NamedTuple
 
 from .errors import MCPVideoError
 from .limits import *  # noqa: F403 — re-export all limit constants
@@ -267,6 +268,70 @@ _CSS_COLOR_NAMES = frozenset(
 
 _HEX_COLOR_RE = re.compile(r"^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$")
 _FFMPEG_SPECIAL_CHARS = set(":=;'[]\\")
+
+
+# --------------------------------------------------------------------------- #
+# Subtitle safe-area profile data (immutable source of truth)
+# --------------------------------------------------------------------------- #
+#
+# The numeric profile constants below — display dimensions, title-safe margin,
+# subtitle font size, anchor position, and line/character constraints — are
+# validation constants per AGENTS.md Rule 13.  The subtitle QA module imports
+# this tuple and builds its typed ``PLATFORM_PROFILES`` dict deterministically
+# from it so there is exactly one source of truth.
+
+
+class SubtitleSafeAreaProfileData(NamedTuple):
+    """Immutable record for one platform's subtitle safe-area constraints."""
+
+    platform: str
+    display_width: int
+    display_height: int
+    title_safe_margin_pct: float
+    subtitle_font_size_px: int
+    subtitle_anchor_x_pct: float
+    subtitle_anchor_y_pct: float
+    max_chars_per_line: int
+    max_lines: int
+
+
+#: Immutable platform safe-area profiles — the single source of truth used by
+#: the deterministic subtitle safe-area QA across vertical/horizontal/square.
+SUBTITLE_SAFE_AREA_PROFILES: tuple[SubtitleSafeAreaProfileData, ...] = (
+    SubtitleSafeAreaProfileData(
+        platform="vertical",
+        display_width=1080,
+        display_height=1920,
+        title_safe_margin_pct=0.08,
+        subtitle_font_size_px=64,
+        subtitle_anchor_x_pct=0.5,
+        subtitle_anchor_y_pct=0.90,
+        max_chars_per_line=28,
+        max_lines=3,
+    ),
+    SubtitleSafeAreaProfileData(
+        platform="horizontal",
+        display_width=1920,
+        display_height=1080,
+        title_safe_margin_pct=0.10,
+        subtitle_font_size_px=48,
+        subtitle_anchor_x_pct=0.5,
+        subtitle_anchor_y_pct=0.88,
+        max_chars_per_line=42,
+        max_lines=3,
+    ),
+    SubtitleSafeAreaProfileData(
+        platform="square",
+        display_width=1080,
+        display_height=1080,
+        title_safe_margin_pct=0.08,
+        subtitle_font_size_px=56,
+        subtitle_anchor_x_pct=0.5,
+        subtitle_anchor_y_pct=0.88,
+        max_chars_per_line=36,
+        max_lines=3,
+    ),
+)
 
 
 def _validate_color(color: str) -> None:

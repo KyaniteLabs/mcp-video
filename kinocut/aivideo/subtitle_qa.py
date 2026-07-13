@@ -20,6 +20,13 @@ from dataclasses import dataclass
 from itertools import pairwise
 
 from kinocut.contracts.defect import DefectCode, DefectFinding, Severity
+from kinocut.defaults import (
+    DEFAULT_SUBTITLE_QA_CHAR_WIDTH_FACTOR as _CHAR_WIDTH_FACTOR,
+    DEFAULT_SUBTITLE_QA_DETECTOR_CONFIDENCE as _DETECTOR_CONFIDENCE,
+    DEFAULT_SUBTITLE_QA_GAP_SECONDS_THRESHOLD as DEFAULT_GAP_SECONDS_THRESHOLD,
+    DEFAULT_SUBTITLE_QA_LINE_HEIGHT_FACTOR as _LINE_HEIGHT_FACTOR,
+    DEFAULT_SUBTITLE_QA_READING_SPEED_CPS as DEFAULT_READING_SPEED_CPS,
+)
 from kinocut.errors import MCPVideoError
 from kinocut.ffmpeg_helpers import (
     _get_video_duration,
@@ -27,25 +34,24 @@ from kinocut.ffmpeg_helpers import (
     _validate_input_path,
 )
 from kinocut.subtitles_eof import ClampWarning, clamp_segments_to_eof
+from kinocut.validation import SUBTITLE_SAFE_AREA_PROFILES
 
 # --------------------------------------------------------------------------- #
-# QA defaults (module-local — no shared-default edits per task constraints)
+# Module-local identifiers (not tunable defaults — see AGENTS.md Rule 12)
 # --------------------------------------------------------------------------- #
-
-#: Standard adult-content reading-speed ceiling (chars per second).
-DEFAULT_READING_SPEED_CPS = 25.0
-
-#: Gap between consecutive cues beyond which a ``meaningful_gap`` finding fires.
-DEFAULT_GAP_SECONDS_THRESHOLD = 3.0
-
-#: Factor approximating average glyph width relative to font size.
-_CHAR_WIDTH_FACTOR = 0.6
-
-#: Factor approximating line height relative to font size.
-_LINE_HEIGHT_FACTOR = 1.2
+#
+# The five numeric defaults above (reading-speed ceiling, gap threshold,
+# glyph/line-height heuristic factors, and detector confidence) live in
+# ``defaults.py`` per AGENTS.md Rule 12 and are re-bound here under stable
+# names so public signatures stay backward-compatible. The identifiers below
+# are NOT defaults: they are this module's unique namespace name, its stable
+# validation error code, the measurement-protocol encoding for
+# ``ClampWarning``, and the deterministic-detector agent identity.  None is a
+# magic number or a tunable value, so they stay at point of use.
 
 _DETECTOR_PREFIX = "deterministic:subtitle_qa"
 _ERR_CODE = "invalid_subtitle_qa_input"
+_AGENT_IDENTITY = "agent:subtitle_qa"
 
 #: Numeric encoding for clamp warnings (Measurement.value must be float).
 _CLAMP_CODE: dict[ClampWarning, float] = {
@@ -100,43 +106,27 @@ class SubtitleQaReport:
 
 
 # --------------------------------------------------------------------------- #
-# Platform profiles — deterministic full-display-resolution constants
+# Platform profiles — built deterministically from shared immutable data
 # --------------------------------------------------------------------------- #
+#
+# The immutable source-of-truth profile data (dimensions, margins, font size,
+# anchor, line constraints) lives in ``kinocut.validation`` per AGENTS.md
+# Rule 13.  This dict is built from that data so there is exactly one source
+# of truth and no opportunity for the two surfaces to diverge.
 
 PLATFORM_PROFILES: dict[str, SafeAreaProfile] = {
-    "vertical": SafeAreaProfile(
-        platform="vertical",
-        display_width=1080,
-        display_height=1920,
-        title_safe_margin_pct=0.08,
-        subtitle_font_size_px=64,
-        subtitle_anchor_x_pct=0.5,
-        subtitle_anchor_y_pct=0.90,
-        max_chars_per_line=28,
-        max_lines=3,
-    ),
-    "horizontal": SafeAreaProfile(
-        platform="horizontal",
-        display_width=1920,
-        display_height=1080,
-        title_safe_margin_pct=0.10,
-        subtitle_font_size_px=48,
-        subtitle_anchor_x_pct=0.5,
-        subtitle_anchor_y_pct=0.88,
-        max_chars_per_line=42,
-        max_lines=3,
-    ),
-    "square": SafeAreaProfile(
-        platform="square",
-        display_width=1080,
-        display_height=1080,
-        title_safe_margin_pct=0.08,
-        subtitle_font_size_px=56,
-        subtitle_anchor_x_pct=0.5,
-        subtitle_anchor_y_pct=0.88,
-        max_chars_per_line=36,
-        max_lines=3,
-    ),
+    data.platform: SafeAreaProfile(
+        platform=data.platform,
+        display_width=data.display_width,
+        display_height=data.display_height,
+        title_safe_margin_pct=data.title_safe_margin_pct,
+        subtitle_font_size_px=data.subtitle_font_size_px,
+        subtitle_anchor_x_pct=data.subtitle_anchor_x_pct,
+        subtitle_anchor_y_pct=data.subtitle_anchor_y_pct,
+        max_chars_per_line=data.max_chars_per_line,
+        max_lines=data.max_lines,
+    )
+    for data in SUBTITLE_SAFE_AREA_PROFILES
 }
 
 
@@ -170,7 +160,7 @@ def _make_finding(
     severity: Severity,
     detector: str,
     measurements: tuple[dict[str, object], ...],
-    confidence: float = 1.0,
+    confidence: float = _DETECTOR_CONFIDENCE,
 ) -> DefectFinding:
     """Construct one typed DefectFinding from the common field set."""
     return DefectFinding(
@@ -260,7 +250,7 @@ def qa_subtitle_temporal(
     eof_seconds: float,
     project_id: str,
     target_id: str | None = None,
-    created_by: str = "agent:subtitle_qa",
+    created_by: str = _AGENT_IDENTITY,
     reading_speed_cps_threshold: float = DEFAULT_READING_SPEED_CPS,
     gap_seconds_threshold: float = DEFAULT_GAP_SECONDS_THRESHOLD,
 ) -> tuple[DefectFinding, ...]:
@@ -513,7 +503,7 @@ def qa_subtitle_safe_area(
     profile: SafeAreaProfile,
     project_id: str,
     target_id: str | None = None,
-    created_by: str = "agent:subtitle_qa",
+    created_by: str = _AGENT_IDENTITY,
     overlay_regions: Sequence[Mapping[str, float]] = (),
 ) -> tuple[DefectFinding, ...]:
     """Flag subtitle/overlay safe-area collisions at full display resolution.
@@ -702,7 +692,7 @@ def subtitle_qa(
     *,
     project_id: str,
     profile: str | None = None,
-    created_by: str = "agent:subtitle_qa",
+    created_by: str = _AGENT_IDENTITY,
     reading_speed_cps_threshold: float = DEFAULT_READING_SPEED_CPS,
     gap_seconds_threshold: float = DEFAULT_GAP_SECONDS_THRESHOLD,
     overlay_regions: Sequence[Mapping[str, float]] = (),

@@ -583,3 +583,189 @@ def test_qa_all_findings_are_valid_defect_records():
         assert 0.0 <= finding.confidence <= 1.0
         assert finding.detector.startswith("deterministic:subtitle_qa")
         assert finding.status.value == "suspected"
+
+
+# --------------------------------------------------------------------------- #
+# Shared-defaults divergence (AGENTS.md Rule 12)
+# --------------------------------------------------------------------------- #
+
+
+def test_qa_defaults_sourced_from_shared_defaults_module():
+    """Subtitle QA defaults must come from ``defaults.py``, not be redefined.
+
+    Identity checks (not equality) catch silent divergence: if anyone
+    reintroduces a module-level literal or rebinds the public function default
+    to a hardcoded number, ``is`` fails because Python does not intern floats.
+    """
+    import inspect
+
+    from kinocut.aivideo import subtitle_qa
+    from kinocut.defaults import (
+        DEFAULT_SUBTITLE_QA_CHAR_WIDTH_FACTOR,
+        DEFAULT_SUBTITLE_QA_DETECTOR_CONFIDENCE,
+        DEFAULT_SUBTITLE_QA_GAP_SECONDS_THRESHOLD,
+        DEFAULT_SUBTITLE_QA_LINE_HEIGHT_FACTOR,
+        DEFAULT_SUBTITLE_QA_READING_SPEED_CPS,
+    )
+
+    # Module-level aliases must reference the shared defaults exactly.
+    assert subtitle_qa.DEFAULT_READING_SPEED_CPS is DEFAULT_SUBTITLE_QA_READING_SPEED_CPS
+    assert subtitle_qa.DEFAULT_GAP_SECONDS_THRESHOLD is DEFAULT_SUBTITLE_QA_GAP_SECONDS_THRESHOLD
+    assert subtitle_qa._CHAR_WIDTH_FACTOR is DEFAULT_SUBTITLE_QA_CHAR_WIDTH_FACTOR
+    assert subtitle_qa._LINE_HEIGHT_FACTOR is DEFAULT_SUBTITLE_QA_LINE_HEIGHT_FACTOR
+    assert subtitle_qa._DETECTOR_CONFIDENCE is DEFAULT_SUBTITLE_QA_DETECTOR_CONFIDENCE
+
+    # Public function default args must bind to the same shared objects.
+    sig_temporal = inspect.signature(subtitle_qa.qa_subtitle_temporal)
+    assert (
+        sig_temporal.parameters["reading_speed_cps_threshold"].default
+        is DEFAULT_SUBTITLE_QA_READING_SPEED_CPS
+    )
+    assert (
+        sig_temporal.parameters["gap_seconds_threshold"].default
+        is DEFAULT_SUBTITLE_QA_GAP_SECONDS_THRESHOLD
+    )
+
+    sig_full = inspect.signature(subtitle_qa.subtitle_qa)
+    assert (
+        sig_full.parameters["reading_speed_cps_threshold"].default
+        is DEFAULT_SUBTITLE_QA_READING_SPEED_CPS
+    )
+    assert (
+        sig_full.parameters["gap_seconds_threshold"].default
+        is DEFAULT_SUBTITLE_QA_GAP_SECONDS_THRESHOLD
+    )
+
+    # Private helper confidence default must also bind to the shared object.
+    sig_finding = inspect.signature(subtitle_qa._make_finding)
+    assert (
+        sig_finding.parameters["confidence"].default
+        is DEFAULT_SUBTITLE_QA_DETECTOR_CONFIDENCE
+    )
+
+
+def test_qa_defaults_module_does_not_redefine_shared_numeric_values():
+    """The subtitle_qa module must not contain a local numeric redefinition.
+
+    AST-scans the source so a future edit that adds e.g.
+    ``DEFAULT_READING_SPEED_CPS = 25.0`` (with the same value) is still caught,
+    even though the value would happen to compare equal.
+    """
+    import ast
+    import pathlib
+
+    from kinocut.aivideo import subtitle_qa
+
+    shared_names = {
+        "DEFAULT_SUBTITLE_QA_READING_SPEED_CPS",
+        "DEFAULT_SUBTITLE_QA_GAP_SECONDS_THRESHOLD",
+        "DEFAULT_SUBTITLE_QA_CHAR_WIDTH_FACTOR",
+        "DEFAULT_SUBTITLE_QA_LINE_HEIGHT_FACTOR",
+        "DEFAULT_SUBTITLE_QA_DETECTOR_CONFIDENCE",
+    }
+    rebound = {
+        "DEFAULT_READING_SPEED_CPS",
+        "DEFAULT_GAP_SECONDS_THRESHOLD",
+        "_CHAR_WIDTH_FACTOR",
+        "_LINE_HEIGHT_FACTOR",
+        "_DETECTOR_CONFIDENCE",
+    }
+
+    source = pathlib.Path(subtitle_qa.__file__).read_text(encoding="utf-8")
+    tree = ast.parse(source)
+
+    # No module-level Assign/AnnAssign may re-bind the alias names — they must
+    # come through `from kinocut.defaults import ... as ...` only.
+    offenders: list[str] = []
+    for node in tree.body:
+        if isinstance(node, ast.Assign | ast.AnnAssign):
+            targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+            for target in targets:
+                if isinstance(target, ast.Name) and target.id in rebound:
+                    offenders.append(target.id)
+    assert offenders == [], (
+        f"subtitle_qa redefines shared-default aliases locally: {offenders}"
+    )
+
+    # The shared names must be imported from defaults, not defined inline.
+    imported_from_defaults: set[str] = set()
+    for node in tree.body:
+        if isinstance(node, ast.ImportFrom) and node.module and node.module.endswith("defaults"):
+            for alias in node.names:
+                imported_from_defaults.add(alias.name)
+    assert shared_names <= imported_from_defaults, (
+        f"subtitle_qa missing required shared-default imports: "
+        f"{shared_names - imported_from_defaults}"
+    )
+
+
+# --------------------------------------------------------------------------- #
+# Platform profiles — divergence from shared validation data (Rule 13)
+# --------------------------------------------------------------------------- #
+
+
+def test_qa_platform_profiles_built_from_validation_data():
+    """PLATFORM_PROFILES must match the immutable validation source exactly.
+
+    Every field of every profile is compared against
+    ``SUBTITLE_SAFE_AREA_PROFILES`` from ``validation.py`` so a silent edit
+    to either surface is caught.
+    """
+    from kinocut.aivideo.subtitle_qa import PLATFORM_PROFILES, SafeAreaProfile
+    from kinocut.validation import SUBTITLE_SAFE_AREA_PROFILES
+
+    assert len(PLATFORM_PROFILES) == len(SUBTITLE_SAFE_AREA_PROFILES)
+    for data in SUBTITLE_SAFE_AREA_PROFILES:
+        assert data.platform in PLATFORM_PROFILES
+        profile = PLATFORM_PROFILES[data.platform]
+        assert isinstance(profile, SafeAreaProfile)
+        assert profile.platform == data.platform
+        assert profile.display_width == data.display_width
+        assert profile.display_height == data.display_height
+        assert profile.title_safe_margin_pct == data.title_safe_margin_pct
+        assert profile.subtitle_font_size_px == data.subtitle_font_size_px
+        assert profile.subtitle_anchor_x_pct == data.subtitle_anchor_x_pct
+        assert profile.subtitle_anchor_y_pct == data.subtitle_anchor_y_pct
+        assert profile.max_chars_per_line == data.max_chars_per_line
+        assert profile.max_lines == data.max_lines
+
+
+def test_qa_platform_profiles_not_hardcoded_in_subtitle_qa():
+    """subtitle_qa must build PLATFORM_PROFILES from imported data, not literals.
+
+    AST-scans the source so a future edit that re-introduces literal
+    ``SafeAreaProfile(...)`` calls with hardcoded numbers inside a module-level
+    dict is caught.
+    """
+    import ast
+    import pathlib
+
+    from kinocut.aivideo import subtitle_qa
+
+    source = pathlib.Path(subtitle_qa.__file__).read_text(encoding="utf-8")
+    tree = ast.parse(source)
+
+    # SUBTITLE_SAFE_AREA_PROFILES must be imported from validation.
+    imported_from_validation: set[str] = set()
+    profile_value: ast.expr | None = None
+    for node in tree.body:
+        if isinstance(node, ast.ImportFrom) and node.module and node.module.endswith("validation"):
+            for alias in node.names:
+                imported_from_validation.add(alias.name)
+        if isinstance(node, ast.Assign):
+            for target in node.targets:
+                if isinstance(target, ast.Name) and target.id == "PLATFORM_PROFILES":
+                    profile_value = node.value
+        elif isinstance(node, ast.AnnAssign):
+            if isinstance(node.target, ast.Name) and node.target.id == "PLATFORM_PROFILES":
+                profile_value = node.value
+    assert "SUBTITLE_SAFE_AREA_PROFILES" in imported_from_validation, (
+        "subtitle_qa must import SUBTITLE_SAFE_AREA_PROFILES from validation"
+    )
+    assert profile_value is not None, "PLATFORM_PROFILES must be defined"
+    # The dict must be built via comprehension over the imported data, not a
+    # literal dict with SafeAreaProfile calls using hardcoded numbers.
+    assert isinstance(profile_value, ast.DictComp), (
+        "PLATFORM_PROFILES must be a dict comprehension built from "
+        "SUBTITLE_SAFE_AREA_PROFILES, not hardcoded literals"
+    )
