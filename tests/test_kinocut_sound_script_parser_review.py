@@ -82,6 +82,61 @@ def _generic_parsed() -> parser.ParsedScript:
             _actor("actor_a", "voice_a"),
         ),
     )
+def _two_scene_parsed() -> parser.ParsedScript:
+    document = _generic_document()
+    first_scene = document["scenes"][0]
+    first_scene["lines"] = first_scene["lines"][:1]
+    first_scene["beats"] = first_scene["beats"][:1]
+    document["scenes"].append(
+        {
+            "scene_id": "scene_other",
+            "pause_after_seconds": 0.0,
+            "lines": [
+                {
+                    "actor_id": "actor_a",
+                    "text": "Across the hall.",
+                    "kind": "dialogue",
+                    "pause_after_seconds": 0.0,
+                }
+            ],
+        }
+    )
+    return parser.parse_episode_script(
+        document,
+        project_id="project_alpha",
+        created_by="agent:worker_1",
+        actors=(
+            _actor("narrator", "voice_narrator"),
+            _actor("actor_a", "voice_a"),
+        ),
+    )
+
+
+def _chapter_only_parsed() -> parser.ParsedScript:
+    return parser.parse_wf_episode_script(
+        {
+            "episode_id": "wf_chapter_review",
+            "scenes": [
+                {
+                    "scene_id": "wf_scene",
+                    "turns": [
+                        {
+                            "character": "Narrator",
+                            "text": "Chapter One",
+                            "confessional": False,
+                        }
+                    ],
+                }
+            ],
+        },
+        project_id="project_alpha",
+        created_by="agent:worker_1",
+        actors=(),
+        character_routes={},
+        narrator_character="Narrator",
+    )
+
+
 
 
 def test_generic_parser_represents_action_narration_voiceover_and_beats_in_source_order():
@@ -164,6 +219,51 @@ def test_parsed_script_model_rejects_referential_integrity_defects(defect):
         payload["scenes"][0]["line_ids"] = payload["scenes"][0]["line_ids"][:1]
     else:
         payload["scenes"][0]["line_ids"] = list(reversed(payload["scenes"][0]["line_ids"]))
+
+    with pytest.raises(ValidationError):
+        parser.ParsedScript.model_validate(payload)
+
+
+@pytest.mark.parametrize("defect", ["event_scene", "beat_scene"])
+def test_parsed_script_rejects_event_or_beat_scene_ownership_mismatch(defect):
+    payload = _generic_parsed().model_dump(mode="json")
+    if defect == "event_scene":
+        payload["events"][0]["scene_id"] = "scene_other"
+    else:
+        payload["beats"][0]["scene_id"] = "scene_other"
+
+    with pytest.raises(ValidationError):
+        parser.ParsedScript.model_validate(payload)
+
+
+@pytest.mark.parametrize(("event_index", "wrong_kind"), [(0, "beat"), (1, "line")])
+def test_parsed_script_rejects_line_or_beat_event_kind_mismatch(event_index, wrong_kind):
+    payload = _generic_parsed().model_dump(mode="json")
+    payload["events"][event_index]["kind"] = wrong_kind
+
+    with pytest.raises(ValidationError):
+        parser.ParsedScript.model_validate(payload)
+
+
+def test_parsed_script_rejects_chapter_event_kind_mismatch():
+    payload = _chapter_only_parsed().model_dump(mode="json")
+    payload["events"][0]["kind"] = "line"
+
+    with pytest.raises(ValidationError):
+        parser.ParsedScript.model_validate(payload)
+
+
+def test_parsed_script_rejects_beat_after_line_from_another_scene():
+    payload = _two_scene_parsed().model_dump(mode="json")
+    payload["beats"][0]["after_line_id"] = "line_0002_0001"
+
+    with pytest.raises(ValidationError):
+        parser.ParsedScript.model_validate(payload)
+
+
+def test_parsed_script_rejects_chapter_card_scene_ownership_mismatch():
+    payload = _chapter_only_parsed().model_dump(mode="json")
+    payload["chapter_cards"][0]["scene_id"] = "scene_other"
 
     with pytest.raises(ValidationError):
         parser.ParsedScript.model_validate(payload)

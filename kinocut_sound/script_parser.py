@@ -23,6 +23,7 @@ from kinocut_sound._canonical import (
     location_violation,
 )
 from kinocut_sound._errors import SoundContractError
+from kinocut_sound._script_integrity import validate_script_relationships
 from kinocut_sound.lines import Emotion, Line, ProfileRef, Prosody
 from kinocut_sound.limits import MIN_TEXT_LENGTH_CHARS, MIN_TIME_SECONDS, MIN_VERSION
 
@@ -275,6 +276,13 @@ class ParsedScript(RecordBase):
         )
         if set(event_ids) != set(known_ids):
             raise ValueError("events must reference every parsed object exactly once")
+        validate_script_relationships(
+            scenes=self.scenes,
+            parsed_lines=self.parsed_lines,
+            beats=self.beats,
+            chapter_cards=self.chapter_cards,
+            events=self.events,
+        )
         return self
 
     def canonical_id(self) -> str:
