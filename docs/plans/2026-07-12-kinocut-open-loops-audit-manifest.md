@@ -1,5 +1,13 @@
 # Kinocut all-open-loops controller audit and execution manifest
 
+> **Implementation amendment:** The inventory below is the pre-ready-units audit snapshot.
+> Governed audio-bed composition, voice seam checks, approved-asset registry queries, subtitle QA,
+> deterministic graphics, and the `kinocut_sound` foundation have since landed in the reviewed
+> integration checkpoint at `090424c`. See
+> [`../status/2026-07-12-ready-units-integration-checkpoint.md`](../status/2026-07-12-ready-units-integration-checkpoint.md)
+> for exact evidence. Unamended open/closed counts below are historical and must not be used as the
+> current completion claim.
+
 **Status:** decision-complete repo-native manifest; audit only — no implementation, push, merge, tag, publish, deploy, or release authorized by this document.
 
 **Audit base:** `c0032d8` on `codex/niko-plan-audit`.

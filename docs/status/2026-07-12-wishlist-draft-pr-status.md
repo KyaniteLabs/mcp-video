@@ -1,5 +1,10 @@
 # AI-video and sound program: draft PR status
 
+> **Successor status:** This historical Wave-3 checkpoint is superseded by
+> [`2026-07-12-ready-units-integration-checkpoint.md`](2026-07-12-ready-units-integration-checkpoint.md),
+> which records the reviewed audio, registry, subtitle, graphics, and `kinocut_sound` foundation
+> integration at `090424c`. The release stop remains unchanged.
+
 **Snapshot date:** 2026-07-12
 
 **Current reviewed implementation tip:** `46e5e0d84b6e0d325e226c540e3384dbee3ef0b0`
