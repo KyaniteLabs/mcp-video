@@ -7,6 +7,7 @@ import warnings
 import pytest
 from pydantic import ValidationError
 
+from kinocut_sound._canonical import canonical_digest
 from kinocut_sound.provider_policy import (
     CloudExecutionApproval,
     ExecutionPolicy,
@@ -15,7 +16,7 @@ from kinocut_sound.provider_policy import (
     validate_cloud_approval,
 )
 from kinocut_sound.registry import AdapterRegistry, RegistryError
-from kinocut_sound.s3_cache import AuthorizationAwareCache, AuthorizedLineage
+from kinocut_sound.s3_cache import AuthorizationAwareCache, AuthorizedLineage, CacheError
 from kinocut_sound.s3_fingerprint import build_render_fingerprint
 
 from tests.test_kinocut_sound_s3_policy import (
@@ -90,6 +91,82 @@ def test_cloud_approval_self_validates_policy_without_external_policy() -> None:
         with pytest.raises(RegistryError) as exc_info:
             validate_cloud_approval(approval.model_copy(update=update))
         assert exc_info.value.code == "cloud_policy_changed"
+
+
+def test_coherent_model_copy_forgery_loses_internal_issuance_proof() -> None:
+    _, approval, policy = _approved_cloud()
+    validate_cloud_approval(approval)
+    validate_cloud_approval(approval, policy)
+
+    forged_route = approval.route_snapshot.model_copy(
+        update={
+            "provider_id": "provider_b",
+            "region": "eu-west-1",
+            "egress_host": "api.other.test",
+            "credential_handle": "provider_b_key",
+        }
+    )
+    forged_request = approval.request_snapshot.model_copy(
+        update={
+            "egress_host": forged_route.egress_host,
+            "credential_handle": forged_route.credential_handle,
+        }
+    )
+    forged_policy = approval.policy_snapshot.model_copy(update={"routes": (forged_route,)})
+    forged = approval.model_copy(
+        update={
+            "provider_id": forged_route.provider_id,
+            "region": forged_route.region,
+            "egress_host": forged_route.egress_host,
+            "credential_handle": forged_route.credential_handle,
+            "request_snapshot": forged_request,
+            "route_snapshot": forged_route,
+            "policy_snapshot": forged_policy,
+            "request_digest": canonical_digest(forged_request),
+            "route_digest": canonical_digest(forged_route),
+            "limits_digest": canonical_digest(approval.limits_snapshot),
+            "policy_digest": canonical_digest(forged_policy),
+        }
+    )
+
+    validation_errors: list[str | None] = []
+    for expected_policy in (None, forged_policy):
+        try:
+            validate_cloud_approval(forged, expected_policy)
+        except RegistryError as exc:
+            validation_errors.append(exc.code)
+        else:
+            validation_errors.append(None)
+
+    ledger = _ledger()
+    ledger.acquire_lease(
+        "lease_forged",
+        grant_ids=("grant_a",),
+        ttl_seconds=30,
+        context=_CONTEXT,
+        at_iso=_NOW,
+        actor_id="actor_a",
+    )
+    cache_error = None
+    try:
+        AuthorizationAwareCache().store_authorized(
+            build_render_fingerprint(_fingerprint_inputs()),
+            "render:forged",
+            artifact_id="forged_output",
+            artifact_digest=_SHA_A,
+            lineage=AuthorizedLineage(lease_id="lease_forged", actor_id="actor_a"),
+            ledger=ledger,
+            context=_CONTEXT,
+            at_iso=_NOW,
+            cloud_approval=forged,
+        )
+    except CacheError as exc:
+        cache_error = exc.code
+
+    assert {"validation_errors": validation_errors, "cache_error": cache_error} == {
+        "validation_errors": ["cloud_policy_changed", "cloud_policy_changed"],
+        "cache_error": "cache_cloud_unconfirmed",
+    }
 
 
 def test_authorized_cache_lease_lineage_uses_real_s2_commit_contract() -> None:

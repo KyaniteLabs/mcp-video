@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import hmac
 from itertools import islice
 import logging
+import secrets
 from typing import Protocol, TypeVar
 
 from pydantic import Field, PrivateAttr, StrictBool, field_validator, model_validator
@@ -48,7 +50,7 @@ from kinocut_sound.validation import ISO8601_RE, TERRITORY_RE
 logger = logging.getLogger(__name__)
 
 _ModelT = TypeVar("_ModelT", bound=FrozenModel)
-_APPROVAL_ISSUER = object()
+_APPROVAL_SIGNING_KEY = secrets.token_bytes(32)
 
 
 def _error(message: str, code: str) -> RegistryError:
@@ -318,7 +320,7 @@ class CloudExecutionApproval(FrozenModel):
     limits_digest: Sha256
     policy_digest: Sha256
     confirmed: StrictBool
-    _issuer_token: object | None = PrivateAttr(default=None)
+    _issuance_proof: str | None = PrivateAttr(default=None)
 
     @field_validator("provider_id", "region", "egress_host", "credential_handle")
     @classmethod
@@ -343,6 +345,11 @@ class CloudExecutionApproval(FrozenModel):
         if isinstance(value, bool) or not isinstance(value, int):
             raise ValueError("retention_days must be an integer")
         return value
+
+
+def _approval_proof(approval: CloudExecutionApproval) -> str:
+    payload_digest = canonical_digest(approval).encode("ascii")
+    return hmac.new(_APPROVAL_SIGNING_KEY, payload_digest, "sha256").hexdigest()
 
 
 @dataclass(frozen=True)
@@ -543,7 +550,7 @@ def _cloud_approval(
         policy_digest=canonical_digest(policy),
         confirmed=True,
     )
-    approval.__pydantic_private__["_issuer_token"] = _APPROVAL_ISSUER
+    approval.__pydantic_private__["_issuance_proof"] = _approval_proof(approval)
     return approval
 
 
@@ -596,10 +603,14 @@ def validate_cloud_approval(
     try:
         if not isinstance(approval, CloudExecutionApproval):
             raise TypeError("approval type mismatch")
-        if approval._issuer_token is not _APPROVAL_ISSUER:
-            raise ValueError("approval was not internally issued")
         checked_policy = _sanitize_policy(policy) if policy is not None else None
         checked = _sanitize_approval(approval)
+        proof = approval._issuance_proof
+        if not isinstance(proof, str) or not hmac.compare_digest(
+            proof,
+            _approval_proof(checked),
+        ):
+            raise ValueError("approval was not internally issued")
         if not _approval_is_coherent(checked, checked_policy):
             raise ValueError("approval snapshot mismatch")
     except Exception:
