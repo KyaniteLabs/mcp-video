@@ -1,6 +1,8 @@
 # Wishlist draft verification receipt
 
-**Receipt state:** G006 closeout checkpoint — merge-ready bounded checkpoint
+**Receipt state:** G006 closeout successor — local gates green, remote exact-tip CI pending
+
+**Current reviewed implementation tip:** `46e5e0d84b6e0d325e226c540e3384dbee3ef0b0`
 
 **Implementation/security-review tip:** `7d16d525121f5bf8e9e427798304e89057844051`
 
@@ -14,6 +16,30 @@ This receipt records the G006 closeout evidence on the reviewed implementation t
 `7d16d525121f5bf8e9e427798304e89057844051` and the hygiene tip `47731e9`. The G006
 evidence-integrity blockers are closed; the whole-gate checklist is complete and merge-ready as a
 bounded checkpoint. This does **not** authorize release, tag, package, deploy, or announcement.
+
+## Forgejo run 142 failure and reviewed successor
+
+Forgejo run 142 was not absent. On publication tip `411bc529` it completed with 6 failed, 2936
+passed, and 13 skipped in the Debian/root/FFmpeg 5 runner. Root could rewrite descriptor snapshots,
+and FFmpeg 5 `showinfo` omitted `duration_time`, so the temporal corruption check emitted no
+finding.
+
+The reviewed successor `46e5e0d84b6e0d325e226c540e3384dbee3ef0b0` uses immutable Linux
+memfd seals for verified snapshots and fails closed when sealing is unavailable. It also supports
+FFmpeg 5 temporal diagnostics while rejecting path/banner/component false positives and clamping
+fallback intervals at media EOF.
+
+| Gate | Result |
+| --- | --- |
+| Exact Debian/root/FFmpeg 5 reproductions | `22 passed in 4.07s` |
+| Independent successor review | APPROVE / CLEAR; `49 focused passed` |
+| Full repository suite on Niko | `3104 passed, 18 skipped, 8 warnings, 536.51s` |
+| Ruff and canonical import alias | pass |
+| Diff, forbidden-artifact, and public leak audits | pass |
+| Exact-tip Forgejo CI | pending; required before merge |
+
+Known platform limit: verified snapshot-backed operations require Linux immutable memfd seals and
+fail closed where that primitive is unavailable. The release prohibition remains unchanged.
 
 ## Checks recorded by this documentation unit
 

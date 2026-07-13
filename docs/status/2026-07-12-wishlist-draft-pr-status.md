@@ -2,20 +2,20 @@
 
 **Snapshot date:** 2026-07-12
 
-**Implementation/security-review tip:** `7d16d525121f5bf8e9e427798304e89057844051`
+**Current reviewed implementation tip:** `46e5e0d84b6e0d325e226c540e3384dbee3ef0b0`
 
 **Hygiene tip:** `47731e9`
 
 **G006 remediation checkpoint:** `7d16d525121f5bf8e9e427798304e89057844051` (reviewed implementation tip); hygiene closeout `47731e9`
 
-**State:** G006 merge-ready bounded checkpoint; not released
+**State:** G006 local gates green; awaiting exact-tip remote CI; not released
 
 ## Executive summary
 
 The branch contains the contract and project-store foundation, the first field-safety fixes,
 deterministic ingest/inspection, and a governed Wave 3 review-and-salvage surface with the G006
-evidence-integrity blockers closed. It is a **merge-ready bounded checkpoint**, not a release
-candidate.
+evidence-integrity blockers closed. The current successor passes the complete local gate and is
+awaiting exact-tip remote CI. It is a bounded merge candidate, not a release candidate.
 
 The checkpoint must remain unreleased. It does not authorize a version bump, tag, package upload,
 registry submission, deployment, release creation, or announcement.
@@ -57,6 +57,27 @@ tip `7d16d525121f5bf8e9e427798304e89057844051` (hygiene tip `47731e9`):
 - **Import/diff/forbidden/readiness/leak gates:** all recorded as pass on the reviewed tip (import
   alias, `git diff --check`, forbidden-artifact scan, repository-readiness audit, gitleaks
   working-tree scan).
+
+### Forgejo CI compatibility successor
+
+Forgejo run 142 on the older publication tip `411bc529` was present and failed: 6 failed, 2936
+passed, 13 skipped. Its Debian/root/FFmpeg 5 runner exposed two environment-dependent defects:
+verified source snapshots remained writable to root, and FFmpeg 5 `showinfo` output omitted
+`duration_time`, preventing corrupt-frame evidence from being emitted.
+
+Commit `46e5e0d` closes both defects. Verified snapshots now use immutable Linux memfd seals and
+fail closed when sealing is unavailable. Temporal diagnostics parse FFmpeg 5 output, reject
+filename/banner/component false positives, and clamp fallback frame intervals to the expected
+media end. Evidence on the successor tip:
+
+- exact Debian/root/FFmpeg 5 reproductions: 22 passed;
+- independent code/security/architecture review: APPROVE / CLEAR, 49 focused passed;
+- whole repository suite on Niko: 3104 passed, 18 skipped, 8 warnings, 536.51s;
+- Ruff, canonical import alias, diff hygiene, forbidden-artifact scan, and public leak scan: pass.
+
+The successor must still receive a green exact-tip Forgejo run before merge. Platforms without
+Linux immutable memfd seals cannot perform verified snapshot-backed operations; those operations
+fail closed rather than silently accepting mutable evidence.
 
 This is a merge-ready bounded checkpoint for Wave 3. It is **not** release-ready, publish-ready, or
 deploy-ready. The explicit stop-before-release gate remains in force: no tag, package, deploy,

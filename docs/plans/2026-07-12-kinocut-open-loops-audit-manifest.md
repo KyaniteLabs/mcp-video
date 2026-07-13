@@ -29,6 +29,8 @@
 
 The draft PR status (`docs/status/2026-07-12-wishlist-draft-pr-status.md`) and the verification receipt (`docs/proofs/wishlist-draft/VERIFICATION_RECEIPT.md`) record the G006 closeout on the Wave 3 tip. The architecture review is APPROVE (279 focused pass); the security review is CLEAR (102 + 57 focused pass). The whole repository suite passed on the reviewed implementation tip: 3088 passed, 18 skipped, 8 warnings, 552.04s. This is a merge-ready bounded checkpoint; no release, tag, package, deploy, or announcement is authorized.
 
+Forgejo run 142 subsequently exposed Debian/root/FFmpeg 5 compatibility defects on publication tip `411bc529`: six failures caused by root-writable verified snapshots and FFmpeg 5 `showinfo` records without `duration_time`. The reviewed successor `46e5e0d` seals snapshots with immutable Linux memfd seals, fails closed when seals are unavailable, and makes temporal diagnostics FFmpeg 5 compatible without accepting path/banner/component false positives. Its exact root-container replay passed 22 tests; independent review is APPROVE/CLEAR with 49 focused pass; the Niko whole suite passed 3104 tests with 18 skipped and 8 warnings in 536.51s. Exact-tip Forgejo CI remains required before merge. This successor does not change the standing release stop.
+
 ### 1.1 Persisted mutation fingerprint and authorization references are absent from salvage lineage
 
 - **Status at audit base (`c0032d8`):** open.
