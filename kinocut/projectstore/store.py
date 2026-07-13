@@ -50,6 +50,7 @@ from kinocut.contracts.learning import (
     WorkflowRecipe,
 )
 from kinocut.contracts.protection import ProtectedElement
+from kinocut.contracts.registry import BedRecord, ClipRecord, LineageLink
 from kinocut.contracts.review import ApprovalState, KnownLimitation, ReviewDecision
 from kinocut.contracts.verdict import ClipVerdict
 from kinocut.errors import MCPVideoError
@@ -82,6 +83,9 @@ _RECORD_REGISTRY: dict[str, type[RecordBase]] = {
     "usage_event": UsageEvent,
     "cost_event": CostEvent,
     "workflow_recipe": WorkflowRecipe,
+    "clip_record": ClipRecord,
+    "bed_record": BedRecord,
+    "lineage_link": LineageLink,
 }
 
 
