@@ -7,6 +7,11 @@
 > [`../status/2026-07-12-ready-units-integration-checkpoint.md`](../status/2026-07-12-ready-units-integration-checkpoint.md)
 > for exact evidence. Unamended open/closed counts below are historical and must not be used as the
 > current completion claim.
+>
+> **Sound amendment:** S1 is merged, and S2 authorization plus S4 generic/WF parsing and pure
+> episode planning are complete on the reviewed 2026-07-13 integration checkpoint. See
+> [`../status/2026-07-13-sound-s2-s4-integration-checkpoint.md`](../status/2026-07-13-sound-s2-s4-integration-checkpoint.md).
+> S3 is the next blocking leaf; the historical sound inventory below is superseded.
 
 **Status:** decision-complete repo-native manifest; audit only — no implementation, push, merge, tag, publish, deploy, or release authorized by this document.
 
@@ -139,20 +144,20 @@ Closed = shipped on `c0032d8` with focused tests. Open = unimplemented, partiall
 
 ### 2.2 Sound (`kinocut_sound`) program
 
-The Sonic World audio-play program is **entirely open**. The design (`docs/superpowers/specs/2026-07-11-kinocut-sound-sonic-world-design.md`) and plan index (`docs/superpowers/plans/2026-07-12-kinocut-sound-plan-index.md`) are decision-complete; no `kinocut_sound/` module exists on this branch. All ten module-sequence leaves in the sound plan index are unstarted:
+The historical statement that this program is entirely open is superseded. Current reviewed state:
 
-1. SoundPlan foundation contracts — open.
-2. Voice providers and profiles — open.
-3. Restoration/post/spatial chain — open.
-4. Script parser and episode assembly — open.
-5. Ambience, Foley, and world-building — open.
-6. Voice consistency and roster management — open.
-7. QA, metadata, loudness, true-peak, provenance — open.
-8. Orchestration, cancellation/resume, caching — open.
-9. Scalability and the representative benchmark — open.
-10. Standalone Python/CLI plus serialized Kinocut/MCP adapters — open.
+- **S1 complete:** standalone plans, timeline, routing, delivery, consent, receipt, capability,
+  format, line, and render-fingerprint contracts.
+- **S2 complete:** authorization ledger, leases, revocation race handling, transitive lineage,
+  privacy-safe audit context, per-source blend/cloud egress, and quarantine/deletion outcomes.
+- **S4 complete:** strict generic/WF parsing and deterministic pure episode planning for dialogue,
+  narration, action, voiceover, chapter cards, beats, pacing, silence, routing, and Foley contracts.
+- **S3 and S5-S15 open:** S3 is next; S5 voice depends on S3 and S4. S7 may proceed after S3;
+  S8 depends on S2, S3, and S4.
 
-Existing bridges that will compose into sound: `kinocut/audio_engine/{core,sequencing,synthesis,spatial,stem}.py`, `kinocut/ai_engine/transcribe.py`, and `kinocut/audio_guardrails.py`. No sound-specific public CLI command or MCP tool is registered; `tests/test_public_surface.py` pins the public surface at 121 CLI commands / 142 MCP tools, none of which are sound-program commands.
+No sound-specific public CLI command or MCP tool is registered. Public parity and concrete host
+binding remain the serialized S12/S13 joins. Existing Kinocut audio bridges remain downstream
+composition targets, not proof that those joins are complete.
 
 ### 2.3 Distribution, C2PA, and post-rescue loops
 
