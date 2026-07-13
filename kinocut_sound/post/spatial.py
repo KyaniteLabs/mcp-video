@@ -12,6 +12,7 @@ Nothing in this module imports from ``kinocut.*`` runtime.
 from __future__ import annotations
 
 import shutil
+import subprocess
 from collections.abc import Mapping
 from pathlib import Path
 
@@ -53,6 +54,59 @@ MAX_HUMANIZATION_PCT: float = 100.0
 
 # Convolution reverb presets — bounded codes.
 REVERB_PRESETS: frozenset[str] = frozenset({"close", "small_room", "hall", "outdoor"})
+
+
+def _afir_supports_gtype_4() -> bool:
+    """Probe whether the installed ffmpeg ``afir`` filter accepts ``gtype=4``.
+
+    ffmpeg 5.1.x only supports ``gtype`` values -1 through 2, while ffmpeg 6.1+
+    extends this to -1 through 4. The probe is cached on the function attribute
+    so the ffmpeg invocation runs at most once per process.
+    """
+
+    cached = getattr(_afir_supports_gtype_4, "_cached", None)
+    if cached is not None:
+        return cached
+    binary = shutil.which("ffmpeg")
+    if binary is None:
+        _afir_supports_gtype_4._cached = False  # type: ignore[attr-defined]
+        return False
+    cmd = [
+        binary,
+        "-hide_banner",
+        "-nostdin",
+        "-loglevel",
+        "error",
+        "-f",
+        "lavfi",
+        "-i",
+        "anullsrc",
+        "-f",
+        "lavfi",
+        "-i",
+        "anullsrc",
+        "-filter_complex",
+        "[0:a][1:a]afir=gtype=4",
+        "-t",
+        "0",
+        "-f",
+        "null",
+        "-",
+    ]
+    try:
+        proc = subprocess.run(  # noqa: S603 - command list built from validated components
+            cmd,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=10.0,
+        )
+        supported = proc.returncode == 0
+    except (subprocess.TimeoutExpired, OSError):
+        supported = False
+    _afir_supports_gtype_4._cached = supported  # type: ignore[attr-defined]
+    return supported
 
 
 class ConvolutionReverbAdapter:
@@ -111,9 +165,10 @@ class ConvolutionReverbAdapter:
         ir_path = ctx.work_dir / f"ir_{preset}.wav"
         _ensure_ir(ir_path, preset=preset, sample_rate_hz=ctx.sample_rate_hz)
         # gtype=4 (rms auto-gain) prevents the convolution from changing the
-        # overall signal level drastically. With peak auto-gain (gtype=0) the
-        # output is near-silent for synthetic noise-based IRs.
-        filt = f"[0:a][1:a]afir=wet={ffmpeg_filter_number(wet)}:dry={ffmpeg_filter_number(dry)}:gtype=4"
+        # overall signal level drastically. ffmpeg 5.1.x only supports gtype
+        # -1..2, so fall back to gtype=-1 (no auto-gain) on older binaries.
+        gtype = 4 if _afir_supports_gtype_4() else -1
+        filt = f"[0:a][1:a]afir=wet={ffmpeg_filter_number(wet)}:dry={ffmpeg_filter_number(dry)}:gtype={gtype}"
         run_ffmpeg(
             [
                 "-i",
