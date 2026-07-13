@@ -5,7 +5,6 @@ from __future__ import annotations
 import contextlib
 import hashlib
 import json
-import os
 import tempfile
 from enum import StrEnum
 from pathlib import Path
@@ -30,6 +29,12 @@ from kinocut.aivideo.salvage_checks import (
     _source_unchanged_check,
     _still_frame_origin_check,
 )
+from kinocut.aivideo.salvage_lineage import (
+    checked_hash,
+    install_manifest,
+    manifest_payload,
+    read_prior_derivative,
+)
 from kinocut.aivideo.salvage_render import _probe_source, _render
 from kinocut.contracts._common import NormalizedRegion, Sha256, ValueObject
 from kinocut.contracts.asset import AssetRecord, GenerationLineage, MediaKind
@@ -39,7 +44,6 @@ from kinocut.engine_probe import probe
 from kinocut.errors import MCPVideoError
 from kinocut.ffmpeg_helpers import _run_command
 from kinocut.projectstore import Project, append_record, ingest_asset, layout, read_records, store
-from kinocut.rescue.operations import _sha256
 from kinocut.source_identity import SourceIdentity, VerifiedSource, copy_verified_snapshot
 
 
@@ -177,15 +181,6 @@ def _verified_source_snapshot(source: Path, expected: SourceIdentity, workspace:
         held.close()
 
 
-def _checked_hash(path: Path, *, missing_message: str) -> str:
-    """Hash one existing in-store file with privacy-safe filesystem errors."""
-
-    with store._mapped_os_errors():
-        if not path.is_file():
-            raise _salvage_error(missing_message, "salvage_integrity_failed")
-        return _sha256(path)
-
-
 def _active_source(project: Project, asset_id: str) -> tuple[AssetRecord, Path]:
     records = [r for r in read_records(project, "asset_record") if type(r) is AssetRecord]
     superseded = {r.supersedes for r in records if r.supersedes is not None}
@@ -194,7 +189,7 @@ def _active_source(project: Project, asset_id: str) -> tuple[AssetRecord, Path]:
         raise _salvage_error("source asset is missing or ambiguous", "salvage_source_invalid")
     source = matches[0]
     path = store.safe_target(project, source.original_location)
-    if _checked_hash(path, missing_message="source asset is missing") != source.asset_id:
+    if checked_hash(path, missing_message="source asset is missing") != source.asset_id:
         raise _salvage_error("source asset integrity check failed", "salvage_integrity_failed")
     if source.media_kind is not MediaKind.VIDEO:
         raise _salvage_error("salvage source must be a video", "salvage_source_invalid")
@@ -320,6 +315,7 @@ def _read_prior_derivative(
     source_asset_id: str,
     policy: dict[str, Any],
     policy_hash: str,
+    intent: MutationIntent,
 ) -> tuple[AssetRecord, str, str, tuple[PreservationCheck, ...]] | None:
     """Validate and return a prior publication; never reconstruct missing bytes."""
 
@@ -327,66 +323,16 @@ def _read_prior_derivative(
     if asset is None:
         return None
     output = store.safe_target(project, asset.original_location)
-    if _checked_hash(output, missing_message="published derivative is missing") != asset.asset_id:
+    if checked_hash(output, missing_message="published derivative is missing") != asset.asset_id:
         raise _salvage_error("derivative integrity check failed", "salvage_integrity_failed")
-    if len(asset.derived_artifact_ids) != 1:
-        raise _salvage_error("lineage artifact reference is invalid", "salvage_integrity_failed")
-    artifact_id = asset.derived_artifact_ids[0]
-    rel = layout.artifact_relative_path(artifact_id, "salvage-lineage.json")
-    artifact = store.safe_target(project, rel)
-    if _checked_hash(artifact, missing_message="published lineage artifact is missing") != artifact_id:
-        raise _salvage_error("lineage artifact integrity check failed", "salvage_integrity_failed")
-    try:
-        with store._mapped_os_errors():
-            payload = json.loads(artifact.read_text(encoding="utf-8"))
-        checks = tuple(PreservationCheck.model_validate(item) for item in payload["preservation_checks"])
-    except (KeyError, TypeError, json.JSONDecodeError, ValidationError) as exc:
-        raise _salvage_error("lineage artifact is invalid", "salvage_integrity_failed") from exc
-    expected = {
-        "operation": policy["recipe"],
-        "policy": policy,
-        "policy_hash": policy_hash,
-        "source_asset_id": source_asset_id,
-        "output_hash": asset.asset_id,
-    }
-    if any(payload.get(key) != value for key, value in expected.items()) or not all(check.passed for check in checks):
-        raise _salvage_error("lineage artifact does not match its asset", "salvage_integrity_failed")
-    return asset, artifact_id, str(rel), checks
-
-
-def _install_manifest(project: Project, payload: dict[str, Any]) -> tuple[str, str]:
-    content = _canonical(payload)
-    artifact_id = _digest(content)
-    rel = layout.artifact_relative_path(artifact_id, "salvage-lineage.json")
-    destination = store.safe_target(project, rel)
-    with store._mapped_os_errors():
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        exists = destination.exists()
-    if exists:
-        if _checked_hash(destination, missing_message="lineage artifact is missing") != artifact_id:
-            raise _salvage_error("lineage artifact integrity check failed", "salvage_integrity_failed")
-        return artifact_id, str(rel)
-    with store._mapped_os_errors():
-        fd, name = tempfile.mkstemp(dir=destination.parent, prefix=".salvage.", suffix=".tmp")
-        temp = Path(name)
-        try:
-            with os.fdopen(fd, "wb") as handle:
-                handle.write(content)
-                handle.flush()
-                os.fsync(handle.fileno())
-            try:
-                os.link(temp, destination)
-            except FileExistsError:
-                if _sha256(destination) != artifact_id:
-                    raise _salvage_error(
-                        "lineage artifact integrity check failed",
-                        "salvage_integrity_failed",
-                    ) from None
-            store._fsync_dir(destination.parent)
-        finally:
-            with contextlib.suppress(OSError):
-                temp.unlink(missing_ok=True)
-    return artifact_id, str(rel)
+    artifact_id, rel, checks = read_prior_derivative(
+        project,
+        asset=asset,
+        policy=policy,
+        policy_hash=policy_hash,
+        intent=intent,
+    )
+    return asset, artifact_id, rel, checks
 
 
 def _enrich_asset(project: Project, asset: AssetRecord, source: AssetRecord, artifact_id: str) -> AssetRecord:
@@ -496,48 +442,40 @@ def create_salvage_derivative(
     except ValidationError as exc:
         raise _salvage_error("acceptance spec id is invalid", "invalid_salvage_policy") from exc
     source, source_path = _active_source(project, source_asset_id)
-    prior = _read_prior_derivative(project, source.asset_id, validated, policy_hash)
+    intent = _mutation_intent(
+        selected,
+        validated,
+        source.asset_id,
+        _salvage_audio_fingerprint(source_path),
+        authorization_decision_ids,
+    )
+    prior = _read_prior_derivative(project, source.asset_id, validated, policy_hash, intent)
     if prior is not None:
         asset, artifact_id, artifact_location, checks = prior
         verdict = _verdict(project, asset.asset_id, acceptance_spec_id)
         return _result(selected, validated, policy_hash, asset, artifact_id, artifact_location, verdict, checks)
     work_root = store.safe_target(project, layout.artifacts_dir())
-    suffix = (
-        ".png"
-        if selected is SalvageRecipe.STILL_FRAME
-        else ".mkv"
-        if selected is SalvageRecipe.FREEZE_EXTENSION
-        else ".mkv"
-        if selected is SalvageRecipe.BACKGROUND_ONLY
-        else ".mp4"
-    )
+    suffix = _suffix_for(selected)
     with store._mapped_os_errors(), tempfile.TemporaryDirectory(dir=work_root, prefix=".salvage-render.") as work:
         workspace = Path(work)
         expected = SourceIdentity(source.asset_id, source.byte_size)
         with _verified_source_snapshot(source_path, expected, workspace) as held:
             snapshot = Path(held.path)
-            intent = _mutation_intent(
-                selected,
-                validated,
-                source.asset_id,
-                _salvage_audio_fingerprint(snapshot, pass_fds=held.pass_fds),
-                authorization_decision_ids,
-            )
             assert_no_protected_collision(project, intent)
             rendered = workspace / f"derivative{suffix}"
             _render(selected, validated, snapshot, rendered, pass_fds=held.pass_fds)
             checks = _checks_from_descriptor(selected, validated, held, rendered, source.asset_id)
-        output_hash = _checked_hash(rendered, missing_message="salvage render is missing")
-        manifest = {
-            "schema_version": 1,
-            "operation": selected.value,
-            "policy": validated,
-            "policy_hash": policy_hash,
-            "source_asset_id": source.asset_id,
-            "output_hash": output_hash,
-            "preservation_checks": [item.model_dump(mode="json") for item in checks],
-        }
-        artifact_id, artifact_location = _install_manifest(project, manifest)
+        output_hash = checked_hash(rendered, missing_message="salvage render is missing")
+        manifest = manifest_payload(
+            operation=selected.value,
+            policy=validated,
+            policy_hash=policy_hash,
+            source_asset_id=source.asset_id,
+            output_hash=output_hash,
+            preservation_checks=checks,
+            intent=intent,
+        )
+        artifact_id, artifact_location = install_manifest(project, manifest)
         lineage = GenerationLineage(
             generator_model="kinocut.salvage.v1",
             provider_id="local_ffmpeg",
@@ -553,7 +491,17 @@ def create_salvage_derivative(
         )
     asset = _enrich_asset(project, asset, source, artifact_id)
     stored_output = store.safe_target(project, asset.original_location)
-    if _checked_hash(stored_output, missing_message="published derivative is missing") != asset.asset_id:
+    if checked_hash(stored_output, missing_message="published derivative is missing") != asset.asset_id:
         raise _salvage_error("derivative integrity check failed", "salvage_integrity_failed")
     verdict = _verdict(project, asset.asset_id, acceptance_spec_id)
     return _result(selected, validated, policy_hash, asset, artifact_id, artifact_location, verdict, checks)
+
+
+def _suffix_for(selected: SalvageRecipe) -> str:
+    """Return the output file suffix for one recipe."""
+
+    if selected is SalvageRecipe.STILL_FRAME:
+        return ".png"
+    if selected in {SalvageRecipe.FREEZE_EXTENSION, SalvageRecipe.BACKGROUND_ONLY}:
+        return ".mkv"
+    return ".mp4"

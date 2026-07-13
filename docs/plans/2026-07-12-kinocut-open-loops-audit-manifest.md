@@ -31,45 +31,29 @@ The draft PR status (`docs/status/2026-07-12-wishlist-draft-pr-status.md`) and t
 
 ### 1.1 Persisted mutation fingerprint and authorization references are absent from salvage lineage
 
-- **Gap.** `kinocut/aivideo/salvage.py::create_salvage_derivative` builds a `MutationIntent` via `_mutation_intent(...)` and passes it to `assert_no_protected_collision`, but the exact `mutation_fingerprint(intent)` and the claimed `authorization_decision_ids` are **not** written into the persisted salvage-lineage manifest.
-- **Evidence.** The manifest installed by `_install_manifest` (`kinocut/aivideo/salvage.py`, near line 720) contains only `schema_version`, `operation`, `policy`, `policy_hash`, `source_asset_id`, `output_hash`, and `preservation_checks`. The fields needed to re-prove authorization on read — `mutation_fingerprint` and `authorization_decision_ids` — are missing.
-- **Test gap.** No test in `tests/test_aivideo_salvage.py` asserts that the manifest records the exact fingerprint or the authorization references that were live at render time. `_read_prior_derivative` re-derives intent from `policy_hash` only, so a persisted derivative can be re-validated even if its authorization has since been superseded.
-- **Owner.** Wave 3 salvage owner (`kinocut/aivideo/salvage.py`).
-- **Acceptance gate.**
-  1. Extend the salvage-lineage manifest schema (bump `schema_version`; add a read migration) to include `mutation_fingerprint` and `authorization_decision_ids`.
-  2. `_read_prior_derivative` must reject any persisted manifest whose recomputed fingerprint differs from the stored value, or whose authorization references are no longer active and human-bound to that fingerprint.
-  3. New focused tests: tamper/forgery/replay scenarios must fail closed; idempotent re-runs must still match; manifest schema migration must remain read-compatible with the prior version.
-  4. Privacy: authorization IDs are record IDs (already `sha256:` digests); no host paths, prose, or credentials enter the manifest.
+- **Status at audit base (`c0032d8`):** open.
+- **Status at this manifest update:** closed by this commit on `codex/niko-salvage-lineage` (tip recorded in §1.4 below). The manifest schema is bumped to v2; `mutation_fingerprint(intent)` and `authorization_decision_ids` are persisted in `kinocut/aivideo/salvage_lineage.py::manifest_payload`. `_read_prior_derivative` recomputes the same descriptor/audio-bound intent via `_mutation_intent` + `_salvage_audio_fingerprint` and rejects any persisted manifest whose recomputed fingerprint differs from the stored value, whose authorization refs are missing/stale/superseded/not human-bound to that fingerprint, or where a protected lock now requires fresh approval (`assert_no_protected_collision` is re-run on replay). Schema-v1 backward behavior is explicit: v1 manifests are accepted on read but treated as unauthenticated, so they cannot bypass current authorization. Hostile tests cover fingerprint tamper, authorization-ref tamper, stale/superseded auth replay, protected-state changes after render, v1 idempotent replay, v1 plus new lock, and successful idempotent v2 replay through a protected lock. Privacy: authorization IDs are record IDs (already `sha256:` digests); no host paths, prose, or credentials enter the manifest. The fresh independent review and the full combined gate (§7) are **not** claimed by this update.
+- **Original gap (for reference).** `kinocut/aivideo/salvage.py::create_salvage_derivative` built a `MutationIntent` via `_mutation_intent(...)` and passed it to `assert_no_protected_collision`, but the exact `mutation_fingerprint(intent)` and the claimed `authorization_decision_ids` were not written into the persisted salvage-lineage manifest, and `_read_prior_derivative` re-derived intent from `policy_hash` only.
+- **Owner.** Wave 3 salvage owner (`kinocut/aivideo/salvage.py`, `kinocut/aivideo/salvage_lineage.py`).
 
 ### 1.2 `trim_audio` body-swap proof does not bind to the declared trim of the approved source
 
-- **Gap.** `kinocut/engine_body_swap.py::_proof` records `expected="approved_audio_trimmed"` and a `changed`/`preserved` verdict computed by comparing the source and output `_audio_fingerprint` values. It does **not** prove that the output audio is the declared bounded prefix of the approved source. A swap that substituted unrelated audio of the correct length would still pass the `trim_audio` path with `verdict="changed"`.
-- **Evidence.** The `trim_audio` branch of `_render_args` only applies `-t <video_duration>`; `_proof` then asserts `preservation_required=False`, so no preservation gate fires. The test suite parametrizes `("trim_audio", 0.6, 1.0, "changed")` and accepts any "changed" verdict.
-- **Test gap.** No test in `tests/test_body_swap.py` proves that `trim_audio` output packets are a bounded prefix of the approved source packets. The authorization-replay test only covers `pad_video` → `trim_audio` replay.
+- **Status at audit base (`c0032d8`):** open.
+- **Status at this manifest update:** closed by `aed4245 fix(aivideo): prove approved-source trim_audio prefix` on this branch. `_declared_trim_proof` verifies the output audio packet sequence is a bounded prefix of the approved source within tolerance; the `trim_audio` verdict is `approved_audio_trimmed`; hostile tests cover equal-length substitution, volume-scaled re-encode, descriptor-backed hostile render, and faithful `-c:a copy -t cut`.
+- **Original gap (for reference).** `_proof` compared source and output `_audio_fingerprint` values and accepted any "changed" verdict, so unrelated audio of the correct length could pass the `trim_audio` path.
 - **Owner.** Wave 3 body-swap owner (`kinocut/engine_body_swap.py`).
-- **Acceptance gate.**
-  1. Add a `_declared_trim_proof(source, output, *, duration_policy, expected_duration)` that verifies the output audio packet sequence is a prefix of the approved source packet sequence within the declared duration tolerance, plus a supplement confirming the trim length equals the video duration.
-  2. Replace the generic `changed` verdict for `trim_audio` with `approved_audio_trimmed` and fail closed if the prefix relationship does not hold.
-  3. New focused tests: substitute non-prefix audio of equal length; mismatched codec; trim from the wrong starting offset; replay `pad_video` authorization for `trim_audio` (already present).
-  4. Update `docs/AI_VIDEO_REVIEW_AND_SALVAGE.md` to describe the strengthened proof.
 
-### 1.3 Independent origin proofs for region-crop and still-frame salvage are missing (freeze and clean-edges are closed)
+### 1.3 Independent origin proofs for region-crop and still-frame salvage are missing (freeze prefix, freeze tail, clean-edges, and background are closed)
 
-- **Already closed (do not redo):**
-  - **freeze_extension** — `_freeze_checks` binds the source tail to every extension frame; `test_freeze_proof_binds_source_tail_and_every_extension_sample`, `test_black_padding_cannot_pass_as_freeze`, and `test_freeze_rejects_forgery_that_only_matches_old_sample_indexes` cover forgery.
+- **Status at audit base (`c0032d8`):** open (region-crop origin and still-frame origin); the freeze prefix check was also missing (only the tail and extension were bound).
+- **Status at this manifest update:** closed by `e885d9f fix(aivideo): bind entire salvage frame range to descriptor` on this branch. `_region_crop_origin_check` independently re-renders the declared crop and compares every frame hash; `_still_frame_origin_check` re-extracts the declared timestamp in a common rgb24 space and compares pixels; `_freeze_checks` now compares every pre-transition, transition, and extension frame against the source hash stream (the prefix loop was the missing piece at audit base). `_background_origin_check` keeps the existing FFV1-backed comparison. Hostile tests cover wrong-offset region crop, synthetic still, and prefix-frame forgery.
+- **Already closed before this wave (do not redo):**
   - **clean_edges** — `_clean_edges_origin_check` independently re-selects the source interval and compares frame hashes; `cd1ede6 fix(aivideo): verify clean-edge origin independently` plus `test_clean_edges_rejects_same_duration_from_wrong_source_interval` and `test_clean_edges_rejects_systematic_trim_interval_defect` cover it. `a6171c3 fix(aivideo): keep salvage sources descriptor-bound` and `eccd293 fix(aivideo): bind body-swap authorization policy` plus `8240ba8 test(aivideo): exercise descriptor-bound hostile renders` close the descriptor-bound hostile-render loop.
-  - **background_only** — `_background_origin_check` independently crops three source frames and compares; `test_background_rejects_same_dimensions_from_wrong_origin` covers it.
-- **Open — region-crop origin.** `REGION_CROP` in `_checks` only emits `requested_region_dimensions`; there is no independent pixel-origin proof. A same-dimension crop from the wrong region would pass.
-- **Open — still-frame origin.** The default branch emits only `still_frame_created` with `expected="decodable_image"` and `passed=output.width > 0`. There is no proof that the still was extracted from the declared `policy["timestamp"]` of the approved source.
-- **Owner.** Wave 3 salvage owner (`kinocut/aivideo/salvage.py`).
-- **Acceptance gate.**
-  1. Add `_region_crop_origin_check(source, output, region)` modeled on `_background_origin_check`, sampling at least three representative timestamps and comparing declared-region source hashes to output hashes; add a `test_region_crop_rejects_same_dimensions_from_wrong_origin` hostile test.
-  2. Add `_still_frame_origin_check(source, output, timestamp)` that re-extracts the source frame at the declared timestamp and compares image bytes/hash; add a `test_still_frame_rejects_wrong_timestamp_or_substitute_image` hostile test.
-  3. Extend `_checks` so both recipes require the new origin check; re-run the full preservation suite on every recipe.
+- **Owner.** Wave 3 salvage owner (`kinocut/aivideo/salvage.py`, `kinocut/aivideo/salvage_checks.py`).
 
 ### 1.4 Wave 3 PR unblock sequence
 
-Close 1.1 → 1.2 → 1.3 in that order (mutation/authorization binding is the deepest contract; trim proof is engine-local; origin proofs are recipe-local). Each unit lands as one TDD commit on a Wave 3 follow-up branch off `c0032d8`. After all three close, the controller reruns the full gate (§7) on the new tip and requests a fresh independent security/architecture review before describing the draft PR as merge-ready.
+§1.1, §1.2, and §1.3 are now closed on `codex/niko-salvage-lineage`. The integration order was 1.2 (`aed4245`) → 1.3 (`e885d9f`) → 1.1 (this commit). Each unit landed as one TDD commit on the Wave 3 follow-up branch off `c0032d8`. The controller must still rerun the full gate (§7) on the exact new tip, request a fresh independent security/architecture review, and only then describe the draft PR as merge-ready. This manifest update does **not** claim review completion or a passing combined gate.
 
 ## 2. Closed versus open items (program inventory)
 
@@ -86,7 +70,7 @@ Closed = shipped on `c0032d8` with focused tests. Open = unimplemented, partiall
 | 5 | Explicit Clip Verdicts | closed | `kinocut/aivideo/verdict.py`, `kinocut/contracts/verdict.py`, `tests/test_aivideo_verdict.py` | 02 / PR 3.1 |
 | 6 | Defect Taxonomy | closed | `kinocut/contracts/defect.py`, `tests/test_contracts_defect.py` | 00 / PR 3.1 |
 | 7 | Approved-Element Locking | closed | `kinocut/aivideo/protection.py::assert_no_protected_collision`, `kinocut/contracts/protection.py`, `tests/test_aivideo_protection.py`, `tests/test_contracts_protection.py` | 02 / PR 3.1 |
-| 8 | Receipt-Backed Editing | partial | `AiVideoReceiptSection` + `PreservationProof` exist (`kinocut/contracts/receipt_ai_video.py`, `tests/test_receipt_ai_video.py`); body-swap and salvage receipts still need the strengthened evidence in §1.2/§1.1 | 00 / PRs 1.1, 3.2, 3.3 |
+| 8 | Receipt-Backed Editing | closed | `AiVideoReceiptSection` + `PreservationProof` exist (`kinocut/contracts/receipt_ai_video.py`, `tests/test_receipt_ai_video.py`); body-swap and salvage receipts now carry the strengthened evidence landed in §1.1/§1.2/§1.3 | 00 / PRs 1.1, 3.2, 3.3 |
 | 9 | Motion Strip | closed | `kinocut/aivideo/inspection/motion_strip.py::build_motion_strip`, `tests/test_inspection_motion_strip.py` | 01 / PR 2.2 |
 | 10 | Late-Frame QA | closed | `kinocut/aivideo/inspection/samplers.py::sample_decoded_timestamps` (0/25/50/75/95/last policy), `tests/test_inspection_samplers.py` | 01 / PR 2.2 |
 | 11 | Text-Drift Check | closed | `extract_region_crops`, declared-region sampler, `tests/test_inspection_samplers.py` | 01 / PR 2.2 |
@@ -95,8 +79,8 @@ Closed = shipped on `c0032d8` with focused tests. Open = unimplemented, partiall
 | 14 | Frozen/Black/Corrupt Detection | closed | `_black_findings`/`_frozen_findings`/`_corrupt_findings`, `tests/test_inspection_temporal_checks.py` | 01 / PR 2.3 |
 | 15 | Motion Intent Check | closed (optional) | `analyze_optional_visual_findings` returns `provider_not_configured` deterministically; `tests/test_inspection_providers.py` | 01 / PR 2.4 |
 | 16 | Generative Defect Report | closed (optional) | optional visual provider hook + deterministic findings aggregation | 01 / PRs 2.3–2.4 |
-| 17 | Body Swap | partial | `kinocut/engine_body_swap.py::body_swap` ships pad/trim/reject; §1.2 trim proof still open | 02 / PR 3.2 |
-| 18 | Salvage Clip | partial | `kinocut/aivideo/salvage.py::create_salvage_derivative` ships 5 recipes; §1.1 (mutation/auth persistence) and §1.3 (region-crop + still-frame origin) open | 02 / PR 3.3 |
+| 17 | Body Swap | closed | `kinocut/engine_body_swap.py::body_swap` ships pad/trim/reject with descriptor-bound `_declared_trim_proof` (`aed4245`); §1.2 trim proof closed | 02 / PR 3.2 |
+| 18 | Salvage Clip | closed | `kinocut/aivideo/salvage.py::create_salvage_derivative` ships 5 recipes with descriptor-bound origin checks (`e885d9f`) and v2 salvage-lineage schema persisting `mutation_fingerprint` + `authorization_decision_ids` (this commit); §1.1 and §1.3 closed | 02 / PR 3.3 |
 | 19 | Continuity Assistant | open | no adjacent-clip rubric; optional VLM/embedding findings not wired | 03 / PR 7.2 |
 | 20 | Approved Clip Reuse | open | semantic index exists (`kinocut/semantic/index.py`); no verdict/rights-filtered approved-clip registry query | 03 / PR 6.1 |
 | 21 | Protected Timeline Regions | deferred | blocked behind kernel wave (Plan 05 / PR K.1) — contract not implemented | 05 |
@@ -106,7 +90,7 @@ Closed = shipped on `c0032d8` with focused tests. Open = unimplemented, partiall
 | 25 | Voice Style Check | open | no pace/pitch/cadence/silence seam metric | 02 / PR 4.2 |
 | 26 | Voice Identity Check | open | no speaker-embedding provider | 02 / PR 4.2 |
 | 27 | ASR Timestamp Clamp | open | transcription parses segments (`kinocut/ai_engine/transcribe.py`) but no canonical EOF clamp before derived metrics | 01/02 / PRs 1.2, 4.2 |
-| 28 | Audio Preservation Verification | partial | `_audio_evidence`/`_audio_fingerprint` exist (`kinocut/engine_body_swap.py`); §1.2 strengthens the `trim_audio` case | 02 / PR 3.2 |
+| 28 | Audio Preservation Verification | closed | `_audio_evidence`/`_audio_fingerprint` exist (`kinocut/engine_body_swap.py`); `_declared_trim_proof` strengthens the `trim_audio` case (`aed4245`) | 02 / PR 3.2 |
 | 29 | Audio Duration Safety | closed | `add_audio(..., duration_policy=...)` (`kinocut/engine_audio_ops.py`, `tests/test_add_audio_duration_policy.py`) | 01 / PR 1.1 |
 | 30 | Audio Seam Report | open | composition over #25–29; no seam report | 02 / PR 4.2 |
 | 31 | ASS Subtitle Support | closed | `kinocut/engine_subtitles.py`, `kinocut/subtitles_common.py`, `tests/test_subtitles_ass_and_dimension.py` | 01 / PR 1.2 |
@@ -141,7 +125,7 @@ Closed = shipped on `c0032d8` with focused tests. Open = unimplemented, partiall
 | 60 | Production Cost Ledger | open | `CostEvent` contract exists; no append-only event writer or derived totals | 04 / PR 10.1 |
 | 61 | Acceptance Benchmark | partial | broad golden/real-FFmpeg fixtures exist; no versioned AI-video benchmark corpus | 04 / PR 10.2 |
 
-**Closed:** 20 of 61 (including 2 closed-optional: #15, #16). **Partial:** 15. **Open:** 23. **Deferred (kernel/data):** 3 (#21, #44, #58). The Wave 3 trio in §1 must close before any of the partial Wave 3 items (#8, #17, #18, #28) can be described as merge-ready.
+**Closed:** 24 of 61 (including 2 closed-optional: #15, #16). **Partial:** 11. **Open:** 23. **Deferred (kernel/data):** 3 (#21, #44, #58). Wave 3 trio §1.1/§1.2/§1.3 is closed on `codex/niko-salvage-lineage`; items #8, #17, #18, and #28 move from partial to closed. The fresh independent review and the full combined gate (§7) on the exact tip are still required before any of these items can be described as merge-ready.
 
 ### 2.2 Sound (`kinocut_sound`) program
 
@@ -244,9 +228,9 @@ Every closed and every open item carries the same gate shape:
 
 For the §1 blockers specifically:
 
-- **§1.1 acceptance:** manifest schema bumped; persisted `mutation_fingerprint` and `authorization_decision_ids`; `_read_prior_derivative` rejects mismatched or stale-authorization manifests; three new focused tests (tamper, replay, idempotent re-run).
-- **§1.2 acceptance:** `_declared_trim_proof` verifies output audio is a bounded prefix of the approved source within tolerance; `expected="approved_audio_trimmed"`; hostile-prefix tests for equal-length substitution, wrong codec, wrong offset.
-- **§1.3 acceptance:** `_region_crop_origin_check` and `_still_frame_origin_check` ship with hostile tests for same-dimension wrong-region crop and wrong-timestamp still substitution; existing freeze/clean-edges/background checks remain green.
+- **§1.1 acceptance (closed on `codex/niko-salvage-lineage`):** manifest schema bumped to v2; persisted `mutation_fingerprint` and `authorization_decision_ids`; `kinocut/aivideo/salvage_lineage.py::read_prior_derivative` rejects mismatched or stale-authorization manifests, re-runs `assert_no_protected_collision` on replay, and defines explicit safe v1 backward behavior; hostile tests cover fingerprint tamper, auth-ref tamper, stale/superseded auth replay, new protected lock after render, v1 idempotent replay, v1 + new lock, and successful idempotent v2 replay through a fresh protected lock.
+- **§1.2 acceptance (closed by `aed4245`):** `_declared_trim_proof` verifies output audio is a bounded prefix of the approved source within tolerance; `expected="approved_audio_trimmed"`; hostile-prefix tests for equal-length substitution, volume-scaled re-encode, descriptor-backed hostile render, and faithful copy.
+- **§1.3 acceptance (closed by `e885d9f`):** `_region_crop_origin_check` and `_still_frame_origin_check` ship with hostile tests for same-dimension wrong-region crop and synthetic still substitution; `_freeze_checks` now binds the entire frame range (prefix + transition + extension); existing clean-edges/background checks remain green.
 
 ## 7. Release stop (non-negotiable)
 
@@ -263,8 +247,8 @@ After the open items close, the controller must publish a final coverage matrix,
 
 ## 8. Audit unblock checklist (controller)
 
-- [ ] Wave 3 follow-up branch off `c0032d8` closes §1.1, §1.2, §1.3 in TDD order.
-- [ ] `docs/status/2026-07-12-wishlist-draft-pr-status.md` and `docs/proofs/wishlist-draft/VERIFICATION_RECEIPT.md` updated with the new tip, exact test counts, and the fresh independent review verdict.
+- [x] Wave 3 follow-up branch off `c0032d8` closes §1.1, §1.2, §1.3 in TDD order (`aed4245`, `e885d9f`, this commit on `codex/niko-salvage-lineage`).
+- [ ] `docs/status/2026-07-12-wishlist-draft-pr-status.md` and `docs/proofs/wishlist-draft/VERIFICATION_RECEIPT.md` updated with the new tip, exact test counts, and the fresh independent review verdict (controller step; not claimed by this commit).
 - [ ] Public-surface counts in `tests/test_public_surface.py` revisited only when a new Wave lands new commands/tools (none authorized by this manifest).
 - [ ] `docs/superpowers/plans/2026-07-11-kinocut-ai-video-plan-index.md` checkbox progress updated for each closed/open transition.
 - [ ] Sound program has a fresh Epoch estimate per leaf before each foundation/voice/post/assembly/ambience/QA/orchestration/scalability/adapter/benchmark story starts, and an actual-duration receipt after each closes.

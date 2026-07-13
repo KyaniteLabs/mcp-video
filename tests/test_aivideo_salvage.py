@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from pathlib import Path
 
 import pytest
@@ -14,12 +15,15 @@ from kinocut.aivideo.salvage import (
     create_salvage_derivative,
 )
 from kinocut.aivideo.salvage_checks import _decoded_frame_hashes
+from kinocut.aivideo.salvage_lineage import install_manifest
+from kinocut.contracts.asset import AssetRecord
 from kinocut.contracts.protection import ProtectedElement
+from kinocut.contracts.review import ReviewDecision
 from kinocut.engine_body_swap import _audio_fingerprint
 from kinocut.engine_probe import probe
 from kinocut.errors import MCPVideoError
-from kinocut.projectstore import ingest_asset, open_project, read_records
-from tests.contracts_fixtures import protection_kwargs
+from kinocut.projectstore import append_record, ingest_asset, open_project, read_records
+from tests.contracts_fixtures import protection_kwargs, review_decision_kwargs
 
 _ACCEPTANCE_SPEC = "sha256:" + "a" * 64
 
@@ -689,3 +693,354 @@ def test_invalid_or_bypass_policy_fails_closed(source, recipe, policy):
             acceptance_spec_id=_ACCEPTANCE_SPEC,
         )
     assert excinfo.value.code == "invalid_salvage_policy"
+
+
+# ---------------------------------------------------------------------------
+# §1.1 salvage lineage schema v2: persisted mutation_fingerprint and
+# authorization_decision_ids; tamper/forgery/replay fail closed; idempotent
+# re-runs and safe v1 backward behavior.
+# ---------------------------------------------------------------------------
+
+
+def _repoint_asset_artifact(project: Project, asset: AssetRecord, new_artifact_id: str) -> AssetRecord:
+    """Supersede one asset record to point at a different lineage artifact."""
+
+    repointed = asset.model_copy(
+        update={
+            "record_id": None,
+            "supersedes": asset.record_id,
+            "derived_artifact_ids": (new_artifact_id,),
+        }
+    )
+    return append_record(project, repointed)
+
+
+def _install_custom_manifest(project: Project, payload: dict) -> tuple[str, str]:
+    """Install an arbitrary manifest payload via the canonical installer."""
+
+    return install_manifest(project, payload)
+
+
+def _v1_payload_from_v2(payload: dict) -> dict:
+    """Strip v2-only fields to produce a legacy v1-shaped manifest."""
+
+    v1 = dict(payload)
+    v1.pop("mutation_fingerprint", None)
+    v1.pop("authorization_decision_ids", None)
+    v1["schema_version"] = 1
+    return v1
+
+
+def test_salvage_manifest_persists_v2_schema_with_fingerprint_and_authorization_refs(source):
+    """v2 manifest records the exact mutation_fingerprint and auth refs."""
+
+    project, original, source_path = source
+    audio_fingerprint = _audio_fingerprint(str(source_path))
+    auth_a = "sha256:" + "b" * 64
+    auth_b = "sha256:" + "c" * 64
+
+    result = create_salvage_derivative(
+        project,
+        source_asset_id=original.asset_id,
+        recipe="still_frame",
+        policy={"timestamp": 1.0},
+        acceptance_spec_id=_ACCEPTANCE_SPEC,
+        authorization_decision_ids=(auth_a, auth_b),
+    )
+
+    manifest = json.loads((project.root / result.lineage_artifact_location).read_text())
+    assert manifest["schema_version"] == 2
+    expected_intent = _mutation_intent(
+        SalvageRecipe.STILL_FRAME,
+        result.policy,
+        original.asset_id,
+        audio_fingerprint,
+        (auth_a, auth_b),
+    )
+    from kinocut.aivideo.protection import mutation_fingerprint
+
+    assert manifest["mutation_fingerprint"] == mutation_fingerprint(expected_intent)
+    assert manifest["authorization_decision_ids"] == [auth_a, auth_b]
+    assert str(project.root) not in json.dumps(manifest)
+
+
+def test_idempotent_replay_reuses_v2_manifest_without_re_rendering(source):
+    """A second call reads the same v2 derivative without rendering again."""
+
+    project, original, _source_path = source
+    kwargs = dict(
+        source_asset_id=original.asset_id,
+        recipe="still_frame",
+        policy={"timestamp": 1.0},
+        acceptance_spec_id=_ACCEPTANCE_SPEC,
+    )
+    first = create_salvage_derivative(project, **kwargs)
+    second = create_salvage_derivative(project, **kwargs)
+    assert second.asset.record_id == first.asset.record_id
+    assert second.lineage_artifact_id == first.lineage_artifact_id
+    assert len(read_records(project, "clip_verdict")) == 1
+
+
+def test_v2_manifest_with_tampered_fingerprint_fails_closed(source):
+    """Replay fails when the stored mutation_fingerprint disagrees with recompute."""
+
+    project, original, _source_path = source
+    kwargs = dict(
+        source_asset_id=original.asset_id,
+        recipe="still_frame",
+        policy={"timestamp": 1.0},
+        acceptance_spec_id=_ACCEPTANCE_SPEC,
+    )
+    first = create_salvage_derivative(project, **kwargs)
+
+    manifest_path = project.root / first.lineage_artifact_location
+    payload = json.loads(manifest_path.read_text())
+    payload["mutation_fingerprint"] = "sha256:" + "0" * 64
+    tampered_id, _ = _install_custom_manifest(project, payload)
+    _repoint_asset_artifact(project, first.asset, tampered_id)
+
+    with pytest.raises(MCPVideoError) as excinfo:
+        create_salvage_derivative(project, **kwargs)
+    assert excinfo.value.code == "salvage_integrity_failed"
+    assert excinfo.value.error_type == "integrity_error"
+
+
+def test_v2_manifest_with_tampered_authorization_ref_fails_closed(source):
+    """Replay fails when a stored authorization_decision_id is not a valid approval."""
+
+    project, original, _source_path = source
+    forged_ref = "sha256:" + "9" * 64
+    kwargs = dict(
+        source_asset_id=original.asset_id,
+        recipe="still_frame",
+        policy={"timestamp": 1.0},
+        acceptance_spec_id=_ACCEPTANCE_SPEC,
+        authorization_decision_ids=(forged_ref,),
+    )
+    first = create_salvage_derivative(project, **kwargs)
+
+    manifest_path = project.root / first.lineage_artifact_location
+    payload = json.loads(manifest_path.read_text())
+    payload["authorization_decision_ids"] = ["sha256:" + "5" * 64]
+    tampered_id, _ = _install_custom_manifest(project, payload)
+    _repoint_asset_artifact(project, first.asset, tampered_id)
+
+    with pytest.raises(MCPVideoError) as excinfo:
+        create_salvage_derivative(project, **kwargs)
+    assert excinfo.value.code == "salvage_integrity_failed"
+
+
+def test_stale_authorization_ref_fails_closed_after_supersession(source):
+    """Replay fails when a stored authorization_decision_id has been superseded."""
+
+    project, original, source_path = source
+    audio_fingerprint = _audio_fingerprint(str(source_path))
+    intent = _mutation_intent(
+        SalvageRecipe.STILL_FRAME,
+        {"recipe": "still_frame", "timestamp": 1.0},
+        original.asset_id,
+        audio_fingerprint,
+        (),
+    )
+    from kinocut.aivideo.protection import mutation_fingerprint
+
+    intent_fingerprint = mutation_fingerprint(intent)
+    approval = append_record(
+        project,
+        ReviewDecision(
+            **review_decision_kwargs(
+                project_id=project.project_id,
+                target_ref=intent_fingerprint,
+                dependency_fingerprint=intent_fingerprint,
+            )
+        ),
+    )
+    result = create_salvage_derivative(
+        project,
+        source_asset_id=original.asset_id,
+        recipe="still_frame",
+        policy={"timestamp": 1.0},
+        acceptance_spec_id=_ACCEPTANCE_SPEC,
+        authorization_decision_ids=(approval.record_id,),
+    )
+    assert result.asset.record_id is not None
+
+    # Supersede the stored approval: replay must fail because the ref is no
+    # longer active and human-bound to the fingerprint.
+    superseding = append_record(
+        project,
+        ReviewDecision(
+            **review_decision_kwargs(
+                project_id=project.project_id,
+                target_ref=intent_fingerprint,
+                dependency_fingerprint=intent_fingerprint,
+                supersedes=approval.record_id,
+            )
+        ),
+    )
+    with pytest.raises(MCPVideoError) as excinfo:
+        create_salvage_derivative(
+            project,
+            source_asset_id=original.asset_id,
+            recipe="still_frame",
+            policy={"timestamp": 1.0},
+            acceptance_spec_id=_ACCEPTANCE_SPEC,
+            authorization_decision_ids=(superseding.record_id,),
+        )
+    assert excinfo.value.code == "salvage_integrity_failed"
+
+
+def test_new_protected_lock_blocks_idempotent_replay(source):
+    """A protected element added after render blocks replay (fresh approval needed)."""
+
+    project, original, source_path = source
+    kwargs = dict(
+        source_asset_id=original.asset_id,
+        recipe="still_frame",
+        policy={"timestamp": 1.0},
+        acceptance_spec_id=_ACCEPTANCE_SPEC,
+    )
+    create_salvage_derivative(project, **kwargs)
+
+    protect(
+        project,
+        ProtectedElement(
+            **protection_kwargs(
+                project_id=project.project_id,
+                dependency_fingerprint=original.asset_id,
+                element_type="source_asset",
+            )
+        ),
+    )
+    with pytest.raises(MCPVideoError) as excinfo:
+        create_salvage_derivative(project, **kwargs)
+    assert excinfo.value.code == "protected_element_change"
+
+
+def test_v1_manifest_replay_succeeds_without_protection(source):
+    """A legacy v1 manifest remains idempotent when no protection applies."""
+
+    project, original, _source_path = source
+    kwargs = dict(
+        source_asset_id=original.asset_id,
+        recipe="still_frame",
+        policy={"timestamp": 1.0},
+        acceptance_spec_id=_ACCEPTANCE_SPEC,
+    )
+    first = create_salvage_derivative(project, **kwargs)
+
+    manifest_path = project.root / first.lineage_artifact_location
+    v2_payload = json.loads(manifest_path.read_text())
+    v1_payload = _v1_payload_from_v2(v2_payload)
+    v1_id, _ = _install_custom_manifest(project, v1_payload)
+    _repoint_asset_artifact(project, first.asset, v1_id)
+
+    replayed = create_salvage_derivative(project, **kwargs)
+    assert replayed.lineage_artifact_id == v1_id
+    assert replayed.asset.derived_artifact_ids == (v1_id,)
+
+
+def test_v1_manifest_cannot_bypass_current_protected_lock(source):
+    """A legacy v1 manifest cannot bypass a protected element added later."""
+
+    project, original, _source_path = source
+    kwargs = dict(
+        source_asset_id=original.asset_id,
+        recipe="still_frame",
+        policy={"timestamp": 1.0},
+        acceptance_spec_id=_ACCEPTANCE_SPEC,
+    )
+    first = create_salvage_derivative(project, **kwargs)
+
+    manifest_path = project.root / first.lineage_artifact_location
+    v2_payload = json.loads(manifest_path.read_text())
+    v1_payload = _v1_payload_from_v2(v2_payload)
+    v1_id, _ = _install_custom_manifest(project, v1_payload)
+    _repoint_asset_artifact(project, first.asset, v1_id)
+
+    protect(
+        project,
+        ProtectedElement(
+            **protection_kwargs(
+                project_id=project.project_id,
+                dependency_fingerprint=original.asset_id,
+                element_type="source_asset",
+            )
+        ),
+    )
+    with pytest.raises(MCPVideoError) as excinfo:
+        create_salvage_derivative(project, **kwargs)
+    assert excinfo.value.code == "protected_element_change"
+
+
+def test_v2_manifest_replay_succeeds_through_fresh_protected_lock(source):
+    """Replay succeeds when a stored v2 auth ref clears a current protected lock."""
+
+    project, original, source_path = source
+    audio_fingerprint = _audio_fingerprint(str(source_path))
+
+    # Lock the source asset with an original human approval.
+    original_approval = append_record(
+        project,
+        ReviewDecision(
+            **review_decision_kwargs(
+                project_id=project.project_id,
+                target_ref=original.asset_id,
+                dependency_fingerprint=original.asset_id,
+            )
+        ),
+    )
+    protect(
+        project,
+        ProtectedElement(
+            **protection_kwargs(
+                project_id=project.project_id,
+                dependency_fingerprint=original.asset_id,
+                element_type="source_asset",
+                human_approval_ref=original_approval.record_id,
+            )
+        ),
+    )
+
+    # Build the salvage intent fingerprint and issue a fresh human approval
+    # that derives from the lock and the original approval.
+    intent = _mutation_intent(
+        SalvageRecipe.STILL_FRAME,
+        {"recipe": "still_frame", "timestamp": 1.0},
+        original.asset_id,
+        audio_fingerprint,
+        (),
+    )
+    from kinocut.aivideo.protection import mutation_fingerprint
+
+    intent_fingerprint = mutation_fingerprint(intent)
+    salvage_approval = append_record(
+        project,
+        ReviewDecision(
+            **review_decision_kwargs(
+                project_id=project.project_id,
+                target_ref=intent_fingerprint,
+                dependency_fingerprint=intent_fingerprint,
+                source_record_ids=(original_approval.record_id,),
+            )
+        ),
+    )
+
+    first = create_salvage_derivative(
+        project,
+        source_asset_id=original.asset_id,
+        recipe="still_frame",
+        policy={"timestamp": 1.0},
+        acceptance_spec_id=_ACCEPTANCE_SPEC,
+        authorization_decision_ids=(salvage_approval.record_id,),
+    )
+    second = create_salvage_derivative(
+        project,
+        source_asset_id=original.asset_id,
+        recipe="still_frame",
+        policy={"timestamp": 1.0},
+        acceptance_spec_id=_ACCEPTANCE_SPEC,
+        authorization_decision_ids=(salvage_approval.record_id,),
+    )
+    assert second.asset.record_id == first.asset.record_id
+    assert second.lineage_artifact_id == first.lineage_artifact_id
