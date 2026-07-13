@@ -138,6 +138,7 @@ class PostChain:
 
         from kinocut_sound.post._fixtures import sha256_of_file
 
+        ctx.work_dir.mkdir(parents=True, exist_ok=True)
         stage_params = stage_params or {}
         current_input = Path(input_path)
         results: list[PostStageResult] = []
