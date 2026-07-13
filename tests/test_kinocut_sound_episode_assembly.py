@@ -254,7 +254,7 @@ def test_planner_rejects_absolute_asset_sources_and_cancels_before_validation():
         assembly.FoleyCueIntent(
             cue_id="foley_leaky",
             after_line_id="line_0001_0001",
-            asset_ref="/home/private/door.wav",
+            asset_ref="/opt/fixture/door.wav",
             asset_hash="sha256:" + "c" * 64,
             duration_seconds=0.4,
         )
