@@ -12,6 +12,7 @@ from typing import Literal
 
 from pydantic import Field, ValidationError, field_validator, model_validator
 
+from kinocut_sound._assembly_integrity import validate_episode_assembly
 from kinocut_sound._canonical import (
     BoundedCode,
     FrozenModel,
@@ -22,6 +23,10 @@ from kinocut_sound._canonical import (
     location_violation,
 )
 from kinocut_sound._errors import SoundContractError
+from kinocut_sound._model_boundary import (
+    dump_revalidate_model,
+    dump_revalidate_tuple,
+)
 from kinocut_sound.lines import ProfileRef
 from kinocut_sound.limits import MIN_TIME_SECONDS
 from kinocut_sound.script_parser import (
@@ -38,7 +43,6 @@ from kinocut_sound.timeline import Cue, CueKind, Timeline
 
 class AssemblyPlanningError(SoundContractError):
     """A bounded, privacy-safe episode planning failure."""
-
 
 
 class ClipRef(FrozenModel):
@@ -143,9 +147,11 @@ class EpisodeAssembly(RecordBase):
     parsed_script_id: Sha256
     timeline: Timeline
     line_cue_order: tuple[str, ...]
+    line_ids: tuple[str, ...]
     routes: tuple[AssemblyRoute, ...]
     clip_hashes: tuple[Sha256, ...]
     foley_hashes: tuple[Sha256, ...]
+    foley_cue_ids: tuple[str, ...]
     chapter_cards: tuple[ChapterCard, ...]
 
     @field_validator("episode_id")
@@ -154,11 +160,8 @@ class EpisodeAssembly(RecordBase):
         return BoundedCode(value)
 
     @model_validator(mode="after")
-    def _route_order_matches_line_cues(self) -> EpisodeAssembly:
-        if tuple(route.cue_id for route in self.routes) != self.line_cue_order:
-            raise ValueError("route order must match line cue order")
-        if self.parsed_script_id not in self.source_record_ids:
-            raise ValueError("parsed script id must be a source record id")
+    def _assembly_is_self_consistent(self) -> EpisodeAssembly:
+        validate_episode_assembly(self)
         return self
 
     def canonical_id(self) -> str:
@@ -202,10 +205,7 @@ def _group_by_line(values: tuple[CueIntent, ...]) -> dict[str, tuple[CueIntent, 
     for value in values:
         line_id = value.after_line_id
         grouped.setdefault(line_id, []).append(value)
-    return {
-        line_id: tuple(sorted(items, key=lambda item: item.cue_id))
-        for line_id, items in grouped.items()
-    }
+    return {line_id: tuple(sorted(items, key=lambda item: item.cue_id)) for line_id, items in grouped.items()}
 
 
 def _append_cue(
@@ -239,9 +239,7 @@ def _line_route(item: ParsedLine) -> AssemblyRoute:
 
 
 def _bounded_pause_cue_id(kind: str, source_id: str) -> str:
-    digest = canonical_digest({"kind": kind, "source_id": source_id}).removeprefix(
-        "sha256:"
-    )
+    digest = canonical_digest({"kind": kind, "source_id": source_id}).removeprefix("sha256:")
     token = base64.b32encode(bytes.fromhex(digest)).decode("ascii").rstrip("=").lower()
     return f"pause_{token}"
 
@@ -268,6 +266,8 @@ def _append_beat(beat: ParsedBeat, current: float, cues: list[Cue]) -> float:
         kind=kind,
         source_ref=source_ref,
     )
+
+
 def _plan_line_extras(
     item: ParsedLine,
     current: float,
@@ -373,6 +373,13 @@ def plan_episode_assembly(
 
     if cancellation_requested:
         raise _planning_error("episode assembly planning was cancelled", "assembly_cancelled")
+    try:
+        parsed = dump_revalidate_model(parsed, ParsedScript)
+        clips = dump_revalidate_tuple(clips, ClipRef)
+        foley_cues = dump_revalidate_tuple(foley_cues, FoleyCueIntent)
+        designed_silences = dump_revalidate_tuple(designed_silences, DesignedSilenceIntent)
+    except (AttributeError, TypeError, ValueError, ValidationError) as exc:
+        raise _planning_error("assembly inputs failed strict boundary validation", "invalid_assembly") from exc
     clip_index = _unique_index(clips)
     expected_line_ids = tuple(item.line.line_id for item in parsed.parsed_lines)
     if set(clip_index) != set(expected_line_ids):
@@ -381,9 +388,14 @@ def plan_episode_assembly(
     foley_by_line = _group_by_line(foley_cues)
     silence_by_line = _group_by_line(designed_silences)
     try:
-        timeline, routes = _build_timeline(
-            parsed, clip_index, foley_by_line, silence_by_line
-        )
+        timeline, routes = _build_timeline(parsed, clip_index, foley_by_line, silence_by_line)
+        foley_hash_by_id = {
+            beat.beat_id: beat.asset_hash
+            for beat in parsed.beats
+            if beat.kind == BeatKind.FOLEY and beat.asset_hash is not None
+        }
+        foley_hash_by_id.update({cue.cue_id: cue.asset_hash for cue in foley_cues})
+        foley_cue_ids = tuple(cue.cue_id for cue in timeline.cues if cue.kind == CueKind.FOLEY)
         parsed_id = parsed.canonical_id()
         return EpisodeAssembly(
             project_id=parsed.project_id,
@@ -393,16 +405,11 @@ def plan_episode_assembly(
             parsed_script_id=parsed_id,
             timeline=timeline,
             line_cue_order=parsed.cue_order,
+            line_ids=expected_line_ids,
             routes=routes,
             clip_hashes=tuple(clip_index[line_id].artifact_hash for line_id in expected_line_ids),
-            foley_hashes=tuple(
-                beat.asset_hash
-                for beat in parsed.beats
-                if beat.kind == BeatKind.FOLEY and beat.asset_hash is not None
-            )
-            + tuple(
-                cue.asset_hash for cue in sorted(foley_cues, key=lambda item: item.cue_id)
-            ),
+            foley_hashes=tuple(foley_hash_by_id[cue_id] for cue_id in foley_cue_ids),
+            foley_cue_ids=foley_cue_ids,
             chapter_cards=parsed.chapter_cards,
         )
     except (ValidationError, KeyError) as exc:

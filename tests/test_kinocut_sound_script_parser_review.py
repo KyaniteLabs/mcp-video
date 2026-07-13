@@ -82,6 +82,8 @@ def _generic_parsed() -> parser.ParsedScript:
             _actor("actor_a", "voice_a"),
         ),
     )
+
+
 def _two_scene_parsed() -> parser.ParsedScript:
     document = _generic_document()
     first_scene = document["scenes"][0]
@@ -137,6 +139,26 @@ def _chapter_only_parsed() -> parser.ParsedScript:
     )
 
 
+def _generic_with_chapter_payload():
+    payload = _generic_parsed().model_dump(mode="json")
+    chapter = _chapter_only_parsed().model_dump(mode="json")["chapter_cards"][0]
+    chapter["chapter_id"] = "chapter_review"
+    chapter["scene_id"] = "scene_review"
+    payload["chapter_cards"].append(chapter)
+    payload["events"].append(
+        {
+            "event_id": "chapter_review",
+            "scene_id": "scene_review",
+            "kind": "chapter_card",
+        }
+    )
+    payload["scenes"][0]["event_ids"].append("chapter_review")
+    return payload
+
+
+def _remove_event(payload, event_id):
+    payload["events"] = [event for event in payload["events"] if event["event_id"] != event_id]
+    payload["scenes"][0]["event_ids"] = [item for item in payload["scenes"][0]["event_ids"] if item != event_id]
 
 
 def test_generic_parser_represents_action_narration_voiceover_and_beats_in_source_order():
@@ -264,6 +286,122 @@ def test_parsed_script_rejects_beat_after_line_from_another_scene():
 def test_parsed_script_rejects_chapter_card_scene_ownership_mismatch():
     payload = _chapter_only_parsed().model_dump(mode="json")
     payload["chapter_cards"][0]["scene_id"] = "scene_other"
+
+    with pytest.raises(ValidationError):
+        parser.ParsedScript.model_validate(payload)
+
+
+@pytest.mark.parametrize("target_type", ["beat", "chapter_card"])
+def test_parsed_script_rejects_same_type_target_id_duplicates(target_type):
+    if target_type == "beat":
+        payload = _generic_parsed().model_dump(mode="json")
+        retired_id = payload["beats"][1]["beat_id"]
+        payload["beats"][1]["beat_id"] = payload["beats"][0]["beat_id"]
+        _remove_event(payload, retired_id)
+    else:
+        payload = _generic_with_chapter_payload()
+        payload["chapter_cards"].append(payload["chapter_cards"][0].copy())
+
+    with pytest.raises(ValidationError):
+        parser.ParsedScript.model_validate(payload)
+
+
+@pytest.mark.parametrize("collision", ["line_beat", "line_chapter", "beat_chapter"])
+def test_parsed_script_rejects_cross_type_target_id_collisions(collision):
+    payload = _generic_with_chapter_payload()
+    line_id = payload["parsed_lines"][0]["line"]["line_id"]
+    beat_id = payload["beats"][0]["beat_id"]
+    chapter_id = payload["chapter_cards"][0]["chapter_id"]
+
+    if collision == "line_beat":
+        payload["beats"][0]["beat_id"] = line_id
+        _remove_event(payload, beat_id)
+        surviving_id, surviving_kind = line_id, "beat"
+    elif collision == "line_chapter":
+        payload["chapter_cards"][0]["chapter_id"] = line_id
+        _remove_event(payload, chapter_id)
+        surviving_id, surviving_kind = line_id, "chapter_card"
+    else:
+        payload["chapter_cards"][0]["chapter_id"] = beat_id
+        _remove_event(payload, chapter_id)
+        surviving_id, surviving_kind = beat_id, "chapter_card"
+
+    event = next(item for item in payload["events"] if item["event_id"] == surviving_id)
+    event["kind"] = surviving_kind
+
+    with pytest.raises(ValidationError):
+        parser.ParsedScript.model_validate(payload)
+
+
+def test_parser_revalidates_poisoned_actor_profiles_at_public_boundary():
+    poisoned_profile = ProfileRef.model_construct(
+        profile_id="RAW PROFILE SECRET",
+        version=1,
+    )
+    actor = _actor("actor_a", "voice_a").model_copy(update={"profile": poisoned_profile})
+
+    with pytest.raises(parser.ScriptParseError):
+        parser.parse_episode_script(
+            _generic_document(),
+            project_id="project_alpha",
+            created_by="agent:worker_1",
+            actors=(_actor("narrator", "voice_narrator"), actor),
+        )
+
+
+def test_parser_translates_wrong_actor_runtime_type_to_custom_error():
+    with pytest.raises(parser.ScriptParseError):
+        parser.parse_episode_script(
+            _generic_document(),
+            project_id="project_alpha",
+            created_by="agent:worker_1",
+            actors=(object(),),
+        )
+
+
+def test_wf_parser_translates_wrong_narrator_runtime_type_to_custom_error():
+    document = {
+        "episode_id": "wf_runtime_type",
+        "scenes": [
+            {
+                "scene_id": "wf_scene",
+                "turns": [
+                    {
+                        "character": "Narrator",
+                        "text": "Chapter One",
+                        "confessional": False,
+                    }
+                ],
+            }
+        ],
+    }
+
+    with pytest.raises(parser.ScriptParseError):
+        parser.parse_wf_episode_script(
+            document,
+            project_id="project_alpha",
+            created_by="agent:worker_1",
+            actors=(),
+            character_routes={},
+            narrator_character=object(),
+        )
+
+
+@pytest.mark.parametrize("defect", ["line_event_order", "line_index", "beat_anchor"])
+def test_parsed_script_rejects_source_event_order_contradictions(defect):
+    payload = _generic_parsed().model_dump(mode="json")
+    if defect == "line_event_order":
+        payload["events"][0], payload["events"][3] = (
+            payload["events"][3],
+            payload["events"][0],
+        )
+        payload["scenes"][0]["event_ids"] = [item["event_id"] for item in payload["events"]]
+    elif defect == "line_index":
+        payload["parsed_lines"][0]["line_index"] = 7
+    else:
+        beat_event = payload["events"].pop(1)
+        payload["events"].insert(0, beat_event)
+        payload["scenes"][0]["event_ids"] = [item["event_id"] for item in payload["events"]]
 
     with pytest.raises(ValidationError):
         parser.ParsedScript.model_validate(payload)

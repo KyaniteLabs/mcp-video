@@ -23,7 +23,11 @@ from kinocut_sound._canonical import (
     location_violation,
 )
 from kinocut_sound._errors import SoundContractError
-from kinocut_sound._script_integrity import validate_script_relationships
+from kinocut_sound._model_boundary import dump_revalidate_index
+from kinocut_sound._script_integrity import (
+    validate_script_relationships,
+    validate_target_id_uniqueness,
+)
 from kinocut_sound.lines import Emotion, Line, ProfileRef, Prosody
 from kinocut_sound.limits import MIN_TEXT_LENGTH_CHARS, MIN_TIME_SECONDS, MIN_VERSION
 
@@ -159,7 +163,6 @@ class ParsedScene(FrozenModel):
         return value
 
 
-
 class ParsedBeat(FrozenModel):
     """One hashed, source-ordered pacing, Foley, or silence beat."""
 
@@ -227,6 +230,8 @@ class ParsedEvent(FrozenModel):
     @classmethod
     def _ids_are_bounded(cls, value: str) -> str:
         return BoundedCode(value)
+
+
 class ParsedScript(RecordBase):
     """Canonical, privacy-safe result of parsing one structured episode."""
 
@@ -247,6 +252,11 @@ class ParsedScript(RecordBase):
 
     @model_validator(mode="after")
     def _ordering_is_self_consistent(self) -> ParsedScript:
+        validate_target_id_uniqueness(
+            parsed_lines=self.parsed_lines,
+            beats=self.beats,
+            chapter_cards=self.chapter_cards,
+        )
         line_ids = tuple(item.line.line_id for item in self.parsed_lines)
         cue_ids = tuple(item.cue_id for item in self.parsed_lines)
         if len(set(line_ids)) != len(line_ids):
@@ -259,9 +269,7 @@ class ParsedScript(RecordBase):
         expected_lines: list[str] = []
         expected_events: list[str] = []
         for scene in self.scenes:
-            scene_lines = tuple(
-                item.line.line_id for item in self.parsed_lines if item.scene_id == scene.scene_id
-            )
+            scene_lines = tuple(item.line.line_id for item in self.parsed_lines if item.scene_id == scene.scene_id)
             if scene.line_ids != scene_lines:
                 raise ValueError("scene line membership must exactly match parsed line order")
             expected_lines.extend(scene.line_ids)
@@ -271,8 +279,10 @@ class ParsedScript(RecordBase):
         event_ids = tuple(event.event_id for event in self.events)
         if tuple(expected_events) != event_ids or len(set(event_ids)) != len(event_ids):
             raise ValueError("scene event membership must exactly match unique event order")
-        known_ids = line_ids + tuple(item.beat_id for item in self.beats) + tuple(
-            item.chapter_id for item in self.chapter_cards
+        known_ids = (
+            line_ids
+            + tuple(item.beat_id for item in self.beats)
+            + tuple(item.chapter_id for item in self.chapter_cards)
         )
         if set(event_ids) != set(known_ids):
             raise ValueError("events must reference every parsed object exactly once")
@@ -317,7 +327,6 @@ class _LineInput(FrozenModel):
         return value
 
 
-
 class _BeatInput(FrozenModel):
     kind: BeatKind
     text: str = Field(min_length=1)
@@ -355,6 +364,7 @@ class _BeatInput(FrozenModel):
         if self.kind != BeatKind.DESIGNED_SILENCE and self.silence_quality is not None:
             raise ValueError("only designed silence may carry a quality")
         return self
+
 
 class _SceneInput(FrozenModel):
     scene_id: str = Field(min_length=1)
@@ -398,7 +408,6 @@ class _ScriptInput(FrozenModel):
         if not value:
             raise ValueError("episode must contain at least one scene")
         return value
-
 
 
 class _WfTurnInput(FrozenModel):
@@ -446,6 +455,8 @@ class _WfScriptInput(FrozenModel):
         if not value:
             raise ValueError("WF episode must contain at least one scene")
         return value
+
+
 def _parse_error(message: str, code: str) -> ScriptParseError:
     return ScriptParseError(message, code=code, suggested_action={"auto_fix": False})
 
@@ -457,13 +468,6 @@ def _validation_code(exc: ValidationError) -> str:
     if "scene_id" in locations:
         return "invalid_scene"
     return "invalid_script"
-
-
-def _actor_index(actors: tuple[ActorRoute, ...]) -> dict[str, ActorRoute]:
-    actor_ids = tuple(actor.actor_id for actor in actors)
-    if len(set(actor_ids)) != len(actor_ids):
-        raise _parse_error("actor roster contains duplicate actor ids", "invalid_actor_roster")
-    return {actor.actor_id: actor for actor in actors}
 
 
 def _spatial_preset(route: ActorRoute, kind: ScriptLineKind) -> str:
@@ -509,7 +513,6 @@ def _build_line(
     )
 
 
-
 def _build_beat(
     source: _BeatInput,
     *,
@@ -519,11 +522,7 @@ def _build_beat(
     line_ids: tuple[str, ...],
 ) -> ParsedBeat:
     beat_id = f"beat_{scene_index:04d}_{beat_index:04d}"
-    after_line_id = (
-        line_ids[source.after_line_index - 1]
-        if source.after_line_index > MIN_TIME_SECONDS
-        else None
-    )
+    after_line_id = line_ids[source.after_line_index - 1] if source.after_line_index > MIN_TIME_SECONDS else None
     return ParsedBeat(
         beat_id=beat_id,
         scene_id=scene_id,
@@ -545,18 +544,13 @@ def _scene_events(
 ) -> tuple[ParsedEvent, ...]:
     events: list[ParsedEvent] = []
     for beat in (item for item in beats if item.after_line_id is None):
-        events.append(
-            ParsedEvent(event_id=beat.beat_id, scene_id=scene_id, kind=ParsedEventKind.BEAT)
-        )
+        events.append(ParsedEvent(event_id=beat.beat_id, scene_id=scene_id, kind=ParsedEventKind.BEAT))
     for line_id in line_ids:
-        events.append(
-            ParsedEvent(event_id=line_id, scene_id=scene_id, kind=ParsedEventKind.LINE)
-        )
+        events.append(ParsedEvent(event_id=line_id, scene_id=scene_id, kind=ParsedEventKind.LINE))
         for beat in (item for item in beats if item.after_line_id == line_id):
-            events.append(
-                ParsedEvent(event_id=beat.beat_id, scene_id=scene_id, kind=ParsedEventKind.BEAT)
-            )
+            events.append(ParsedEvent(event_id=beat.beat_id, scene_id=scene_id, kind=ParsedEventKind.BEAT))
     return tuple(events)
+
 
 def _build_scene(
     scene: _SceneInput,
@@ -608,7 +602,11 @@ def parse_episode_script(
 ) -> ParsedScript:
     """Parse structured episode data into a canonical, privacy-safe record."""
 
-    actor_map = _actor_index(actors)
+    try:
+        actor_map = dump_revalidate_index(actors, ActorRoute, "actor_id")
+    except (AttributeError, TypeError, ValueError, ValidationError) as exc:
+        raise _parse_error("actor roster failed strict validation", "invalid_actor_roster") from exc
+
     try:
         script = _ScriptInput.model_validate(document)
     except ValidationError as exc:
@@ -738,9 +736,17 @@ def parse_wf_episode_script(
 ) -> ParsedScript:
     """Parse bounded WF scenes and turns while retaining narrator cards as metadata."""
 
-    if not narrator_character.strip() or any(ord(char) < 0x20 for char in narrator_character):
+    if (
+        not isinstance(narrator_character, str)
+        or not narrator_character.strip()
+        or any(ord(char) < 0x20 for char in narrator_character)
+    ):
         raise _parse_error("WF narrator character is invalid", "invalid_script")
-    actor_map = _actor_index(actors)
+    try:
+        actor_map = dump_revalidate_index(actors, ActorRoute, "actor_id")
+    except (AttributeError, TypeError, ValueError, ValidationError) as exc:
+        raise _parse_error("actor roster failed strict validation", "invalid_actor_roster") from exc
+
     route_map = _wf_character_map(character_routes, actor_map)
     try:
         script = _WfScriptInput.model_validate(document)
