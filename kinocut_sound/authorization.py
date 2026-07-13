@@ -18,6 +18,7 @@ from typing import Any
 
 from kinocut_sound._canonical import BoundedCode
 from kinocut_sound._errors import SoundContractError
+from kinocut_sound.authorization_privacy import context_hash_input
 from kinocut_sound.consent import AuditEvent, ConsentGrant, ConsentState
 from kinocut_sound.validation import ISO8601_RE
 
@@ -198,11 +199,7 @@ class ConsentLedger:
     """In-memory append-only authorization ledger and transitive lineage graph."""
 
     def __init__(self, *, max_lease_seconds: int) -> None:
-        if (
-            isinstance(max_lease_seconds, bool)
-            or not isinstance(max_lease_seconds, int)
-            or max_lease_seconds < 1
-        ):
+        if isinstance(max_lease_seconds, bool) or not isinstance(max_lease_seconds, int) or max_lease_seconds < 1:
             raise _authorization_error("invalid lease ceiling", "invalid_lease_duration")
         self._max_lease_seconds = max_lease_seconds
         self._lock = RLock()
@@ -283,7 +280,11 @@ class ConsentLedger:
             "boundary_authorized",
             at_iso,
             "system:authorization",
-            detail={"boundary": boundary.value, "grant_ids": ordered},
+            detail={
+                "boundary": boundary.value,
+                "grant_ids": ordered,
+                "context": context_hash_input(context),
+            },
         )
         return ordered
 
@@ -329,7 +330,11 @@ class ConsentLedger:
             at_iso,
             actor_id,
             lease_id=lease_id,
-            detail={"grant_ids": grant_ids, "expires_at_iso": lease.expires_at_iso},
+            detail={
+                "grant_ids": grant_ids,
+                "expires_at_iso": lease.expires_at_iso,
+                "context": context_hash_input(context),
+            },
         )
         return lease
 
@@ -378,7 +383,11 @@ class ConsentLedger:
             actor_id,
             lease_id=lease_id,
             asset_id=output_asset_id,
-            detail={"grant_ids": lease.grant_ids, "parent_asset_ids": parent_asset_ids},
+            detail={
+                "grant_ids": lease.grant_ids,
+                "parent_asset_ids": parent_asset_ids,
+                "context": context_hash_input(lease.context),
+            },
         )
         self._finish_waiting_revocations(at_iso)
         return lineage
@@ -467,6 +476,7 @@ class ConsentLedger:
             detail={
                 "grant_ids": tuple(sorted(all_grants)),
                 "parent_asset_ids": lineage.parent_asset_ids,
+                "context": context_hash_input(context),
             },
         )
         return lineage
@@ -511,6 +521,8 @@ class ConsentLedger:
     ) -> tuple[str, ...]:
         """Require the composite grant and every named source grant independently."""
 
+        if not isinstance(context, AuthorizationContext):
+            raise _authorization_error("consent scope is invalid", "grant_scope_invalid")
         if context.operation != "voice_blend":
             raise _authorization_error("blend scope is denied", "grant_scope_denied")
         grant = self.current_grant(blend_grant_id)
@@ -521,6 +533,13 @@ class ConsentLedger:
             grant_ids,
             at_iso=at_iso,
             context=context,
+        )
+        self._append_event(
+            "blend_authorized",
+            at_iso,
+            "system:authorization",
+            grant_id=grant.grant_id,
+            detail={"grant_ids": grant_ids, "context": context_hash_input(context)},
         )
         return grant_ids
 
@@ -550,6 +569,8 @@ class ConsentLedger:
         if isinstance(retention_days, bool) or not isinstance(retention_days, int):
             raise _authorization_error("cloud egress is denied", "cloud_egress_denied")
         self._authorize_grants(grant_ids, at_iso=at_iso, context=context)
+        if context.provider_class != "cloud":
+            raise _authorization_error("consent scope is denied", "grant_scope_denied")
         for grant_id in grant_ids:
             grant = self.current_grant(grant_id)
             egress = grant.cloud_egress
@@ -575,6 +596,7 @@ class ConsentLedger:
                 "data_classes": data_classes,
                 "territory": territory,
                 "retention_days": retention_days,
+                "context": context_hash_input(context),
             },
         )
         return grant_ids
@@ -694,7 +716,10 @@ class ConsentLedger:
             at_iso,
             actor_id,
             lease_id=lease.lease_id,
-            detail={"grant_ids": lease.grant_ids},
+            detail={
+                "grant_ids": lease.grant_ids,
+                "context": context_hash_input(lease.context),
+            },
         )
 
     def _active_lease_ids(self, grant_id: str, at_iso: str) -> tuple[str, ...]:
