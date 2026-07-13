@@ -563,3 +563,64 @@ def test_parsed_script_rejects_every_timeline_emitting_id_collision(collision):
 
     with pytest.raises(ValidationError):
         parser.ParsedScript.model_validate(payload)
+
+
+@pytest.mark.parametrize("ceiling", ["scene", "line", "text", "beat", "turn"])
+def test_generator_inputs_cannot_bypass_script_resource_ceilings(ceiling):
+    if ceiling == "turn":
+        document = {
+            "episode_id": "wf_generator_limits",
+            "scenes": [
+                {
+                    "scene_id": "wf_scene",
+                    "turns": (
+                        {
+                            "character": "Narrator",
+                            "text": "Chapter",
+                            "confessional": False,
+                        }
+                        for _ in range(MAX_SCRIPT_TURNS_PER_SCENE + 1)
+                    ),
+                }
+            ],
+        }
+        with pytest.raises(parser.ScriptParseError):
+            parser.parse_wf_episode_script(
+                document,
+                project_id="project_alpha",
+                created_by="agent:worker_1",
+                actors=(),
+                character_routes={},
+                narrator_character="Narrator",
+            )
+        return
+
+    scene = {
+        "scene_id": "scene_0000",
+        "pause_after_seconds": 0.0,
+        "lines": [_limit_line()],
+    }
+    document = {"episode_id": "generator_limits", "scenes": [scene]}
+    if ceiling == "scene":
+        document["scenes"] = (
+            {
+                "scene_id": f"scene_{index:04d}",
+                "pause_after_seconds": 0.0,
+                "lines": [_limit_line()],
+            }
+            for index in range(MAX_SCRIPT_SCENES + 1)
+        )
+    elif ceiling == "line":
+        scene["lines"] = (_limit_line() for _ in range(MAX_SCRIPT_LINES_PER_SCENE + 1))
+    elif ceiling == "text":
+        scene["lines"] = iter([_limit_line("x" * (MAX_SCRIPT_TEXT_LENGTH_CHARS + 1))])
+    else:
+        scene["beats"] = (_limit_beat() for _ in range(MAX_SCRIPT_BEATS_PER_SCENE + 1))
+
+    with pytest.raises(parser.ScriptParseError):
+        parser.parse_episode_script(
+            document,
+            project_id="project_alpha",
+            created_by="agent:worker_1",
+            actors=(_actor("actor_0000", "voice_a"),),
+        )

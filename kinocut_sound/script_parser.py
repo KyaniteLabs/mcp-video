@@ -31,7 +31,7 @@ from kinocut_sound._script_integrity import (
     validate_script_relationships,
     validate_target_id_uniqueness,
 )
-from kinocut_sound._script_resource_limits import script_limit_violation
+from kinocut_sound._script_resource_limits import SCRIPT_LIMITS, script_limit_violation
 from kinocut_sound.lines import Emotion, Line, ProfileRef, Prosody
 from kinocut_sound.limits import MIN_TEXT_LENGTH_CHARS, MIN_TIME_SECONDS, MIN_VERSION
 
@@ -307,7 +307,7 @@ class ParsedScript(RecordBase):
 
 class _LineInput(FrozenModel):
     actor_id: str = Field(min_length=1)
-    text: str = Field(min_length=1)
+    text: str = Field(min_length=1, max_length=SCRIPT_LIMITS.text)
     kind: ScriptLineKind
     pause_after_seconds: float = Field(ge=MIN_TIME_SECONDS, strict=True)
 
@@ -333,7 +333,7 @@ class _LineInput(FrozenModel):
 
 class _BeatInput(FrozenModel):
     kind: BeatKind
-    text: str = Field(min_length=1)
+    text: str = Field(min_length=1, max_length=SCRIPT_LIMITS.text)
     after_line_index: int = Field(ge=MIN_TIME_SECONDS, strict=True)
     duration_seconds: float = Field(gt=MIN_TIME_SECONDS, strict=True)
     asset_ref: str | None = None
@@ -373,8 +373,8 @@ class _BeatInput(FrozenModel):
 class _SceneInput(FrozenModel):
     scene_id: str = Field(min_length=1)
     pause_after_seconds: float = Field(ge=MIN_TIME_SECONDS, strict=True)
-    lines: tuple[_LineInput, ...]
-    beats: tuple[_BeatInput, ...] = ()
+    lines: tuple[_LineInput, ...] = Field(max_length=SCRIPT_LIMITS.lines)
+    beats: tuple[_BeatInput, ...] = Field(default=(), max_length=SCRIPT_LIMITS.beats)
 
     @field_validator("scene_id")
     @classmethod
@@ -387,6 +387,8 @@ class _SceneInput(FrozenModel):
             raise ValueError("scene must contain at least one line or beat")
         if any(beat.after_line_index > len(self.lines) for beat in self.beats):
             raise ValueError("beat after_line_index exceeds scene line count")
+        if len(self.lines) + len(self.beats) > SCRIPT_LIMITS.events:
+            raise ValueError("scene event count exceeds resource ceiling")
         return self
 
     @field_validator("pause_after_seconds")
@@ -399,7 +401,7 @@ class _SceneInput(FrozenModel):
 
 class _ScriptInput(FrozenModel):
     episode_id: str = Field(min_length=1)
-    scenes: tuple[_SceneInput, ...]
+    scenes: tuple[_SceneInput, ...] = Field(max_length=SCRIPT_LIMITS.scenes)
 
     @field_validator("episode_id")
     @classmethod
@@ -416,7 +418,7 @@ class _ScriptInput(FrozenModel):
 
 class _WfTurnInput(FrozenModel):
     character: str = Field(min_length=1)
-    text: str = Field(min_length=1)
+    text: str = Field(min_length=1, max_length=SCRIPT_LIMITS.text)
     confessional: bool = Field(strict=True)
 
     @field_validator("character", "text")
@@ -429,7 +431,7 @@ class _WfTurnInput(FrozenModel):
 
 class _WfSceneInput(FrozenModel):
     scene_id: str = Field(min_length=1)
-    turns: tuple[_WfTurnInput, ...]
+    turns: tuple[_WfTurnInput, ...] = Field(max_length=SCRIPT_LIMITS.turns)
 
     @field_validator("scene_id")
     @classmethod
@@ -446,7 +448,7 @@ class _WfSceneInput(FrozenModel):
 
 class _WfScriptInput(FrozenModel):
     episode_id: str = Field(min_length=1)
-    scenes: tuple[_WfSceneInput, ...]
+    scenes: tuple[_WfSceneInput, ...] = Field(max_length=SCRIPT_LIMITS.scenes)
 
     @field_validator("episode_id")
     @classmethod

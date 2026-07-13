@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from dataclasses import dataclass
 from typing import Any
 
 from kinocut_sound.limits import (
@@ -13,6 +14,19 @@ from kinocut_sound.limits import (
     MAX_SCRIPT_TEXT_LENGTH_CHARS,
     MAX_SCRIPT_TURNS_PER_SCENE,
 )
+
+
+@dataclass(frozen=True)
+class _ScriptLimits:
+    scenes: int = MAX_SCRIPT_SCENES
+    lines: int = MAX_SCRIPT_LINES_PER_SCENE
+    beats: int = MAX_SCRIPT_BEATS_PER_SCENE
+    turns: int = min(MAX_SCRIPT_TURNS_PER_SCENE, MAX_SCRIPT_EVENTS_PER_SCENE)
+    events: int = MAX_SCRIPT_EVENTS_PER_SCENE
+    text: int = MAX_SCRIPT_TEXT_LENGTH_CHARS
+
+
+SCRIPT_LIMITS = _ScriptLimits()
 
 
 def _collection(value: object) -> list[Any] | tuple[Any, ...] | None:
