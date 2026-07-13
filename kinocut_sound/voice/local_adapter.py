@@ -100,6 +100,7 @@ class SynthesisRecipe:
     attack_seconds: float
     release_seconds: float
     harmonic_ratio: float
+    text_phase_offset: float
     text_hash: Sha256
     slot_id: str
     pronunciation_fingerprint: Sha256
@@ -139,6 +140,23 @@ def _clamp(value: float, low: float, high: float) -> float:
 def _bounded_duration(text_length_chars: int, rate: float) -> float:
     raw = DEFAULT_SECONDS_PER_CHAR * max(1, int(text_length_chars)) / max(0.1, rate)
     return _clamp(raw, DEFAULT_MIN_DURATION_SECONDS, DEFAULT_MAX_DURATION_SECONDS)
+
+
+def _text_phase_offset(text_hash: Sha256) -> float:
+    """Return a bounded phase offset (radians) derived from a text hash.
+
+    Maps the leading 8 hex chars of a bounded SHA-256 into ``[0, 2π)`` so
+    distinct text inputs yield distinct starting phases for the second
+    harmonic. The result is bounded and deterministic — same hash always
+    produces the same offset.
+    """
+
+    hex_part = text_hash.removeprefix("sha256:")
+    try:
+        head = int(hex_part[:8], 16)
+    except (ValueError, IndexError):
+        head = 0
+    return (head / 0xFFFFFFFF) * (2.0 * math.pi)
 
 
 def _harmonic_mix(
@@ -184,15 +202,11 @@ def build_recipe(
     duration_seconds = _bounded_duration(line.text_length_chars, effective.rate)
 
     # Linear gain from dB. Cap under the peak amplitude so true-peak stays < 0.
-    gain_linear = DEFAULT_PEAK_AMPLITUDE_LINEAR * (
-        10.0 ** (effective.volume_db / 20.0)
-    )
+    gain_linear = DEFAULT_PEAK_AMPLITUDE_LINEAR * (10.0 ** (effective.volume_db / 20.0))
     gain_linear = _clamp(gain_linear, 0.0, DEFAULT_PEAK_AMPLITUDE_LINEAR)
 
     # Brightness blends slot formant offset, per-line emphasis, and emotion.
-    formant_brightness = _clamp(
-        0.5 + (effective.formant_offset / 12.0) * 0.5, 0.0, _MAX_BRIGHTNESS
-    )
+    formant_brightness = _clamp(0.5 + (effective.formant_offset / 12.0) * 0.5, 0.0, _MAX_BRIGHTNESS)
     emphasis_brightness = _clamp(effective.emphasis, 0.0, _MAX_BRIGHTNESS)
     brightness = _clamp(
         0.5 * formant_brightness + 0.3 * emotion.brightness + 0.2 * emphasis_brightness,
@@ -208,9 +222,7 @@ def build_recipe(
 
     tremolo_depth = _clamp(abs(emotion.tremolo_depth), 0.0, _MAX_TREMOLO_DEPTH)
     tremolo_rate_hz = 4.5 + 0.5 * emotion.intensity
-    pitch_drift_cents = _clamp(
-        emotion.pitch_drift_cents, -_MAX_PITCH_DRIFT_CENTS, _MAX_PITCH_DRIFT_CENTS
-    )
+    pitch_drift_cents = _clamp(emotion.pitch_drift_cents, -_MAX_PITCH_DRIFT_CENTS, _MAX_PITCH_DRIFT_CENTS)
     pitch_drift_rate_hz = 0.7
 
     attack_seconds = DEFAULT_ATTACK_SECONDS * (0.5 + emotion.attack_smoothness)
@@ -228,6 +240,7 @@ def build_recipe(
         attack_seconds=attack_seconds,
         release_seconds=release_seconds,
         harmonic_ratio=harmonic_ratio,
+        text_phase_offset=_text_phase_offset(line.text_hash),
         text_hash=line.text_hash,
         slot_id=slot.slot_id,
         pronunciation_fingerprint=pronunciation_fingerprint,
@@ -248,6 +261,7 @@ def _recipe_digest(recipe: SynthesisRecipe) -> Sha256:
         "attack_seconds": recipe.attack_seconds,
         "release_seconds": recipe.release_seconds,
         "harmonic_ratio": recipe.harmonic_ratio,
+        "text_phase_offset": recipe.text_phase_offset,
         "text_hash": recipe.text_hash,
         "slot_id": recipe.slot_id,
         "pronunciation_fingerprint": recipe.pronunciation_fingerprint,
@@ -262,7 +276,7 @@ def _synthesize_pcm(recipe: SynthesisRecipe) -> tuple[bytes, float]:
     sample_rate = int(recipe.sample_rate_hz)
     if sample_rate <= 0:
         raise voice_error("sample rate must be positive", ADAPTER_OUTPUT_INVALID)
-    n_samples = max(1, int(math.ceil(recipe.duration_seconds * sample_rate)))
+    n_samples = max(1, math.ceil(recipe.duration_seconds * sample_rate))
     attack_samples = max(0, int(recipe.attack_seconds * sample_rate))
     release_samples = max(0, int(recipe.release_seconds * sample_rate))
 
@@ -274,6 +288,7 @@ def _synthesize_pcm(recipe: SynthesisRecipe) -> tuple[bytes, float]:
     tremolo_rate = recipe.tremolo_rate_hz
     drift_cents = recipe.pitch_drift_cents
     drift_rate = recipe.pitch_drift_rate_hz
+    text_phase = recipe.text_phase_offset
 
     two_pi = 2.0 * math.pi
     phase = 0.0
@@ -288,7 +303,9 @@ def _synthesize_pcm(recipe: SynthesisRecipe) -> tuple[bytes, float]:
         # Tremolo shapes amplitude; center it at 1.0.
         amp_mod = 1.0 - tremolo_depth * 0.5 * (1.0 - math.sin(two_pi * tremolo_rate * t))
         fundamental = math.sin(phase)
-        harmonic = math.sin(2.0 * phase) if harmonic_ratio > 0 else 0.0
+        # The second harmonic carries the text-derived phase offset so
+        # distinct text inputs produce measurably distinct output bytes.
+        harmonic = math.sin(2.0 * phase + text_phase) if harmonic_ratio > 0 else 0.0
         # Brightness shapes how much harmonic reaches the mix.
         harmonic_amp = harmonic_ratio * brightness
         sample_value = gain * amp_mod * (fundamental + harmonic_amp * harmonic)
@@ -376,7 +393,7 @@ class LocalSynthesisAdapter:
     ``available=True`` because the synthesizer is pure Python.
     """
 
-    __slots__ = ("_sample_rate_hz", "_channel_count", "_descriptor")
+    __slots__ = ("_channel_count", "_descriptor", "_sample_rate_hz")
 
     def __init__(
         self,

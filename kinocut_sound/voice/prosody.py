@@ -38,7 +38,6 @@ from kinocut_sound.limits import (
 from kinocut_sound.voice._errors import (
     EMOTION_OUT_OF_RANGE,
     PROSODY_OUT_OF_RANGE,
-    VoiceError,
     bounded_voice_error,
 )
 from kinocut_sound.voice.roster import VoiceSlot

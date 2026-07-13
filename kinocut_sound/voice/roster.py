@@ -37,7 +37,6 @@ from kinocut_sound.voice._errors import (
     ROSTER_EXCEEDS_CEILING,
     ROSTER_INVALID,
     ROSTER_UNKNOWN,
-    VoiceError,
     bounded_voice_error,
     voice_error,
 )
@@ -339,9 +338,7 @@ class VoiceRoster:
                     ROSTER_INVALID,
                 )
             try:
-                bounded = tuple(
-                    islice(slots.items(), MAX_ROSTER_SLOTS + 1)
-                )
+                bounded = tuple(islice(slots.items(), MAX_ROSTER_SLOTS + 1))
             except Exception as exc:
                 raise voice_error(
                     "voice roster source is not iterable",

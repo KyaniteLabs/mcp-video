@@ -188,9 +188,7 @@ def _build_section(
     warnings: tuple[str, ...],
 ) -> SoundReceiptSection:
     plan_hash = plan.canonical_id()
-    profile_versions = tuple(
-        (line.profile.profile_id, line.profile.version) for line in plan.lines
-    )
+    profile_versions = tuple((line.profile.profile_id, line.profile.version) for line in plan.lines)
     ordered_inputs = tuple(clip.to_ordered_input() for clip in clips)
     transformations = tuple(clip.to_transformation() for clip in clips)
     loudness = _build_loudness(clips)
@@ -274,13 +272,13 @@ class BatchPlanner:
 
     __slots__ = (
         "_adapter",
-        "_roster",
-        "_slot_resolver",
-        "_output_dir",
-        "_max_lines",
-        "_sample_rate_hz",
         "_channel_count",
         "_determinism_class",
+        "_max_lines",
+        "_output_dir",
+        "_roster",
+        "_sample_rate_hz",
+        "_slot_resolver",
     )
 
     def __init__(
@@ -318,6 +316,11 @@ class BatchPlanner:
         if channel_count != DEFAULT_CHANNEL_COUNT:
             raise voice_error(
                 "BatchPlanner supports mono output only",
+                ADAPTER_INPUT_INVALID,
+            )
+        if not isinstance(output_dir, str) or not output_dir:
+            raise voice_error(
+                "output_dir must be a non-empty path",
                 ADAPTER_INPUT_INVALID,
             )
         self._adapter = adapter

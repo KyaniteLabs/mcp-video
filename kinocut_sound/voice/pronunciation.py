@@ -29,7 +29,6 @@ from kinocut_sound.lines import PronunciationOverride
 
 from kinocut_sound.voice._errors import (
     PRONUNCIATION_INVALID,
-    VoiceError,
     bounded_voice_error,
     voice_error,
 )
@@ -61,9 +60,7 @@ class PronunciationDictionary:
                     PRONUNCIATION_INVALID,
                 )
             try:
-                bounded = tuple(
-                    islice(overrides.items(), MAX_DICTIONARY_ENTRIES + 1)
-                )
+                bounded = tuple(islice(overrides.items(), MAX_DICTIONARY_ENTRIES + 1))
             except Exception as exc:
                 raise voice_error(
                     "pronunciation overrides are not iterable",
@@ -194,9 +191,7 @@ class PronunciationDictionary:
         return {
             "kind": "pronunciation_dictionary",
             "entries": [
-                {"term_hash": key, "ipa": value.ipa}
-                for key in self.term_hashes
-                for value in (self._overrides[key],)
+                {"term_hash": key, "ipa": value.ipa} for key in self.term_hashes for value in (self._overrides[key],)
             ],
         }
 
