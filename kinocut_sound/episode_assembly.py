@@ -7,7 +7,7 @@ an authoritative timeline and explicit routing plan.
 
 from __future__ import annotations
 
-from enum import StrEnum
+import base64
 from typing import Literal
 
 from pydantic import Field, ValidationError, field_validator, model_validator
@@ -17,26 +17,28 @@ from kinocut_sound._canonical import (
     FrozenModel,
     RecordBase,
     Sha256,
+    canonical_digest,
     canonical_record_id,
     location_violation,
 )
 from kinocut_sound._errors import SoundContractError
 from kinocut_sound.lines import ProfileRef
 from kinocut_sound.limits import MIN_TIME_SECONDS
-from kinocut_sound.script_parser import ParsedLine, ParsedScript
+from kinocut_sound.script_parser import (
+    BeatKind,
+    ChapterCard,
+    ParsedBeat,
+    ParsedEventKind,
+    ParsedLine,
+    ParsedScript,
+    SilenceQuality,
+)
 from kinocut_sound.timeline import Cue, CueKind, Timeline
 
 
 class AssemblyPlanningError(SoundContractError):
     """A bounded, privacy-safe episode planning failure."""
 
-
-class SilenceQuality(StrEnum):
-    """Closed qualities for explicit designed silence."""
-
-    DEAD = "dead"
-    ROOM_TONE = "room_tone"
-    HELD_BREATH = "held_breath"
 
 
 class ClipRef(FrozenModel):
@@ -144,6 +146,7 @@ class EpisodeAssembly(RecordBase):
     routes: tuple[AssemblyRoute, ...]
     clip_hashes: tuple[Sha256, ...]
     foley_hashes: tuple[Sha256, ...]
+    chapter_cards: tuple[ChapterCard, ...]
 
     @field_validator("episode_id")
     @classmethod
@@ -235,6 +238,36 @@ def _line_route(item: ParsedLine) -> AssemblyRoute:
     )
 
 
+def _bounded_pause_cue_id(kind: str, source_id: str) -> str:
+    digest = canonical_digest({"kind": kind, "source_id": source_id}).removeprefix(
+        "sha256:"
+    )
+    token = base64.b32encode(bytes.fromhex(digest)).decode("ascii").rstrip("=").lower()
+    return f"pause_{token}"
+
+
+def _append_beat(beat: ParsedBeat, current: float, cues: list[Cue]) -> float:
+    if beat.kind == BeatKind.FOLEY:
+        if beat.asset_ref is None:
+            raise _planning_error("Foley beat is missing its asset reference", "invalid_assembly")
+        kind = CueKind.FOLEY
+        source_ref = beat.asset_ref
+    elif beat.kind == BeatKind.DESIGNED_SILENCE:
+        if beat.silence_quality is None:
+            raise _planning_error("silence beat is missing its quality", "invalid_assembly")
+        kind = CueKind.SILENCE
+        source_ref = f"silence/{beat.silence_quality.value}.json"
+    else:
+        kind = CueKind.SILENCE
+        source_ref = "silence/pace.json"
+    return _append_cue(
+        cues,
+        cue_id=beat.beat_id,
+        start_seconds=current,
+        duration_seconds=beat.duration_seconds,
+        kind=kind,
+        source_ref=source_ref,
+    )
 def _plan_line_extras(
     item: ParsedLine,
     current: float,
@@ -279,13 +312,21 @@ def _build_timeline(
     silence_by_line: dict[str, tuple[CueIntent, ...]],
 ) -> tuple[Timeline, tuple[AssemblyRoute, ...]]:
     parsed_by_id = {item.line.line_id: item for item in parsed.parsed_lines}
+    beat_by_id = {beat.beat_id: beat for beat in parsed.beats}
+    event_by_id = {event.event_id: event for event in parsed.events}
     cues: list[Cue] = []
     routes: list[AssemblyRoute] = []
     current = MIN_TIME_SECONDS
     for scene in parsed.scenes:
-        for line_id in scene.line_ids:
-            item = parsed_by_id[line_id]
-            clip = clips[line_id]
+        for event_id in scene.event_ids:
+            event = event_by_id[event_id]
+            if event.kind == ParsedEventKind.CHAPTER_CARD:
+                continue
+            if event.kind == ParsedEventKind.BEAT:
+                current = _append_beat(beat_by_id[event_id], current, cues)
+                continue
+            item = parsed_by_id[event_id]
+            clip = clips[event_id]
             current = _append_cue(
                 cues,
                 cue_id=item.cue_id,
@@ -299,27 +340,30 @@ def _build_timeline(
                 item,
                 current,
                 cues,
-                silence_by_line.get(line_id, ()),
-                foley_by_line.get(line_id, ()),
+                silence_by_line.get(event_id, ()),
+                foley_by_line.get(event_id, ()),
             )
         if scene.pause_after_seconds > MIN_TIME_SECONDS:
             current = _append_cue(
                 cues,
-                cue_id=f"pause_{scene.scene_id}",
+                cue_id=_bounded_pause_cue_id("scene", scene.scene_id),
                 start_seconds=current,
                 duration_seconds=scene.pause_after_seconds,
                 kind=CueKind.SILENCE,
                 source_ref="silence/scene_pause.json",
             )
-    return Timeline(cues=tuple(cues)), tuple(routes)
+    return (
+        Timeline(cues=tuple(cues), require_at_least_one_cue=bool(cues)),
+        tuple(routes),
+    )
 
 
 def plan_episode_assembly(
     parsed: ParsedScript,
     *,
     clips: tuple[ClipRef, ...],
-    foley_cues: tuple[FoleyCueIntent, ...],
-    designed_silences: tuple[DesignedSilenceIntent, ...],
+    foley_cues: tuple[FoleyCueIntent, ...] = (),
+    designed_silences: tuple[DesignedSilenceIntent, ...] = (),
     created_by: str,
     cancellation_requested: bool,
 ) -> EpisodeAssembly:
@@ -352,8 +396,14 @@ def plan_episode_assembly(
             routes=routes,
             clip_hashes=tuple(clip_index[line_id].artifact_hash for line_id in expected_line_ids),
             foley_hashes=tuple(
+                beat.asset_hash
+                for beat in parsed.beats
+                if beat.kind == BeatKind.FOLEY and beat.asset_hash is not None
+            )
+            + tuple(
                 cue.asset_hash for cue in sorted(foley_cues, key=lambda item: item.cue_id)
             ),
+            chapter_cards=parsed.chapter_cards,
         )
     except (ValidationError, KeyError) as exc:
         raise _planning_error("episode timeline failed canonical validation", "invalid_assembly") from exc
