@@ -191,6 +191,12 @@ def _run_hyperframes(
             capture_output=True,
             text=True,
             timeout=timeout,
+            # Never inherit the caller's stdin: when invoked from an MCP server
+            # there is no TTY, so a stray interactive prompt would block forever.
+            stdin=subprocess.DEVNULL,
+            # `init` runs a network AI-skills check that the --skip-skills flag
+            # does not currently disable; this env var is the supported opt-out.
+            env={**os.environ, "HYPERFRAMES_SKIP_SKILLS": "1"},
         )
     except subprocess.TimeoutExpired:
         raise HyperframesRenderError(" ".join(cmd), -1, "Render timed out") from None
@@ -387,10 +393,12 @@ _SCHEMA: dict[str, dict[str, Any]] = {
             "resolution": "resolution",
         },
         "switches": {
-            "skip-transcribe": "skip_transcribe",
             "tailwind": "tailwind",
         },
-        "fixed": ["--non-interactive", "--skip-skills"],
+        # `init` prompts interactively by default and can implicitly launch
+        # Whisper; always pass --non-interactive and --skip-transcribe so the
+        # MCP subprocess scaffolds a project without ever blocking on input.
+        "fixed": ["--non-interactive", "--skip-skills", "--skip-transcribe"],
         "cwd_key": "output_dir",
         "timeout": 120,
     },

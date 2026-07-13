@@ -1214,6 +1214,67 @@ class TestCreateProject:
 
 
 # ---------------------------------------------------------------------------
+# Test: init non-interactive / MCP no-hang regression
+# ---------------------------------------------------------------------------
+
+
+class TestInitNonInteractiveHang:
+    """Regression: ``init`` must never block on a prompt when run under MCP.
+
+    An MCP server has no TTY, so an interactive prompt -- or the network
+    AI-skills check that ``--skip-skills`` does not actually disable -- would
+    hang the tool call indefinitely. ``init`` must always run non-interactively
+    and skip transcription, and every Hyperframes subprocess must run with a
+    closed stdin and ``HYPERFRAMES_SKIP_SKILLS=1``.
+    """
+
+    def test_init_forces_non_interactive_and_skip_transcribe(self, tmp_path):
+        """init passes --non-interactive and --skip-transcribe even when not requested."""
+        with _mock_deps_ok(), patch("mcp_video.hyperframes_engine.subprocess.run") as mock_run:
+            mock_run.return_value = _make_completed_process(stdout="initialized")
+
+            # skip_transcribe defaults to False, yet both flags must still be forced.
+            create_project("regression-project", output_dir=str(tmp_path), template="blank")
+
+            cmd = mock_run.call_args[0][0]
+            assert _hyperframes_subcommand(cmd) == "init"
+            assert "--non-interactive" in cmd
+            assert "--skip-transcribe" in cmd
+            # Forced exactly once -- the removed switch must not double it up.
+            assert cmd.count("--skip-transcribe") == 1
+
+    def test_subprocess_closes_stdin_and_skips_skills(self, tmp_path):
+        """Every Hyperframes subprocess runs with DEVNULL stdin and the skills opt-out."""
+        with _mock_deps_ok(), patch("mcp_video.hyperframes_engine.subprocess.run") as mock_run:
+            mock_run.return_value = _make_completed_process(stdout="initialized")
+
+            create_project("regression-project", output_dir=str(tmp_path), template="blank")
+
+            kwargs = mock_run.call_args.kwargs
+            assert kwargs["stdin"] is subprocess.DEVNULL
+            assert kwargs["env"]["HYPERFRAMES_SKIP_SKILLS"] == "1"
+            # The parent environment is preserved, not replaced.
+            assert "PATH" in kwargs["env"]
+
+    def test_unrelated_commands_do_not_receive_init_flags(self, sample_hyperframes_project):
+        """render() (and other commands) must not inherit init-only flags."""
+        fake_cp = _make_completed_process(stdout="Rendered.")
+        with (
+            _mock_deps_ok(),
+            patch("mcp_video.hyperframes_engine.subprocess.run", return_value=fake_cp) as mock_run,
+            patch("os.path.isfile", return_value=True),
+            patch("os.path.getsize", return_value=1024 * 1024),
+        ):
+            render(str(sample_hyperframes_project), output_path="/tmp/out.mp4", format="mp4")
+
+            cmd = mock_run.call_args[0][0]
+            assert "--skip-transcribe" not in cmd
+            assert "--non-interactive" not in cmd
+            # The shared runner still applies the safe non-interactive default.
+            assert mock_run.call_args.kwargs["stdin"] is subprocess.DEVNULL
+
+
+# ---------------------------------------------------------------------------
 # Test: validate
 # ---------------------------------------------------------------------------
 

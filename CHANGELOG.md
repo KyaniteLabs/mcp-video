@@ -27,6 +27,10 @@ This project follows a simple release-note style:
 - Approved AI-video dispositions now require active exact human decisions with requirement-level evidence; analyzer output alone cannot create approval.
 - Body-swap and salvage resolve verified stored source identities and reject stale, ambiguous, aliased, or protected inputs rather than trusting ambient paths.
 
+### Fixed
+
+- `hyperframes_init` no longer hangs when Kinocut runs as an MCP server. Project scaffolding now always invokes the Hyperframes CLI non-interactively and with `HYPERFRAMES_SKIP_SKILLS=1` (the CLI ignores the `--skip-skills` flag and otherwise runs a blocking network AI-skills check on `init`), and every Hyperframes subprocess is run with a closed stdin so a missing TTY can never block on an interactive prompt.
+
 ### Release status
 
 - These changes are under draft review. No version bump, tag, package upload, directory submission, deployment, release, or announcement is authorized.
