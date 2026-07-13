@@ -316,3 +316,98 @@ def test_operation_that_cannot_derive_complete_footprint_fails_closed(project):
             },
         )
     assert excinfo.value.code == "invalid_mutation_intent"
+
+
+# ---------------------------------------------------------------------------
+# Shared active-human-approval resolver: one predicate consumed by both the
+# protected-collision gate and the salvage-lineage replay verifier.
+# ---------------------------------------------------------------------------
+
+_FINGERPRINT = "sha256:" + "a" * 64
+
+
+def _stored_approval(project, **overrides):
+    from kinocut.projectstore import append_record
+    from tests.contracts_fixtures import review_decision_kwargs
+
+    values = {
+        "project_id": project.project_id,
+        "target_ref": _FINGERPRINT,
+        "dependency_fingerprint": _FINGERPRINT,
+    }
+    values.update(overrides)
+    return append_record(project, ReviewDecision(**review_decision_kwargs(**values)))
+
+
+def test_resolver_accepts_valid_active_human_approval(project):
+    from kinocut.aivideo.protection import active_human_approval_bound_to, decision_history
+
+    decision = _stored_approval(project)
+    decisions, active_ids = decision_history(project)
+    result = active_human_approval_bound_to(
+        decisions.get(decision.record_id), decision.record_id, active_ids, _FINGERPRINT
+    )
+    assert result is not None
+    assert result.record_id == decision.record_id
+
+
+def test_resolver_rejects_hostile_target_ref_mismatch(project):
+    from kinocut.aivideo.protection import active_human_approval_bound_to, decision_history
+
+    decision = _stored_approval(project, target_ref="sha256:" + "b" * 64)
+    decisions, active_ids = decision_history(project)
+    result = active_human_approval_bound_to(
+        decisions.get(decision.record_id), decision.record_id, active_ids, _FINGERPRINT
+    )
+    assert result is None
+
+
+def test_resolver_rejects_superseded_stale_decision(project):
+    from kinocut.aivideo.protection import active_human_approval_bound_to, decision_history
+
+    original = _stored_approval(project)
+    _stored_approval(project, supersedes=original.record_id)
+    decisions, active_ids = decision_history(project)
+    result = active_human_approval_bound_to(
+        decisions.get(original.record_id), original.record_id, active_ids, _FINGERPRINT
+    )
+    assert result is None
+
+
+def test_resolver_rejects_subclass_lookalike(project):
+    from kinocut.aivideo.protection import active_human_approval_bound_to
+
+    class Lookalike(ReviewDecision):
+        pass
+
+    lookalike = Lookalike(
+        **review_decision_kwargs(
+            project_id=project.project_id,
+            target_ref=_FINGERPRINT,
+            dependency_fingerprint=_FINGERPRINT,
+        )
+    )
+    result = active_human_approval_bound_to(lookalike, "fake-id", {"fake-id"}, _FINGERPRINT)
+    assert result is None
+
+
+def test_resolver_rejects_agent_authored_decision(project):
+    from kinocut.aivideo.protection import active_human_approval_bound_to, decision_history
+
+    decision = _stored_approval(project, created_by="agent")
+    decisions, active_ids = decision_history(project)
+    result = active_human_approval_bound_to(
+        decisions.get(decision.record_id), decision.record_id, active_ids, _FINGERPRINT
+    )
+    assert result is None
+
+
+def test_resolver_rejects_reject_decision(project):
+    from kinocut.aivideo.protection import active_human_approval_bound_to, decision_history
+
+    decision = _stored_approval(project, decision="reject")
+    decisions, active_ids = decision_history(project)
+    result = active_human_approval_bound_to(
+        decisions.get(decision.record_id), decision.record_id, active_ids, _FINGERPRINT
+    )
+    assert result is None

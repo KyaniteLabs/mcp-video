@@ -189,6 +189,38 @@ def _human_approval(decision: ReviewDecision | None, fingerprint: str) -> bool:
     )
 
 
+def active_human_approval_bound_to(
+    decision: ReviewDecision | None,
+    decision_id: str,
+    active_ids: set[str],
+    expected_fingerprint: str,
+) -> ReviewDecision | None:
+    """Return the decision if it is an active, exact-type human approval
+    bound to *expected_fingerprint* as both dependency and target.
+
+    This is the single reusable authorization predicate for mutation-intent
+    decisions.  Both the protected-collision gate
+    (:func:`assert_no_protected_collision`) and the salvage-lineage replay
+    verifier consume it so the binding semantics can never drift apart.
+    """
+
+    if decision is None:
+        return None
+    if type(decision) is not ReviewDecision:
+        return None
+    if decision_id not in active_ids:
+        return None
+    if decision.decision is not DecisionType.APPROVE:
+        return None
+    if not decision.created_by.startswith("human"):
+        return None
+    if decision.dependency_fingerprint != expected_fingerprint:
+        return None
+    if decision.target_ref != expected_fingerprint:
+        return None
+    return decision
+
+
 def _authorization_is_fresh(
     lock: ProtectedElement,
     original: ReviewDecision,
@@ -221,14 +253,13 @@ def _authorized(
 
     intent_fingerprint = mutation_fingerprint(intent)
     for decision_id in intent.authorization_decision_ids:
-        decision = all_decisions.get(decision_id)
-        if decision_id not in active_decision_ids:
-            continue
-        if not _human_approval(decision, intent_fingerprint):
-            continue
-        if decision is None:  # narrowed by _human_approval
-            continue
-        if decision.target_ref != intent_fingerprint:
+        decision = active_human_approval_bound_to(
+            all_decisions.get(decision_id),
+            decision_id,
+            active_decision_ids,
+            intent_fingerprint,
+        )
+        if decision is None:
             continue
         if _authorization_is_fresh(lock, original, decision):
             return True

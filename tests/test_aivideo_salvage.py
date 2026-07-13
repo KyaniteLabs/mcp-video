@@ -1044,3 +1044,58 @@ def test_v2_manifest_replay_succeeds_through_fresh_protected_lock(source):
     )
     assert second.asset.record_id == first.asset.record_id
     assert second.lineage_artifact_id == first.lineage_artifact_id
+
+
+# ---------------------------------------------------------------------------
+# Authorization-ref resolver unification: hostile target_ref mismatch must fail
+# closed; the shared resolver rejects subclass lookalikes, stale/superseded
+# decisions, and decisions whose target_ref disagrees with the fingerprint.
+# ---------------------------------------------------------------------------
+
+
+def test_v2_manifest_replay_rejects_authorization_ref_with_hostile_target_ref(source):
+    """A stored auth ref with correct dependency_fingerprint but hostile target_ref fails."""
+
+    project, original, source_path = source
+    audio_fingerprint = _audio_fingerprint(str(source_path))
+    kwargs = dict(
+        source_asset_id=original.asset_id,
+        recipe="still_frame",
+        policy={"timestamp": 1.0},
+        acceptance_spec_id=_ACCEPTANCE_SPEC,
+    )
+    first = create_salvage_derivative(project, **kwargs)
+
+    intent = _mutation_intent(
+        SalvageRecipe.STILL_FRAME,
+        {"recipe": "still_frame", "timestamp": 1.0},
+        original.asset_id,
+        audio_fingerprint,
+        (),
+    )
+    from kinocut.aivideo.protection import mutation_fingerprint
+
+    intent_fingerprint = mutation_fingerprint(intent)
+
+    # Hostile: correct dependency_fingerprint but WRONG target_ref.
+    hostile = append_record(
+        project,
+        ReviewDecision(
+            **review_decision_kwargs(
+                project_id=project.project_id,
+                target_ref="sha256:" + "e" * 64,
+                dependency_fingerprint=intent_fingerprint,
+            )
+        ),
+    )
+
+    manifest_path = project.root / first.lineage_artifact_location
+    payload = json.loads(manifest_path.read_text())
+    payload["authorization_decision_ids"] = [hostile.record_id]
+    tampered_id, _ = _install_custom_manifest(project, payload)
+    _repoint_asset_artifact(project, first.asset, tampered_id)
+
+    with pytest.raises(MCPVideoError) as excinfo:
+        create_salvage_derivative(project, **kwargs)
+    assert excinfo.value.code == "salvage_integrity_failed"
+    assert excinfo.value.error_type == "integrity_error"

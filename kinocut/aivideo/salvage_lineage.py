@@ -21,13 +21,13 @@ from pydantic import ValidationError
 
 from kinocut.aivideo.protection import (
     MutationIntent,
+    active_human_approval_bound_to,
     assert_no_protected_collision,
     decision_history,
     mutation_fingerprint,
 )
 from kinocut.aivideo.salvage_checks import PreservationCheck, _salvage_error
 from kinocut.contracts.asset import AssetRecord
-from kinocut.contracts.review import DecisionType, ReviewDecision
 from kinocut.projectstore import Project, layout, store
 from kinocut.rescue.operations import _sha256
 
@@ -159,24 +159,6 @@ def _structural_mismatch(
     return any(payload.get(key) != value for key, value in expected.items())
 
 
-def _is_human_approval_bound_to(
-    decision: ReviewDecision | None,
-    decision_id: str,
-    active_ids: set[str],
-    expected_fingerprint: str,
-) -> bool:
-    """Match protection._human_approval semantics for one replayed decision."""
-
-    return bool(
-        decision is not None
-        and type(decision) is ReviewDecision
-        and decision_id in active_ids
-        and decision.created_by.startswith("human")
-        and decision.decision is DecisionType.APPROVE
-        and decision.dependency_fingerprint == expected_fingerprint
-    )
-
-
 def _verify_authorization_refs(
     project: Project,
     authorization_decision_ids: tuple[str, ...],
@@ -187,7 +169,7 @@ def _verify_authorization_refs(
     decisions, active_ids = decision_history(project)
     for decision_id in authorization_decision_ids:
         decision = decisions.get(decision_id)
-        if not _is_human_approval_bound_to(decision, decision_id, active_ids, expected_fingerprint):
+        if active_human_approval_bound_to(decision, decision_id, active_ids, expected_fingerprint) is None:
             raise _salvage_error(
                 "stored authorization reference is no longer valid",
                 "salvage_integrity_failed",
