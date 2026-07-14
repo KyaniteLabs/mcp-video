@@ -223,7 +223,7 @@ def _render_composition(spec_path: Path, output_path: Path) -> dict[str, Any]:
     spec_resolved = _validate_spec_path(str(spec_path))
     spec_data, spec_bytes = _load_spec(spec_resolved)
     canvas = _parse_canvas(spec_data.get("canvas"))
-    layers = _parse_layers(spec_data, spec_resolved.parent)
+    layers = _parse_layers(spec_data, spec_resolved.parent, canvas)
     output = _resolve_output_path(str(output_path), spec_resolved, spec_data)
     filter_complex = _build_filter_complex(canvas, layers)
     args = _build_ffmpeg_args(canvas, layers, filter_complex, output)
