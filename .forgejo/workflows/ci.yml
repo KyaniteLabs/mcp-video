@@ -20,6 +20,9 @@ jobs:
     # PR-safe test job: ffmpeg + full dependency tree + the "not slow" suite.
     # Route to the confirmed-active `heavy` label so this required protected-
     # branch check cannot remain queued behind the unavailable `light` runner.
+    # Keep the core suite at two workers: this job shares the heavy runner with
+    # three four-worker FFmpeg matrix jobs, and four core workers repeatedly
+    # exhausted the runner while the identical command passed off-runner.
     runs-on: heavy
     steps:
       - uses: actions/checkout@v4
@@ -31,7 +34,7 @@ jobs:
           .venv/bin/pip install --quiet --upgrade pip
           .venv/bin/pip install --quiet -e ".[dev]"
       - name: Test
-        run: .venv/bin/pytest tests/ -q -m "not slow" -n 4
+        run: .venv/bin/pytest tests/ -q -m "not slow" -n 2
   test-slow:
     # Slow real-media integration suite, skipped by the PR `test` job. Runs only
     # on push to master. Route to the confirmed-active `heavy` runner. Kept
