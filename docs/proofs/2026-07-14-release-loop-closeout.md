@@ -13,8 +13,6 @@ idempotency fix. It does not replace the original Kinocut 1.8.0 publication rece
   skip/verification behavior.
 - Release and recovery dispatches share one non-cancelling concurrency group, removing
   the observed npm publication race.
-- The required Forgejo core-test job is capped at two workers so it can coexist with
-  the three FFmpeg matrix jobs on the shared heavy runner without oversubscription.
 - The final TasteCheck status now records the completed production keyboard, cold-load,
   and responsive-overflow checks. The earlier HOLD ledger is explicitly historical.
 
@@ -28,8 +26,11 @@ idempotency fix. It does not replace the original Kinocut 1.8.0 publication rece
 - Full repository gate: `3819 passed, 170 skipped, 10 warnings` in `883.20s`;
   command exit code `0`.
 - Exact four-worker Forgejo core command, reproduced off-runner after two remote runs
-  failed at the same 3m36s boundary: `3672 passed, 166 skipped, 8 warnings` in
-  `484.10s`, exit code `0`. The runner job was therefore reduced to two workers.
+  failed: `3672 passed, 166 skipped, 8 warnings` in `484.10s`, exit code `0`.
+- Server-side Forgejo logs then identified the real Linux-only failures: one function
+  exceeded the 80-line source limit, and FFmpeg emitted WAVE extensible PCM that Python
+  3.11 could not read. The final patch restores the source limit and emits portable
+  16-bit PCM WAV from convolution reverb.
 
 The warnings were the repository's expected timeout-mark, guardrail, and synthetic-media
 warnings; there were no test failures.

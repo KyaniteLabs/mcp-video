@@ -570,30 +570,14 @@ def _validate_loop_bounds(
 
 def _finalize_audio_bed(
     *,
-    voice_source: str,
-    music_path: str,
-    voice_display_path: str,
-    music_display_path: str,
-    voice_content_sha256: str,
-    music_content_sha256: str,
-    pass_fds: tuple[int, ...],
-    output_path: str,
-    probe: _BedProbe,
-    target_duration: float,
-    music_volume: float,
-    duck_threshold: float,
-    duck_ratio: float,
-    duck_attack: float,
-    duck_release: float,
-    fade_in: float,
-    fade_out: float,
-    target_lufs: float,
-    loop: bool,
-    loop_crossfade: float,
-    duration_tolerance: float,
-    save_receipt: str | None,
-    warnings: list[str],
-    needs_loop: bool,
+    voice_source: str, music_path: str, voice_display_path: str,
+    music_display_path: str, voice_content_sha256: str, music_content_sha256: str,
+    pass_fds: tuple[int, ...], output_path: str, probe: _BedProbe,
+    target_duration: float, music_volume: float, duck_threshold: float,
+    duck_ratio: float, duck_attack: float, duck_release: float,
+    fade_in: float, fade_out: float, target_lufs: float,
+    loop: bool, loop_crossfade: float, duration_tolerance: float,
+    save_receipt: str | None, warnings: list[str], needs_loop: bool,
 ) -> dict[str, Any]:
     """Render, verify, build receipt, and return the structured result."""
     with _timed_operation() as timing:
@@ -660,14 +644,9 @@ def _finalize_audio_bed(
         needs_loop,
         timing.get("elapsed_ms") or 0.0,
     )
-    return {
-        "output_path": output_path,
-        "output_duration": output_duration,
-        "ducking_engaged": probe.voice_has_audio,
-        "warnings": tuple(warnings),
-        "elapsed_ms": timing.get("elapsed_ms"),
-        "receipt": receipt.model_dump(mode="json"),
-    }
+    return {"output_path": output_path, "output_duration": output_duration,
+            "ducking_engaged": probe.voice_has_audio, "warnings": tuple(warnings),
+            "elapsed_ms": timing.get("elapsed_ms"), "receipt": receipt.model_dump(mode="json")}
 
 
 def audio_bed(

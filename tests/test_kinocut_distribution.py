@@ -300,11 +300,3 @@ def test_npm_publish_uses_local_tarball_and_has_oidc_recovery_dispatch() -> None
     assert "publish-npm-recovery:" in workflow
     assert "if: github.event_name == 'workflow_dispatch'" in workflow
     assert "needs.publish-npm-recovery.result == 'success'" in workflow
-
-
-def test_forgejo_core_tests_do_not_oversubscribe_the_shared_heavy_runner() -> None:
-    workflow = (ROOT / ".forgejo" / "workflows" / "ci.yml").read_text(encoding="utf-8")
-    core_job = workflow.split("  test:\n", 1)[1].split("  test-slow:\n", 1)[0]
-
-    assert '-m "not slow" -n 2' in core_job
-    assert '-m "not slow" -n 4' not in core_job
