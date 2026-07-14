@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from kinocut.doctor import _check_alias_identity, _check_legacy_env_paths, run_diagnostics
 
 
@@ -24,7 +22,6 @@ def test_alias_identity_check_passes_when_kinocut_and_mcp_video_share_client():
 
 
 def test_alias_identity_check_fails_when_alias_is_broken(monkeypatch):
-    import kinocut
     import mcp_video
 
     class _Other:
