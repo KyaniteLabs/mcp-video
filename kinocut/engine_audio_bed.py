@@ -650,22 +650,15 @@ def _finalize_audio_bed(
 
 
 def audio_bed(
-    voice_source: str,
-    music_path: str,
-    output_path: str,
+    voice_source: str, music_path: str, output_path: str,
     *,
-    loop: bool = True,
-    loop_crossfade: float = DEFAULT_AUDIO_BED_LOOP_CROSSFADE,
-    fade_in: float = DEFAULT_AUDIO_BED_FADE_IN,
-    fade_out: float = DEFAULT_AUDIO_BED_FADE_OUT,
+    loop: bool = True, loop_crossfade: float = DEFAULT_AUDIO_BED_LOOP_CROSSFADE,
+    fade_in: float = DEFAULT_AUDIO_BED_FADE_IN, fade_out: float = DEFAULT_AUDIO_BED_FADE_OUT,
     target_lufs: float = DEFAULT_AUDIO_BED_TARGET_LUFS,
-    duck_threshold: float = DEFAULT_AUDIO_BED_DUCK_THRESHOLD,
-    duck_ratio: float = DEFAULT_AUDIO_BED_DUCK_RATIO,
-    duck_attack: float = DEFAULT_AUDIO_BED_DUCK_ATTACK_MS,
-    duck_release: float = DEFAULT_AUDIO_BED_DUCK_RELEASE_MS,
+    duck_threshold: float = DEFAULT_AUDIO_BED_DUCK_THRESHOLD, duck_ratio: float = DEFAULT_AUDIO_BED_DUCK_RATIO,
+    duck_attack: float = DEFAULT_AUDIO_BED_DUCK_ATTACK_MS, duck_release: float = DEFAULT_AUDIO_BED_DUCK_RELEASE_MS,
     music_volume: float = DEFAULT_AUDIO_BED_MUSIC_VOLUME,
-    duration_tolerance: float = DEFAULT_AUDIO_BED_DURATION_TOLERANCE_SECONDS,
-    save_receipt: str | None = None,
+    duration_tolerance: float = DEFAULT_AUDIO_BED_DURATION_TOLERANCE_SECONDS, save_receipt: str | None = None,
 ) -> dict[str, Any]:
     """Governed one-shot audio-bed: duck music under voice, normalize, receipt."""
     _validate_audio_bed_params(
