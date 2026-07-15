@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from kinocut.contracts._errors import INVALID_RECORD, contract_error
 from kinocut.contracts.acceptance import GenerationAcceptanceSpec
-from kinocut.contracts.editorial import BeatMap
+from kinocut.contracts.editorial import BeatMap, ContinuityPlan
 from kinocut.projectstore import Project, append_record, read_records
 
 
@@ -38,4 +38,23 @@ def beat_maps_for_spec(project: Project, spec_id: str) -> list[BeatMap]:
     return [item for item in _active(project, "beat_map", BeatMap) if item.acceptance_spec_id == spec_id]  # type: ignore[return-value]
 
 
-__all__ = ["beat_maps_for_spec", "record_beat_map"]
+def record_continuity_plan(project: Project, plan: ContinuityPlan) -> ContinuityPlan:
+    """Persist one continuity plan, rejecting a dangling acceptance-spec reference."""
+
+    if not _spec_exists(project, plan.acceptance_spec_id):
+        raise contract_error("continuity plan references no acceptance spec", INVALID_RECORD)
+    return append_record(project, plan)  # type: ignore[return-value]
+
+
+def continuity_plans_for_spec(project: Project, spec_id: str) -> list[ContinuityPlan]:
+    """Return active continuity plans bound to ``spec_id``."""
+
+    return [item for item in _active(project, "continuity_plan", ContinuityPlan) if item.acceptance_spec_id == spec_id]  # type: ignore[return-value]
+
+
+__all__ = [
+    "beat_maps_for_spec",
+    "continuity_plans_for_spec",
+    "record_beat_map",
+    "record_continuity_plan",
+]

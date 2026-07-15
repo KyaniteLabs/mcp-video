@@ -4,10 +4,15 @@ from __future__ import annotations
 
 import pytest
 
-from kinocut.aivideo.editorial import beat_maps_for_spec, record_beat_map
+from kinocut.aivideo.editorial import (
+    beat_maps_for_spec,
+    continuity_plans_for_spec,
+    record_beat_map,
+    record_continuity_plan,
+)
 from kinocut.contracts._common import canonical_record_id
 from kinocut.contracts.acceptance import GenerationAcceptanceSpec
-from kinocut.contracts.editorial import BeatMap, BeatRequirement
+from kinocut.contracts.editorial import BeatMap, BeatRequirement, ContinuityExpectation, ContinuityPlan
 from kinocut.errors import MCPVideoError
 from kinocut.projectstore import append_record, open_project
 from tests.contracts_fixtures import acceptance_spec_kwargs
@@ -78,6 +83,66 @@ def test_beat_map_rejects_duplicate_beat_ids(project):
                 beats=(
                     BeatRequirement(beat_id="intro", label="A"),
                     BeatRequirement(beat_id="intro", label="B"),
+                ),
+            ),
+        )
+
+
+def _continuity_plan(project, spec_id, **overrides) -> ContinuityPlan:
+    base = {
+        "project_id": project.project_id,
+        "created_by": "human",
+        "acceptance_spec_id": spec_id,
+        "expectations": (
+            ContinuityExpectation(shot_id="shot_a", expected_subjects=("product",)),
+            ContinuityExpectation(shot_id="shot_b", forbidden_changes=("wardrobe",)),
+        ),
+    }
+    base.update(overrides)
+    return ContinuityPlan(**base)
+
+
+def test_record_continuity_plan_persists_bound_to_acceptance_spec(project):
+    spec = append_record(project, _spec(project))
+    stored = record_continuity_plan(project, _continuity_plan(project, spec.record_id))
+    assert stored.record_kind == "continuity_plan"
+    assert stored.acceptance_spec_id == spec.record_id
+    assert [e.shot_id for e in stored.expectations] == ["shot_a", "shot_b"]
+
+
+def test_record_continuity_plan_rejects_dangling_acceptance_spec(project):
+    with pytest.raises(MCPVideoError, match="acceptance spec"):
+        record_continuity_plan(project, _continuity_plan(project, "sha256:" + "0" * 64))
+
+
+def test_continuity_plans_for_spec_returns_active_only(project):
+    spec = append_record(project, _spec(project))
+    first = record_continuity_plan(project, _continuity_plan(project, spec.record_id))
+    record_continuity_plan(
+        project,
+        _continuity_plan(
+            project,
+            spec.record_id,
+            supersedes=first.record_id,
+            expectations=(ContinuityExpectation(shot_id="shot_a", expected_subjects=("product", "logo")),),
+        ),
+    )
+    rows = continuity_plans_for_spec(project, spec.record_id)
+    assert len(rows) == 1
+    assert rows[0].expectations[0].expected_subjects == ("product", "logo")
+
+
+def test_continuity_plan_rejects_duplicate_shot_ids(project):
+    spec = append_record(project, _spec(project))
+    with pytest.raises(Exception, match="unique"):
+        record_continuity_plan(
+            project,
+            _continuity_plan(
+                project,
+                spec.record_id,
+                expectations=(
+                    ContinuityExpectation(shot_id="shot_a"),
+                    ContinuityExpectation(shot_id="shot_a"),
                 ),
             ),
         )

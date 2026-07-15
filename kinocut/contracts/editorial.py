@@ -72,4 +72,45 @@ class BeatMap(RecordBase):
         return value
 
 
-__all__ = ["BeatMap", "BeatRequirement"]
+__all__ = ["BeatMap", "BeatRequirement", "ContinuityExpectation", "ContinuityPlan"]
+
+
+class ContinuityExpectation(ValueObject):
+    """One shot's declarative continuity expectation (#45)."""
+
+    shot_id: str
+    expected_subjects: tuple[str, ...] = ()
+    forbidden_changes: tuple[str, ...] = ()
+
+    @field_validator("shot_id")
+    @classmethod
+    def _shot_id_is_code(cls, value: str) -> str:
+        if not _CODE_RE.match(value):
+            raise ValueError("shot_id must be a bounded lowercase code")
+        return value
+
+    @field_validator("expected_subjects", "forbidden_changes")
+    @classmethod
+    def _fields_are_codes(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        return _codes(value)
+
+
+class ContinuityPlan(RecordBase):
+    """A declarative inter-shot continuity contract bound to a spec (#45)."""
+
+    record_kind: Literal["continuity_plan"] = "continuity_plan"
+
+    acceptance_spec_id: Sha256
+    expectations: tuple[ContinuityExpectation, ...]
+
+    @field_validator("expectations")
+    @classmethod
+    def _expectations_nonempty_with_unique_ids(
+        cls, value: tuple[ContinuityExpectation, ...]
+    ) -> tuple[ContinuityExpectation, ...]:
+        if not value:
+            raise ValueError("a continuity plan requires at least one expectation")
+        shot_ids = [item.shot_id for item in value]
+        if len(set(shot_ids)) != len(shot_ids):
+            raise ValueError("shot_ids must be unique")
+        return value

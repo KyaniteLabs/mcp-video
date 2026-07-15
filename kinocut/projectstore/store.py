@@ -43,7 +43,7 @@ from kinocut.contracts.acceptance import GenerationAcceptanceSpec
 from kinocut.contracts.adapter import parse_record_json, validate_record
 from kinocut.contracts.asset import AssetRecord
 from kinocut.contracts.defect import DefectFinding
-from kinocut.contracts.editorial import BeatMap
+from kinocut.contracts.editorial import BeatMap, ContinuityPlan
 from kinocut.contracts.learning import (
     CostEvent,
     PromptOutcome,
@@ -88,6 +88,7 @@ _RECORD_REGISTRY: dict[str, type[RecordBase]] = {
     "bed_record": BedRecord,
     "lineage_link": LineageLink,
     "beat_map": BeatMap,
+    "continuity_plan": ContinuityPlan,
 }
 
 
