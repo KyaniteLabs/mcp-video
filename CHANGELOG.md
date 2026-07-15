@@ -9,6 +9,16 @@ This project follows a simple release-note style:
 - `Fixed` for bug fixes.
 - `Security` for vulnerability fixes.
 
+## 1.9.0 - 2026-07-15
+
+### Added
+
+- Public MCP, CLI, and Python-client surfaces for eight release-artifact policy engines: `video_review_package`, `video_publish_gate`, `video_review_decision`, `video_learning_report`, `video_cost_ledger`, `video_recipe_capture`, `video_capabilities`, and `video_benchmark_run`. These expose the contract-first AI-video review, publish-gate, learning, cost, recipe, capability, and benchmark engines (previously internal records) to agents and operators across all three surfaces.
+
+### Changed
+
+- Published surface grew to **150 MCP tools / 129 CLI commands** (from 142 / 121 in 1.8.0). All parity invariants — count tests, public doc claims, the `CLIENT_METHOD_CONTRACTS` client registry, and the `server.py` thin-facade cap — were re-synced for the cutover.
+
 ## 1.8.0 - 2026-07-14
 
 ### Added

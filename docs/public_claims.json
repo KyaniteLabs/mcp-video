@@ -1,12 +1,16 @@
 {
   "schema_version": 1,
   "package_name": "kinocut",
-  "cli_names": ["kino", "kinocut", "mcp-video"],
-  "published_version": "1.8.0",
-  "published_date": "2026-07-14",
-  "release_candidate_version": "1.8.0",
-  "published_mcp_tools": 142,
-  "published_cli_commands": 121,
+  "cli_names": [
+    "kino",
+    "kinocut",
+    "mcp-video"
+  ],
+  "published_version": "1.9.0",
+  "published_date": "2026-07-15",
+  "release_candidate_version": "1.9.0",
+  "published_mcp_tools": 150,
+  "published_cli_commands": 129,
   "development_mcp_tools": 150,
   "development_cli_commands": 129,
   "registry_id": "io.github.KyaniteLabs/kinocut",

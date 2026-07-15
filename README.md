@@ -97,15 +97,15 @@ video.release_checkpoint(short.output_path)  # thumbnail + quality gate before y
 
 | Surface | Version / tip | What it means |
 | --- | --- | --- |
-| **PyPI / npm / GitHub Release** | **[1.8.0](https://github.com/KyaniteLabs/kinocut/releases/tag/v1.8.0)** (2026-07-14) | Latest **published** package. Install with `pip install -U kinocut`. |
-| **This repository (`master`)** | **150 MCP tools / 129 CLI commands** | Diverges from published 1.8.0 (+8 MCP / +8 CLI): release-artifact policy surfaces (review, publish gate, learning, cost, recipe, capabilities, benchmark). |
-| **Next** | trusted execution kernel + sound program depth | See [Whats next](#whats-next). Not a 1.9 package claim. |
+| **PyPI / npm / GitHub Release** | **[1.9.0](https://github.com/KyaniteLabs/kinocut/releases/tag/v1.9.0)** (2026-07-15) | Latest **published** package. Install with `pip install -U kinocut`. |
+| **This repository (`master`)** | **150 MCP tools / 129 CLI commands** | Matches published 1.9.0 at tag (release-artifact policy surfaces: review, publish gate, learning, cost, recipe, capabilities, benchmark). |
+| **Next** | trusted execution kernel + sound program depth | See [Whats next](#whats-next). Not pinned to a specific package version yet. |
 
 Install from PyPI for the stable package. Clone `master` only when you intentionally need post-tag tip work.
 
-## What's in 1.8.0 (latest release)
+## What's in 1.9.0 (latest release)
 
-Kinocut **1.8.0** is what you get from `pip install kinocut` today (**142 MCP tools / 121 CLI commands**):
+Kinocut **1.9.0** is what you get from `pip install kinocut` today (**150 MCP tools / 129 CLI commands**). 1.9.0 adds public MCP/CLI/client surfaces for eight release-artifact policy engines (review package, publish gate, review decisions, learning report, cost ledger, recipe capture, capabilities, benchmark) on top of the 1.8.0 contract-first AI-video foundation:
 
 - Everything from the **1.7.0** identity cutover (`kinocut` package, `kino` CLI, MCP Registry id, kinocut.dev)
 - **Governed AI-video** — content-addressed ingest, unified preflight, temporal inspect, exact-asset verdict / acceptance, body-swap, lineage-bound salvage ([docs/AI_VIDEO_REVIEW_AND_SALVAGE.md](docs/AI_VIDEO_REVIEW_AND_SALVAGE.md))
