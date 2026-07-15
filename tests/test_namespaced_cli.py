@@ -6,8 +6,8 @@ from kinocut.cli.namespaces import NAMESPACED_ALIASES, namespaced_groups, resolv
 
 
 def test_resolve_returns_the_flat_command_for_a_namespaced_path():
-    assert resolve_namespaced("aivideo", "verdict") == "video_verdict"
-    assert resolve_namespaced("aivideo", "body-swap") == "video_body_swap"
+    assert resolve_namespaced("aivideo", "verdict") == "video-verdict"
+    assert resolve_namespaced("aivideo", "body-swap") == "video-body-swap"
 
 
 def test_resolve_returns_none_for_an_unknown_path():
@@ -17,7 +17,7 @@ def test_resolve_returns_none_for_an_unknown_path():
 
 def test_every_alias_targets_a_nonempty_flat_command():
     for (group, action), flat in NAMESPACED_ALIASES.items():
-        assert isinstance(flat, str) and flat.startswith("video_"), (group, action, flat)
+        assert isinstance(flat, str) and flat.startswith("video-"), (group, action, flat)
 
 
 def test_namespaced_groups_lists_actions_per_group():
@@ -28,3 +28,17 @@ def test_namespaced_groups_lists_actions_per_group():
     for actions in groups.values():
         assert list(actions) == sorted(actions)
         assert len(actions) == len(set(actions))
+
+
+def test_aivideo_namespace_subcommand_parses_to_the_flat_operation():
+    from kinocut.cli.handlers_aivideo import _AIVIDEO_NAMESPACE_OPS
+    from kinocut.cli.parser import build_parser
+
+    parser = build_parser()
+    args = parser.parse_args(["aivideo", "verdict", "/tmp/proj", "--verdict-json", "{}"])
+    assert args.command == "aivideo"
+    assert args.aivideo_command == "verdict"
+    assert args.project_dir == "/tmp/proj"
+    # resolver + handler agree on the flat target / operation
+    assert resolve_namespaced("aivideo", "verdict") == "video-verdict"
+    assert _AIVIDEO_NAMESPACE_OPS["verdict"] == "verdict"

@@ -19,6 +19,7 @@ from . import hyperframes
 from . import workflow
 from . import inspection
 from . import aivideo
+from . import namespaces
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -66,5 +67,6 @@ def build_parser() -> argparse.ArgumentParser:
     postrescue.add_parsers(subparsers)
     inspection.add_parsers(subparsers)
     aivideo.add_parsers(subparsers)
+    namespaces.add_parsers(subparsers)
 
     return parser

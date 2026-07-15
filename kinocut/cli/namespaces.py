@@ -16,13 +16,13 @@ from __future__ import annotations
 # command handled by the same handler; namespace aliases never introduce
 # behavior of their own.
 NAMESPACED_ALIASES: dict[tuple[str, str], str] = {
-    ("aivideo", "verdict"): "video_verdict",
-    ("aivideo", "acceptance"): "video_acceptance_eval",
-    ("aivideo", "salvage"): "video_salvage",
-    ("aivideo", "body-swap"): "video_body_swap",
-    ("aivideo", "ingest"): "video_ingest",
-    ("aivideo", "preflight"): "video_preflight",
-    ("aivideo", "inspect"): "video_inspect_temporal",
+    ("aivideo", "verdict"): "video-verdict",
+    ("aivideo", "acceptance"): "video-acceptance-eval",
+    ("aivideo", "salvage"): "video-salvage",
+    ("aivideo", "body-swap"): "video-body-swap",
+    ("aivideo", "ingest"): "video-ingest",
+    ("aivideo", "preflight"): "video-preflight",
+    ("aivideo", "inspect"): "video-inspect-temporal",
 }
 
 
