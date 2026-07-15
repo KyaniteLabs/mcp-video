@@ -1,6 +1,6 @@
 # Improvement Roadmap
 
-Kinocut 1.8.0 is published with 142 MCP tools and 121 CLI commands. The 1.7.0 identity cutover is historical; the contract-first AI-video and sound program described below is post-release work that remains incomplete. Remotion has been fully removed. The current priority is finishing governed review/salvage, then executing the remaining program through independently reviewed parallel lanes.
+Kinocut 1.9.0 is published with 150 MCP tools and 129 CLI commands. The 1.7.0 identity cutover is historical; the contract-first AI-video and sound program described below is post-release work that remains incomplete. Remotion has been fully removed. The current priority is finishing governed review/salvage, then executing the remaining program through independently reviewed parallel lanes.
 
 ## Current AI-video and sound program
 
