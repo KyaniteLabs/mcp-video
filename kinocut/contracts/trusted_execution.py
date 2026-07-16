@@ -75,6 +75,28 @@ class RenderJobRecord(RecordBase):
     status: RenderJobStatus
     stage: str | None = Field(default=None, min_length=1, max_length=128)
     workflow_spec_digest: Sha256
+    # Phase-1 async-render extensions: optional and backward-compatible. A render-job
+    # snapshot carries its frozen workspace-relative spec path, numeric progress, the
+    # detached runner pid (liveness/orphan detection), a privacy-safe failure summary,
+    # and the ordered output digests of completed stages (progressive artifact metadata
+    # reused across resume — the wrapped engine's per-step hashes, never a parallel cursor).
+    spec_path: str | None = Field(default=None, max_length=255)
+    stage_index: int | None = Field(default=None, ge=0)
+    stage_total: int | None = Field(default=None, ge=0)
+    runner_pid: int | None = Field(default=None, ge=0)
+    error_code: str | None = Field(default=None, max_length=64)
+    error_message: str | None = Field(default=None, max_length=256)
+    completed_artifacts: tuple[Sha256, ...] = ()
+
+    @model_validator(mode="after")
+    def _spec_path_is_workspace_relative(self) -> RenderJobRecord:
+        path = self.spec_path
+        if path is not None:
+            if not path or path.startswith("/") or "\x00" in path or "\\" in path:
+                raise ValueError("spec_path must be a workspace-relative posix path")
+            if any(segment in ("", "..", ".") for segment in path.split("/")):
+                raise ValueError("spec_path must not contain traversal or empty segments")
+        return self
 
 
 class CASManifestRecord(RecordBase):
