@@ -8,6 +8,7 @@ ids without a timeline IR/DAG or public-surface change (analysis ops stay CAS pr
 from __future__ import annotations
 
 import hashlib
+import itertools
 import json
 import math
 import os
@@ -22,8 +23,7 @@ from kinocut.contracts.trusted_execution import EditRevisionRecord
 from kinocut.projectstore.cas import resolve_blob
 from kinocut.projectstore.edit_projects import append_revision, get_edit_project
 from kinocut.projectstore.render_jobs import job_spec_path
-from kinocut.projectstore.store import Project
-import itertools
+from kinocut.projectstore.store import Project, read_records
 
 __all__ = [
     "CAS_PRODUCER_KINDS",
@@ -275,12 +275,22 @@ def synthesize_workflow_spec(
 
     trim/merge/reframe(->resize)/silence_cut(->trim+merge) become workspace-relative
     steps over verified CAS sources; burn_in and crop stay compiled and are reported, in
-    operation order, in ``unrendered_kinds``. ``base_revision_id`` must equal head.
+    operation order, in ``unrendered_kinds``. ``base_revision_id`` must be the current head and
+    the lowered operations' canonical ids must exactly equal that revision's stored ids, so a
+    receipt can never claim a revision the operations did not build.
     """
     head = get_edit_project(project, edit_project_id)
-    if base_revision_id != head.head_revision_id:
+    if base_revision_id is None or base_revision_id != head.head_revision_id:
         raise contract_error("supplied base revision does not match the current head", INVALID_RECORD)
+    # Bind the lowering to the durable revision it claims: the record must exist, belong to this
+    # edit project, and the canonical ids of the passed operations must equal its stored ids.
+    revision = next((r for r in read_records(project, "edit_revision") if r.record_id == base_revision_id), None)
+    if revision is None or revision.edit_project_id != edit_project_id:
+        raise contract_error("supplied base revision is not a revision of this edit project", INVALID_RECORD)
+    # Normalize once (operations may be a one-shot generator) and reuse the list everywhere below.
     normalized = [_normalize_operation(descriptor, index) for index, descriptor in enumerate(operations)]
+    if tuple(_operation_id(op) for op in normalized) != revision.operation_ids:
+        raise contract_error("supplied operations do not match the base revision", INVALID_RECORD)
 
     renderable = [op for op in normalized if op.kind in _RENDERABLE_KINDS]
     # Declare only sources read by the lowered steps, verified + addressed by opaque job-relative paths.
