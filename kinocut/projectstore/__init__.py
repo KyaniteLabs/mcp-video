@@ -16,11 +16,19 @@ content-addressed media assets. Its guarantees:
 Public surface: :func:`open_project`, :func:`append_record`,
 :func:`read_records`, :func:`ingest_asset`, :func:`ingest_blob`,
 :func:`resolve_blob`, :func:`rebuild_indexes`, and the :class:`Project` handle.
+The internal Phase-1 edit-project repository adds
+:func:`create_edit_project`, :func:`get_edit_project`, and
+:func:`append_revision`.
 """
 
 from __future__ import annotations
 
 from kinocut.projectstore.cas import ingest_blob, resolve_blob
+from kinocut.projectstore.edit_projects import (
+    append_revision,
+    create_edit_project,
+    get_edit_project,
+)
 from kinocut.projectstore.ingest import ingest_asset
 from kinocut.projectstore.store import (
     Project,
@@ -33,6 +41,9 @@ from kinocut.projectstore.store import (
 __all__ = [
     "Project",
     "append_record",
+    "append_revision",
+    "create_edit_project",
+    "get_edit_project",
     "ingest_asset",
     "ingest_blob",
     "open_project",
