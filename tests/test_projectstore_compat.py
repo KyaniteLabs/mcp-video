@@ -49,6 +49,11 @@ def _cas(project, data: bytes = b"x") -> str:
     return ingest_blob(project, src, media_type="video/mp4").digest
 
 
+def _project_files(root):
+    """Relative paths of every file under ``root`` for the fail-closed 'created no files' check."""
+    return sorted(str(path.relative_to(root)) for path in root.rglob("*") if path.is_file())
+
+
 def _raise(fn, *args, **kw):
     with pytest.raises(MCPVideoError):
         fn(*args, **kw)
@@ -164,6 +169,36 @@ def test_burn_in_and_crop_reported_honestly_as_unrendered(project):
     syn = synthesize_workflow_spec(project, ep.edit_project_id, ops, base_revision_id=rev.record_id)
     assert syn.unrendered_kinds == ("burn_in", "crop")  # in operation order, renderable trim excluded
     assert [s["op"] for s in syn.spec["steps"]] == ["trim"]  # only trim lowered
+
+
+def test_synthesis_rejects_operations_not_matching_revision(project):
+    """Trusted binding: lowering may not claim a revision the operations did not build."""
+    d1, d2 = _cas(project, b"a"), _cas(project, b"b")
+    ep = create_edit_project(project)
+    ops_a = [
+        {"kind": "trim", "source": d1, "start": 0.0, "end": 1.0},
+        {"kind": "reframe", "source": d2, "width": 128, "height": 96},
+    ]
+    rev = compile_repurpose_slice(project, ep.edit_project_id, ops_a)
+    files_before = _project_files(project.root)
+
+    # different operations (param change) claiming the same revision -> fail closed
+    ops_b = [
+        {"kind": "trim", "source": d1, "start": 0.0, "end": 2.0},
+        {"kind": "reframe", "source": d2, "width": 128, "height": 96},
+    ]
+    _raise(synthesize_workflow_spec, project, ep.edit_project_id, ops_b, base_revision_id=rev.record_id)
+    # reordered operations claiming the same revision -> fail closed (order binds into the ids)
+    _raise(synthesize_workflow_spec, project, ep.edit_project_id, [ops_a[1], ops_a[0]], base_revision_id=rev.record_id)
+
+    # fail-closed: synthesis is read-only, so no durable files were created and the head is unchanged
+    assert _project_files(project.root) == files_before
+    assert get_edit_project(project, ep.edit_project_id).head_revision_id == rev.record_id
+
+    # matching operations lower successfully and bind the same revision
+    syn = synthesize_workflow_spec(project, ep.edit_project_id, ops_a, base_revision_id=rev.record_id)
+    assert [s["op"] for s in syn.spec["steps"]] == ["trim", "resize"]
+    assert syn.unrendered_kinds == ()
 
 
 _FAKE_FFPROBE = """\
