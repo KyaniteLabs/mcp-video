@@ -1,0 +1,199 @@
+"""Behavior tests for the Phase-1 durable edit-project repository."""
+
+from __future__ import annotations
+
+import threading
+from pathlib import Path
+
+import pytest
+from pydantic import ValidationError
+
+import kinocut.projectstore.store as store
+from kinocut.contracts._common import canonical_record_id
+from kinocut.errors import MCPVideoError
+from kinocut.projectstore import (
+    append_revision,
+    create_edit_project,
+    get_edit_project,
+    open_project,
+    read_records,
+)
+
+_OP1 = "sha256:" + "1" * 64
+_OP2 = "sha256:" + "2" * 64
+
+
+@pytest.fixture
+def project(tmp_path):
+    return open_project(tmp_path / "project")
+
+
+def _raise_oserror_with(secret):
+    raise OSError(13, "Permission denied", secret)
+
+
+def test_create_get_round_trip_and_unknown_fails_closed(project):
+    ep = create_edit_project(project)
+    assert ep.revision_number == 0 and ep.head_revision_id is None and ep.edit_project_id.startswith("edit_project:")
+    assert get_edit_project(project, ep.edit_project_id).record_id == ep.record_id
+    with pytest.raises(MCPVideoError):
+        get_edit_project(project, "edit_project:" + "b" * 64)
+
+
+def test_identity_and_revisions_survive_reopen(tmp_path):
+    project = open_project(tmp_path / "proj")
+    ep = create_edit_project(project)
+    r1 = append_revision(project, ep.edit_project_id, operation_ids=(_OP1,))
+    reopened = open_project(project.root)
+    head = get_edit_project(reopened, ep.edit_project_id)
+    assert head.revision_number == 1 and head.head_revision_id == r1.record_id
+    assert [r.record_id for r in read_records(reopened, "edit_revision")] == [r1.record_id]
+
+
+def test_two_linear_revisions_advance_head_and_parent_chain(project):
+    ep = create_edit_project(project)
+    r1 = append_revision(project, ep.edit_project_id, operation_ids=(_OP1,))
+    r2 = append_revision(project, ep.edit_project_id, operation_ids=(_OP2,), base_revision_id=r1.record_id)
+    assert r1.revision_number == 1 and r1.parent_revision_id is None
+    assert r2.revision_number == 2 and r2.parent_revision_id == r1.record_id
+    head = get_edit_project(project, ep.edit_project_id)
+    assert head.revision_number == 2 and head.head_revision_id == r2.record_id
+    projects = read_records(project, "edit_project")
+    superseded = {p.supersedes for p in projects if p.supersedes}
+    assert [p.record_id for p in projects if p.record_id not in superseded] == [head.record_id]
+
+
+def test_stale_base_is_rejected_and_appends_nothing(project):
+    ep = create_edit_project(project)
+    append_revision(project, ep.edit_project_id, operation_ids=(_OP1,))
+    for bad in (None, "sha256:" + "0" * 64):
+        with pytest.raises(MCPVideoError):
+            append_revision(project, ep.edit_project_id, operation_ids=(_OP2,), base_revision_id=bad)
+    assert len(read_records(project, "edit_revision")) == len(read_records(project, "kernel_event")) == 1
+    assert get_edit_project(project, ep.edit_project_id).revision_number == 1
+
+
+def test_first_revision_rejects_non_null_base(project):
+    ep = create_edit_project(project)
+    with pytest.raises(MCPVideoError):
+        append_revision(project, ep.edit_project_id, operation_ids=(_OP1,), base_revision_id="sha256:" + "9" * 64)
+
+
+def test_create_is_idempotent_on_supplied_identity(project):
+    identity = "edit_project:" + "a" * 64
+    first = create_edit_project(project, edit_project_id=identity)
+    second = create_edit_project(project, edit_project_id=identity)
+    assert first.record_id == second.record_id
+    assert len(read_records(project, "edit_project")) == 1
+
+
+def test_each_revision_appends_exactly_one_ordered_event(project):
+    ep = create_edit_project(project)
+    r1 = append_revision(project, ep.edit_project_id, operation_ids=(_OP1,))
+    r2 = append_revision(project, ep.edit_project_id, operation_ids=(_OP2,), base_revision_id=r1.record_id)
+    events = read_records(project, "kernel_event")
+    assert (
+        len(events) == 2
+        and [e.event_id for e in events] == [1, 2]
+        and {e.event_kind for e in events} == {"revision.created"}
+    )
+    assert [e.revision_id for e in events] == [r1.record_id, r2.record_id] and events[
+        0
+    ].subject_record_id == r1.record_id
+
+
+@pytest.mark.parametrize("fail_at_call", [2, 3])
+def test_failed_write_rolls_back_the_whole_transaction(project, monkeypatch, fail_at_call):
+    ep = create_edit_project(project)
+    real_append = store._atomic_append
+    calls = {"n": 0}
+
+    def flaky(path, line):
+        calls["n"] += 1
+        if calls["n"] == fail_at_call:  # revision (1), event (2), head (3)
+            raise MCPVideoError("simulated write failure")
+        return real_append(path, line)
+
+    monkeypatch.setattr(store, "_atomic_append", flaky)
+    with pytest.raises(MCPVideoError):
+        append_revision(project, ep.edit_project_id, operation_ids=(_OP1,))
+    assert read_records(project, "edit_revision") == []
+    assert read_records(project, "kernel_event") == []
+    assert get_edit_project(project, ep.edit_project_id).revision_number == 0
+    assert len(read_records(project, "edit_project")) == 1
+
+
+def test_concurrent_appends_with_same_base_serialize_one_wins(project):
+    ep = create_edit_project(project)
+    results = {"ok": 0, "stale": 0}
+    lock = threading.Lock()
+
+    def worker():
+        try:
+            append_revision(project, ep.edit_project_id, operation_ids=(_OP1,))
+        except MCPVideoError:
+            with lock:
+                results["stale"] += 1
+            return
+        with lock:
+            results["ok"] += 1
+
+    threads = [threading.Thread(target=worker) for _ in range(6)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert results["ok"] == 1 and results["stale"] == 5
+    assert (
+        len(read_records(project, "edit_revision")) == 1
+        and get_edit_project(project, ep.edit_project_id).revision_number == 1
+    )
+
+
+def test_edit_project_state_is_isolated_per_project_store(tmp_path):
+    one = open_project(tmp_path / "one")
+    two = open_project(tmp_path / "two")
+    ep = create_edit_project(one)
+    append_revision(one, ep.edit_project_id, operation_ids=(_OP1,))
+    with pytest.raises(MCPVideoError):
+        get_edit_project(two, ep.edit_project_id)
+    assert read_records(two, "edit_project") == read_records(two, "edit_revision") == []
+    for record in read_records(one, "edit_project"):
+        assert record.project_id == one.project_id
+
+
+def test_canonical_record_id_is_content_derived_and_records_are_frozen(project):
+    ep = create_edit_project(project)
+    stored_ep = read_records(project, "edit_project")[0]
+    assert stored_ep.record_id == canonical_record_id(stored_ep)
+    rev = append_revision(project, ep.edit_project_id, operation_ids=(_OP1,))
+    stored_rev = read_records(project, "edit_revision")[0]
+    assert stored_rev.record_id == canonical_record_id(stored_rev) == rev.record_id
+    with pytest.raises(ValidationError):
+        stored_rev.revision_number = 99  # records are frozen
+
+
+def test_snapshot_read_oserror_is_mapped_without_host_path_leak(project, monkeypatch):
+    host_path_marker = "/secret/SNAPSHOT-MARKER/edit_project.jsonl"
+    monkeypatch.setattr(Path, "read_bytes", lambda self: _raise_oserror_with(host_path_marker))
+    with pytest.raises(MCPVideoError) as exc:
+        append_revision(project, create_edit_project(project).edit_project_id, operation_ids=(_OP1,))
+    assert "SNAPSHOT-MARKER" not in str(exc.value) and host_path_marker not in str(exc.value)
+
+
+def test_rollback_unlink_oserror_is_mapped_without_host_path_leak(project, monkeypatch):
+    ep = create_edit_project(project)
+    real_append, calls = store._atomic_append, {"n": 0}
+
+    def flaky(path, line):
+        calls["n"] += 1
+        if calls["n"] == 2:  # event write fails after the revision file commits
+            raise MCPVideoError("simulated write failure")
+        return real_append(path, line)
+
+    monkeypatch.setattr(store, "_atomic_append", flaky)
+    host_path_marker = "/secret/ROLLBACK-MARKER/edit_revision.jsonl"
+    monkeypatch.setattr(Path, "unlink", lambda self, *a, **k: _raise_oserror_with(host_path_marker))
+    with pytest.raises(MCPVideoError) as exc:
+        append_revision(project, ep.edit_project_id, operation_ids=(_OP1,))
+    assert "ROLLBACK-MARKER" not in str(exc.value) and host_path_marker not in str(exc.value)
