@@ -13,6 +13,8 @@ reopened/resumed with unchanged stage-1 hash/count (completed stage skipped).
 
 from __future__ import annotations
 
+import hashlib
+import os
 import json
 import subprocess
 import sys
@@ -71,6 +73,55 @@ class _FakeProc:
     def communicate(self, timeout=None):
         self.blocked.append("communicate")
         return (b"", b"")
+
+
+# --- Deterministic fake ffprobe/ffmpeg for the real-engine kill/reopen test ----------
+#
+# The recovery test runs the SHIPPED ``video_workflow_render`` against real subprocesses;
+# these tiny Python shims stand in for ffprobe/ffmpeg on PATH so stage 1 (probe) completes,
+# stage 2 (convert) blocks until SIGKILL, then completes on resume. No fake renderer.
+
+_FAKE_FFPROBE = """\
+#!/usr/bin/env python3
+import sys
+sys.stdout.write(
+    '{"streams":[{"codec_type":"video","codec_name":"h264","width":320,"height":240,'
+    '"r_frame_rate":"30/1","duration":"2.000000","side_data_list":[]}],'
+    '"format":{"duration":"2.000000","bit_rate":"100000","size":"1234",'
+    '"format_name":"mov,mp4,m4a,3gp,3g2,mj2"}}'
+)
+"""
+
+_FAKE_FFMPEG = """\
+#!/usr/bin/env python3
+import os
+import sys
+import time
+
+token = os.environ.get("KINOCUT_TEST_FFMPEG_BLOCK_TOKEN", "")
+if token and os.path.exists(token):
+    while True:
+        time.sleep(0.2)
+
+out = sys.argv[-1] if len(sys.argv) > 1 else ""
+if out and out != "-":
+    parent = os.path.dirname(out)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
+    with open(out, "wb") as handle:
+        handle.write(b"kinocut-fake-ffmpeg-output")
+sys.exit(0)
+"""
+
+
+def _install_fake_binaries(bin_dir):
+    """Write executable fake ``ffprobe``/``ffmpeg`` into ``bin_dir``; return its path."""
+    bin_dir.mkdir(parents=True, exist_ok=True)
+    (bin_dir / "ffprobe").write_text(_FAKE_FFPROBE)
+    (bin_dir / "ffmpeg").write_text(_FAKE_FFMPEG)
+    for name in ("ffprobe", "ffmpeg"):
+        os.chmod(bin_dir / name, 0o700)
+    return bin_dir
 
 
 def test_start_render_job_launch_contract_and_prompt_return(tmp_path, monkeypatch):
@@ -191,30 +242,64 @@ def test_run_job_cooperative_pre_start_cancel_skips_render(tmp_path, monkeypatch
 
 
 def test_real_child_kill_reopen_resume_skips_completed_stage(tmp_path, monkeypatch):
+    """kill/reopen/resume against the SHIPPED engine + its authoritative resume cursor.
+
+    A real detached child runs the actual ``video_workflow_render`` (no fake
+    renderer, no fixture env). Deterministic fake ``ffprobe``/``ffmpeg`` on PATH make
+    stage 1 (probe) complete — so the executor persists its genuine progressive
+    workflow receipt — and stage 2 (convert) BLOCK inside the fake ``ffmpeg``; the
+    runner's whole process group is SIGKILLed; the project is reopened/resumed;
+    stage 1 is SKIPPED (reused from the real receipt, never re-executed — proven by
+    its carried-over started/ended timestamps, ``skipped: true`` and identical input
+    hash) and stage 2 then succeeds. Bounded on Darwin/Linux.
+    """
     project = open_project(tmp_path / "proj")
     job = _job(project)
-    monkeypatch.setenv("KINOCUT_RENDER_RUNNER_FIXTURE", "1")
-    monkeypatch.setenv("KINOCUT_RENDER_RUNNER_FIXTURE_WAIT", "20")
+    # The engine resolves declared source paths relative to the frozen spec's directory
+    # (the workspace root inside the job store), so the input media must live there.
+    job_dir = render_jobs.job_spec_path(project, job.job_id).parent
+    (job_dir / "in.mp4").write_bytes(b"kinocut-deterministic-input-media")
+
+    block_token = tmp_path / "block-ffmpeg"
+    block_token.write_text("1")  # present -> fake ffmpeg blocks; removed -> it completes
+    bin_dir = _install_fake_binaries(tmp_path / "fakebin")
+    # The detached child inherits this PATH, so shutil.which finds the fakes in-process.
+    monkeypatch.setenv("PATH", str(bin_dir) + os.pathsep + os.environ.get("PATH", ""))
+    monkeypatch.setenv("KINOCUT_TEST_FFMPEG_BLOCK_TOKEN", str(block_token))
 
     running = start_render_job(project, job.job_id)
     receipt_path = render_jobs.job_receipt_path(project, job.job_id)
-    counts_path = receipt_path.parent / "fixture_progress.json"
-    deadline = time.monotonic() + 10
+
+    # Stage 1 (probe) completes -> the executor writes its real progressive receipt.
+    deadline = time.monotonic() + 15
+    first_receipt = None
     while time.monotonic() < deadline:
-        if counts_path.exists():
-            counts = json.loads(counts_path.read_text())
-            if counts.get("s1") == 1:
+        if receipt_path.exists():
+            try:
+                first_receipt = json.loads(receipt_path.read_text())
+            except (OSError, json.JSONDecodeError):
+                first_receipt = None
+            if first_receipt and first_receipt.get("resume_cursor", {}).get("last_completed_step") == "s1":
                 break
         time.sleep(0.05)
     else:
-        raise AssertionError("runner did not persist stage 1")
+        render_jobs.terminate_render_job(project, job.job_id)
+        raise AssertionError("runner did not persist stage 1's real workflow receipt")
+    assert first_receipt is not None
 
-    first_receipt = json.loads(receipt_path.read_text())
-    first_hash = first_receipt["steps"][0]["output_hash"]
-    failed = render_jobs.terminate_render_job(project, job.job_id)
+    # Stage 1's genuine per-step record — the skip / no-re-execution proof.
+    first_s1 = first_receipt["steps"][0]
+    assert first_s1["status"] == "completed"
+    assert first_receipt["status"] == "in_progress"  # terminal receipt not yet written
+    first_input_hash = first_s1["input_hashes"]["src"]
+    first_started, first_ended = first_s1["started_at"], first_s1["ended_at"]
+
+    failed = render_jobs.terminate_render_job(project, job.job_id)  # SIGKILL the process group
     assert failed.status.value == "failed"
     assert failed.error_code == "terminated"
     assert failed.runner_pid is None
+
+    block_token.unlink()  # the fake ffmpeg now lets the convert complete on resume
 
     reopened = open_project(project.root)
     resumed = render_jobs.resume_render_job(reopened, job.job_id)
@@ -222,10 +307,9 @@ def test_real_child_kill_reopen_resume_skips_completed_stage(tmp_path, monkeypat
     restarted = start_render_job(reopened, job.job_id)
     assert restarted.runner_pid != running.runner_pid
 
-    deadline = time.monotonic() + 10
+    deadline = time.monotonic() + 15
     while time.monotonic() < deadline:
-        head = get_render_job(reopened, job.job_id)
-        if head.status.value == "succeeded":
+        if get_render_job(reopened, job.job_id).status.value == "succeeded":
             break
         time.sleep(0.05)
     else:
@@ -233,7 +317,29 @@ def test_real_child_kill_reopen_resume_skips_completed_stage(tmp_path, monkeypat
         raise AssertionError("resumed runner did not succeed")
 
     final_receipt = json.loads(receipt_path.read_text())
-    counts = json.loads(counts_path.read_text())
-    assert counts == {"s1": 1, "s2": 1}
-    assert final_receipt["steps"][0]["output_hash"] == first_hash
-    assert final_receipt["success"] is True
+    final_s1 = final_receipt["steps"][0]
+    # stage 1 was SKIPPED on resume: reused from the real receipt, never re-executed.
+    assert final_s1["status"] == "completed"
+    assert final_s1.get("skipped") is True
+    assert final_s1["input_hashes"]["src"] == first_input_hash  # identical input hash
+    assert final_s1["started_at"] == first_started  # timestamps carried forward = not re-run
+    assert final_s1["ended_at"] == first_ended
+    # stage 2 ran to completion on resume.
+    assert final_receipt["steps"][1]["status"] == "completed"
+    assert final_receipt["steps"][1].get("skipped") is not True
+    assert final_receipt["status"] == "completed"
+    assert final_receipt["resume_cursor"] == {"last_completed_step": "s2", "next_step": None}
+    assert final_receipt["feature_flags"]["resume_used"] is True
+    assert final_receipt["feature_flags"]["resumed_from"] == "s2"
+    assert (job_dir / "out.mp4").is_file()  # the real convert product landed on disk
+    # Regression lock: the terminal receipt's declared output hash must reflect
+    # the file that actually landed on disk, NOT a null that the progressive
+    # (in_progress) snapshot memoized for the still-absent output before the
+    # convert stage produced it. ``_hash_if_exists`` caches None on absence, so
+    # progressive output hashing must be isolated from the shared hash_cache.
+    out_entry = final_receipt["outputs"][0]
+    assert out_entry["id"] == "out1"
+    out_hash = out_entry["output_hash"]
+    assert out_hash is not None, "terminal output hash poisoned by progressive null cache"
+    expected_hash = "sha256:" + hashlib.sha256((job_dir / "out.mp4").read_bytes()).hexdigest()
+    assert out_hash == expected_hash
