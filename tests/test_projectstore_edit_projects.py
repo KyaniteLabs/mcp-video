@@ -126,6 +126,7 @@ def test_failed_write_rolls_back_the_whole_transaction(project, monkeypatch, fai
     assert read_records(project, "edit_revision") == []
     assert read_records(project, "kernel_event") == []
     assert read_records(project, "revision_sources") == []
+    assert read_records(project, "branch") == []
     assert get_edit_project(project, ep.edit_project_id).revision_number == 0
     assert len(read_records(project, "edit_project")) == 1
 
