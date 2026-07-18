@@ -28,6 +28,15 @@ class EditProjectRecord(RecordBase):
         return self
 
 
+class BranchRecord(RecordBase):
+    """Immutable branch-head snapshot; legacy histories synthesize ``main`` on read."""
+
+    record_kind: Literal["branch"] = "branch"
+    edit_project_id: EditProjectId
+    branch_name: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
+    head_revision_id: Sha256 | None = None
+
+
 class EditRevisionRecord(RecordBase):
     """One immutable snapshot in an append-only linear edit history."""
 
@@ -42,6 +51,14 @@ class EditRevisionRecord(RecordBase):
         if (self.revision_number == 1) != (self.parent_revision_id is None):
             raise ValueError("only the first revision may omit its parent")
         return self
+
+
+class RevisionSourcesRecord(RecordBase):
+    """Source CAS digests used by one revision's opaque operation descriptors."""
+
+    record_kind: Literal["revision_sources"] = "revision_sources"
+    revision_id: Sha256
+    source_digests: tuple[Sha256, ...] = ()
 
 
 class RenderJobStatus(StrEnum):

@@ -57,10 +57,12 @@ from kinocut.contracts.verdict import ClipVerdict
 from kinocut.contracts.trusted_execution import (
     CASManifestRecord,
     CASGCReceiptRecord,
+    BranchRecord,
     EditProjectRecord,
     EditRevisionRecord,
     KernelEventRecord,
     RenderJobRecord,
+    RevisionSourcesRecord,
 )
 from kinocut.errors import MCPVideoError
 from kinocut.projectstore import layout
@@ -98,11 +100,13 @@ _RECORD_REGISTRY: dict[str, type[RecordBase]] = {
     "beat_map": BeatMap,
     "continuity_plan": ContinuityPlan,
     "edit_project": EditProjectRecord,
+    "branch": BranchRecord,
     "edit_revision": EditRevisionRecord,
     "render_job": RenderJobRecord,
     "cas_manifest": CASManifestRecord,
     "cas_gc": CASGCReceiptRecord,
     "kernel_event": KernelEventRecord,
+    "revision_sources": RevisionSourcesRecord,
 }
 
 
