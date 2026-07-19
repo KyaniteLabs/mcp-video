@@ -1,9 +1,10 @@
-"""Behavior tests for the namespaced CLI argv router (#388, T7a).
+"""Behavior tests for the namespaced CLI argv router (#388, T7a; #390, T7b).
 
 These tests exercise the ``kino <group> <action> ...`` -> ``kino <flat> ...`` rewrite
 that ``kinocut.__main__._rewrite_namespaced_argv`` performs before
 ``build_parser().parse_args()`` runs. They do NOT depend on a new argparse subparser
-being added; the flat 130-command surface stays authoritative.
+being added; the flat 130-command surface stays authoritative. T7a added the seven
+``aivideo`` aliases; T7b adds the nine ``audio`` aliases on top of the merged router.
 """
 
 from __future__ import annotations
@@ -15,7 +16,7 @@ import sys
 import pytest
 
 from kinocut.__main__ import _rewrite_namespaced_argv
-from kinocut.cli.namespaces import NAMESPACED_ALIASES
+from kinocut.cli.namespaces import NAMESPACED_ALIASES, namespaced_groups
 from kinocut.cli.parser import build_parser
 from tests.test_public_surface import EXPECTED_CLI_COMMANDS
 
@@ -45,11 +46,62 @@ def test_no_dangling_aliases_every_target_is_a_registered_flat_command():
     [(group, action, flat) for (group, action), flat in sorted(NAMESPACED_ALIASES.items())],
     ids=[f"{group}-{action}" for group, action in sorted(NAMESPACED_ALIASES)],
 )
-def test_every_aivideo_alias_rewrites_to_its_flat_target(group: str, action: str, flat: str):
-    """All seven aivideo aliases route to the matching flat command, preserving trailing argv."""
+def test_every_namespaced_alias_rewrites_to_its_flat_target(group: str, action: str, flat: str):
+    """Every (group, action) alias rewrites to its flat command, preserving trailing argv.
+
+    Covers all 16 aliases: the seven ``aivideo`` paths (T7a) and the nine ``audio``
+    paths (T7b). Group/action-specific counts are pinned by the dedicated tests below.
+    """
 
     rewritten = _rewrite_namespaced_argv([group, action, "PROJECT", "--extra", "value"])
     assert rewritten == [flat, "PROJECT", "--extra", "value"]
+
+
+# Explicit per-group coverage so a future addition to either group is caught.
+
+AIVIDEO_ALIASES: dict[tuple[str, str], str] = {
+    ("aivideo", "verdict"): "video-verdict",
+    ("aivideo", "acceptance"): "video-acceptance-eval",
+    ("aivideo", "salvage"): "video-salvage",
+    ("aivideo", "body-swap"): "video-body-swap",
+    ("aivideo", "ingest"): "video-ingest",
+    ("aivideo", "preflight"): "video-preflight",
+    ("aivideo", "inspect"): "video-inspect-temporal",
+}
+
+AUDIO_ALIASES: dict[tuple[str, str], str] = {
+    ("audio", "normalize"): "normalize-audio",
+    ("audio", "synthesize"): "audio-synthesize",
+    ("audio", "compose"): "audio-compose",
+    ("audio", "preset"): "audio-preset",
+    ("audio", "sequence"): "audio-sequence",
+    ("audio", "effects"): "audio-effects",
+    ("audio", "add-generated"): "video-add-generated-audio",
+    ("audio", "spatial"): "video-audio-spatial",
+    ("audio", "bed"): "audio-bed",
+}
+
+
+def test_aivideo_group_keeps_exactly_seven_aliases():
+    """The T7a aivideo group is unchanged: exactly its seven known aliases."""
+
+    aivideo = {k: v for k, v in NAMESPACED_ALIASES.items() if k[0] == "aivideo"}
+    assert aivideo == AIVIDEO_ALIASES
+    assert len(aivideo) == 7
+
+
+@pytest.mark.parametrize(
+    ("action", "flat"),
+    [(action, flat) for (_, action), flat in sorted(AUDIO_ALIASES.items())],
+    ids=[f"audio-{action}" for _, action in sorted(AUDIO_ALIASES)],
+)
+def test_every_audio_alias_rewrites_to_its_flat_target(action: str, flat: str):
+    """All nine T7b audio aliases route to the matching flat command, preserving trailing argv."""
+
+    rewritten = _rewrite_namespaced_argv(["audio", action, "PROJECT", "--extra", "value"])
+    assert rewritten == [flat, "PROJECT", "--extra", "value"]
+    # The flat target is still directly parseable as a registered subcommand.
+    assert flat in EXPECTED_CLI_COMMANDS
 
 
 def test_format_json_before_group_is_preserved():
@@ -126,14 +178,41 @@ def test_unknown_option_short_circuits_without_rewriting():
 
 
 def test_flat_command_set_remains_130():
-    """The flat subcommand set is the same 130-command surface; no new parser was added."""
+    """The flat subcommand set is the same 130-command surface; no new parser was added.
+
+    Namespace aliases are pure argv rewrites to existing flat commands, never new
+    subcommands: 7 aivideo aliases (T7a) + 9 audio aliases (T7b) = 16 grouped paths
+    over the unchanged 130-command parser.
+    """
 
     assert len(EXPECTED_CLI_COMMANDS) == 130
-    assert len(NAMESPACED_ALIASES) == 7
+    assert len(NAMESPACED_ALIASES) == 16
+    groups = namespaced_groups()
+    assert set(groups) == {"aivideo", "audio"}
+    assert groups["aivideo"] == (
+        "acceptance",
+        "body-swap",
+        "ingest",
+        "inspect",
+        "preflight",
+        "salvage",
+        "verdict",
+    )
+    assert groups["audio"] == (
+        "add-generated",
+        "bed",
+        "compose",
+        "effects",
+        "normalize",
+        "preset",
+        "sequence",
+        "spatial",
+        "synthesize",
+    )
 
 
-def test_parser_does_not_register_an_aivideo_subparser():
-    """Grouped routing reuses flat subparsers; no `aivideo` subparser is created."""
+def test_parser_does_not_register_a_namespace_group_subparser():
+    """Grouped routing reuses flat subparsers; no `aivideo` or `audio` subparser is created."""
 
     import argparse as _argparse
 
@@ -141,6 +220,7 @@ def test_parser_does_not_register_an_aivideo_subparser():
     subparsers_action = next(action for action in parser._actions if isinstance(action, _argparse._SubParsersAction))
     choices = set(subparsers_action.choices)
     assert "aivideo" not in choices
+    assert "audio" not in choices
     assert choices == EXPECTED_CLI_COMMANDS
 
 
@@ -154,8 +234,18 @@ def test_grouped_route_exposes_target_help():
     assert "--verdict-json" in result.stdout
 
 
-def test_group_help_does_not_add_aivideo_to_top_level_command_list():
-    """`kino --help` still lists exactly the flat 130 commands — no aivideo entry."""
+def test_grouped_audio_bed_route_exposes_flat_audio_bed_help():
+    """`kino audio bed --help` rewrites so argparse prints the flat audio-bed command's help."""
+
+    result = _cli("audio", "bed", "--help")
+    assert result.returncode == 0, result.stderr
+    # The flat audio-bed command's help is shown — its prog line and a distinctive option appear verbatim.
+    assert "audio-bed" in result.stdout
+    assert "--loop-crossfade" in result.stdout
+
+
+def test_group_help_does_not_add_namespace_groups_to_top_level_command_list():
+    """`kino --help` still lists exactly the flat 130 commands — no aivideo or audio entry."""
 
     result = _cli("--help")
     assert result.returncode == 0, result.stderr
@@ -164,3 +254,4 @@ def test_group_help_does_not_add_aivideo_to_top_level_command_list():
     help_commands = set(command_list.split(","))
     assert help_commands == EXPECTED_CLI_COMMANDS
     assert "aivideo" not in help_commands
+    assert "audio" not in help_commands

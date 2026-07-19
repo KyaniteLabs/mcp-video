@@ -23,6 +23,15 @@ NAMESPACED_ALIASES: dict[tuple[str, str], str] = {
     ("aivideo", "ingest"): "video-ingest",
     ("aivideo", "preflight"): "video-preflight",
     ("aivideo", "inspect"): "video-inspect-temporal",
+    ("audio", "normalize"): "normalize-audio",
+    ("audio", "synthesize"): "audio-synthesize",
+    ("audio", "compose"): "audio-compose",
+    ("audio", "preset"): "audio-preset",
+    ("audio", "sequence"): "audio-sequence",
+    ("audio", "effects"): "audio-effects",
+    ("audio", "add-generated"): "video-add-generated-audio",
+    ("audio", "spatial"): "video-audio-spatial",
+    ("audio", "bed"): "audio-bed",
 }
 
 
