@@ -10,6 +10,11 @@ from typing import Any, Literal, get_args
 from pydantic import ConfigDict, Field, model_validator
 
 from kinocut.contracts._common import ValueObject
+from kinocut.limits import (
+    INSTAGRAM_REELS_MAX_DURATION_SECONDS,
+    MIN_SHORTS_PREVIEW_DURATION_SECONDS,
+    YOUTUBE_SHORTS_MAX_DURATION_SECONDS,
+)
 
 
 Platform = Literal["youtube_shorts", "instagram_reels"]
@@ -19,8 +24,8 @@ PLATFORMS: tuple[str, ...] = get_args(Platform)
 
 PLATFORM_MAX_DURATIONS: Mapping[str, float] = MappingProxyType(
     {
-        "youtube_shorts": 180.0,
-        "instagram_reels": 90.0,
+        "youtube_shorts": YOUTUBE_SHORTS_MAX_DURATION_SECONDS,
+        "instagram_reels": INSTAGRAM_REELS_MAX_DURATION_SECONDS,
     }
 )
 
@@ -61,6 +66,8 @@ class ClippedMoment(_StrictModel):
         expected = self.end_seconds - self.start_seconds
         if math.isfinite(expected) and abs(expected - self.duration_seconds) > 1e-9:
             raise ValueError("duration_seconds must equal end_seconds - start_seconds")
+        if self.duration_seconds > PLATFORM_MAX_DURATIONS[self.platform] + 1e-9:
+            raise ValueError("duration_seconds exceeds the platform maximum")
         return self
 
 
@@ -98,12 +105,22 @@ def _validate_moment(moment: Mapping[str, Any] | Any) -> tuple[float, float, str
     else:
         start = getattr(moment, "start", None)
         end = getattr(moment, "end", None)
-    if not isinstance(start, (int, float)) or not isinstance(end, (int, float)):
+    if (
+        not isinstance(start, (int, float))
+        or isinstance(start, bool)
+        or not isinstance(end, (int, float))
+        or isinstance(end, bool)
+    ):
         raise _clip_error(f"moment {moment_id!r} requires numeric 'start' and 'end' fields", CLIP_INVALID_TIME_RANGE)
     if math.isnan(float(start)) or math.isinf(float(start)) or math.isnan(float(end)) or math.isinf(float(end)):
         raise _clip_error(f"moment {moment_id!r} has non-finite start/end", CLIP_INVALID_TIME_RANGE)
     start_f = float(start)
     end_f = float(end)
+    if start_f < 0.0:
+        raise _clip_error(
+            f"moment {moment_id!r} start must be non-negative",
+            CLIP_INVALID_TIME_RANGE,
+        )
     if end_f <= start_f:
         raise _clip_error(
             f"moment {moment_id!r} requires end > start (got {start_f} -> {end_f})",
@@ -140,10 +157,11 @@ def clip_moment(
                 f"{platform} max {max_duration:.3f}s; clipped to {clipped_end - start:.3f}s"
             ),
         )
-    if original_duration < 1.0:
+    if original_duration < MIN_SHORTS_PREVIEW_DURATION_SECONDS:
         if not allow_safe_fallback:
             raise _clip_error(
-                f"moment {moment_id!r} duration {original_duration:.3f}s below minimum 1.000s",
+                f"moment {moment_id!r} duration {original_duration:.3f}s below "
+                f"minimum {MIN_SHORTS_PREVIEW_DURATION_SECONDS:.3f}s",
                 CLIP_DURATION_BELOW_MINIMUM,
             )
         return ClippedMoment(
@@ -158,7 +176,7 @@ def clip_moment(
             was_clipped=False,
             review_warning=(
                 f"moment {moment_id!r} duration {original_duration:.3f}s below "
-                f"minimum 1.000s; short preview fallback applied"
+                f"minimum {MIN_SHORTS_PREVIEW_DURATION_SECONDS:.3f}s; short preview fallback applied"
             ),
         )
     return ClippedMoment(

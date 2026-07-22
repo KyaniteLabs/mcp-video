@@ -94,6 +94,19 @@ def test_clip_moment_rejects_inverted_range() -> None:
     assert CLIP_INVALID_TIME_RANGE in str(exc_info.value)
 
 
+@pytest.mark.parametrize(
+    "moment",
+    [
+        {"moment_id": "negative", "start": -1.0, "end": 2.0},
+        {"moment_id": "bool", "start": False, "end": True},
+    ],
+)
+def test_clip_moment_rejects_non_media_ranges(moment: dict[str, object]) -> None:
+    with pytest.raises(ValueError) as exc_info:
+        clip_moment(moment, platform="youtube_shorts")
+    assert CLIP_INVALID_TIME_RANGE in str(exc_info.value)
+
+
 def test_clip_moment_rejects_missing_moment_id() -> None:
     with pytest.raises(ValueError) as exc_info:
         clip_moment({"start": 0.0, "end": 10.0}, platform="youtube_shorts")
@@ -108,4 +121,18 @@ def test_clipped_moment_is_strict_deterministic_value_object() -> None:
     with pytest.raises(Exception):
         ClippedMoment.model_validate(
             {"moment_id": "m:x", "platform": "not_a_platform", "start_seconds": 0.0, "end_seconds": 1.0}
+        )
+
+
+def test_clipped_moment_rejects_direct_over_budget_construction() -> None:
+    with pytest.raises(ValueError, match="platform maximum"):
+        ClippedMoment(
+            moment_id="over",
+            platform="instagram_reels",
+            start_seconds=0.0,
+            end_seconds=100.0,
+            duration_seconds=100.0,
+            original_start_seconds=0.0,
+            original_end_seconds=100.0,
+            original_duration_seconds=100.0,
         )
