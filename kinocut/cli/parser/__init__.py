@@ -20,6 +20,7 @@ from . import workflow
 from . import inspection
 from . import aivideo
 from . import release
+from . import shorts  # re-exported via add_parsers registration
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -73,5 +74,6 @@ def build_parser() -> argparse.ArgumentParser:
     inspection.add_parsers(subparsers)
     aivideo.add_parsers(subparsers)
     release.add_parsers(subparsers)
+    shorts.add_parsers(subparsers)
 
     return parser

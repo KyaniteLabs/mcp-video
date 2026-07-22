@@ -9,6 +9,7 @@ Optional dependencies:
 from __future__ import annotations
 
 import logging
+import os
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -38,6 +39,61 @@ def _validate_transcribe_duration(video_path: str) -> None:
             error_type="validation_error",
             code="duration_too_long",
         )
+
+
+def _extract_audio_segment(
+    video_path: str,
+    start: float,
+    duration: float,
+    *,
+    sample_rate: int = 16000,
+) -> str:
+    """Extract a fixed-duration audio segment to a temp WAV file.
+
+    Used by the long-form transcription workflow to slice media up to
+    MAX_VIDEO_DURATION into per-chunk WAV files for Whisper.  Output is
+    Whisper-optimal 16-bit mono PCM at the requested sample rate.
+
+    Returns the path of the generated WAV file.  The caller is responsible
+    for cleanup (long-form paths use a single temp dir per run).
+    """
+    if not isinstance(start, (int, float)) or start < 0:
+        raise MCPVideoError(
+            f"start must be a non-negative number, got {start!r}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
+    if not isinstance(duration, (int, float)) or duration <= 0:
+        raise MCPVideoError(
+            f"duration must be a positive number, got {duration!r}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
+    out_fd, out_path = tempfile.mkstemp(suffix=".wav", prefix="kc_longform_")
+    os.close(out_fd)
+
+    _run_command(
+        [
+            "ffmpeg",
+            "-y",
+            "-ss",
+            f"{float(start):.6f}",
+            "-i",
+            str(video_path),
+            "-t",
+            f"{float(duration):.6f}",
+            "-vn",
+            "-acodec",
+            "pcm_s16le",
+            "-ar",
+            str(int(sample_rate)),
+            "-ac",
+            "1",
+            out_path,
+        ],
+        timeout=DEFAULT_FFMPEG_TIMEOUT,
+    )
+    return out_path
 
 
 def ai_transcribe(

@@ -163,6 +163,7 @@ from .server_tools_repurpose import (
     video_repurpose as video_repurpose,
     video_repurpose_plan as video_repurpose_plan,
 )
+from .server_tools_shorts import shorts_package as shorts_package, shorts_plan as shorts_plan, shorts_propose as shorts_propose, shorts_render as shorts_render, shorts_review as shorts_review
 from .server_tools_guardrails import (
     video_validate_text_layout as video_validate_text_layout,
     video_extract_frame as video_extract_frame,

@@ -3,7 +3,7 @@
 These tests exercise the ``kino <group> <action> ...`` -> ``kino <flat> ...`` rewrite
 that ``kinocut.__main__._rewrite_namespaced_argv`` performs before
 ``build_parser().parse_args()`` runs. They do NOT depend on a new argparse subparser
-being added; the flat 130-command surface stays authoritative. T7a added the seven
+being added; the flat 131-command surface stays authoritative. T7a added the seven
 ``aivideo`` aliases; T7b adds the nine ``audio`` aliases; T7c adds the five ``qa``
 aliases; T7d adds the ten ``edit`` aliases on top of the merged router.
 """
@@ -169,7 +169,7 @@ def test_edit_group_keeps_exactly_ten_aliases():
     edit = {k: v for k, v in NAMESPACED_ALIASES.items() if k[0] == "edit"}
     assert edit == EDIT_ALIASES
     assert len(edit) == 10
-    # All ten flat targets remain directly available on the 130-command surface.
+    # All ten flat targets remain directly available on the 131-command surface.
     assert set(edit.values()) <= EXPECTED_CLI_COMMANDS
 
 
@@ -246,16 +246,14 @@ def test_unknown_option_short_circuits_without_rewriting():
     assert _rewrite_namespaced_argv(argv) == argv
 
 
-def test_flat_command_set_remains_130():
-    """The flat subcommand set is the same 130-command surface; no new parser was added.
+def test_flat_command_set_remains_131():
+    """Namespace aliases remain argv rewrites over the deliberate 131-command surface.
 
-    Namespace aliases are pure argv rewrites to existing flat commands, never new
-    subcommands: 7 aivideo aliases (T7a) + 9 audio aliases (T7b) + 5 qa aliases
-    (T7c) + 10 edit aliases (T7d) = 31 grouped paths over the unchanged
-    130-command parser.
+    The shorts product adds one real flat command; the 31 grouped aliases remain
+    pure rewrites to existing flat commands.
     """
 
-    assert len(EXPECTED_CLI_COMMANDS) == 130
+    assert len(EXPECTED_CLI_COMMANDS) == 131
     assert len(NAMESPACED_ALIASES) == 31
     groups = namespaced_groups()
     assert set(groups) == {"aivideo", "audio", "qa", "edit"}
@@ -374,7 +372,7 @@ def test_edit_collision_input_keeps_flat_edit_timeline_parser():
 
 
 def test_group_help_does_not_add_namespace_groups_to_top_level_command_list():
-    """`kino --help` mentions all four groups yet lists exactly the flat 130 commands."""
+    """`kino --help` mentions all four groups yet lists exactly 131 flat commands."""
 
     result = _cli("--help")
     assert result.returncode == 0, result.stderr

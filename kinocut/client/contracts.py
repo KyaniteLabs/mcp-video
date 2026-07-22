@@ -368,4 +368,10 @@ CLIENT_METHOD_CONTRACTS: dict[str, dict[str, Any]] = {
     "recipe_capture": {"category": "report", "return_type": "dict", "aliases": {}},
     "capabilities": {"category": "report", "return_type": "dict", "aliases": {}},
     "benchmark_run": {"category": "report", "return_type": "dict", "aliases": {}},
+    # Human-gated long-form shorts workflow
+    "shorts_plan": {"category": "shorts", "return_type": "dict", "aliases": {}},
+    "shorts_propose": {"category": "shorts", "return_type": "dict", "aliases": {}},
+    "shorts_review": {"category": "shorts", "return_type": "dict", "aliases": {}},
+    "shorts_render": {"category": "shorts", "return_type": "dict", "aliases": {}},
+    "shorts_package": {"category": "shorts", "return_type": "dict", "aliases": {}},
 }
