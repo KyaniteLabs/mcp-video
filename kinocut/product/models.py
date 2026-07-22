@@ -19,10 +19,9 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-from collections.abc import Mapping
-from typing import Any, Literal
+from typing import Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import Field, model_validator
 
 from kinocut.contracts._common import ValueObject
 
@@ -198,20 +197,3 @@ def canonical_dedup_key(
         allow_nan=False,
     ).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()[:16]
-
-
-# --- Internal helpers exposed for tests --------------------------------------
-
-
-def to_jsonable(value: Any) -> Any:
-    """Recursively coerce strict models / nested tuples to JSON primitives."""
-
-    if isinstance(value, BaseModel):
-        return value.model_dump(mode="json")
-    if isinstance(value, tuple):
-        return [to_jsonable(item) for item in value]
-    if isinstance(value, list):
-        return [to_jsonable(item) for item in value]
-    if isinstance(value, Mapping):
-        return {str(key): to_jsonable(item) for key, item in value.items()}
-    return value
