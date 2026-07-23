@@ -9,6 +9,8 @@ Optional dependencies:
 from __future__ import annotations
 
 import logging
+import math
+import os
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -38,6 +40,77 @@ def _validate_transcribe_duration(video_path: str) -> None:
             error_type="validation_error",
             code="duration_too_long",
         )
+
+
+def _extract_audio_segment(
+    video_path: str,
+    start: float,
+    duration: float,
+    *,
+    sample_rate: int = 16000,
+    output_dir: str | None = None,
+) -> str:
+    """Extract a fixed-duration audio segment to a temp WAV file.
+
+    Used by the long-form transcription workflow to slice media up to
+    MAX_VIDEO_DURATION into per-chunk WAV files for Whisper.  Output is
+    Whisper-optimal 16-bit mono PCM at the requested sample rate.
+
+    Returns the path of the generated WAV file.  The caller is responsible
+    for cleanup (long-form paths use a single temp dir per run).
+    """
+    if isinstance(start, bool) or not isinstance(start, (int, float)) or not math.isfinite(start) or start < 0:
+        raise MCPVideoError(
+            f"start must be a non-negative number, got {start!r}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
+    if (
+        isinstance(duration, bool)
+        or not isinstance(duration, (int, float))
+        or not math.isfinite(duration)
+        or duration <= 0
+    ):
+        raise MCPVideoError(
+            f"duration must be a positive number, got {duration!r}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
+    if isinstance(sample_rate, bool) or not isinstance(sample_rate, int) or sample_rate <= 0:
+        raise MCPVideoError(
+            f"sample_rate must be a positive int, got {sample_rate!r}",
+            error_type="validation_error",
+            code="invalid_parameter",
+        )
+    out_fd, out_path = tempfile.mkstemp(suffix=".wav", prefix="kc_longform_", dir=output_dir)
+    os.close(out_fd)
+
+    try:
+        _run_command(
+            [
+                "ffmpeg",
+                "-y",
+                "-ss",
+                f"{float(start):.6f}",
+                "-i",
+                str(video_path),
+                "-t",
+                f"{float(duration):.6f}",
+                "-vn",
+                "-acodec",
+                "pcm_s16le",
+                "-ar",
+                str(sample_rate),
+                "-ac",
+                "1",
+                out_path,
+            ],
+            timeout=DEFAULT_FFMPEG_TIMEOUT,
+        )
+    except Exception:
+        Path(out_path).unlink(missing_ok=True)
+        raise
+    return out_path
 
 
 def ai_transcribe(
