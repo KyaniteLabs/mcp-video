@@ -10,8 +10,8 @@ Everything here is:
 
 * **Strict** — ``extra="forbid"``, ``frozen=True``, ``allow_inf_nan=False``;
   unknown fields, mutation, and non-finite floats are rejected.
-* **JSON-stable** — every model round-trips through
-  ``model_dump(mode="json")`` with sorted keys + compact separators.
+* **JSON-stable** — every model round-trips deterministically through Pydantic's
+  JSON mode.
 * **Decoupled from engines** — no FFmpeg, no project-store, no I/O. The
   orchestrator wires these values into existing engine seams without ever
   re-deriving them.
@@ -29,7 +29,8 @@ expected literal.
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from typing import Any, Literal
+from pathlib import PurePath
+from typing import Any, Literal, cast
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -59,7 +60,7 @@ _UNDERSCORE_TO_HYPHEN: Mapping[str, str] = {
 }
 
 
-def normalise_platform(value: str) -> str:
+def normalise_platform(value: str) -> InternalPlatform:
     """Return the underscore (internal) form for ``value``.
 
     Accepts either external hyphen form or internal underscore form; raises
@@ -77,29 +78,29 @@ def normalise_platform(value: str) -> str:
     if not isinstance(value, str) or not value:
         raise ValueError(f"unknown platform {value!r}; expected one of {list(CANONICAL_EXTERNAL_PLATFORMS)}")
     if value in _HYPHEN_TO_UNDERSCORE:
-        return _HYPHEN_TO_UNDERSCORE[value]
+        return cast(InternalPlatform, _HYPHEN_TO_UNDERSCORE[value])
     if value in _UNDERSCORE_TO_HYPHEN:
-        return value
+        return cast(InternalPlatform, value)
     raise ValueError(f"unknown platform {value!r}; expected one of {list(CANONICAL_EXTERNAL_PLATFORMS)}")
 
 
-def externalise_platform(value: str) -> str:
+def externalise_platform(value: str) -> ExternalPlatform:
     """Return the hyphen (external) form for ``value``; raises on unknown."""
 
     if not isinstance(value, str) or not value:
         raise ValueError(f"unknown platform {value!r}")
     if value in _UNDERSCORE_TO_HYPHEN:
-        return _UNDERSCORE_TO_HYPHEN[value]
+        return cast(ExternalPlatform, _UNDERSCORE_TO_HYPHEN[value])
     if value in _HYPHEN_TO_UNDERSCORE:
-        return value
+        return cast(ExternalPlatform, value)
     raise ValueError(f"unknown platform {value!r}; expected one of {list(CANONICAL_EXTERNAL_PLATFORMS)}")
 
 
-def normalise_platforms(values: Sequence[str]) -> tuple[str, ...]:
+def normalise_platforms(values: Sequence[str]) -> tuple[InternalPlatform, ...]:
     """Normalise every platform in ``values`` and de-duplicate while preserving order."""
 
     seen: set[str] = set()
-    out: list[str] = []
+    out: list[InternalPlatform] = []
     for value in values:
         internal = normalise_platform(value)
         if internal not in seen:
@@ -202,8 +203,9 @@ class ShortsConfig(_StrictModel):
 
     The orchestrator accepts a :class:`ShortsConfig` (or a mapping of equal
     shape) at every entry point. ``platforms`` is normalised to the internal
-    underscore form; ``output_dir`` is a project-local directory the
-    orchestrator may create — it is NOT a posting path.
+    underscore form. ``max_clip_seconds`` bounds discovery; platform-specific
+    output limits are enforced later by ``clip_pipeline``. ``output_dir`` is a
+    validated project-relative directory the orchestrator may create.
     """
 
     platforms: tuple[str, ...] = Field(default_factory=lambda: tuple(_HYPHEN_TO_UNDERSCORE.values()))
@@ -216,32 +218,24 @@ class ShortsConfig(_StrictModel):
 
     @model_validator(mode="after")
     def _normalise_platforms_and_window(self) -> ShortsConfig:
-        # Normalise platforms to the underscore form; external callers
-        # typically pass the hyphen form. Fail closed on an unknown id.
-        normalised = tuple(normalise_platform(p) for p in self.platforms)
+        normalised = normalise_platforms(self.platforms)
         if not normalised:
             raise ValueError("shorts config requires at least one platform")
         if self.max_clip_seconds <= self.min_clip_seconds:
             raise ValueError("max_clip_seconds must be strictly greater than min_clip_seconds")
-        # Preserve order while ensuring uniqueness.
-        seen: set[str] = set()
-        deduped: list[str] = []
-        for platform in normalised:
-            if platform not in seen:
-                seen.add(platform)
-                deduped.append(platform)
-        # Pydantic frozen model — use object.__setattr__ for the assignment.
-        object.__setattr__(self, "platforms", tuple(deduped))
+        if self.output_dir is not None:
+            output_path = PurePath(self.output_dir)
+            if output_path.is_absolute() or ".." in output_path.parts or "\x00" in self.output_dir:
+                raise ValueError("output_dir must be a project-relative path without parent traversal")
+        object.__setattr__(self, "platforms", normalised)
         return self
 
 
-def config_from_mapping(mapping: Mapping[str, Any] | None) -> ShortsConfig:
+def config_from_mapping(mapping: Mapping[str, Any] | ShortsConfig | None) -> ShortsConfig:
     """Build a :class:`ShortsConfig` from a mapping or use safe defaults.
 
-    ``None`` returns the strict default — no platforms preset, full duration
-    window, no output directory. ``mapping`` keys are the same as
-    :class:`ShortsConfig`'s field names; unknown keys raise
-    :class:`ValueError` via the strict base.
+    ``None`` returns both canonical platforms, the full duration window, and no
+    output directory. Unknown mapping keys raise :class:`ValueError`.
     """
 
     if mapping is None:

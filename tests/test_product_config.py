@@ -33,6 +33,8 @@ def test_platform_round_trip(raw: str, internal: str, external: str) -> None:
 def test_normalise_platform_rejects_unknown(value: str) -> None:
     with pytest.raises(ValueError, match="unknown platform"):
         normalise_platform(value)
+    with pytest.raises(ValueError, match="unknown platform"):
+        externalise_platform(value)
 
 
 def test_normalise_platforms_dedupes_and_canonical_listing() -> None:
@@ -52,6 +54,11 @@ def test_shorts_config_defaults_normalisation_and_unknown_rejection() -> None:
     assert normalised.platforms == ("youtube_shorts", "instagram_reels")
     with pytest.raises(ValidationError, match="unknown platform"):
         ShortsConfig(platforms=("tiktok",))
+    with pytest.raises(ValidationError, match="at least one platform"):
+        ShortsConfig(platforms=())
+    for unsafe in ("/tmp/output", "../output", "safe/../../output", "bad\x00path"):
+        with pytest.raises(ValidationError, match="project-relative"):
+            ShortsConfig(output_dir=unsafe)
 
 
 @pytest.mark.parametrize(
@@ -88,6 +95,8 @@ def test_audio_out_of_range_rejected(lufs: float, fade: float) -> None:
 
 def test_config_from_mapping_none_nested_and_unknown_keys() -> None:
     assert config_from_mapping(None) == ShortsConfig()
+    existing = ShortsConfig(platforms=("instagram-reel",))
+    assert config_from_mapping(existing) is existing
     cfg = config_from_mapping(
         {
             "platforms": ["youtube-shorts"],
