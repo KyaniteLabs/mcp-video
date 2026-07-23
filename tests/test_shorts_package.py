@@ -33,6 +33,7 @@ import pytest
 from pydantic import ValidationError
 
 from kinocut.errors import MCPVideoError
+from kinocut.product import canonical_dedup_key
 from kinocut.product.captions import build_caption_artifact
 from kinocut.product.models import CandidateMoment
 from kinocut.product.package import (
@@ -56,29 +57,51 @@ from kinocut.product.package import (
 # --------------------------------------------------------------------------- #
 
 
-_DEDUP_KEY = "1" * 16
+_CANDIDATE_DEFAULTS = {
+    "candidate_id": "cand_pkg_01",
+    "start": 10.0,
+    "end": 20.0,
+    "transcript_excerpt": "Hello world this is a test of the package",
+    "suggested_title": "A test clip",
+    "suggested_hook": "Watch this short",
+    "rationale": "ends on a complete thought",
+    "confidence": 0.85,
+    "review_warning": None,
+    "context_before": None,
+    "context_after": None,
+    "sensitivity": "none",
+    "unsuitable": False,
+}
+
+
+# Default dedup_key mirrors the canonical hash over the default candidate
+# fields so tests that pin the package id (``pkg_<key>``) keep working even
+# after we stopped hand-pasting a placeholder constant.
+_DEDUP_KEY = canonical_dedup_key(
+    start=_CANDIDATE_DEFAULTS["start"],
+    end=_CANDIDATE_DEFAULTS["end"],
+    excerpt=_CANDIDATE_DEFAULTS["transcript_excerpt"],
+    sensitivity=_CANDIDATE_DEFAULTS["sensitivity"],
+)
 
 
 def _candidate(**overrides):
-    """Build a strict ``CandidateMoment`` with safe defaults."""
+    """Build a strict ``CandidateMoment`` with safe defaults.
 
-    kwargs = {
-        "candidate_id": "cand_pkg_01",
-        "start": 10.0,
-        "end": 20.0,
-        "transcript_excerpt": "Hello world this is a test of the package",
-        "suggested_title": "A test clip",
-        "suggested_hook": "Watch this short",
-        "rationale": "ends on a complete thought",
-        "confidence": 0.85,
-        "review_warning": None,
-        "context_before": None,
-        "context_after": None,
-        "dedup_key": _DEDUP_KEY,
-        "sensitivity": "none",
-        "unsuitable": False,
-    }
+    The ``dedup_key`` is derived from the final candidate values via
+    :func:`canonical_dedup_key` *after* overrides are applied so that any
+    change to ``start``/``end``/``transcript_excerpt``/``sensitivity`` still
+    produces a model that survives the strict validator's invariant check.
+    """
+
+    kwargs = dict(_CANDIDATE_DEFAULTS)
     kwargs.update(overrides)
+    kwargs["dedup_key"] = canonical_dedup_key(
+        start=kwargs["start"],
+        end=kwargs["end"],
+        excerpt=kwargs["transcript_excerpt"],
+        sensitivity=kwargs["sensitivity"],
+    )
     return CandidateMoment.model_validate(kwargs)
 
 

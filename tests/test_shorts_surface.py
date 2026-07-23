@@ -27,6 +27,7 @@ import pytest
 
 from kinocut.errors import MCPVideoError
 
+from kinocut.product import canonical_dedup_key
 from kinocut.product.models import CandidateMoment, TranscriptSegment, TranscriptWord
 from kinocut.product.shorts import (
     ShortsPlan,
@@ -533,7 +534,15 @@ def _make_plan(
         suggested_hook="Hook",
         rationale="Rationale",
         confidence=0.9,
-        dedup_key="0" * 16,
+        # ``dedup_key`` must mirror the canonical hash over (start, end,
+        # excerpt, sensitivity); computing it here keeps the fixture honest
+        # against the strict validator's invariant check.
+        dedup_key=canonical_dedup_key(
+            start=0.0,
+            end=10.0,
+            excerpt="hello world",
+            sensitivity="none",
+        ),
     )
     return ShortsPlan(
         job_id="shorts_" + "0" * 16,

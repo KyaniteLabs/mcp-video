@@ -43,10 +43,11 @@ from typing import Any, Literal
 
 from pydantic import Field, model_validator
 
+from ..contracts._common import ValueObject
 from ..errors import MCPVideoError
 from ..ffmpeg_helpers import _validate_artifact_path, _validate_input_path
 from .captions import CaptionArtifact
-from .models import CandidateMoment, _StrictModel
+from .models import CandidateMoment
 
 
 # --- Constants -------------------------------------------------------------- #
@@ -79,7 +80,7 @@ _DRAFTING_ONLY_TAGS: tuple[str, ...] = (
 # --- Inputs ----------------------------------------------------------------- #
 
 
-class ThumbnailSpec(_StrictModel):
+class ThumbnailSpec(ValueObject):
     """One chosen representative thumbnail for the approved clip.
 
     ``image_path`` is the path the review surface approved; ``timestamp`` is
@@ -93,7 +94,7 @@ class ThumbnailSpec(_StrictModel):
     notes: str | None = None
 
 
-class PerformanceIdentifier(_StrictModel):
+class PerformanceIdentifier(ValueObject):
     """Optional, drafting-only performance identifier for an A/B lane.
 
     ``status == "draft"`` is the canonical state of an authored
@@ -106,7 +107,7 @@ class PerformanceIdentifier(_StrictModel):
     label: str = Field(min_length=1, max_length=64)
 
 
-class PackageConfig(_StrictModel):
+class PackageConfig(ValueObject):
     """Knobs that control how a package is written.
 
     ``manifest_basename`` is the filename component for the JSON manifest;
@@ -126,7 +127,7 @@ class PackageConfig(_StrictModel):
 # --- Manifest schemas ------------------------------------------------------ #
 
 
-class PackageAsset(_StrictModel):
+class PackageAsset(ValueObject):
     """One file the package wrote, with its role tag.
 
     The role tag is a bounded literal so a downstream consumer can render a
@@ -154,7 +155,7 @@ class PackageAsset(_StrictModel):
         return self
 
 
-class PackageLineage(_StrictModel):
+class PackageLineage(ValueObject):
     """Provenance references for the packaged clip.
 
     References are bounded sha256-prefixed digests (when the producer
@@ -170,7 +171,7 @@ class PackageLineage(_StrictModel):
     review_decision_ref: str | None = None
 
 
-class PackageManifest(_StrictModel):
+class PackageManifest(ValueObject):
     """The machine-readable, JSON-stable edit manifest.
 
     The manifest schema is deliberately small. Every field is either a
@@ -216,7 +217,7 @@ class PackageManifest(_StrictModel):
 # --- Result returned by the writer ----------------------------------------- #
 
 
-class PackagedClipResult(_StrictModel):
+class PackagedClipResult(ValueObject):
     """The deterministic result of :func:`package_approved_clip`.
 
     ``package_root`` is the directory the package writes to; ``manifest_path``

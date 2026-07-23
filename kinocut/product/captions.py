@@ -52,8 +52,8 @@ from typing import Any, Literal
 from pydantic import Field, ValidationError, model_validator
 from pydantic_core import InitErrorDetails, PydanticCustomError
 
+from ..contracts._common import ValueObject
 from ..ffmpeg_helpers import _seconds_to_srt_time
-from .models import _StrictModel
 
 
 # --- Constants -------------------------------------------------------------- #
@@ -109,7 +109,7 @@ cues from hand-authored ones."""
 # --- Inputs ----------------------------------------------------------------- #
 
 
-class WordTiming(_StrictModel):
+class WordTiming(ValueObject):
     """One timed word/token consumed by the caption grouper.
 
     Mirrors the long-form transcription slice's word shape exactly: ``word``
@@ -134,7 +134,7 @@ class WordTiming(_StrictModel):
 # --- Phrase cue output ------------------------------------------------------ #
 
 
-class PhraseCue(_StrictModel):
+class PhraseCue(ValueObject):
     """One grouped phrase returned by :func:`build_caption_artifact`.
 
     ``text`` is what reviewers see (and what the SRT writer emits), exactly
@@ -167,7 +167,7 @@ class PhraseCue(_StrictModel):
 # --- SRT writer output ----------------------------------------------------- #
 
 
-class CaptionArtifact(_StrictModel):
+class CaptionArtifact(ValueObject):
     """The deterministic result of :func:`build_caption_artifact`.
 
     ``cues`` is the ordered, phrase-grouped cue list. ``srt_body`` is the
@@ -189,7 +189,7 @@ class CaptionArtifact(_StrictModel):
 # --- Appearance / safe-area placement -------------------------------------- #
 
 
-class SafeArea(_StrictModel):
+class SafeArea(ValueObject):
     """Normalised caption-safe rectangle for a target platform.
 
     Every value is in unit-frame coordinates (``[0, 1]``) so the same plan
@@ -218,7 +218,7 @@ class SafeArea(_StrictModel):
         return self
 
 
-class CaptionAppearance(_StrictModel):
+class CaptionAppearance(ValueObject):
     """Visual style for an authored SRT burn-in.
 
     ``font_size`` is in pixels at the *target* output resolution — not the
@@ -238,7 +238,7 @@ class CaptionAppearance(_StrictModel):
     margin_y: int = Field(default=64, ge=0, le=4096)
 
 
-class BurnInPlan(_StrictModel):
+class BurnInPlan(ValueObject):
     """Drafting-only burn-in plan consumed by the workflow ``burn_in`` op.
 
     ``enabled=False`` means *do not* emit any ``burn_in`` step; the
@@ -264,7 +264,7 @@ class BurnInPlan(_StrictModel):
 # --- Top-level config ------------------------------------------------------ #
 
 
-class CaptionConfig(_StrictModel):
+class CaptionConfig(ValueObject):
     """All knobs the caption grouper accepts at construction.
 
     Defaults target short-form vertical captions (Shorts/Reels): 18-word
