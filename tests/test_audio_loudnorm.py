@@ -50,7 +50,7 @@ def test_two_pass_commands_and_measured_values(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr("kinocut.engine_audio_normalize._require_filter", lambda *args: None)
     monkeypatch.setattr(
         "kinocut.engine_audio_normalize._run_ffprobe_json",
-        lambda _path: {"streams": [{"codec_type": "audio"}]},
+        lambda _path: {"format": {"duration": "1.0"}, "streams": [{"codec_type": "audio"}]},
     )
     monkeypatch.setattr("kinocut.engine_audio_normalize._run_ffmpeg", lambda command: calls.append(command) or analysis)
     monkeypatch.setattr("kinocut.engine_audio_normalize._build_edit_result", lambda *args, **kwargs: args[0])
@@ -99,7 +99,7 @@ def test_short_audio_uses_one_pass_fallback_for_infinite_measurement(tmp_path, m
     monkeypatch.setattr("kinocut.engine_audio_normalize._require_filter", lambda *args: None)
     monkeypatch.setattr(
         "kinocut.engine_audio_normalize._run_ffprobe_json",
-        lambda _path: {"streams": [{"codec_type": "audio"}]},
+        lambda _path: {"format": {"duration": "0.1"}, "streams": [{"codec_type": "audio"}]},
     )
     monkeypatch.setattr(
         "kinocut.engine_audio_normalize._run_ffmpeg",
