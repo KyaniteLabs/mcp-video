@@ -51,7 +51,7 @@
 | | |
 | --- | --- |
 | **Also known as** | `kino` (CLI); formerly **mcp-video** / `mcp_video` |
-| **Latest published release** | **[1.9.0](https://github.com/KyaniteLabs/kinocut/releases/tag/v1.9.0)** (2026-07-15) |
+| **Latest published release** | **[1.10.0](https://github.com/KyaniteLabs/kinocut/releases/tag/v1.10.0)** (2026-07-23) |
 | **Product site** | [kinocut.dev](https://kinocut.dev/) |
 | **PyPI** | [`kinocut`](https://pypi.org/project/kinocut/) |
 | **MCP Registry** | [`io.github.KyaniteLabs/kinocut`](https://registry.modelcontextprotocol.io/v0/servers/io.github.KyaniteLabs%2Fkinocut/versions/latest) |
@@ -98,15 +98,15 @@ video.release_checkpoint(short.output_path)  # thumbnail + quality gate before y
 
 | Surface | Version / tip | What it means |
 | --- | --- | --- |
-| **PyPI / npm / GitHub Release** | **[1.9.0](https://github.com/KyaniteLabs/kinocut/releases/tag/v1.9.0)** (2026-07-15) | Latest **published** package. Install with `pip install -U kinocut`. |
-| **This repository (`master`)** | **155 MCP tools / 134 CLI commands** | Development tip ahead of published 1.9.0 (saved-plan shorts stages: plan-show, review, render, package; plus release-artifact policy surfaces). |
+| **PyPI / npm / GitHub Release** | **[1.10.0](https://github.com/KyaniteLabs/kinocut/releases/tag/v1.10.0)** (2026-07-23) | Latest **published** package. Install with `pip install -U kinocut`. |
+| **This repository (`master`)** | **155 MCP tools / 134 CLI commands** | Matches published **1.10.0** (saved-plan shorts stages: plan-show, review, render, package; plus release-artifact policy surfaces). |
 | **Next** | trusted execution kernel + sound program depth | See [Whats next](#whats-next). Not pinned to a specific package version yet. |
 
 Install from PyPI for the stable package. Clone `master` only when you intentionally need post-tag tip work.
 
-## What's in 1.9.0 (latest release)
+## What's in 1.10.0 (latest release)
 
-Kinocut **1.9.0** is what you get from `pip install kinocut` today (**150 MCP tools / 129 CLI commands**). 1.9.0 adds public MCP/CLI/client surfaces for eight release-artifact policy engines (review package, publish gate, review decisions, learning report, cost ledger, recipe capture, capabilities, benchmark) on top of the 1.8.0 contract-first AI-video foundation:
+Kinocut **1.10.0** is what you get from `pip install kinocut` today (**155 MCP tools / 134 CLI commands**). 1.10.0 adds saved-plan stream-to-shorts stages (plan show, human review, approval-gated render, local package) on top of the 1.9.0 release-artifact policy surfaces and the 1.8.0 contract-first AI-video foundation:
 
 - Everything from the **1.7.0** identity cutover (`kinocut` package, `kino` CLI, MCP Registry id, kinocut.dev)
 - **Governed AI-video** — content-addressed ingest, unified preflight, temporal inspect, exact-asset verdict / acceptance, body-swap, lineage-bound salvage ([docs/AI_VIDEO_REVIEW_AND_SALVAGE.md](docs/AI_VIDEO_REVIEW_AND_SALVAGE.md))
@@ -365,7 +365,7 @@ mcp-video doctor
 
 ## En español
 
-Kinocut es un servidor MCP de edición de video para agentes de IA. La última versión publicada es **1.9.0** (`pip install kinocut`) con **150 herramientas MCP** y **129 comandos CLI** sobre FFmpeg para recortar, unir, subtitular, mezclar audio, aplicar efectos y reutilizar contenido (Shorts, Reels, TikTok), más un motor de flujos de trabajo (`workflow`) con recibos verificables, rescate de video, revisión AI-video gobernada y barreras de seguridad antes de renderizar.
+Kinocut es un servidor MCP de edición de video para agentes de IA. La última versión publicada es **1.10.0** (`pip install kinocut`) con **155 herramientas MCP** y **134 comandos CLI** sobre FFmpeg para recortar, unir, subtitular, mezclar audio, aplicar efectos y reutilizar contenido (Shorts, Reels, TikTok), más un motor de flujos de trabajo (`workflow`) con recibos verificables, rescate de video, revisión AI-video gobernada y barreras de seguridad antes de renderizar.
 
 Requisito: [FFmpeg](https://ffmpeg.org/) instalado y disponible en el `PATH`.
 
@@ -506,7 +506,7 @@ kino repurpose clip.mp4 --platforms youtube-shorts instagram-reel tiktok
 
 ## MCP Tools
 
-Published **1.9.0** registers **150 MCP tools** and **129 CLI commands** (including governed AI-video surfaces). The table summarizes core categories — `search_tools` discovers the exact operation without loading every description.
+Published **1.10.0** registers **155 MCP tools** and **134 CLI commands** (including governed AI-video surfaces). The table summarizes core categories — `search_tools` discovers the exact operation without loading every description.
 
 | Category | Count | Highlights |
 | --- | ---: | --- |
@@ -597,7 +597,7 @@ Any MCP-compatible client that can run a local stdio server (Claude Code, Cursor
 
 ### How many tools are there?
 
-Published **1.9.0** documents **150 MCP tools / 129 CLI commands**. Historical **1.7.0** cutover was **135 / 114**.
+Published **1.10.0** documents **155 MCP tools / 134 CLI commands**. Historical **1.7.0** cutover was **135 / 114**.
 
 ### Was it called mcp-video?
 

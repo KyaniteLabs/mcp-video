@@ -9,7 +9,7 @@ description = "Compatibility installer for Kinocut, formerly mcp-video."
 readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.11"
-dependencies = ["kinocut==1.9.0"]
+dependencies = ["kinocut==1.10.0"]
 
 [project.scripts]
 mcp-video = "kinocut.__main__:main"
