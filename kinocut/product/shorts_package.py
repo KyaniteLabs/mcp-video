@@ -80,9 +80,7 @@ def package_approved_candidate(
             recovery="Call render_approved_candidate(...) first, then package.",
         )
 
-    base = os.path.realpath(
-        package_root or os.path.join(plan.output_dir, candidate.candidate_id, "packages")
-    )
+    base = os.path.realpath(package_root or os.path.join(plan.output_dir, candidate.candidate_id, "packages"))
     os.makedirs(base, exist_ok=True)
     config = PackageConfig(overwrite_package=overwrite)
     emitted: list[dict[str, Any]] = []

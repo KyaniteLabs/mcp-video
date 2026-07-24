@@ -50,9 +50,7 @@ def _render_digest(
 
 def _words_for(plan: ShortsPlan, candidate: CandidateMoment) -> list[WordTiming]:
     """Prefer real word timings; fall back to even segment splits."""
-    segment_ids = {
-        seg.segment_id for seg in plan.transcript if seg.end > candidate.start and seg.start < candidate.end
-    }
+    segment_ids = {seg.segment_id for seg in plan.transcript if seg.end > candidate.start and seg.start < candidate.end}
     words: list[WordTiming] = []
     if plan.transcript_words:
         for item in plan.transcript_words:
@@ -102,9 +100,7 @@ def _clip_bounds(candidate: CandidateMoment, platform: str):
     )
     warning = None
     if clipped.was_clipped or clipped.review_warning is not None:
-        warning = clipped.review_warning or (
-            f"moment {candidate.candidate_id!r} clipped for {internal}"
-        )
+        warning = clipped.review_warning or (f"moment {candidate.candidate_id!r} clipped for {internal}")
     return clipped, rendered, warning
 
 
@@ -152,9 +148,7 @@ def _render_media(
             vertical.output_path,
             output_path=faded,
             video_codec="copy",
-            audio_filter=(
-                f"afade=t=in:st=0:d={fade:.3f},afade=t=out:st={fade_out:.3f}:d={fade:.3f}"
-            ),
+            audio_filter=(f"afade=t=in:st=0:d={fade:.3f},afade=t=out:st={fade_out:.3f}:d={fade:.3f}"),
         )
     )
     return normalize_audio(

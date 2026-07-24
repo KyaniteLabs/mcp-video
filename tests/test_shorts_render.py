@@ -42,9 +42,7 @@ def _plan(tmp_path: Path, source: Path) -> str:
                 },
                 "platforms": ("youtube-shorts", "instagram-reel"),
                 "config": {"render": {"audio": {"lufs": -14.0, "fade_seconds": 0.05}}},
-                "transcript": (
-                    {"segment_id": "segment_01", "start": 10.0, "end": 25.0, "text": excerpt},
-                ),
+                "transcript": ({"segment_id": "segment_01", "start": 10.0, "end": 25.0, "text": excerpt},),
                 "proposals": (candidate.model_dump(mode="json"),),
             }
         )
