@@ -41,8 +41,7 @@ class PackageConfig(ValueObject):
     """Controls deterministic package writing."""
 
     manifest_basename: str = Field(default="manifest", min_length=1, max_length=64)
-    overwrite_manifest: bool = False
-    write_thumbnail_marker: bool = True
+    overwrite_package: bool = False
 
 
 class PackageAsset(ValueObject):
@@ -53,6 +52,7 @@ class PackageAsset(ValueObject):
         "editable_subtitles",
         "representative_thumbnail",
         "edit_manifest",
+        "metadata",
         "performance_identifier",
     ]
     relative_path: str = Field(min_length=1)
@@ -76,6 +76,7 @@ class PackageLineage(ValueObject):
     transcript_reference: str | None = None
     generation_lineage_ref: str | None = None
     review_decision_ref: str | None = None
+    artifact_sha256: str | None = Field(default=None, pattern=r"^sha256:[0-9a-f]{64}$")
 
 
 class ShortsPackageManifest(ValueObject):
