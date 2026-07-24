@@ -12,11 +12,12 @@ import os
 from pathlib import Path
 from typing import Any
 
+from ..errors import MCPVideoError
 from ..engine_audio_normalize import normalize_audio
 from ..engine_edit import trim
 from ..engine_resize import resize
 from ..engine_thumbnail import thumbnail
-from ..ffmpeg_helpers import _build_ffmpeg_cmd, _run_ffmpeg, _validate_input_path
+from ..ffmpeg_helpers import _build_ffmpeg_cmd, _run_ffmpeg, _validate_input_path, _validate_output_path
 from .captions import CaptionConfig, WordTiming, build_caption_artifact
 from .clip_pipeline import clip_moment
 from .config import normalise_platform
@@ -219,6 +220,28 @@ def _render_one_platform(
     return _payload_for(record, clipped, cache_hit=False), record, warning
 
 
+def _safe_render_base(plan: ShortsPlan, candidate_id: str, output_path: str | None) -> str:
+    """Resolve render output directory under plan.output_dir with write guards."""
+    default = os.path.join(plan.output_dir, candidate_id)
+    requested = output_path or default
+    base = os.path.realpath(os.path.expanduser(requested))
+    if os.path.splitext(base)[1]:
+        base = os.path.dirname(base)
+    # Guard a representative media path so system/symlink/sensitive homes are blocked.
+    _validate_output_path(os.path.join(base, "vertical.mp4"))
+    output_root = os.path.realpath(os.path.expanduser(plan.output_dir))
+    if os.path.commonpath((output_root, base)) != output_root:
+        raise MCPVideoError(
+            f"Problem: Render output path escapes plan.output_dir. "
+            f"Likely cause: {requested!r} is outside {plan.output_dir!r}. "
+            f"Recovery: Pass a path under the plan output directory.",
+            error_type="validation_error",
+            code="unsafe_path",
+            suggested_action={"auto_fix": False, "description": "Use a directory under plan.output_dir."},
+        )
+    return base
+
+
 def render_approved_candidate(
     plan_path_or_dir: str,
     *,
@@ -229,9 +252,7 @@ def render_approved_candidate(
     plan = load_shorts_plan(plan_path_or_dir)
     candidate = resolve_approved_candidate(plan, candidate_id)
     source_path = _validate_input_path(plan.intake.source_path)
-    base_dir = os.path.realpath(output_path or os.path.join(plan.output_dir, candidate.candidate_id))
-    if os.path.splitext(base_dir)[1]:
-        base_dir = os.path.dirname(base_dir)
+    base_dir = _safe_render_base(plan, candidate.candidate_id, output_path)
     os.makedirs(base_dir, exist_ok=True)
 
     records: list[RenderRecord] = list(plan.renders)

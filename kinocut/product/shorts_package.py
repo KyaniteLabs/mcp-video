@@ -80,7 +80,17 @@ def package_approved_candidate(
             recovery="Call render_approved_candidate(...) first, then package.",
         )
 
-    base = os.path.realpath(package_root or os.path.join(plan.output_dir, candidate.candidate_id, "packages"))
+    requested = package_root or os.path.join(plan.output_dir, candidate.candidate_id, "packages")
+    base = os.path.realpath(os.path.expanduser(requested))
+    # Fail closed outside plan.output_dir; package_approved_clip re-validates write paths.
+    output_root = os.path.realpath(os.path.expanduser(plan.output_dir))
+    if os.path.commonpath((output_root, base)) != output_root:
+        raise _package_error(
+            "Package root escapes plan.output_dir.",
+            code="unsafe_path",
+            cause=f"{requested!r} is outside {plan.output_dir!r}.",
+            recovery="Pass a package_root under the plan output directory.",
+        )
     os.makedirs(base, exist_ok=True)
     config = PackageConfig(overwrite_package=overwrite)
     emitted: list[dict[str, Any]] = []

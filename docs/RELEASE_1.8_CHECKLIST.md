@@ -9,10 +9,10 @@ publish steps for this completed release.
 **Authority:** [`public_claims.json`](public_claims.json) · [`RELEASE_RITUAL.md`](RELEASE_RITUAL.md) ·
 [`.github/workflows/publish.yml`](../.github/workflows/publish.yml)
 
-**Tip surface at freeze:** 150 MCP tools · 129 CLI commands
-**Published result:** 1.9.0 · 150 MCP / 129 CLI
+**Tip surface at freeze:** 155 MCP tools · 134 CLI commands
+**Published result:** 1.10.0 · 155 MCP / 134 CLI
 
-At tag time, `development_* == published_*`; the release-tag counts were 150 / 129.
+At 1.10.0 tag time, `development_* == published_*` at 155 / 134. (1.8.0 historical freeze was 142 / 121; 1.9.0 was 150 / 129.)
 
 ---
 

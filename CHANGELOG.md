@@ -9,6 +9,23 @@ This project follows a simple release-note style:
 - `Fixed` for bug fixes.
 - `Security` for vulnerability fixes.
 
+## 1.10.0 - 2026-07-23
+
+### Added
+
+- Saved-plan stream-to-shorts stages across MCP, CLI, and Python client: `shorts_plan_show` / `shorts-plan-show`, `shorts_review` / `shorts-review`, `shorts_render` / `shorts-render`, and `shorts_package` / `shorts-package`. Operators can load a persisted plan, append fail-closed human review decisions, render platform drafts (YouTube Shorts / Instagram Reels) only after a current approve, and package local manifests without any network posting.
+- Operator guide [`docs/STREAM_SHORTS.md`](docs/STREAM_SHORTS.md) and an honest acceptance-status proof under `docs/proofs/` (human listening remains an explicit gate for production claims).
+
+### Changed
+
+- Published surface grows to **155 MCP tools / 134 CLI commands** (from 150 / 129 in 1.9.0). Public claims, count tests, and the thin `server.py` facade remain in lockstep.
+- Render and package stages require output roots under the plan `output_dir` (path containment).
+
+### Compatibility
+
+- `pip install -U kinocut` to 1.10.0. The `mcp-video` compatibility shim continues to install the matching Kinocut version; legacy `mcp_video` imports and env vars remain supported on the 1.10.x line.
+- Stream-to-shorts is operator-available. Full production acceptance still requires human listening at edit boundaries and phone-frame visual review (see `docs/proofs/2026-07-24-stream-shorts-acceptance-status.md`).
+
 ## 1.9.0 - 2026-07-15
 
 ### Added
