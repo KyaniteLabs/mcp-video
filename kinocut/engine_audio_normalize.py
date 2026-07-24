@@ -63,11 +63,13 @@ def normalize_audio(
     output_path: str | None = None,
     *,
     true_peak_dbtp: float = -1.0,
+    fade_seconds: float = 0.01,
 ) -> EditResult:
     """Normalize audio with FFmpeg's two-pass loudnorm filter."""
     input_path = _validate_input_path(input_path)
     target, loudness_range = _number(target_lufs, "target_lufs", -70, -5), _number(lra, "lra", 0, 50)
     peak = _number(true_peak_dbtp, "true_peak_dbtp", -12, 0)
+    fade = _number(fade_seconds, "fade_seconds", 0, 1)
     _require_filter("loudnorm", "Audio normalization")
     output = output_path or _auto_output(input_path, "normalized")
     _validate_output_path(output)
@@ -80,7 +82,8 @@ def normalize_audio(
         _escaped(loudness_range, "lra"),
         _escaped(peak, "true_peak_dbtp"),
     )
-    has_audio = _has_audio(_run_ffprobe_json(input_path))
+    probe = _run_ffprobe_json(input_path)
+    has_audio = _has_audio(probe)
     with _timed_operation() as timing:
         if not has_audio:
             _run_ffmpeg(
@@ -92,12 +95,40 @@ def normalize_audio(
                 )
             )
         else:
+            duration_value = next(
+                (
+                    stream.get("duration")
+                    for stream in probe.get("streams", [])
+                    if stream.get("codec_type") == "audio" and stream.get("duration") is not None
+                ),
+                None,
+            )
+            if duration_value is None:
+                format_data = probe.get("format")
+                duration_value = format_data.get("duration") if isinstance(format_data, dict) else None
+            try:
+                duration = float(duration_value)
+            except (TypeError, ValueError):
+                duration = 0.0
+            if not math.isfinite(duration) or duration <= 0:
+                raise MCPVideoError(
+                    "Could not determine a finite positive media duration for boundary fades",
+                    error_type="processing_error",
+                    code="invalid_media_duration",
+                )
+            boundary = min(fade, duration / 2)
+            if boundary > 0:
+                boundary_s = _escaped(boundary, "fade_seconds")
+                fade_out_start_s = _escaped(duration - boundary, "fade_out_start")
+                fade_filter = f"afade=t=in:st=0:d={boundary_s},afade=t=out:st={fade_out_start_s}:d={boundary_s},"
+            else:
+                fade_filter = ""
             analysis = _run_ffmpeg(
                 [
                     "-i",
                     input_path,
                     "-af",
-                    f"loudnorm=I={target_s}:LRA={lra_s}:TP={peak_s}:print_format=json",
+                    f"{fade_filter}loudnorm=I={target_s}:LRA={lra_s}:TP={peak_s}:print_format=json",
                     "-f",
                     "null",
                     "-",
@@ -108,10 +139,12 @@ def normalize_audio(
             except MCPVideoError:
                 if "input_i" not in analysis.stderr or "-inf" not in analysis.stderr:
                     raise
-                render_filter = f"loudnorm=I={target_s}:LRA={lra_s}:TP={peak_s}"
+                render_filter = f"{fade_filter}loudnorm=I={target_s}:LRA={lra_s}:TP={peak_s}"
             else:
                 measured_filter = ":".join(f"{key}={_escaped(value, key)}" for key, value in measured.items())
-                render_filter = f"loudnorm=I={target_s}:LRA={lra_s}:TP={peak_s}:{measured_filter}:linear=true"
+                render_filter = (
+                    f"{fade_filter}loudnorm=I={target_s}:LRA={lra_s}:TP={peak_s}:{measured_filter}:linear=true"
+                )
             _run_ffmpeg(
                 _build_ffmpeg_cmd(
                     input_path,
